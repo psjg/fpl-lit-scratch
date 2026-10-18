@@ -93,6 +93,20 @@ Canonical Clipper face (from Kakoune `assistant_clippy`):
  ╰───╯
 ```
 
+**Local TTY only (offline for now).** Multi-mascot hello/bye chrome lives in the
+walker REPL, not on the published site. Kakoune-style assistants:
+
+| Id | Face | Notes |
+| --- | --- | --- |
+| `clipper` | paperclip above | common |
+| `clipper-smoke` | + cigarette | rare |
+| `clipper-jonko` | + joint; eyes `O`/`o` | rare; “peut-être français” is a quip, not a face |
+| `meatdog` | tiny dog | uncommon |
+| `none` | line only | uncommon |
+
+One pick per session greets and says bye. Diagnostic Clipper-on-every-error stays
+deferred. Not a TRPG.
+
 ### Full error sketch (illustration only — not printed yet)
 
 ```text

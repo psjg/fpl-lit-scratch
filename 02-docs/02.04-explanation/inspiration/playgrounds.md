@@ -90,13 +90,17 @@ Current state: playground uses **Monaco** with Quokka-style `|-` ghosts; Tab / A
 
 Turnstile ASCII inventory (notation only): [turnstiles.md](turnstiles.md).
 
-## Splash / MOTD (TTY chrome)
+## Splash / MOTD (local TTY chrome)
 
-Minecraft-style one-liner at REPL startup — not language keywords. Pool includes FPL /
-Favourite / Final Programming Language, don’t get eaten by a grue, west of a white house,
-Dunnet, meatdog, Chuck Norris, Gas Town’s Mayor / Overseer, Clipper quips. Full Clipper
-ASCII speaking diagnostics lives in [judgments](judgments.md); error tags in
-[02.03.01](../../02.03-reference/errors.md). Site: [fpl-lit-scratch](https://psjg.github.io/fpl-lit-scratch/).
+**Offline for now** — local `make repl` only; not part of the published site face.
+
+At startup a session picks one ASCII **assistant** (Clipper, rare smoke/jonko variants,
+meatdog, or none) and prints face + hello line; the same face says **bye** on `:quit` /
+clean EOF. Minecraft-style one-liners (grue, white house, Dunnet, Chuck, Mayor, …) sit
+in each assistant’s hello/bye pools. Not language keywords; not a MUD.
+
+Diagnostic Clipper sketches: [judgments](judgments.md). Error tags:
+[02.03.01](../../02.03-reference/errors.md).
 
 ## Where FPL `/try` sits today
 
