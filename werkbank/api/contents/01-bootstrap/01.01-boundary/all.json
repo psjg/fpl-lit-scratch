@@ -1,0 +1,71 @@
+{
+  "content": [
+    {
+      "content": null,
+      "created": "2026-10-18T19:06:51.839360Z",
+      "format": null,
+      "hash": null,
+      "hash_algorithm": null,
+      "last_modified": "2026-10-18T19:06:51.839360Z",
+      "mimetype": null,
+      "name": "01.01.02-fon.ipynb",
+      "path": "01-bootstrap/01.01-boundary/01.01.02-fon.ipynb",
+      "size": 23079,
+      "type": "notebook",
+      "writable": true
+    },
+    {
+      "content": null,
+      "created": "2026-10-18T19:06:52.357070Z",
+      "format": null,
+      "hash": null,
+      "hash_algorithm": null,
+      "last_modified": "2026-10-18T19:06:52.357070Z",
+      "mimetype": null,
+      "name": "01.01.03-pipe.ipynb",
+      "path": "01-bootstrap/01.01-boundary/01.01.03-pipe.ipynb",
+      "size": 8626,
+      "type": "notebook",
+      "writable": true
+    },
+    {
+      "content": null,
+      "created": "2026-10-18T19:06:51.300164Z",
+      "format": null,
+      "hash": null,
+      "hash_algorithm": null,
+      "last_modified": "2026-10-18T19:06:51.300164Z",
+      "mimetype": null,
+      "name": "01.01.01-source.ipynb",
+      "path": "01-bootstrap/01.01-boundary/01.01.01-source.ipynb",
+      "size": 2370,
+      "type": "notebook",
+      "writable": true
+    },
+    {
+      "content": null,
+      "created": "2026-10-18T19:06:52.867192Z",
+      "format": null,
+      "hash": null,
+      "hash_algorithm": null,
+      "last_modified": "2026-10-18T19:06:52.867192Z",
+      "mimetype": null,
+      "name": "01.01.04-render.ipynb",
+      "path": "01-bootstrap/01.01-boundary/01.01.04-render.ipynb",
+      "size": 2357,
+      "type": "notebook",
+      "writable": true
+    }
+  ],
+  "created": "2026-10-18T19:07:08.702169Z",
+  "format": "json",
+  "hash": null,
+  "hash_algorithm": null,
+  "last_modified": "2026-10-18T19:07:08.703637Z",
+  "mimetype": null,
+  "name": "01.01-boundary",
+  "path": "01-bootstrap/01.01-boundary",
+  "size": null,
+  "type": "directory",
+  "writable": true
+}

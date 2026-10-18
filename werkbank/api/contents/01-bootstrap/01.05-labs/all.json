@@ -1,0 +1,29 @@
+{
+  "content": [
+    {
+      "content": null,
+      "created": "2026-10-18T19:07:04.852097Z",
+      "format": null,
+      "hash": null,
+      "hash_algorithm": null,
+      "last_modified": "2026-10-18T19:07:04.852097Z",
+      "mimetype": null,
+      "name": "01.05.01-pipeline.ipynb",
+      "path": "01-bootstrap/01.05-labs/01.05.01-pipeline.ipynb",
+      "size": 2301,
+      "type": "notebook",
+      "writable": true
+    }
+  ],
+  "created": "2026-10-18T19:07:08.713059Z",
+  "format": "json",
+  "hash": null,
+  "hash_algorithm": null,
+  "last_modified": "2026-10-18T19:07:08.713146Z",
+  "mimetype": null,
+  "name": "01.05-labs",
+  "path": "01-bootstrap/01.05-labs",
+  "size": null,
+  "type": "directory",
+  "writable": true
+}

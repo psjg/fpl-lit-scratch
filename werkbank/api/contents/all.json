@@ -1,0 +1,57 @@
+{
+  "content": [
+    {
+      "content": null,
+      "created": "2026-10-18T19:07:08.702134Z",
+      "format": null,
+      "hash": null,
+      "hash_algorithm": null,
+      "last_modified": "2026-10-18T19:07:08.713422Z",
+      "mimetype": null,
+      "name": "01-bootstrap",
+      "path": "01-bootstrap",
+      "size": null,
+      "type": "directory",
+      "writable": true
+    },
+    {
+      "content": null,
+      "created": "2026-10-18T19:06:49.678891Z",
+      "format": null,
+      "hash": null,
+      "hash_algorithm": null,
+      "last_modified": "2026-10-18T19:06:49.678891Z",
+      "mimetype": null,
+      "name": "00-install.ipynb",
+      "path": "00-install.ipynb",
+      "size": 1670,
+      "type": "notebook",
+      "writable": true
+    },
+    {
+      "content": null,
+      "created": "2026-10-18T19:06:49.678999Z",
+      "format": null,
+      "hash": null,
+      "hash_algorithm": null,
+      "last_modified": "2026-10-18T19:06:49.678999Z",
+      "mimetype": null,
+      "name": "00-install-v2.ipynb",
+      "path": "00-install-v2.ipynb",
+      "size": 1670,
+      "type": "notebook",
+      "writable": true
+    }
+  ],
+  "created": "2026-10-18T19:07:08.701120Z",
+  "format": "json",
+  "hash": null,
+  "hash_algorithm": null,
+  "last_modified": "2026-10-18T19:07:08.702136Z",
+  "mimetype": null,
+  "name": "",
+  "path": "",
+  "size": null,
+  "type": "directory",
+  "writable": true
+}
