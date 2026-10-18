@@ -1,0 +1,203 @@
+#!/usr/bin/env bash
+#
+# .githooks/prepare-commit-msg — fill an empty commit message with what a person needs to
+# write it: the header skeleton, the trailers that can be known, and the rules.
+#
+# A person who typed `doc(readme): ...` or `docs(README): ...` was told only that the header was
+# wrong, and lost the message. This hook gives the rules before the message is written.
+# .githooks/commit-msg, which judges it, refuses a header that is still the skeleton.
+#
+# It acts when git opens an editor on an empty message: the source git passes in $2 is empty
+# (a plain `git commit`) or "template" (-t, commit.template) and nothing but comments is in
+# the file. It leaves alone "message" (-m, -F, which .harness/scripts/acommit.sh uses), "merge", "squash"
+# and "commit" (-C, -c, --amend): those carry a message already.
+#
+# What it writes, at the top of the file:
+#     <type>(<scope>): <summary>
+#     (two empty lines: the body goes there)
+#     Stack: <name>        derived from the branch exactly as .harness/scripts/acommit.sh derives it
+#     Human-Only: true     where no agent identity is set (.harness/scripts/agent-identity.sh)
+# and the rules as comment lines, which git strips. They must never reach the commit, so where
+# they go depends on how git cleans the message up (git commit --help, --cleanup):
+#   a scissors line is in the file   git wrote it for -v or commit.cleanup=scissors, and drops
+#                                    what is below it: the rules go there, after git's own
+#                                    comment lines and before the diff of -v, if any
+#   strip (the default, with an editor)  the rules are comment lines, at the top
+#   whitespace, verbatim             comments are kept by these, so the rules are not written
+#                                    (a note says so); commit-msg's refusals carry them instead
+# A --cleanup option on the command line reaches no hook: the rules are written by the config's
+# reading, and .githooks/commit-msg takes them out of the file before git stores what such a
+# mode keeps. Only a commit that also skips commit-msg (--no-verify) can store them then.
+# core.commentChar and core.commentString name the comment prefix. Under the deprecated 'auto'
+# git has picked one before this hook runs, and the file shows it: git's own comment lines come
+# first in an empty message (none at all with commit.status=false, and then git picks '#').
+# The rules end in a marker line with a random id, and what was written is recorded for
+# .githooks/commit-msg (commit_template_state): git's prefix, and the rules block as written.
+# commit-msg takes out that block and nothing else, and reads the prefix from the record, since
+# the message as it comes back from the editor cannot show it. For a source that gets no template
+# (-e -F, an amend) the prefix is recorded alone, read from the status block git appended: its
+# scissors line, then comment lines to the end of the file. That is looked for only where git
+# writes such a line, an editor under commit.cleanup=scissors, and from the diff of -v; with no
+# editor the file holds the message alone, and its lines are never taken for git's.
+#
+# Usage (git runs it): prepare-commit-msg <message file> [<source> [<sha>]]
+
+set -euo pipefail
+
+file="$1"
+repo_root="$(git rev-parse --show-toplevel)"
+# shellcheck source=commit-rules
+. "$repo_root/.githooks/commit-rules"
+state="$(commit_template_state)"
+cut_state="$(commit_cut_state)"
+rm -f "$state" "$cut_state"
+
+# The scissors line of git commit -v, recorded for commit-msg (commit_cut_state), for every
+# source: -v is given to an amend and to -e -F as well. What git writes for -v comes last
+# (measured, git 2.54: the file this hook gets is the file the editor gets): its scissors line,
+# its own comment lines, then the diff, the first line of which opens 'diff --git', down to the
+# end of the file (-vv adds comment lines and a second diff). Without -v the file ends in git's
+# status block, comment lines, and with commit.status=false git writes no diff for -v at all.
+# So the last scissors line is recorded only when a diff follows it and runs to the end: a
+# message given to git (-e -F, an amend, a template) that holds a scissors line and a quoted
+# diff of its own is followed by git's status block, and is not taken for -v. --no-status on
+# the command line reaches no hook; with it, such a message reads as -v, and commit-lint judges
+# what git stored. The prefix is the repository's or, under 'auto', any one git may pick; a
+# line of the diff that ends like a scissors line ('+# ----... >8 ...') is passed by.
+# None of this is looked for where no editor runs: git sets GIT_EDITOR=: for this hook then (-m,
+# -F, -C) and writes nothing into the file but the message, every line of which is the person's.
+if [ "${GIT_EDITOR:-}" != : ] && [ "$(git config --type=bool --get commit.status || true)" != false ]; then
+	P="$(commit_comment_prefix)" awk '
+		BEGIN { p0 = ENVIRON["P"]; d = "------------------------"; t = " " d " >8 " d }
+		{ line[++n] = $0; if (NF) last = n }
+		END {
+			for (i = n; i >= 1; i--) {
+				l = line[i]; k = length(l) - length(t)
+				if (k < 1 || substr(l, k + 1) != t) continue
+				p = substr(l, 1, k)
+				if (p0 != "" ? p != p0 : !(k == 1 && index("#;@!$%^&|:", p))) continue
+				for (j = i + 1; j <= n && substr(line[j], 1, k) == p; j++) continue
+				if (j <= n && index(line[j], "diff --git ") == 1 && substr(line[last], 1, k) != p) print l
+				exit
+			}
+		}' "$file" >"$cut_state"
+	# Under the deprecated core.commentChar=auto git has picked the comment character by now, and
+	# the file shows it, whatever the source (-e -F, an amend, a template): the status block git
+	# appended last is its scissors line and then comment lines only, down to the end of the file
+	# (with -v the diff follows, and the line recorded above has the character). The pick is
+	# recorded for commit-msg (commit_template_state), which cuts at git's scissors line and
+	# strips git's comment lines by it; with none recorded no line is taken for either, the strict
+	# reading. Only commit.cleanup=scissors has git write a scissors line of its own into the status
+	# block, so only there is one looked for in the file: under any other cleanup a scissors line
+	# in it is the person's, and one typed in a character other than git's pick, with comment
+	# lines below it, was taken for the status block and those lines were stripped, where git
+	# stores them (a cross-family review of #150). Under scissors a typed line that only comment
+	# lines follow still reads as git's when --no-status is given, which no hook sees: commit-lint
+	# on push reads what git stored, and judges what the hook let through. A scissors line the
+	# person typed is passed by unless only comment lines follow it.
+	if [ "$(commit_comment_raw)" = auto ]; then
+		picked="$(sed -n '1s/^\(.\).*/\1/p' "$cut_state")"
+		[ -n "$picked" ] || [ "$(git config --get commit.cleanup || true)" != scissors ] || picked="$(awk '
+			BEGIN { d = "------------------------"; t = " " d " >8 " d }
+			{ line[++n] = $0 }
+			END {
+				for (i = n; i >= 1; i--) {
+					l = line[i]
+					if (length(l) != length(t) + 1 || substr(l, 2) != t) continue
+					p = substr(l, 1, 1)
+					if (!index("#;@!$%^&|:", p)) continue
+					for (j = i + 1; j <= n; j++) if (length(line[j]) && substr(line[j], 1, 1) != p) break
+					if (j > n) print p
+					exit
+				}
+			}' "$file")"
+		[ -z "$picked" ] || printf '%s\n' "$picked" >"$state"
+	fi
+fi
+[ -s "$cut_state" ] || rm -f "$cut_state"
+
+case "${2:-}" in
+"" | template) ;;
+*) exit 0 ;;
+esac
+
+prefix="$(commit_comment_prefix)"
+if [ -z "$prefix" ]; then
+	prefix="$(awk 'NF { c = substr($0, 1, 1); if (index("#;@!$%^&|:", c)) printf "%s", c; exit }' "$file")"
+	[ -n "$prefix" ] || prefix="#"
+fi
+
+# The scissors line, if git wrote one (-v, commit.cleanup=scissors).
+scissors="$(P="$prefix" awk 'BEGIN { p = ENVIRON["P"]; d = "------------------------" }
+	$0 == p " " d " >8 " d { print NR; exit }' "$file")"
+
+# Anything above the scissors line that is not a blank or a comment is a message already (a
+# template). Below it is git's: with -v, the diff of what is staged.
+if P="$prefix" S="${scissors:-0}" awk 'BEGIN { p = ENVIRON["P"]; s = ENVIRON["S"] + 0 }
+	s && NR >= s { exit }
+	NF && substr($0, 1, length(p)) != p { found = 1 } END { exit !found }' "$file"; then
+	exit 0
+fi
+mode="$(git config --get commit.cleanup || true)"
+if [ -z "$scissors" ]; then
+	case "$mode" in
+	"" | default | strip) ;;
+	*)
+		echo "prepare-commit-msg: commit.cleanup=$mode keeps comment lines, so the rules are not written into the message; see .agents/COMMITS.md" >&2
+		write_rules=0
+		;;
+	esac
+fi
+
+trailers=""
+stack="$(commit_stack_of_branch "$(git branch --show-current)")"
+[ -z "$stack" ] || trailers="Stack: $stack"
+if ! "$repo_root/.harness/scripts/agent-identity.sh" show >/dev/null 2>&1; then
+	trailers="${trailers:+$trailers$'\n'}Human-Only: true"
+fi
+
+out="$(mktemp)"
+trap 'rm -f "$out" "$out.rules"' EXIT
+{
+	printf '%s\n' "$COMMIT_SKELETON" "" ""
+	[ -z "$trailers" ] || printf '\n%s\n' "$trailers"
+} >"$out"
+
+# The rules, as comment lines. They come from commit-rules, so they cannot drift from the gate.
+nonce="$(od -An -N6 -tx1 /dev/urandom | tr -d ' \n')"
+{
+	commit_rules_text
+	echo "(end of the rules, block $nonce)"
+} | P="$prefix" awk 'BEGIN { p = ENVIRON["P"] } { print p " " $0 }' >"$out.rules"
+
+if [ -n "$scissors" ]; then
+	# After the comment lines that follow the scissors line (git's own, "Do not modify..."),
+	# before the first line that is not one: the diff of -v.
+	end="$(P="$prefix" awk -v from="$scissors" 'BEGIN { p = ENVIRON["P"] }
+		NR > from && substr($0, 1, length(p)) != p { print NR - 1; found = 1; exit }
+		END { if (!found) print NR }' "$file")"
+	{
+		cat "$out"
+		head -n "$end" "$file"
+		cat "$out.rules"
+		tail -n +"$((end + 1))" "$file"
+	} >"$out.new"
+elif [ "${write_rules:-1}" -eq 1 ]; then
+	{
+		cat "$out"
+		cat "$out.rules"
+		cat "$file"
+	} >"$out.new"
+else
+	{
+		cat "$out"
+		cat "$file"
+	} >"$out.new"
+	: >"$out.rules"
+fi
+cat "$out.new" >"$file"
+{
+	printf '%s\n' "$prefix"
+	cat "$out.rules"
+} >"$state"
+rm -f "$out.new"

@@ -1,0 +1,173 @@
+fpl.fon.x__placed__mutmut_3 -- equivalent: Lark's LALR parser never reports a None or negative position for FON (0 of 27857 failures in a random probe)
+fpl.fon.x__placed__mutmut_4 -- equivalent: Lark's LALR parser never reports a None position for FON (0 of 27857 failures in a random probe)
+fpl.fon.x__placed__mutmut_8 -- equivalent: the None or negative branch is unreached; Lark's LALR parser always reports a position for FON
+fpl.fon.x__placed__mutmut_9 -- equivalent: the None or negative branch is unreached; Lark's LALR parser always reports a position for FON
+fpl.fon.x__scalar__mutmut_5 -- unreachable: the match covers the JSON scalar union, as pyright proves
+fpl.fon.x__scalar__mutmut_11 -- unreachable: the match covers the JSON scalar union, as pyright proves
+fpl.fon.xǁFltǁwritten__mutmut_10 -- equivalent: copysign of any positive magnitude has the sign of x
+fpl.fon.xǁFltǁwritten__mutmut_11 -- equivalent: copysign(1, x) is 1 or -1, never 0
+fpl.fon.xǁFltǁwritten__mutmut_12 -- equivalent: copysign(1, x) is 1 or -1, so < 1 and < 0 agree
+fpl.fon.xǁFltǁwritten__mutmut_31 -- equivalent: float.hex() never writes X
+fpl.fon.xǁFltǁwritten__mutmut_32 -- equivalent: float.hex() never writes X
+fpl.fon.xǁNumǁwritten__mutmut_6 -- equivalent: Decimal formats F and f alike for finite, infinite and nan values
+fpl.fon.xǁ_Buildǁdict__mutmut_4 -- equivalent: the grammar gives a dict an even number of children
+fpl.fon.xǁ_Buildǁdict__mutmut_7 -- equivalent: the grammar gives a dict an even number of children
+fpl.fon.xǁ_Buildǁdict__mutmut_11 -- equivalent: the grammar gives a dict an even number of children
+fpl.fon.xǁ_Buildǁdict__mutmut_21 -- equivalent: a key follows the { so its code offset is never 0
+fpl.lex.x__brackets__mutmut_5 -- equivalent: element 0 of a split is the text before the first match whatever maxsplit is
+fpl.lex.x__brackets__mutmut_7 -- equivalent: element 0 of a split is the text before the first match whatever maxsplit is
+fpl.lex.x__pair__mutmut_74 -- equivalent: None and False are both false for verbatim
+fpl.lex.x__special__mutmut_30 -- equivalent: the newline is searched for after the comment's first character, so it is never at offset 0
+fpl.lex.x__special__mutmut_31 -- equivalent: the newline is searched for after the comment's first character, so it is never at offset 0
+fpl.lex.x_shape__mutmut_33 -- equivalent: a body that is not a path holds no /, so splitting it gives the body alone
+fpl.lex.xǁ_RefusalErrorǁ__init____mutmut_1 -- equivalent: only .offset and .message are read, never the exception's args
+fpl.parse.xǁMisindentedErrorǁ__init____mutmut_1 -- equivalent: only .token is read, never the exception's args
+fpl.parse.x_parse__mutmut_4 -- equivalent: prelex reads an end of None as the source's length
+fpl.parse.x_placed__mutmut_7 -- equivalent: where ignores the column when the line is -1
+fpl.parse.x_placed__mutmut_13 -- equivalent: where ignores the column when the line is -1
+fpl.parse.x_placed__mutmut_14 -- equivalent: where ignores the column when the line is -1
+fpl.parse.xǁ_Buildǁprogram__mutmut_6 -- equivalent: outer places only an empty node, and a line is never empty
+fpl.parse.xǁ_Buildǁline__mutmut_3 -- equivalent: outer places only an empty node, and a line is never empty
+fpl.parse.xǁ_Buildǁline__mutmut_10 -- equivalent: outer places only an empty node, and a line is never empty
+fpl.parse.xǁ_Buildǁframe__mutmut_11 -- equivalent: outer places only an empty node, and a cell is never empty
+fpl.parse.xǁ_Buildǁcell__mutmut_3 -- equivalent: outer places only an empty node, and a cell is never empty
+fpl.parse.xǁ_Buildǁcell__mutmut_12 -- equivalent: outer places only an empty node, and an enclosure holds its brackets
+fpl.parse.xǁ_Buildǁitem__mutmut_3 -- equivalent: outer places only an empty node, and an enclosure holds its brackets
+fpl.parse.xǁ_Buildǁtext__mutmut_27 -- equivalent: a string's interior starts after its opener, so a ⟨ in it is never at offset 0
+fpl.parse.xǁ_Buildǁtext__mutmut_28 -- equivalent: a string's interior starts after its opener, so a ⟨ in it is never at offset 0
+fpl.parse.xǁ_Buildǁtext__mutmut_43 -- equivalent: a string's interior starts after its opener, so a ⟨ in it is never at offset 0
+fpl.print.xǁ_Outǁtext__mutmut_6 -- equivalent: a raw string has exactly one part
+fpl.print.xǁ_Outǁitem__mutmut_12 -- unreachable: the match covers the Item union, as pyright proves
+fpl.print.xǁ_Outǁframes__mutmut_1 -- equivalent: None and False are both false for written
+fpl.lex.x__pair__mutmut_20 -- timeout: the mutant returns a negative offset for a block comment at a line start and the scan never ends
+fpl.lex.x__special__mutmut_20 -- timeout: the mutant finds a newline before a line comment on line 2 and the scan never advances
+fpl.lex.x__special__mutmut_28 -- timeout: the mutant returns -1 for a line comment with no newline after it and the scan never ends
+fpl.lex.x_counted__mutmut_12 -- timeout: the mutant resets its index each step, so counting from any offset past 0 never ends
+fpl.lex.x_pairs__mutmut_7 -- timeout: the mutant loops at the end offset, where no write advances it
+fpl.parse.xǁ_Buildǁtext__mutmut_14 -- timeout: the mutant loops at the interior's end, where no read advances it
+fpl.parse.xǁ_Buildǁtext__mutmut_17 -- timeout: the mutant finds the same island again from the interior's start, forever
+fpl.parse.xǁ_Buildǁtext__mutmut_25 -- timeout: the mutant sets the offset to -1 when no island is left, and the loop never ends
+fpl.parse.xǁ_Buildǁtext__mutmut_42 -- timeout: the mutant stops at an island without reading it, and finds it again forever
+fpl.lex.x__special__mutmut_21 -- equivalent: a line comment is the last thing in its code line, so running it past an island's end to the next newline changes no tree, span or refusal
+fpl.lex.x__special__mutmut_24 -- equivalent: a line comment is the last thing in its code line, so running it past an island's end to the next newline changes no tree, span or refusal
+fpl.lex.x__pair__mutmut_40 -- equivalent: rfind reads a start of None as 0
+fpl.lex.x__pair__mutmut_47 -- equivalent: a newline at offset 0 makes line 1 blank, and parse refuses a tab opening line 2 while FON ignores the depth, so no string read has tabs before it on line 2
+fpl.parse.xǁ_Buildǁtext__mutmut_44 -- equivalent: a string's interior starts after its opener, so a ⟨ in it is never at offset 0
+fpl.parse.xǁ_Buildǁcomment__mutmut_30 -- equivalent: a comment token has only tabs between a newline and its next ; or ⍝, so stripping all whitespace strips the same tabs
+fpl.parse.xǁ_Buildǁcomment__mutmut_32 -- equivalent: a comment token's lines open with tabs and then ; or ⍝, never X, so stripping X as well strips the same tabs
+fpl.print.xǁ_Outǁ__init____mutmut_4 -- equivalent: the first line is at depth 0 and opens in a word, string, enclosure or bar, so its tab count is 0 either way until a newline resets it
+fpl.print.xǁ_Outǁ__init____mutmut_5 -- equivalent: the first line is at depth 0 and opens in a word, string, enclosure or bar, so its tab count is 0 either way until a newline resets it
+fpl.print.xǁ_Outǁitem__mutmut_4 -- unreachable: the match covers the Item union, as pyright proves
+fpl.print.xǁ_Outǁ__init____mutmut_8 -- equivalent: None and False are both false for noted
+fpl.desugar.xǁ_Desugarǁitem__mutmut_4 -- unreachable: the match covers the Item union, as pyright proves
+fpl.desugar.xǁ_Desugarǁitem__mutmut_9 -- unreachable: the match covers the Item union, as pyright proves
+fpl.desugar.xǁ_Desugarǁenclosure__mutmut_5 -- unreachable: the match covers the Pair literals, as pyright proves
+fpl.desugar.xǁ_Desugarǁenclosure__mutmut_29 -- unreachable: the match covers the Pair literals, as pyright proves
+fpl.desugar.x_written__mutmut_3 -- unreachable: the match covers the Statement union, as pyright proves
+fpl.desugar.x_written__mutmut_44 -- unreachable: the match covers the Statement union, as pyright proves
+fpl.desugar.x_sugared__mutmut_2 -- equivalent: stranding is false for "" as for None, neither being a push
+fpl.desugar.x_shown__mutmut_42 -- equivalent: F differs from f only for NaN and infinity; numerals are finite and the default Decimal context traps overflow and invalid operations
+fpl.desugar.x_written__mutmut_52 -- unreachable: the match covers the Statement union, as pyright proves
+fpl.desugar.x_written__mutmut_15 -- equivalent: Effect refuses a slot count other than one per input, so ins and slots are always of one length and strict never fires
+fpl.desugar.x_written__mutmut_18 -- equivalent: Effect refuses a slot count other than one per input, so ins and slots are always of one length and strict never fires
+fpl.desugar.x_written__mutmut_19 -- equivalent: Effect refuses a slot count other than one per input, so ins and slots are always of one length and strict never fires
+fpl.desugar.xǁ_Desugarǁchildren__mutmut_13 -- equivalent: kinds holds len(block) + len(inputs) entries, so its tail from len(inputs) is as long as the block and strict never fires
+fpl.desugar.xǁ_Desugarǁchildren__mutmut_16 -- equivalent: kinds holds len(block) + len(inputs) entries, so its tail from len(inputs) is as long as the block and strict never fires
+fpl.desugar.xǁ_Desugarǁchildren__mutmut_17 -- equivalent: kinds holds len(block) + len(inputs) entries, so its tail from len(inputs) is as long as the block and strict never fires
+fpl.desugar.x_declaration__mutmut_4 -- unreachable: the match covers the Slot literals, as pyright proves
+fpl.desugar.x_declaration__mutmut_31 -- unreachable: the match covers the Slot literals, as pyright proves
+fpl.desugar.x_declaration__mutmut_21 -- equivalent: framed reads None as it reads (), as no items, and makes the same empty frame
+fpl.desugar.x_shown__mutmut_38 -- equivalent: F differs from f only for NaN and infinity; numerals are finite and the default Decimal context traps overflow and invalid operations
+fpl.desugar.x_enclosed__mutmut_4 -- unreachable: the match covers the Listed, Quotation and Dict union, as pyright proves
+fpl.desugar.x_enclosed__mutmut_37 -- unreachable: the match covers the Listed, Quotation and Dict union, as pyright proves
+fpl.desugar.x_spelled__mutmut_6 -- unreachable: the match covers the Node union, as pyright proves
+fpl.desugar.x_spelled__mutmut_36 -- unreachable: the match covers the Node union, as pyright proves
+fpl.desugar.xǁ_Desugarǁarity__mutmut_5 -- unreachable: the match covers the Node union, as pyright proves
+fpl.desugar.xǁ_Desugarǁarity__mutmut_10 -- unreachable: a match is a line of its own, never in a frame, so arity never takes one
+fpl.eval.x_replaced__mutmut_6 -- unreachable: the match covers the Node union, as pyright proves
+fpl.eval.x_replaced__mutmut_46 -- unreachable: the match covers the Node union, as pyright proves
+fpl.desugar.x_directory__mutmut_4 -- equivalent: a match no case takes falls to the end and returns None, as the case does
+fpl.desugar.x_mount__mutmut_3 -- equivalent: the mutant logs Mount(None), which names no directory, so desugar refuses it at 1:1 with no evaluator yet, as the case does, before any line runs
+fpl.desugar.xǁCatalogǁdirectory__mutmut_8 -- equivalent: depth -1 slices here to here[:-1], a directory the loop already searched
+fpl.desugar.xǁCatalogǁresolve__mutmut_8 -- equivalent: depth -1 slices here to here[:-1], a directory the loop already searched
+fpl.desugar.xǁ_Desugarǁ__init____mutmut_5 -- equivalent: body sets here before any word is read, so the initial value is never read
+fpl.desugar.xǁ_Desugarǁcall__mutmut_12 -- equivalent: a call of a bound name lies in its binder's scope and is replaced by a push before it runs, so its span is never reported
+fpl.desugar.xǁ_Desugarǁdict__mutmut_8 -- equivalent: an odd item count is refused above, so the keys and values are as many and strict never fires
+fpl.desugar.xǁ_Desugarǁdict__mutmut_11 -- equivalent: an odd item count is refused above, so the keys and values are as many and strict never fires
+fpl.desugar.xǁ_Desugarǁdict__mutmut_15 -- equivalent: an odd item count is refused above, so the keys and values are as many and strict never fires
+fpl.eval.x_repeat__mutmut_20 -- timeout: the mutant puts back n + 1, so a repeat of one round or more counts up and never ends
+fpl.eval.x_repeat__mutmut_23 -- equivalent: the round puts back q, a quotation, and n - 1, a count, so the repeat it calls never refuses and its span is never reported
+fpl.trivia.x_head__mutmut_16 -- equivalent: Word.span is field(compare=False), so the span of the `:` compared against is never read
+fpl.desugar.xǁ_Desugarǁarity__mutmut_3 -- unreachable: a match is a line of its own, never in a frame, so arity never takes one
+fpl.desugar.xǁ_Desugarǁarity__mutmut_12 -- unreachable: the match covers the Node union, as pyright proves
+fpl.eval.x_matched__mutmut_6 -- unreachable: the match covers the Pattern union, as pyright proves
+fpl.eval.x_matched__mutmut_40 -- unreachable: the match covers the Pattern union, as pyright proves
+fpl.eval.x_names__mutmut_5 -- unreachable: the match covers the Pattern union, as pyright proves
+fpl.eval.x_names__mutmut_12 -- unreachable: the match covers the Pattern union, as pyright proves
+fpl.eval.x_pinned__mutmut_5 -- unreachable: the match covers the Pattern union, as pyright proves
+fpl.eval.x_pinned__mutmut_39 -- unreachable: the match covers the Pattern union, as pyright proves
+fpl.desugar.x_written__mutmut_13 -- equivalent until hole resugar-match closes: an effect fails only for a body holding a match, which written refuses to spell, so +fail is never written
+fpl.desugar.x_written__mutmut_15 -- equivalent until hole resugar-match closes: an effect fails only for a body holding a match, which written refuses to spell, so +fail is never written
+fpl.desugar.x_written__mutmut_16 -- equivalent until hole resugar-match closes: an effect fails only for a body holding a match, which written refuses to spell, so +fail is never written
+fpl.desugar.xǁ_Desugarǁrow__mutmut_21 -- equivalent: frame reads a frame's cells, never its span
+fpl.desugar.xǁ_Desugarǁsimple__mutmut_18 -- equivalent: $x's call is pinned to a Push before any row is tried, and a Call never equals a Push, so its span is never read
+fpl.eval.x_matches__mutmut_4 -- equivalent: a row has its match's arity in patterns and takes that many values, and unbuilt checks the count first, so strict never fires
+fpl.eval.x_matches__mutmut_7 -- equivalent: a row has its match's arity in patterns and takes that many values, and unbuilt checks the count first, so strict never fires
+fpl.eval.x_matches__mutmut_8 -- equivalent: a row has its match's arity in patterns and takes that many values, and unbuilt checks the count first, so strict never fires
+fpl.eval.x_rebound__mutmut_2 -- equivalent: None and False are both false to if and or, and shadowed is only tested
+fpl.eval.x_uncons__mutmut_2 -- equivalent: a match no case takes falls to the end and returns None, as the case does
+fpl.eval.x_unpair__mutmut_2 -- equivalent: a match no case takes falls to the end and returns None, as the case does
+fpl.eval.x_unpush__mutmut_2 -- equivalent: a match no case takes falls to the end and returns None, as the case does
+fpl.eval.x_unswap__mutmut_2 -- equivalent: a match no case takes falls to the end and returns None, as the case does
+fpl.types.x_agreed__mutmut_13 -- equivalent: the stacks are checked to share one length just above, so strict never fires
+fpl.types.x_agreed__mutmut_15 -- equivalent: the stacks are checked to share one length just above, so strict never fires
+fpl.types.x_agreed__mutmut_16 -- equivalent: the stacks are checked to share one length just above, so strict never fires
+fpl.types.x_applied__mutmut_11 -- equivalent: the stack from cut holds as many sorts as the arrow takes, so strict never fires
+fpl.types.x_applied__mutmut_14 -- equivalent: the stack from cut holds as many sorts as the arrow takes, so strict never fires
+fpl.types.x_applied__mutmut_15 -- equivalent: the stack from cut holds as many sorts as the arrow takes, so strict never fires
+fpl.types.x_bound_by__mutmut_5 -- unreachable: the match covers the Pattern union, as pyright proves
+fpl.types.x_bound_by__mutmut_8 -- unreachable: the match covers the Pattern union, as pyright proves
+fpl.types.x_met__mutmut_4 -- equivalent: a match that takes no case does nothing, as pass does
+fpl.types.x_through__mutmut_6 -- unreachable: the match covers the Node union, as pyright proves
+fpl.types.x_through__mutmut_38 -- unreachable: the match covers the Node union, as pyright proves
+fpl.types.x_wanted__mutmut_22 -- timeout: a goal before a binder whose scope ends in a goal then never reaches its count, and the search never ends
+fpl.types.x_wanted__mutmut_26 -- timeout: a goal before a binder whose scope ends in a goal then never reaches its count, and the search never ends
+fpl.types.x_wanted__mutmut_38 -- timeout: count stays at 1, so a goal wanting two values searches forever
+fpl.types.x_wanted__mutmut_39 -- timeout: count falls, so a goal wanting two values searches forever
+fpl.driver.x_stacks__mutmut_5 -- equivalent: evaluate yields one stack per run line, so zip meets equal lengths and strict never acts
+fpl.driver.x_stacks__mutmut_8 -- equivalent: evaluate yields one stack per run line, so zip meets equal lengths and strict never acts
+fpl.driver.x_stacks__mutmut_13 -- equivalent: evaluate yields one stack per run line, so zip meets equal lengths and strict never acts
+fpl.eval.x_final__mutmut_2 -- equivalent: final runs only under metered, which sets FUEL first, so the default is never read
+fpl.eval.x_repeat__mutmut_6 -- timeout: with and, a negative count is not refused and its rounds never reach 0; the test that meets it hangs, which is its kill
+fpl.fon.x__cell__mutmut_10 -- equivalent: None and False are both false for inline
+fpl.log.x__fields__mutmut_20 -- equivalent: the keys were just checked to be the fifteen of FIELDS, so zip meets equal lengths
+fpl.log.x__fields__mutmut_23 -- equivalent: the keys were just checked to be the fifteen of FIELDS, so zip meets equal lengths
+fpl.log.x__fields__mutmut_24 -- equivalent: the keys were just checked to be the fifteen of FIELDS, so zip meets equal lengths
+fpl.log.x__ident__mutmut_2 -- equivalent: None and False are both false for inline
+fpl.log.x__ident__mutmut_8 -- equivalent: an inline multihash is never an event's id, so resolve refuses the name either way
+fpl.log.x_keyed__mutmut_27 -- equivalent: token_bytes(None) gives 32 bytes, its default
+fpl.log.x_record__mutmut_40 -- equivalent: KEYS and the values are fifteen long by construction
+fpl.log.x_record__mutmut_43 -- equivalent: KEYS and the values are fifteen long by construction
+fpl.log.x_record__mutmut_44 -- equivalent: KEYS and the values are fifteen long by construction
+fpl.log.x_u64__mutmut_4 -- equivalent: to_bytes is big-endian by default since Python 3.11
+fpl.log.xǁEventǁheader__mutmut_8 -- equivalent: codec names ignore case, so ASCII is ascii
+fpl.log.xǁEventǁheader__mutmut_11 -- equivalent: codec names ignore case, so ASCII is ascii
+fpl.multihash.x__decimal__mutmut_34 -- equivalent: to_bytes is big-endian by default since Python 3.11
+fpl.multihash.x__leb128__mutmut_10 -- timeout: n <<= 7 grows n, so the loop never ends; the test that meets it hangs, which is its kill
+fpl.multihash.xǁMultihashǁspelled__mutmut_5 -- equivalent: from_bytes is big-endian by default since Python 3.11
+fpl.repl.x__call__mutmut_2 -- equivalent: None and False are both false for add_help
+fpl.repl.x__call__mutmut_3 -- equivalent: None and False are both false for allow_abbrev
+fpl.repl.x__call__mutmut_58 -- equivalent: the value of --log is never read, only whether it is None
+fpl.repl.x__call__mutmut_69 -- equivalent: the value of --show is never read, only whether it is None
+fpl.repl.x__call__mutmut_97 -- equivalent: main prints the usage line for a UsageError, never its message
+fpl.repl.x__call__mutmut_95 -- equivalent: main prints the usage line for a UsageError, never its message
+fpl.repl.x__call__mutmut_96 -- equivalent: main prints the usage line for a UsageError, never its message
+fpl.repl.x__fuel__mutmut_6 -- equivalent: argparse reports a type function's ValueError without its message, and main prints the usage line alone
+fpl.repl.x__kept__mutmut_19 -- equivalent: a log held in memory is never written, so its size is never read
+fpl.repl.x__plain__mutmut_3 -- timeout: a stream at its end gives "" forever, so the loop never ends; the test that meets it hangs, which is its kill
+fpl.repl.x__turn__mutmut_37 -- equivalent: the loop exits 0 whatever a turn's status, and _told reads no status
+fpl.repl.x__turn__mutmut_41 -- equivalent: the loop exits 0 whatever a turn's status, and _told reads no status
+fpl.repl.x_provenance__mutmut_12 -- equivalent: "" and XXXX are both printable ASCII of at most 256 characters
+fpl.session.x__changed__mutmut_8 -- equivalent: strict is False by default, and None is false
+fpl.session.x__changed__mutmut_11 -- equivalent: strict is False by default, and None is false
+fpl.session.xǁ_Entryǁmargin__mutmut_9 -- equivalent: with no non-blank line, "" and XXXX both open with no space, so nothing is refused

@@ -1,0 +1,133 @@
+#!/usr/bin/env bash
+#
+# .githooks/pre-push — four gates on what reaches a remote:
+#
+#   1. No private term or secret in what is pushed (.harness/scripts/leak-check.sh --push): the
+#      patches, file names, identities and messages of every commit the remote does not
+#      have yet, the names of the refs pushed, and annotated tags. A branch new to the
+#      remote is judged by the commits that none of the refs at the URL pushed to ($2,
+#      the pushurl when one is set) has, as git ls-remote lists them now; a URL that
+#      cannot be listed, or holds none of them, gets the whole history judged. This
+#      runs for every remote, Radicle included: publishing is publishing.
+#      FPL_LEAK_GATE = block (default) | warn | off, read by the script.
+#
+#   2. An approved pull request is frozen (.agents/WORKFLOW.md rule 10). A push to GitHub that
+#      would overwrite or delete the branch of an open pull request that a human approved,
+#      at whatever commit, is refused (.harness/scripts/forward-only). It reads the forge with GET
+#      requests only, with python3 and no gh, and refuses when it cannot read it. A rebase
+#      that a real conflict forces goes with FPL_FORWARD_ONLY_OVERRIDE="conflict: <reason>";
+#      the pull request repeats it. When GitHub cannot be read, "unchecked: <reason>" lets a
+#      branch go that the pusher knows nobody approved.
+#
+#   3. Refuse to push to a remote branch whose name does not parse under
+#      .agents/BRANCHES.md. reference-transaction stops a bad name at creation, but only in
+#      a clone whose hooks are wired (.harness/scripts/setup.sh). This is the second local net: the
+#      name that would appear on the forge is judged right before it gets there.
+#      Deletions are let through so a non-conforming remote branch can still be cleaned
+#      up. FPL_BRANCH_GATE = block (default) | warn | off
+#
+#   4. Every commit a push adds to a branch passes the commit-msg gates for that branch
+#      (.harness/scripts/commit-lint.sh -b <branch>), as the commit-lint workflow will judge it on the
+#      pull request. commit-msg judges a commit's 'Stack:' trailer only on the branch it
+#      was made on; a commit moved since (cherry-pick, rebase --onto, branch -f) is judged
+#      here again, under the name it arrives with. The commits a push adds are those of the
+#      local sha that no branch at the URL ($2) holds, as git ls-remote lists them now.
+#      That reads an update, a new branch and a new stack on a parent not merged yet alike:
+#      the parent's commits are on the remote under their own name, and .harness/scripts/pr.sh bases
+#      the child's pull request on the tail of the queue, so the workflow does not judge
+#      them under the child's name either (a pull request based elsewhere would). A branch
+#      at the URL whose commit is not here cannot be excluded, so the range only grows:
+#      the gate errs strict, never loose. A push to main, a tag, a deletion and
+#      a push to Radicle are not judged: the workflow judges none of them. Any git command
+#      that fails, the listing of the URL included, refuses the push, and so does a
+#      refusal that cannot be printed. Replace refs are off, so the commits judged are the
+#      ones the push sends.
+
+set -euo pipefail
+
+top="$(git rev-parse --show-toplevel)"
+# Every gate reads the same lines, so stdin is read once. A string, not mapfile: macOS still
+# ships bash 3.2 as /bin/bash. Each gate gets it as a here-string, not through a pipe, so a
+# gate that exits without reading cannot fail the push by SIGPIPE under pipefail.
+updates="$(cat)"
+
+# 1. leak gate -------------------------------------------------------------------------
+# It is handed the URL ($2), not the remote's name ($1): ls-remote of a name lists the
+# fetch url, which may hold what the pushurl does not.
+"$top/.harness/scripts/leak-check.sh" --push "${2:-}" <<<"$updates" ||
+	{ echo "pre-push: nothing was pushed." >&2; exit 1; }
+
+# 2. forward only ----------------------------------------------------------------------
+"$top/.harness/scripts/forward-only" "${1:-}" "${2:-}" <<<"$updates" || exit 1
+
+# 3. branch names ----------------------------------------------------------------------
+# Radicle is not a forge with branch names of its own choosing: its remote helper keeps a
+# patch under refs/heads/patches/<id>, and a new revision of a patch is a push there. The
+# grammar is for names on the forge, so a push to a rad:// remote is not judged, here or in
+# gate 4.
+case "${2:-}" in rad://*) exit 0 ;; esac
+
+mode="${FPL_BRANCH_GATE:-block}"
+lint="$top/.harness/scripts/branch-lint.sh"
+rc=0
+if [ "$mode" != "off" ] && [ -x "$lint" ]; then
+	while read -r local_ref _local_sha remote_ref _remote_sha; do
+		[ "$local_ref" = "(delete)" ] && continue
+		case "$remote_ref" in refs/heads/*) : ;; *) continue ;; esac
+		"$lint" "${remote_ref#refs/heads/}" || rc=1
+	done <<<"$updates"
+fi
+if [ "$rc" -ne 0 ]; then
+	echo "pre-push: nothing was pushed. FPL_BRANCH_GATE=warn to override." >&2
+	[ "$mode" = "warn" ] || exit 1
+fi
+
+# 4. commit messages -------------------------------------------------------------------
+refuse() {
+	echo "pre-push: $*; nothing was pushed." >&2 || :
+	exit 1
+}
+# A refusal names the URL without the user:password@ it may carry, so a credential that
+# rides in the URL never reaches a terminal or a log; git's own messages drop it too.
+shown="${2:-}"
+case "$shown" in
+*://*)
+	rest="${shown#*://}"
+	auth="${rest%%/*}"
+	shown="${shown%%://*}://${auth##*@}${rest#"$auth"}"
+	;;
+esac
+export GIT_NO_REPLACE_OBJECTS=1
+listed=0 not=""
+while read -r local_ref local_sha remote_ref remote_sha; do
+	[ "$local_ref" = "(delete)" ] && continue
+	case "$remote_ref" in refs/heads/main) continue ;; refs/heads/*) : ;; *) continue ;; esac
+	branch="${remote_ref#refs/heads/}"
+	if [ "$listed" -eq 0 ]; then
+		heads="$(git ls-remote --heads -- "${2:-}")" || refuse "cannot list $shown"
+		# Only the commits here can be excluded; a missing one is skipped, not an error.
+		known="$(printf '%s\n' "$heads" | cut -f1 | sed '/^$/d' |
+			git cat-file --batch-check='%(objectname) %(objecttype)')" ||
+			refuse "cannot look up $shown's branches here"
+		not="$(printf '%s\n' "$known" | awk '$2 == "commit" { printf " ^%s", $1 }')" ||
+			refuse "cannot read $shown's branches"
+		listed=1
+	fi
+	# The remote's side of this ref is on the remote by definition.
+	extra=""
+	if [ -n "${remote_sha//0/}" ] && git cat-file -e "$remote_sha^{commit}" 2>/dev/null; then
+		extra=" ^$remote_sha"
+	fi
+	# commit-lint refuses an empty range, and skips merges as the workflow does. Only a
+	# walk that succeeded and found nothing is let through.
+	# shellcheck disable=SC2086 # $not and $extra are lists of ^sha, split on purpose
+	added="$(git rev-list --no-merges "$local_sha" $not $extra)" ||
+		refuse "cannot list the commits $branch adds"
+	[ -n "$added" ] || continue
+	# shellcheck disable=SC2086
+	out="$("$top/.harness/scripts/commit-lint.sh" -b "$branch" "$local_sha" $not $extra 2>&1)" || {
+		printf '%s\n' "$out" >&2 || :
+		refuse "a commit fails the gates for $branch"
+	}
+done <<<"$updates"
+exit 0

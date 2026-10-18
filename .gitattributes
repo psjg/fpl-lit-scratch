@@ -1,0 +1,11 @@
+# GitHub has no grammar for FPL, so .fpl files show as plain text. Clojure's
+# grammar is the nearest one it has: it colours ; comments, strings, numbers
+# and brackets, and leaves the frame bar alone (Scheme would read |...| as a
+# quoted symbol). The minus keeps FPL out of the repository's language bar.
+*.fpl linguist-language=Clojure -linguist-detectable
+
+# Written by nix run .#gen-config from lib.limits in flake.nix, never by hand. GitHub folds
+# them in a diff and leaves them out of the language bar and the review count.
+.editorconfig linguist-generated=true
+.harness/quality/ruff-limits.toml linguist-generated=true
+.githooks/commit-limits linguist-generated=true

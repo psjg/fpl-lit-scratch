@@ -1,0 +1,15 @@
+.tree-item.nav-folder:has(> .nav-folder-title[data-path="01-bootstrap/fpl"]),
+.tree-item.nav-folder:has(> .nav-folder-title[data-path="01-bootstrap/tests"]),
+.tree-item.nav-folder:has(> .nav-folder-title[data-path="01-bootstrap/handoff"]),
+.tree-item.nav-folder:has(> .nav-folder-title[data-path="01-bootstrap/__pycache__"]),
+.tree-item.nav-folder:has(> .nav-folder-title[data-path="01-bootstrap/_extensions"]),
+.tree-item.nav-folder:has(> .nav-folder-title[data-path="01-bootstrap/_site"]),
+.tree-item.nav-folder:has(> .nav-folder-title[data-path="01-bootstrap/bin"]),
+.tree-item.nav-folder:has(> .nav-folder-title[data-path="01-bootstrap/labs/__marimo__"]),
+.tree-item.nav-folder:has(> .nav-folder-title[data-path="01-bootstrap/python"]),
+.tree-item.nav-folder:has(> .nav-folder-title[data-path="01-bootstrap/site/node_modules"]),
+.tree-item.nav-folder:has(> .nav-folder-title[data-path="01-bootstrap/site/dist"]),
+.tree-item.nav-folder:has(> .nav-folder-title[data-path="01-bootstrap/site/src"]),
+.tree-item.nav-folder:has(> .nav-folder-title[data-path=".harness"]) {
+  display: none;
+}

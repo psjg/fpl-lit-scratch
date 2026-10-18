@@ -1,0 +1,45 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+#
+# CodeRabbit reviews alongside Codex. Optional docstring and unit-test generation is
+# enabled at PSJ's request; generated changes still need review before landing.
+# Autofix, CI fixes and merge-conflict resolution remain disabled to avoid those
+# tools committing changes to branches owned by other agents.
+#
+# Pull requests stack on each other (.agents/WORKFLOW.md), so every base branch is reviewed, not
+# only main. Reviews include draft PRs and continue on each push. The pull
+# request description is the harness's record of why; the bot does not rewrite it. The
+# repository is public: only members of the organisation may chat with the bot.
+language: en-US
+reviews:
+  profile: assertive
+  request_changes_workflow: true
+  high_level_summary: true
+  high_level_summary_in_walkthrough: true
+  review_details: true
+  poem: true
+  in_progress_fortune: true
+  sequence_diagrams: true
+  suggested_labels: true
+  suggested_reviewers: true
+  auto_apply_labels: false
+  auto_review:
+    enabled: true
+    drafts: true
+    auto_incremental_review: true
+    auto_pause_after_reviewed_commits: 0
+    base_branches:
+      - ".*"
+  finishing_touches:
+    docstrings:
+      enabled: true
+    unit_tests:
+      enabled: true
+    autofix:
+      enabled: false
+    fix_ci:
+      enabled: false
+    resolve_merge_conflict:
+      enabled: false
+chat:
+  art: true
+  allow_non_org_members: false
