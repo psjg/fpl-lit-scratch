@@ -84,7 +84,7 @@ Turnstile ASCII inventory (notation only): [turnstiles.md](turnstiles.md).
 | Pure buffer | `repl-buffer-part1` | Edit holds FPL only; the site wraps `fpl.run.default.src` |
 | Live side results | `repl-buffer-part2` | Debounced run + side gutter (Swift-cousin); superseded on playground |
 | Instant inline | `repl-buffer-part3` | Monaco + grayed end-of-line decorations (Quokka-cousin) |
-| Roundtrip transcript | `repl-buffer-part4` | Ghost `|-`; Tab commits `; |- …`; TTY REPL prefixes `|- ` |
+| Roundtrip transcript | `repl-buffer-part4` | Ghost `|-`; Tab commits `; |- …`; TTY utop transcript (`|- value : ...`, `;;!` bars) |
 
 Also true right now:
 
@@ -102,7 +102,7 @@ Order of ambition after the pure buffer. Not a delivery promise — implementati
 | 1 | Pure FPL buffer | — | Done (`repl-buffer-part1`) |
 | 2 | Live side results | Swift-cousin gutter | Done (`repl-buffer-part2`); playground moved on |
 | 3 | Instant inline / probes | Quokka | Done on playground (`repl-buffer-part3`): Monaco after-text; no `//?` probes yet |
-| 4 | Roundtrip transcript | Quokka commit + utop | Done (`repl-buffer-part4`): Tab → `; |- …`; TTY `|- ` prefix; no grammar yet |
+| 4 | Roundtrip transcript | Quokka commit + utop | Done (`repl-buffer-part4`): Tab → `; |- …`; TTY promptless `|- value : ...` + ASCII `;;!` phrase bars |
 | 5 | No hidden state | Light Table | Inspector over stack / walker IR |
 | 6 | Document = program | Eve | Walkthrough/essay as the primary live buffer |
 | 7 | Scrub / time | Bret Victor | Parameter scrub; needs cheap deterministic re-run |
