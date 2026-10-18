@@ -33,7 +33,7 @@ ul.task-list li input[type="checkbox"] {
 <script src="../../../site_libs/quarto-search/fuse.min.js"></script>
 <script src="../../../site_libs/quarto-search/quarto-search.js"></script>
 <meta name="quarto:offset" content="../../../">
-<link href="../../../02-docs/02.05-project/README.html" rel="next">
+<link href="../../../02-docs/02.04-explanation/inspiration/turnstiles.html" rel="next">
 <link href="../../../02-docs/02.04-explanation/inspiration/README.html" rel="prev">
 <script src="../../../site_libs/quarto-html/quarto.js" type="module"></script>
 <script src="../../../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
@@ -457,6 +457,12 @@ ul.task-list li input[type="checkbox"] {
  <span class="menu-text">Playgrounds and live programming</span></a>
   </div>
 </li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../../02-docs/02.04-explanation/inspiration/turnstiles.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Turnstile notation</span></a>
+  </div>
+</li>
       </ul>
   </li>
       </ul>
@@ -661,7 +667,7 @@ ul.task-list li input[type="checkbox"] {
 <p>Live JS/TS scratchpad in the editor: <strong>grayed-out values on the same line</strong> as decorations, plus probe comments (<code>//?</code>, etc.). Values are not a separate source column and are not editable as code.</p>
 <ul>
 <li>Steal: type → see; probes when you want a specific value.</li>
-<li>Not yet: ghost text in the buffer. Our part-2 gutter is the wrong cousin if you expected Quokka.</li>
+<li>Now: Monaco after-text ghosts with <code>|-</code>; Tab commits into <code>; |- …</code> notes (<code>repl-buffer-part4</code>). Still no <code>//?</code>-style probes.</li>
 </ul>
 </section>
 <section id="swift-playgrounds-xcode-playground" class="level3">
@@ -692,7 +698,8 @@ ul.task-list li input[type="checkbox"] {
 <li><strong>Monaco</strong>: the editor core of VS Code (the CodePen / LeetCode path) — highlighting, decorations, no workbench.</li>
 </ul>
 <p>When the <code>&lt;textarea&gt;</code> is too thin, prefer <strong>Monaco</strong>, not a full VS Code embed. Quokka-style ghost text is much easier with Monaco decorations than with a textarea plus a side gutter.</p>
-<p>Current state: playground uses <strong>Monaco</strong> with Quokka-style after-text decorations (<code>repl-buffer-part3</code>). Katas still use a <code>&lt;textarea&gt;</code>. The Swift-cousin side gutter from part 2 is retired on <code>/try/</code>.</p>
+<p>Current state: playground uses <strong>Monaco</strong> with Quokka-style <code>|-</code> ghosts; Tab / Accept commits <code>; |- …</code> notes (<code>repl-buffer-part4</code>). Katas still use a <code>&lt;textarea&gt;</code>. The Swift-cousin side gutter from part 2 is retired on <code>/try/</code>.</p>
+<p>Turnstile ASCII inventory (notation only): <a href="turnstiles.html">turnstiles.md</a>.</p>
 </section>
 <section id="where-fpl-try-sits-today" class="level2">
 <h2 class="anchored" data-anchor-id="where-fpl-try-sits-today">Where FPL <code>/try</code> sits today</h2>
@@ -725,12 +732,17 @@ ul.task-list li input[type="checkbox"] {
 <td><code>repl-buffer-part3</code></td>
 <td>Monaco + grayed end-of-line decorations (Quokka-cousin)</td>
 </tr>
+<tr class="even">
+<td>Roundtrip transcript</td>
+<td><code>repl-buffer-part4</code></td>
+<td>Ghost <code>|-</code>; Tab commits <code>; |- …</code>; TTY REPL prefixes <code>|-</code></td>
+</tr>
 </tbody>
 </table>
 <p>Also true right now:</p>
 <ul>
-<li><strong>Term</strong> is still the full dump and the error surface.</li>
-<li>The gutter uses a <strong>1:1 pairing</strong> of non-empty stdout lines with non-blank, non-<code>;;;</code> source lines. If counts differ, the gutter clears and Term carries the truth.</li>
+<li><strong>Term</strong> is still the full dump and the error surface (raw walker stdout, no <code>|-</code> prefix).</li>
+<li>Pairing is <strong>1:1</strong> of non-empty stdout lines with non-blank, non-<code>;;;</code> source lines. Matching committed <code>; |-</code> notes suppress the ghost; mismatch shows a ghost to refresh. If counts differ, decorations clear and Term carries the truth.</li>
 <li>There is <strong>no walker inspector API</strong> feeding the UI.</li>
 <li>Homepage <code>{.python .live}</code> fences stay <strong>Python drivers</strong> for the literate walker story; only playground, katas, and <code>data-kata</code> fences are pure FPL.</li>
 </ul>
@@ -774,18 +786,24 @@ ul.task-list li input[type="checkbox"] {
 </tr>
 <tr class="even">
 <td>4</td>
+<td>Roundtrip transcript</td>
+<td>Quokka commit + utop</td>
+<td>Done (<code>repl-buffer-part4</code>): Tab → <code>; |- …</code>; TTY <code>|-</code> prefix; no grammar yet</td>
+</tr>
+<tr class="odd">
+<td>5</td>
 <td>No hidden state</td>
 <td>Light Table</td>
 <td>Inspector over stack / walker IR</td>
 </tr>
-<tr class="odd">
-<td>5</td>
+<tr class="even">
+<td>6</td>
 <td>Document = program</td>
 <td>Eve</td>
 <td>Walkthrough/essay as the primary live buffer</td>
 </tr>
-<tr class="even">
-<td>6</td>
+<tr class="odd">
+<td>7</td>
 <td>Scrub / time</td>
 <td>Bret Victor</td>
 <td>Parameter scrub; needs cheap deterministic re-run</td>
@@ -1205,8 +1223,8 @@ ul.task-list li input[type="checkbox"] {
       </a>          
   </div>
   <div class="nav-page nav-page-next">
-      <a href="../../../02-docs/02.05-project/README.html" class="pagination-link" aria-label="2.5 Project">
-        <span class="nav-page-text">2.5 Project</span> <i class="bi bi-arrow-right-short"></i>
+      <a href="../../../02-docs/02.04-explanation/inspiration/turnstiles.html" class="pagination-link" aria-label="Turnstile notation">
+        <span class="nav-page-text">Turnstile notation</span> <i class="bi bi-arrow-right-short"></i>
       </a>
   </div>
 </nav>
