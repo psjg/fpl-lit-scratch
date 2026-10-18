@@ -6,6 +6,10 @@
     <title>FPL Playground</title>
     <link rel="stylesheet" href="../assets/fpl-live.css" />
     <link rel="stylesheet" href="../assets/fpl-playground.css" />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs/editor/editor.main.css"
+    />
   </head>
   <body data-fpl-page="playground" class="fpl-try fpl-try-app">
     <header class="fpl-try-header">
@@ -28,21 +32,14 @@
             <button type="button" id="fpl-run" class="fpl-btn primary">Run</button>
           </div>
         </div>
-        <div class="fpl-edit-split">
-          <div
-            id="fpl-gutter"
-            class="fpl-result-gutter"
-            aria-label="Per-line results"
-          ></div>
-          <textarea
-            id="fpl-editor"
-            class="fpl-editor"
-            spellcheck="false"
-            aria-label="FPL playground editor"
-          ></textarea>
-        </div>
+        <div
+          id="fpl-editor"
+          class="fpl-monaco"
+          aria-label="FPL playground editor"
+        ></div>
         <p class="fpl-pane-hint">
-          Live as you type · ⌘/Ctrl+Enter to run · share via <code>#c=</code>
+          Live Quokka-style results · ⌘/Ctrl+Enter to run · share via
+          <code>#c=</code>
         </p>
       </section>
       <div class="fpl-split" role="separator" aria-orientation="vertical"></div>

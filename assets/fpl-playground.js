@@ -1,5 +1,6 @@
 /**
  * /try playground + kata UI. Buffer is pure FPL; runtime wraps fpl.run.default.src.
+ * Playground: Monaco + Quokka-style after-text decorations. Katas: textarea.
  */
 import { runFpl, checkExpected, learnBase } from "./fpl-runtime.js";
 
@@ -10,6 +11,10 @@ const DEFAULT_SRC = `\
 2 | 3 +\t; 5
 1 | 1 2 3 [-] swap-args\t; 1 2 3 - 1
 `;
+
+const LIVE_MS = 300;
+const MONACO_VER = "0.52.2";
+const MONACO_BASE = `https://cdn.jsdelivr.net/npm/monaco-editor@${MONACO_VER}/min/vs`;
 
 function $(id) {
   const el = document.getElementById(id);
@@ -31,8 +36,6 @@ function writeHash(src) {
     history.replaceState(null, "", next);
   }
 }
-
-const LIVE_MS = 300;
 
 function setOut(el, text, ok) {
   el.textContent = text || "(no output)";
@@ -67,114 +70,153 @@ function pairLineResults(src, stdout) {
   return cells;
 }
 
-function renderGutter(gutter, cells) {
-  gutter.replaceChildren();
-  if (!cells) return;
-  for (const cell of cells) {
-    const row = document.createElement("div");
-    row.className = "fpl-gutter-line";
-    if (cell.kind === "result") {
-      row.textContent = cell.text;
-    } else {
-      row.classList.add(cell.kind === "skip" ? "is-skip" : "is-empty");
-      row.textContent = "\u00a0";
-    }
-    gutter.appendChild(row);
+/** @returns {Promise<typeof import("monaco-editor")>} */
+function loadMonaco() {
+  if (window.monaco) return Promise.resolve(window.monaco);
+  return new Promise((resolve, reject) => {
+    window.require = { paths: { vs: MONACO_BASE } };
+    const script = document.createElement("script");
+    script.src = `${MONACO_BASE}/loader.js`;
+    script.async = true;
+    script.onload = () => {
+      window.require(["vs/editor/editor.main"], () => {
+        resolve(window.monaco);
+      });
+    };
+    script.onerror = () => reject(new Error("failed to load Monaco loader"));
+    document.head.appendChild(script);
+  });
+}
+
+/**
+ * @param {import("monaco-editor").editor.IStandaloneCodeEditor} editor
+ * @param {import("monaco-editor")} monaco
+ * @param {{ text: string, kind: string }[] | null} cells
+ * @param {string[]} prevIds
+ */
+function applyQuokkaDecorations(editor, monaco, cells, prevIds) {
+  if (!cells) {
+    return editor.deltaDecorations(prevIds, []);
   }
-}
+  const model = editor.getModel();
+  if (!model) return editor.deltaDecorations(prevIds, []);
 
-function clearGutter(gutter) {
-  gutter.replaceChildren();
-}
-
-function syncScroll(editor, gutter) {
-  gutter.scrollTop = editor.scrollTop;
-}
-
-async function runEditor(editor, out, gutter, btn, { share = false } = {}) {
-  if (btn) btn.disabled = true;
-  out.textContent = "Loading…";
-  out.dataset.ok = "1";
-  out.classList.remove("fpl-live-check-pass", "fpl-live-check-fail");
-  try {
-    const { ok, text } = await runFpl(editor.value);
-    setOut(out, text, ok);
-    if (ok) {
-      const cells = pairLineResults(editor.value, text);
-      if (cells) renderGutter(gutter, cells);
-      else clearGutter(gutter);
-    } else {
-      clearGutter(gutter);
-    }
-    if (share) writeHash(editor.value);
-  } catch (err) {
-    setOut(out, String(err), false);
-    clearGutter(gutter);
-  } finally {
-    if (btn) btn.disabled = false;
+  /** @type {import("monaco-editor").editor.IModelDeltaDecoration[]} */
+  const next = [];
+  for (let i = 0; i < cells.length; i++) {
+    const cell = cells[i];
+    if (cell.kind !== "result" || !cell.text) continue;
+    const line = i + 1;
+    if (line > model.getLineCount()) break;
+    const col = model.getLineMaxColumn(line);
+    next.push({
+      range: new monaco.Range(line, col, line, col),
+      options: {
+        after: {
+          content: `  ${cell.text}`,
+          inlineClassName: "fpl-quokka-after",
+          cursorStops: monaco.editor.InjectedTextCursorStops.None,
+        },
+        showIfCollapsed: true,
+      },
+    });
   }
+  return editor.deltaDecorations(prevIds, next);
 }
 
-function bootPlayground() {
-  const editor = /** @type {HTMLTextAreaElement} */ ($("fpl-editor"));
+async function bootPlayground() {
+  const host = $("fpl-editor");
   const out = $("fpl-out");
-  const gutter = $("fpl-gutter");
   const runBtn = /** @type {HTMLButtonElement} */ ($("fpl-run"));
   const clearBtn = /** @type {HTMLButtonElement} */ ($("fpl-clear"));
   const resetBtn = /** @type {HTMLButtonElement} */ ($("fpl-reset"));
 
+  const monaco = await loadMonaco();
   const fromHash = readHash();
-  editor.value = fromHash != null && fromHash !== "" ? fromHash : DEFAULT_SRC;
+  const initial =
+    fromHash != null && fromHash !== "" ? fromHash : DEFAULT_SRC;
 
+  const editor = monaco.editor.create(host, {
+    value: initial,
+    language: "plaintext",
+    theme: "vs-dark",
+    fontSize: 14,
+    fontFamily: "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
+    lineNumbers: "on",
+    minimap: { enabled: false },
+    scrollBeyondLastLine: false,
+    wordWrap: "off",
+    automaticLayout: true,
+    renderLineHighlight: "line",
+    padding: { top: 12 },
+    tabSize: 4,
+    insertSpaces: false,
+  });
+
+  let decoIds = /** @type {string[]} */ ([]);
   let timer = 0;
   let gen = 0;
+
+  const getSrc = () => editor.getValue();
+
+  const runOnce = async (btn, { share = false } = {}) => {
+    if (btn) btn.disabled = true;
+    out.textContent = "Loading…";
+    out.dataset.ok = "1";
+    out.classList.remove("fpl-live-check-pass", "fpl-live-check-fail");
+    const src = getSrc();
+    try {
+      const { ok, text } = await runFpl(src);
+      setOut(out, text, ok);
+      if (ok) {
+        const cells = pairLineResults(src, text);
+        decoIds = applyQuokkaDecorations(editor, monaco, cells, decoIds);
+      } else {
+        decoIds = applyQuokkaDecorations(editor, monaco, null, decoIds);
+      }
+      if (share) writeHash(src);
+    } catch (err) {
+      setOut(out, String(err), false);
+      decoIds = applyQuokkaDecorations(editor, monaco, null, decoIds);
+    } finally {
+      if (btn) btn.disabled = false;
+    }
+  };
 
   const scheduleLive = () => {
     window.clearTimeout(timer);
     timer = window.setTimeout(() => {
       const my = ++gen;
-      runEditor(editor, out, gutter, null, { share: false }).then(() => {
+      runOnce(null, { share: false }).then(() => {
         if (my !== gen) return;
       });
     }, LIVE_MS);
   };
 
-  runBtn.addEventListener("click", () =>
-    runEditor(editor, out, gutter, runBtn, { share: true }),
-  );
+  runBtn.addEventListener("click", () => runOnce(runBtn, { share: true }));
   clearBtn.addEventListener("click", () => {
     window.clearTimeout(timer);
     gen += 1;
-    editor.value = "";
+    editor.setValue("");
     out.textContent = "";
     out.removeAttribute("data-ok");
-    out.classList.remove("fpl-live-check-pass", "fpl-live-check-fail");
-    clearGutter(gutter);
+    decoIds = applyQuokkaDecorations(editor, monaco, null, decoIds);
     writeHash("");
   });
   resetBtn.addEventListener("click", () => {
     window.clearTimeout(timer);
-    editor.value = DEFAULT_SRC;
+    editor.setValue(DEFAULT_SRC);
     out.textContent = "";
     out.removeAttribute("data-ok");
-    out.classList.remove("fpl-live-check-pass", "fpl-live-check-fail");
-    clearGutter(gutter);
+    decoIds = applyQuokkaDecorations(editor, monaco, null, decoIds);
     writeHash(DEFAULT_SRC);
     scheduleLive();
   });
 
-  editor.addEventListener("input", scheduleLive);
-  editor.addEventListener("scroll", () => syncScroll(editor, gutter));
-  gutter.addEventListener("scroll", () => {
-    editor.scrollTop = gutter.scrollTop;
-  });
-
-  editor.addEventListener("keydown", (ev) => {
-    if ((ev.metaKey || ev.ctrlKey) && ev.key === "Enter") {
-      ev.preventDefault();
-      window.clearTimeout(timer);
-      runEditor(editor, out, gutter, runBtn, { share: true });
-    }
+  editor.onDidChangeModelContent(() => scheduleLive());
+  editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => {
+    window.clearTimeout(timer);
+    runOnce(runBtn, { share: true });
   });
 
   scheduleLive();
@@ -331,7 +373,11 @@ async function bootKata() {
 
 const page = document.body?.dataset?.fplPage;
 if (page === "playground") {
-  bootPlayground();
+  bootPlayground().catch((err) => {
+    const out = document.getElementById("fpl-out");
+    if (out) setOut(out, String(err), false);
+    else console.error(err);
+  });
 } else if (page === "kata") {
   bootKata().catch((err) => {
     const out = document.getElementById("fpl-out");

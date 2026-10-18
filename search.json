@@ -734,7 +734,7 @@
     "href": "02-docs/02.04-explanation/README.html",
     "title": "2.4 Explanation",
     "section": "",
-    "text": "Understanding-oriented docs: vision, rationale, and architecture decision records.\nThe OKF index is index.md.",
+    "text": "Understanding-oriented docs: vision, rationale, and architecture decision records.\nThe OKF index is index.md. Inspiration map (playgrounds, live programming): inspiration/.",
     "crumbs": [
       "2 Docs",
       "2.4 Explanation"
@@ -1136,6 +1136,109 @@
       "3 FPL",
       "3.1 Features",
       "server — spec"
+    ]
+  },
+  {
+    "objectID": "02-docs/02.04-explanation/inspiration/playgrounds.html",
+    "href": "02-docs/02.04-explanation/inspiration/playgrounds.html",
+    "title": "Playgrounds and live programming",
+    "section": "",
+    "text": "A map of systems that shape how we think about /try, katas, and literate walkthroughs. Axes first, brands second. This note does not invent FPL language semantics; it only situates the shell.",
+    "crumbs": [
+      "2 Docs",
+      "2.4 Explanation",
+      "Inspiration",
+      "Playgrounds and live programming"
+    ]
+  },
+  {
+    "objectID": "02-docs/02.04-explanation/inspiration/playgrounds.html#taxonomy",
+    "href": "02-docs/02.04-explanation/inspiration/playgrounds.html#taxonomy",
+    "title": "Playgrounds and live programming",
+    "section": "Taxonomy",
+    "text": "Taxonomy\nThree questions for every entry:\n\nWhere does the result live? In-buffer ghost text (Quokka), a side column (Swift Playground), a separate Term, or the world/image itself (Smalltalk, many Bret Victor demos).\nWhat runs? Whole buffer, per expression, or a continuous live world.\nWhat is the document? Scratch pad, graded kata, literate essay, or a living image.",
+    "crumbs": [
+      "2 Docs",
+      "2.4 Explanation",
+      "Inspiration",
+      "Playgrounds and live programming"
+    ]
+  },
+  {
+    "objectID": "02-docs/02.04-explanation/inspiration/playgrounds.html#core-lineage",
+    "href": "02-docs/02.04-explanation/inspiration/playgrounds.html#core-lineage",
+    "title": "Playgrounds and live programming",
+    "section": "Core lineage",
+    "text": "Core lineage\n\nBret Victor\nTalks and essays (Inventing on Principle, Learnable Programming): make the runtime visible; scrub inputs; kill the “edit → compile → pray” loop as a design ethic, not as a single app.\n\nSteal: results tied to the thing you are looking at; time/input as something you can drag.\nNot yet: scrubbing, timeline, or a real data→picture probe in FPL.\n\n\n\nSmalltalk\nThe environment is the program: image, inspectors, live objects you can poke.\n\nSteal: inspect state instead of guessing; the tool and the language grow together.\nNot yet: an image, object inspectors, or a world that stays hot between edits.\n\n\n\nLight Table\nChris Granger’s IDE research vehicle after the Kickstarter: instant eval, “no hidden state,” related code and values in context.\n\nSteal: evaluate in place; surface what the program is doing now.\nNot yet: a real inspector over walker IR/stack; Light Table itself is not our editor.\n\n\n\nEve\nFollow-on from the Light Table team (witheve.com): literate document with code embedded in prose; relational / reactive under the hood. Project inactive; the essays still matter.\n\nSteal: document = program (closest cousin to Quarto walkthrough + live FPL blocks).\nNot yet: Eve’s language or its grid/block IDE; we are not reimplementing Eve.\n\n\n\nQuokka.js\nLive JS/TS scratchpad in the editor: grayed-out values on the same line as decorations, plus probe comments (//?, etc.). Values are not a separate source column and are not editable as code.\n\nSteal: type → see; probes when you want a specific value.\nNot yet: ghost text in the buffer. Our part-2 gutter is the wrong cousin if you expected Quokka.\n\n\n\nSwift Playgrounds / Xcode playground\nResults in a column beside the code, often with richer value previews than a raw stdout string.\n\nSteal: side-by-side “this line → that value.”\nNot yet: Swift’s value widgets, timeline, or live views. Our gutter is a thin cousin (stdout lines paired 1:1 with source lines).",
+    "crumbs": [
+      "2 Docs",
+      "2.4 Explanation",
+      "Inspiration",
+      "Playgrounds and live programming"
+    ]
+  },
+  {
+    "objectID": "02-docs/02.04-explanation/inspiration/playgrounds.html#cousins-we-already-brushed-in-the-scratch-ui",
+    "href": "02-docs/02.04-explanation/inspiration/playgrounds.html#cousins-we-already-brushed-in-the-scratch-ui",
+    "title": "Playgrounds and live programming",
+    "section": "Cousins we already brushed in the scratch UI",
+    "text": "Cousins we already brushed in the scratch UI\n\nTour of Go — lesson left, editor + run right; walkthrough shape.\nTryAPL / J wasm playground — full-bleed Edit | Term (or Term | Edit).\nCodecademy — Learn | Edit | Term, edge to edge.\nCodePen — editors + preview, full width.\nLeetCode / Exercism — graded: prompt vs editor; Exercism puts commentary on the right.\nObservable — reactive notebooks; code and view woven.\nJupyterLite / Marimo — labs we already ship under werkbank/ and marimo/; not the learn/try shell.",
+    "crumbs": [
+      "2 Docs",
+      "2.4 Explanation",
+      "Inspiration",
+      "Playgrounds and live programming"
+    ]
+  },
+  {
+    "objectID": "02-docs/02.04-explanation/inspiration/playgrounds.html#editor-substrate",
+    "href": "02-docs/02.04-explanation/inspiration/playgrounds.html#editor-substrate",
+    "title": "Playgrounds and live programming",
+    "section": "Editor substrate",
+    "text": "Editor substrate\n\nVS Code in the browser (vscode.dev, code-server): full workbench. Possible to embed; heavy for /try.\nMonaco: the editor core of VS Code (the CodePen / LeetCode path) — highlighting, decorations, no workbench.\n\nWhen the &lt;textarea&gt; is too thin, prefer Monaco, not a full VS Code embed. Quokka-style ghost text is much easier with Monaco decorations than with a textarea plus a side gutter.\nCurrent state: playground uses Monaco with Quokka-style after-text decorations (repl-buffer-part3). Katas still use a &lt;textarea&gt;. The Swift-cousin side gutter from part 2 is retired on /try/.",
+    "crumbs": [
+      "2 Docs",
+      "2.4 Explanation",
+      "Inspiration",
+      "Playgrounds and live programming"
+    ]
+  },
+  {
+    "objectID": "02-docs/02.04-explanation/inspiration/playgrounds.html#where-fpl-try-sits-today",
+    "href": "02-docs/02.04-explanation/inspiration/playgrounds.html#where-fpl-try-sits-today",
+    "title": "Playgrounds and live programming",
+    "section": "Where FPL /try sits today",
+    "text": "Where FPL /try sits today\n\n\n\n\n\n\n\n\nMilestone\nTag\nWhat it is\n\n\n\n\nPure buffer\nrepl-buffer-part1\nEdit holds FPL only; the site wraps fpl.run.default.src\n\n\nLive side results\nrepl-buffer-part2\nDebounced run + side gutter (Swift-cousin); superseded on playground\n\n\nInstant inline\nrepl-buffer-part3\nMonaco + grayed end-of-line decorations (Quokka-cousin)\n\n\n\nAlso true right now:\n\nTerm is still the full dump and the error surface.\nThe gutter uses a 1:1 pairing of non-empty stdout lines with non-blank, non-;;; source lines. If counts differ, the gutter clears and Term carries the truth.\nThere is no walker inspector API feeding the UI.\nHomepage {.python .live} fences stay Python drivers for the literate walker story; only playground, katas, and data-kata fences are pure FPL.",
+    "crumbs": [
+      "2 Docs",
+      "2.4 Explanation",
+      "Inspiration",
+      "Playgrounds and live programming"
+    ]
+  },
+  {
+    "objectID": "02-docs/02.04-explanation/inspiration/playgrounds.html#long-arc",
+    "href": "02-docs/02.04-explanation/inspiration/playgrounds.html#long-arc",
+    "title": "Playgrounds and live programming",
+    "section": "Long arc",
+    "text": "Long arc\nOrder of ambition after the pure buffer. Not a delivery promise — implementation stays in separate plans; this note only names cousins and sequence.\n\n\n\n\n\n\n\n\n\nPart\nName\nCousin\nIntent\n\n\n\n\n1\nPure FPL buffer\n—\nDone (repl-buffer-part1)\n\n\n2\nLive side results\nSwift-cousin gutter\nDone (repl-buffer-part2); playground moved on\n\n\n3\nInstant inline / probes\nQuokka\nDone on playground (repl-buffer-part3): Monaco after-text; no //? probes yet\n\n\n4\nNo hidden state\nLight Table\nInspector over stack / walker IR\n\n\n5\nDocument = program\nEve\nWalkthrough/essay as the primary live buffer\n\n\n6\nScrub / time\nBret Victor\nParameter scrub; needs cheap deterministic re-run\n\n\n\nSmalltalk sits beside this table as a north-star (“environment is the program”), not as a numbered part.",
+    "crumbs": [
+      "2 Docs",
+      "2.4 Explanation",
+      "Inspiration",
+      "Playgrounds and live programming"
+    ]
+  },
+  {
+    "objectID": "02-docs/02.04-explanation/inspiration/README.html",
+    "href": "02-docs/02.04-explanation/inspiration/README.html",
+    "title": "Inspiration",
+    "section": "",
+    "text": "Lineage notes for live programming and playground UIs — what we are looking at, what we stole, what we have not built.\nThe map: playgrounds.md (includes the Monaco vs VS Code-embed choice and the long arc after part1/part2).\nLive scratch shell: Playground. Milestone tags on psjg/fpl-lit-scratch: repl-buffer-part1 (pure FPL buffer), repl-buffer-part2 (side gutter), repl-buffer-part3 (Monaco Quokka-style inline).",
+    "crumbs": [
+      "2 Docs",
+      "2.4 Explanation",
+      "Inspiration"
     ]
   }
 ]

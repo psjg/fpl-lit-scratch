@@ -196,45 +196,21 @@ body {
   text-decoration: underline;
 }
 
-.fpl-edit-split {
+.fpl-monaco {
   flex: 1 1 auto;
   min-height: 0;
-  display: grid;
-  grid-template-columns: minmax(7rem, 32%) minmax(0, 1fr);
+  width: 100%;
   background: #1e1e1e;
 }
 
-.fpl-result-gutter {
-  min-width: 0;
-  min-height: 0;
-  overflow: auto;
-  margin: 0;
-  padding: 0.85rem 0.65rem;
-  box-sizing: border-box;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 0.9rem;
-  line-height: 1.45;
-  background: #181818;
-  border-right: 1px solid #333;
-  color: #75b798;
+.fpl-quokka-after {
+  color: #6a9955 !important;
+  font-style: italic;
+  opacity: 0.85;
+  margin-left: 1.25em;
 }
 
-.fpl-gutter-line {
-  min-height: 1.45em;
-  white-space: pre;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  color: #75b798;
-}
-
-.fpl-gutter-line.is-empty {
-  color: transparent;
-}
-
-.fpl-gutter-line.is-skip {
-  color: #555;
-}
-
+/* Kata page still uses a textarea */
 .fpl-editor {
   flex: 1 1 auto;
   display: block;
