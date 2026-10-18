@@ -1,82 +1,153 @@
-/* Standalone /try playground + kata pages */
+/* Full-viewport split workspace: Tour of Go / TryAPL / J playground feel */
+
+html {
+  height: 100%;
+}
 
 .fpl-try {
   margin: 0;
-  font-family: system-ui, -apple-system, Segoe UI, sans-serif;
-  color: #212529;
-  background: #fff;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  color: #1a1a1a;
+  background: #f4f4f4;
   line-height: 1.45;
 }
 
+.fpl-try-app {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
 .fpl-try-header {
+  flex: 0 0 auto;
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
-  gap: 1rem 1.5rem;
-  padding: 0.85rem 1.25rem;
-  border-bottom: 1px solid #dee2e6;
+  align-items: center;
+  gap: 0.65rem 1.25rem;
+  padding: 0.55rem 1rem;
+  background: #0b3d5c;
+  color: #f8f9fa;
+  border-bottom: none;
 }
 
 .fpl-try-brand {
   font-weight: 700;
-  font-size: 1.15rem;
-  color: inherit;
+  font-size: 1.05rem;
+  color: #fff;
   text-decoration: none;
+  letter-spacing: 0.02em;
+}
+
+.fpl-try-title {
+  font-size: 0.95rem;
+  opacity: 0.85;
 }
 
 .fpl-try-nav {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.75rem 1rem;
+  gap: 0.65rem 1rem;
+  margin-left: auto;
 }
 
 .fpl-try-nav a {
-  color: #0d6efd;
+  color: #cfe2ff;
   text-decoration: none;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
 }
 
 .fpl-try-nav a:hover {
+  color: #fff;
   text-decoration: underline;
 }
 
 .fpl-try-nav a.active {
   font-weight: 600;
-  color: #212529;
+  color: #fff;
 }
 
-.fpl-try-main {
-  max-width: 52rem;
-  margin: 0 auto;
-  padding: 1.25rem;
+.fpl-workspace {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  background: #e9ecef;
 }
 
-.fpl-try-lead {
-  margin: 0 0 1rem;
+.fpl-workspace-play {
+  grid-template-columns: minmax(0, 1fr) 5px minmax(0, 1fr);
+}
+
+.fpl-workspace-kata {
+  grid-template-columns: minmax(16rem, 38%) 5px minmax(0, 1fr);
+}
+
+.fpl-split {
+  background: #ced4da;
+  cursor: default;
+}
+
+.fpl-pane {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+}
+
+.fpl-pane-bar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.65rem;
+  background: #f1f3f5;
+  border-bottom: 1px solid #dee2e6;
+  min-height: 2.4rem;
+}
+
+.fpl-pane-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
   color: #495057;
-  font-size: 0.95rem;
 }
 
-.fpl-try-toolbar {
+.fpl-pane-actions {
+  margin-left: auto;
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-bottom: 0.65rem;
+  gap: 0.35rem;
+}
+
+.fpl-pane-hint {
+  flex: 0 0 auto;
+  margin: 0;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.75rem;
+  color: #6c757d;
+  border-top: 1px solid #eee;
+  background: #fafafa;
+}
+
+.fpl-pane-hint code {
+  font-size: 0.85em;
 }
 
 .fpl-btn {
   appearance: none;
-  border: 1px solid #ced4da;
+  border: 1px solid #adb5bd;
   background: #fff;
   color: #212529;
-  border-radius: 0.25rem;
-  padding: 0.35rem 0.75rem;
-  font-size: 0.9rem;
+  border-radius: 0.2rem;
+  padding: 0.28rem 0.7rem;
+  font-size: 0.85rem;
   cursor: pointer;
 }
 
 .fpl-btn:hover {
-  background: #f8f9fa;
+  background: #e9ecef;
 }
 
 .fpl-btn.primary {
@@ -95,75 +166,130 @@
 }
 
 .fpl-editor {
+  flex: 1 1 auto;
   display: block;
   width: 100%;
-  min-height: 16rem;
+  min-height: 0;
   box-sizing: border-box;
   margin: 0;
-  padding: 0.75rem;
+  padding: 0.85rem 1rem;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 0.875rem;
-  line-height: 1.4;
-  border: 1px solid #ced4da;
-  border-radius: 0.25rem;
-  resize: vertical;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  border: none;
+  border-radius: 0;
+  resize: none;
+  background: #fffef6;
+  color: #1a1a1a;
 }
 
 .fpl-editor:focus {
   outline: none;
-  border-color: #86b7fe;
-  box-shadow: 0 0 0 0.2rem rgb(13 110 253 / 25%);
+  box-shadow: inset 0 0 0 2px #86b7fe;
 }
 
-.fpl-kata-layout {
-  max-width: 72rem;
-  display: grid;
-  grid-template-columns: 14rem 1fr;
-  gap: 1.5rem;
-  align-items: start;
+.fpl-term {
+  flex: 1 1 auto;
+  min-height: 0;
+  margin: 0;
+  padding: 0.85rem 1rem;
+  overflow: auto;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.875rem;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: #fff;
+  border: none;
 }
 
-@media (max-width: 720px) {
-  .fpl-kata-layout {
-    grid-template-columns: 1fr;
-  }
+.fpl-term[data-ok="0"] {
+  background: #fff5f5;
 }
 
-.fpl-kata-aside h1 {
-  margin: 0 0 0.75rem;
-  font-size: 1.15rem;
+.fpl-term.fpl-live-check-pass {
+  background: #d1e7dd;
+}
+
+.fpl-term.fpl-live-check-fail {
+  background: #f8d7da;
+}
+
+.fpl-term:empty::before {
+  content: "Output appears here.";
+  color: #adb5bd;
+}
+
+.fpl-pane-lesson .fpl-lesson-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding: 1rem 1.15rem 1.5rem;
 }
 
 .fpl-kata-list {
   display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.75rem;
+  margin: 0 0 1rem;
+  padding: 0 0 0.85rem;
+  border-bottom: 1px solid #dee2e6;
 }
 
 .fpl-kata-list a {
-  color: #0d6efd;
+  color: #0b3d5c;
   text-decoration: none;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
+  padding: 0.15rem 0.45rem;
+  border-radius: 0.2rem;
+}
+
+.fpl-kata-list a:hover {
+  background: #e7f1ff;
 }
 
 .fpl-kata-list a.active {
   font-weight: 600;
-  color: #212529;
+  background: #0b3d5c;
+  color: #fff;
 }
 
 .fpl-kata-prompt {
-  margin-bottom: 1rem;
+  font-size: 0.95rem;
 }
 
 .fpl-prompt-md {
   margin: 0;
-  padding: 0.75rem 1rem;
-  background: #f8f9fa;
-  border: 1px solid #dee2e6;
-  border-radius: 0.25rem;
+  padding: 0;
+  background: transparent;
+  border: none;
   white-space: pre-wrap;
   font-family: inherit;
-  font-size: 0.95rem;
+  font-size: inherit;
+  color: inherit;
+}
+
+.fpl-pane-work {
+  display: flex;
+  flex-direction: column;
+  background: #e9ecef;
+}
+
+.fpl-work-edit {
+  flex: 1 1 58%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border-bottom: 5px solid #ced4da;
+}
+
+.fpl-work-term {
+  flex: 1 1 42%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
 }
 
 .fpl-live-check {
@@ -201,4 +327,26 @@
 .fpl-live-out.fpl-live-check-fail {
   border-color: #f5c2c7;
   background: #f8d7da;
+}
+
+@media (max-width: 800px) {
+  .fpl-workspace-play,
+  .fpl-workspace-kata {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(0, 1fr) 5px minmax(0, 1fr);
+  }
+
+  .fpl-split {
+    display: none;
+  }
+
+  .fpl-try-app {
+    overflow: auto;
+    height: auto;
+    min-height: 100%;
+  }
+
+  .fpl-workspace {
+    min-height: 85vh;
+  }
 }

@@ -42,14 +42,15 @@ function setOut(el, text, ok) {
   el.classList.remove("fpl-live-check-pass", "fpl-live-check-fail");
 }
 
-async function runEditor(editor, out, btn) {
+async function runEditor(editor, out, btn, { share = false } = {}) {
   btn.disabled = true;
   out.textContent = "Loading…";
   out.dataset.ok = "1";
+  out.classList.remove("fpl-live-check-pass", "fpl-live-check-fail");
   try {
     const { ok, text } = await runSource(editor.value);
     setOut(out, text, ok);
-    writeHash(editor.value);
+    if (share) writeHash(editor.value);
   } catch (err) {
     setOut(out, String(err), false);
   } finally {
@@ -67,24 +68,28 @@ function bootPlayground() {
   const fromHash = readHash();
   editor.value = fromHash != null && fromHash !== "" ? fromHash : DEFAULT_SRC;
 
-  runBtn.addEventListener("click", () => runEditor(editor, out, runBtn));
+  runBtn.addEventListener("click", () =>
+    runEditor(editor, out, runBtn, { share: true }),
+  );
   clearBtn.addEventListener("click", () => {
     editor.value = "";
     out.textContent = "";
     out.removeAttribute("data-ok");
+    out.classList.remove("fpl-live-check-pass", "fpl-live-check-fail");
     writeHash("");
   });
   resetBtn.addEventListener("click", () => {
     editor.value = DEFAULT_SRC;
     out.textContent = "";
     out.removeAttribute("data-ok");
+    out.classList.remove("fpl-live-check-pass", "fpl-live-check-fail");
     writeHash(DEFAULT_SRC);
   });
 
   editor.addEventListener("keydown", (ev) => {
     if ((ev.metaKey || ev.ctrlKey) && ev.key === "Enter") {
       ev.preventDefault();
-      runEditor(editor, out, runBtn);
+      runEditor(editor, out, runBtn, { share: true });
     }
   });
 }
@@ -122,7 +127,7 @@ async function bootKata() {
 
   if (!slug) {
     promptEl.innerHTML =
-      "<p>Pick a kata from the list. Each has a prompt, starter code, Run, and Check against expected stdout.</p>";
+      "<p><strong>Pick a kata</strong></p><p>Lesson on the left, editor and term on the right — same shape as A Tour of Go. Run to try; Check grades against expected stdout.</p>";
     editor.value = "";
     editor.disabled = true;
     runBtn.disabled = true;
@@ -151,6 +156,12 @@ async function bootKata() {
     out.textContent = "";
     out.removeAttribute("data-ok");
     out.classList.remove("fpl-live-check-pass", "fpl-live-check-fail");
+  });
+  editor.addEventListener("keydown", (ev) => {
+    if ((ev.metaKey || ev.ctrlKey) && ev.key === "Enter") {
+      ev.preventDefault();
+      runEditor(editor, out, runBtn);
+    }
   });
   checkBtn.addEventListener("click", async () => {
     checkBtn.disabled = true;
