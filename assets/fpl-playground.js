@@ -100,7 +100,41 @@ async function fetchText(url) {
   return r.text();
 }
 
+function showSideTab(name) {
+  for (const btn of document.querySelectorAll(".fpl-side-tab")) {
+    const on = btn.dataset.tab === name;
+    btn.classList.toggle("active", on);
+    btn.setAttribute("aria-selected", on ? "true" : "false");
+  }
+  for (const panel of document.querySelectorAll(".fpl-side-panel")) {
+    const on = panel.id === "fpl-tab-" + name;
+    panel.classList.toggle("active", on);
+    panel.hidden = !on;
+  }
+}
+
+function wireSideTabs() {
+  for (const btn of document.querySelectorAll(".fpl-side-tab")) {
+    btn.addEventListener("click", () => showSideTab(btn.dataset.tab || "instructions"));
+  }
+}
+
+function setResults(pass, detail) {
+  const box = document.getElementById("fpl-results");
+  if (!box) return;
+  const card = document.createElement("div");
+  card.className = "fpl-results-card " + (pass ? "pass" : "fail");
+  const h = document.createElement("h2");
+  h.textContent = pass ? "All checks passed" : "Check failed";
+  const pre = document.createElement("pre");
+  pre.textContent = detail;
+  card.append(h, pre);
+  box.replaceChildren(card);
+  showSideTab("results");
+}
+
 async function bootKata() {
+  wireSideTabs();
   const params = new URLSearchParams(location.search);
   const slug = params.get("id");
   const listEl = $("fpl-kata-list");
@@ -127,7 +161,7 @@ async function bootKata() {
 
   if (!slug) {
     promptEl.innerHTML =
-      "<p><strong>Pick a kata</strong></p><p>Lesson on the left, editor and term on the right — same shape as A Tour of Go. Run to try; Check grades against expected stdout.</p>";
+      "<p><strong>Pick a kata</strong></p><p>Editor fills the left of the screen; instructions stay on the right (Exercism-style). Run to try; Check grades against expected stdout.</p>";
     editor.value = "";
     editor.disabled = true;
     runBtn.disabled = true;
@@ -143,7 +177,7 @@ async function bootKata() {
     fetchText(base + "expected"),
   ]);
 
-  promptEl.innerHTML = "<pre class=\"fpl-prompt-md\"></pre>";
+  promptEl.innerHTML = '<pre class="fpl-prompt-md"></pre>';
   promptEl.querySelector("pre").textContent = promptMd;
 
   let starterSrc = starter;
@@ -172,17 +206,21 @@ async function bootKata() {
       const { text } = await runSource(editor.value);
       const { pass, actual, expected: exp } = checkExpected(text, expected);
       if (pass) {
-        out.textContent = "PASS\n" + actual;
+        out.textContent = actual;
         out.dataset.ok = "1";
         out.classList.add("fpl-live-check-pass");
+        setResults(true, actual);
       } else {
-        out.textContent =
-          "FAIL\n--- actual ---\n" + actual + "--- expected ---\n" + exp;
+        const detail =
+          "--- actual ---\n" + actual + "--- expected ---\n" + exp;
+        out.textContent = detail;
         out.dataset.ok = "0";
         out.classList.add("fpl-live-check-fail");
+        setResults(false, detail);
       }
     } catch (err) {
       setOut(out, String(err), false);
+      setResults(false, String(err));
     } finally {
       checkBtn.disabled = false;
       runBtn.disabled = false;
