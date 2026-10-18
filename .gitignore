@@ -33,5 +33,14 @@ mutants/
 .book/
 .quarto/
 
+# Pyodide wheels and local packaging stubs for marimo-wasm / JupyterLite.
+.wasm/wheels/
+.wasm/fpl
+.wasm/lite/pypi/
+.wasm/lite/content/01-bootstrap/
+.wasm/lite/.cache/
+.wasm/lite/.jupyterlite.doit.db
+
+
 /.quarto/
 **/*.quarto_ipynb

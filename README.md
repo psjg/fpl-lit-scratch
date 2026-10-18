@@ -89,15 +89,15 @@ FPL
 │   └── <a href="01-bootstrap/01.06-nagini/">01.06-nagini/</a>
 │       └── <a href="01-bootstrap/01.06-nagini/01.06.01-advance.md">01.06.01-advance.md</a>
 ├── <a href="02-docs/">02-docs/</a>         # design, spec and roadmap
-│   ├── <a href="02-docs/02.01-design.md">02.01-design.md</a>
-│   ├── <a href="02-docs/02.02-spec.md">02.02-spec.md</a>
-│   ├── <a href="02-docs/02.03-roadmap.md">02.03-roadmap.md</a>
-│   └── <a href="02-docs/02.04-notes/">02.04-notes/</a>
-│       ├── <a href="02-docs/02.04-notes/02.04.01-issue-task-patch.md">02.04.01-issue-task-patch.md</a>
-│       ├── <a href="02-docs/02.04-notes/02.04.02-sober.md">02.04.02-sober.md</a>
-│       └── <a href="02-docs/02.04-notes/02.04.03-mediating-project.md">02.04.03-mediating-project.md</a>
+│   ├── <a href="02-docs/02.04-explanation/design.md">02.01-design.md</a>
+│   ├── <a href="02-docs/02.03-reference/spec.md">02.02-spec.md</a>
+│   ├── <a href="02-docs/02.05-project/roadmap.md">02.03-roadmap.md</a>
+│   └── <a href="02-docs/02.05-project/notes/">02.04-notes/</a>
+│       ├── <a href="02-docs/02.05-project/notes/issue-task-patch.md">02.04.01-issue-task-patch.md</a>
+│       ├── <a href="02-docs/02.05-project/notes/sober.md">02.04.02-sober.md</a>
+│       └── <a href="02-docs/02.05-project/notes/mediating-project.md">02.04.03-mediating-project.md</a>
 ├── <a href="03-fpl/">03-fpl/</a>          # FPL's own tree
-│   └── <a href="03-fpl/03.01-features/">03.01-features/</a> # the executable spec: what FPL must do (spec.md + examples)
+│   └── <a href="03-fpl/OLD/03.01-features/">03.01-features/</a> # the executable spec: what FPL must do (spec.md + examples)
 ├── <a href=".harness/quality/">.harness/quality/</a>      # the bar every change must clear
 ├── <a href=".harness/scripts/">.harness/scripts/</a>      # gates and helpers (land, boundary, commit-lint)
 ├── <a href=".harness/tools/">.harness/tools/</a>        # side tools; tokview shows how a tokenizer cuts FPL source
@@ -116,7 +116,7 @@ FPL
 ## Try it in Marimo
 
 ```python {.marimo name="try"}
-fpl.run.default.file("03-fpl/03.01-features/draft2/examples/01-frames.fpl")
+fpl.run.default.file("03-fpl/OLD/03.01-features/draft2/examples/01-frames.fpl")
 ```
 
 ```python {.marimo name="try-src"}

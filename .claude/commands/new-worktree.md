@@ -17,4 +17,4 @@ Given `$1` = name (required), `$2` = base branch (default `main`):
 3. Report the worktree path and branch. Stop — implementation starts with `/new-feature` or
    `/impl-feature` inside the new worktree.
 
-Do not scaffold `01-bootstrap/` or `03-fpl/03.01-features/` here unless the maintainer asks.
+Do not scaffold `01-bootstrap/` or `03-fpl/OLD/03.01-features/` here unless the maintainer asks.

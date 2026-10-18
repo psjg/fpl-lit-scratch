@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 #
 # .harness/scripts/spec-guard-self-test.sh — proof that both halves of the oracle rule still bite where the
-# maintainer's spec lives: the conformance suite 03-fpl/03.01-features/, and 02-docs/02.01-design.md and
-# 02-docs/02.02-spec.md. Run by `make gates`.
+# maintainer's spec lives: the conformance suite 03-fpl/OLD/03.01-features/, and 02-docs/02.04-explanation/design.md and
+# 02-docs/02.03-reference/spec.md. Run by `make gates`.
 #
 #   .claude/hooks/guard-specs.sh   PreToolUse(Edit|Write), fed the JSON the harness sends:
 #                                  an edit of a spec.md or of anything under examples/, as an
@@ -68,17 +68,17 @@ hook() {
 	verdict "guard-specs $what" "$rc" "$want" "$text"
 }
 
-for p in /w/03-fpl/03.01-features/draft1/spec.md /w/03-fpl/03.01-features/draft1/examples/a.fpl \
-	/w/03-fpl/03.01-features/draft1/examples/a.expected /w/02-docs/02.01-design.md /w/02-docs/02.02-spec.md \
-	03-fpl/03.01-features/draft1/spec.md 03-fpl/03.01-features/draft1/examples/a.fpl 02-docs/02.01-design.md 02-docs/02.02-spec.md; do
+for p in /w/03-fpl/OLD/03.01-features/draft1/spec.md /w/03-fpl/OLD/03.01-features/draft1/examples/a.fpl \
+	/w/03-fpl/OLD/03.01-features/draft1/examples/a.expected /w/02-docs/02.04-explanation/design.md /w/02-docs/02.03-reference/spec.md \
+	03-fpl/OLD/03.01-features/draft1/spec.md 03-fpl/OLD/03.01-features/draft1/examples/a.fpl 02-docs/02.04-explanation/design.md 02-docs/02.03-reference/spec.md; do
 	hook 2 "refuses $p" "$p" "maintainer-authored spec"
 done
-for p in /w/03-fpl/03.01-features/notes.md /w/fpl/eval.py /w/01-bootstrap/fpl/eval.py /w/02-docs/02.03-roadmap.md \
-	/w/AGENTS.md /w/01-bootstrap/tests/test_conformance.py 03-fpl/03.01-features/README.md ""; do
+for p in /w/03-fpl/OLD/03.01-features/notes.md /w/fpl/eval.py /w/01-bootstrap/fpl/eval.py /w/02-docs/02.05-project/roadmap.md \
+	/w/AGENTS.md /w/01-bootstrap/tests/test_conformance.py 03-fpl/OLD/03.01-features/README.md ""; do
 	hook 0 "lets '$p' through" "$p"
 done
 rc=0
-printf '{"tool_input":{"file_path":"/w/03-fpl/03.01-features/draft1/spec.md"}}' \
+printf '{"tool_input":{"file_path":"/w/03-fpl/OLD/03.01-features/draft1/spec.md"}}' \
 	| FPL_SPEC_EDIT=1 bash "$root/.claude/hooks/guard-specs.sh" >"$tmp/out" 2>&1 || rc=$?
 verdict "guard-specs lets an opted-in session edit a spec" "$rc" 0 ""
 rc=0
@@ -111,9 +111,9 @@ staged() {
 	git checkout -q -- . 2>/dev/null || :
 }
 
-protected="03-fpl/03.01-features/draft1/spec.md 03-fpl/03.01-features/draft1/examples/a.fpl \
-	03-fpl/03.01-features/draft1/examples/a.expected 03-fpl/03.01-features/_template/spec.md 02-docs/02.01-design.md 02-docs/02.02-spec.md"
-free="03-fpl/03.01-features/notes.md fpl/eval.py 01-bootstrap/fpl/eval.py 02-docs/02.03-roadmap.md AGENTS.md \
+protected="03-fpl/OLD/03.01-features/draft1/spec.md 03-fpl/OLD/03.01-features/draft1/examples/a.fpl \
+	03-fpl/OLD/03.01-features/draft1/examples/a.expected 03-fpl/OLD/03.01-features/_template/spec.md 02-docs/02.04-explanation/design.md 02-docs/02.03-reference/spec.md"
+free="03-fpl/OLD/03.01-features/notes.md fpl/eval.py 01-bootstrap/fpl/eval.py 02-docs/02.05-project/roadmap.md AGENTS.md \
 	01-bootstrap/tests/test_conformance.py"
 for p in $protected; do
 	staged unmarked 1 "refuses $p without [spec]" "$p" "protected spec file"
@@ -127,9 +127,9 @@ done
 # workflow see it (a commit made with the hooks off).
 lint() {
 	local marked="$1" want="$2" what="$3" rc=0
-	mkdir -p 03-fpl/03.01-features/draft1/examples
-	echo "x" >03-fpl/03.01-features/draft1/examples/a.fpl
-	git add -f 03-fpl/03.01-features
+	mkdir -p 03-fpl/OLD/03.01-features/draft1/examples
+	echo "x" >03-fpl/OLD/03.01-features/draft1/examples/a.fpl
+	git add -f 03-fpl/OLD/03.01-features
 	msg "$marked"
 	git -c core.hooksPath=/dev/null commit -q -F "$tmp/msg"
 	FPL_LINT_COMMIT="$(git rev-parse HEAD)" .githooks/commit-msg "$tmp/msg" >"$tmp/out" 2>&1 || rc=$?

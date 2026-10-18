@@ -1,6 +1,6 @@
 # 02.03 ROADMAP.md — milestones
 
-Direction only. Scope and ordering shift as `02-docs/02.01-design.md` fills in. Each milestone lands as
+Direction only. Scope and ordering shift as `02-docs/02.04-explanation/design.md` fills in. Each milestone lands as
 a stack of small commits (`.agents/WORKFLOW.md`) inside a worktree and is "done" only when
 `make check` is green (`.agents/CONVENTIONS.md`).
 
@@ -16,15 +16,15 @@ language work. They are listed so the roadmap does not read as though the lexer 
    there from the first commit. Built with milestone 0's skeleton, which is its first subject.
 3. **Prototyping**, which is where milestone 0 begins.
 
-`02-docs/02.04-notes/02.04.02-sober.md` applies to both harness phases: a harness change earns its
+`02-docs/02.05-project/notes/sober.md` applies to both harness phases: a harness change earns its
 place by making a reviewed, landed change cheaper, and there are no language changes yet for
 either of them to make cheaper. That is a thing to watch, not a rule against them.
 
 | # | Milestone | Done when |
 | --- | --- | --- |
-| 0 | **Worktree skeleton** — `01-bootstrap/pyproject.toml`, `01-bootstrap/Makefile` (`include ../.harness/quality/noslop.mk`), `01-bootstrap/fpl/` module stubs, `03-fpl/03.01-features/_template/`, empty conformance runner | `make ready` runs and passes with zero features |
-| 1 | **Lexer + parser** — `grammar.lark`, `parse.py` → surface AST with spans; `test_ambiguity.py` green | `03-fpl/03.01-features/arithmetic/` parses; zero Earley ambiguity |
-| 2 | **Tree-walking eval** — `ast_core.py`, `desugar.py`, `eval.py` for the arithmetic core; `python -m fpl file.fpl` runs | `03-fpl/03.01-features/arithmetic/` conformance passes end to end |
+| 0 | **Worktree skeleton** — `01-bootstrap/pyproject.toml`, `01-bootstrap/Makefile` (`include ../.harness/quality/noslop.mk`), `01-bootstrap/fpl/` module stubs, `03-fpl/OLD/03.01-features/_template/`, empty conformance runner | `make ready` runs and passes with zero features |
+| 1 | **Lexer + parser** — `grammar.lark`, `parse.py` → surface AST with spans; `test_ambiguity.py` green | `03-fpl/OLD/03.01-features/arithmetic/` parses; zero Earley ambiguity |
+| 2 | **Tree-walking eval** — `ast_core.py`, `desugar.py`, `eval.py` for the arithmetic core; `python -m fpl file.fpl` runs | `03-fpl/OLD/03.01-features/arithmetic/` conformance passes end to end |
 | 3 | **Errors** — `errors.py`: every failure is `ERROR: <line>:<col> <message>` with a caret underline; no traceback escapes | error-case `.expected` files pass |
 | 4 | **Desugar layer proven** — a second feature (e.g. `let`, `if`) added as grammar + desugar only, core AST unchanged | new feature green without touching `eval.py` |
 | 5 | **Types** — `types.py`: a real check over core AST; type-error `.expected` cases | typed conformance passes; pyright still strict-clean |

@@ -1,0 +1,11 @@
+{
+  "jupyter-lite-schema-version": 0,
+  "jupyter-config-data": {
+    "appName": "FPL workbench",
+    "litePluginSettings": {
+      "@jupyterlite/pyodide-kernel-extension:kernel": {
+        "pipliteUrls": ["./pypi/all.json"]
+      }
+    }
+  }
+}

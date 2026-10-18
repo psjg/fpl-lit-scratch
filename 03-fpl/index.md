@@ -1,3 +1,4 @@
 # FPL
 
-* [Features](03.01-features/) - 3.1 Features
+* [Hello](hello.md) - smoke note for the image tangle
+* [Archived](OLD/) - the old features oracle (corpus only)

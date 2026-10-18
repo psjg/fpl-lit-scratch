@@ -1,15 +1,9 @@
 ---
-description: Read-only check that the implementation matches every 03-fpl/03.01-features/*/spec.md
+description: Read-only drift check against the archived corpus under 03-fpl/OLD
 ---
 
-Report drift between the code and the maintainer-authored specs. **Read-only** — make no
-edits, open no PRs.
+Read-only. Compare the walker implementation to the archived maintainer fixtures at
+`03-fpl/OLD/03.01-features/*/spec.md` and their examples. Report drift; change no files.
 
-1. For each `03-fpl/03.01-features/<name>/spec.md`: read it, then read the relevant parts of
-   `01-bootstrap/fpl/grammar.lark`, `01-bootstrap/fpl/desugar.py`, `01-bootstrap/fpl/eval.py`, `01-bootstrap/fpl/types.py`.
-2. For every claim in the spec (a syntax form, a desugaring, a semantic rule, an error),
-   state: **matches** / **diverges** / **unimplemented**, each with a `file:line` anchor.
-3. Run `make check` and note any red.
-4. Summarise: is the implementation faithful to the specs? List each divergence as its own
-   line with the spec sentence, the code anchor, and which side looks wrong.
-5. Do not fix anything. Hand the list to the maintainer.
+The live image is `03-fpl/**/*.md` → `.fpl` via `make tangle-fpl`; that is not this check.
+A new oracle home is open — see `AGENTS.md`.

@@ -18,7 +18,7 @@ pointing back to `<root>/.git/worktrees/<name>/`.
 docs/         the language's own: DESIGN.md, SPEC.md, ROADMAP.md, notes/
 01-bootstrap/    the walker, a project of its own: its package fpl, tests, pyproject.toml,
               Makefile, mutants.allow, HOLES.md, handoff/
-fpl/           FPL's own tree: so far 03-fpl/03.01-features/, the conformance suite, the maintainer's
+fpl/           FPL's own tree: so far 03-fpl/OLD/03.01-features/, the conformance suite, the maintainer's
 .harness/quality/ .harness/scripts/ .githooks/ .claude/    the harness
 Makefile      runs the noslop lanes in 01-bootstrap/ (make check, make ready, ...)
 ```

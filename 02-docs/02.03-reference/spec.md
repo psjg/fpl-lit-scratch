@@ -1,8 +1,8 @@
 # SPEC.md — the FPL language specification
 
 > **Status: SKELETON.** Sections fill in as semantics settle — promoted here from
-> `02-docs/02.01-design.md` once decided, and from maintainer-authored `features/<name>/spec.md` as
-> features land. This file is the normative reference; `02-docs/02.01-design.md` holds the *why*.
+> `02-docs/02.04-explanation/design.md` once decided, and from maintainer-authored `features/<name>/spec.md` as
+> features land. This file is the normative reference; `02-docs/02.04-explanation/design.md` holds the *why*.
 >
 > Edit-protected: changing it requires the `[spec]` marker in the commit message.
 

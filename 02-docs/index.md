@@ -1,6 +1,7 @@
 # Docs
 
-* [Design](02.01-design.md) - the FPL vision
-* [Spec](02.02-spec.md) - the FPL language specification
-* [Roadmap](02.03-roadmap.md) - milestones
-* [Notes](02.04-notes/) - notes beside the design
+* [Tutorial](02.01-tutorial/) - learn FPL by doing
+* [How-to](02.02-how-to/) - solve a concrete task
+* [Reference](02.03-reference/) - the language specification and facts
+* [Explanation](02.04-explanation/) - vision, rationale and ADRs
+* [Project](02.05-project/) - roadmap, notes and project lists

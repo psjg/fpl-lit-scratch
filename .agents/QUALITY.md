@@ -74,7 +74,7 @@ request that moves the package is drawn where the package was.
 | `deptry` | an import of a package `pyproject.toml` does not declare, or a declared one nobody imports |
 | `vulture` | code nothing uses |
 | `pylint` duplicate-code | six or more lines repeated |
-| `make run` from the root | the entry a README points to failing, or printing other than the `.expected` of `03-fpl/03.01-features/draft2/examples/01-frames` (the lanes run in `01-bootstrap/`, so only this step runs the walker from the root) |
+| `make run` from the root | the entry a README points to failing, or printing other than the `.expected` of `03-fpl/OLD/03.01-features/draft2/examples/01-frames` (the lanes run in `01-bootstrap/`, so only this step runs the walker from the root) |
 
 On the milestone-0 skeleton `make check` takes about 6 seconds and `make harden` about 3
 minutes, almost all of it CrossHair.
@@ -226,7 +226,7 @@ the same commit as its code can make any code pass. So:
   `01-bootstrap/`; `.githooks/commit-msg`), so the change is reviewed on its own.
 - The gate judges only committed policy: `make check` stops when any policy file, or
   `.harness/scripts/`, differs from what is committed, and also when git cannot say.
-- The examples under `03-fpl/03.01-features/*/examples/` are oracle, like `spec.md`: `[spec]` and the
+- The examples under `03-fpl/OLD/03.01-features/*/examples/` are oracle, like `spec.md`: `[spec]` and the
   `guard-specs` hook (AGENTS.md, "The oracle rule").
 
 The tools and their versions are pinned in `.harness/quality/uv.lock`. `make` syncs them into the

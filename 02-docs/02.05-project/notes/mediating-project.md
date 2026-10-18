@@ -99,7 +99,7 @@ Neither should quietly win by default. Writing both down is how that gets notice
 
 ## What this does not license
 
-Nothing yet. `02-docs/02.01-design.md` has no content and there is no grammar, and a mediating project
+Nothing yet. `02-docs/02.04-explanation/design.md` has no content and there is no grammar, and a mediating project
 is meaningless before there is a language to mediate. The order is: settle on a grammar
 first; the rest of this note is what to weigh once something runs.
 

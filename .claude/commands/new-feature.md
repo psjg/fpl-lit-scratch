@@ -1,18 +1,15 @@
 ---
-description: Scaffold 03-fpl/03.01-features/<name>/ then stop for the maintainer to write the fixtures
+description: Refuse — the features oracle under 03-fpl is archived; use image notes instead
 argument-hint: <name>
 ---
 
-Scaffold a feature directory, then hand back to the maintainer. See the oracle rule in
-`AGENTS.md` and the layout in `.agents/CONVENTIONS.md`.
+Stop. Scaffolding `03-fpl/03.01-features/<name>/` is not the model anymore.
 
-Given `$1` = feature name (inside an implementation worktree):
+The FPL image is literate markdown under `03-fpl/` (except `OLD/`), tangled 1:1 to
+sibling `.fpl` files with `make tangle-fpl`. See `AGENTS.md` and `.agents/CONVENTIONS.md`.
 
-1. Copy `03-fpl/03.01-features/_template/` to `03-fpl/03.01-features/$1/`.
-2. Leave `spec.md`, `examples/*.fpl`, and `examples/*.expected` as the template stubs.
-3. **Stop.** Print exactly what the maintainer must fill in:
-   - `03-fpl/03.01-features/$1/spec.md` — surface syntax, desugaring, semantics
-   - `03-fpl/03.01-features/$1/examples/*.fpl` — programs exercising it
-   - `03-fpl/03.01-features/$1/examples/*.expected` — expected stdout, or `ERROR: <line>:<col> <message>`
-4. Do **not** write any of those files yourself — they are the oracle. Do not start
-   implementing. `/impl-feature` continues once the maintainer has written the fixtures.
+The old suite is at `03-fpl/OLD/03.01-features/` for the walker corpus only. A new
+conformance home is not chosen yet — do not scaffold `_template` copies.
+
+If the maintainer asked for a new image note, write `03-fpl/<path>/<name>.md` (prose +
+`fpl` fences), run `make tangle-fpl`, and stop. Do not invent language semantics.

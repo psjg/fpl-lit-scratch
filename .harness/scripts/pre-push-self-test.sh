@@ -284,8 +284,8 @@ gate() { # gate <exit code> <description> <command>...: a command's exit, output
 }
 git switch -q -c agent/claude/stack/m main
 mkdir -p 02-docs
-echo spec >02-docs/02.02-spec.md
-git add 02-docs/02.02-spec.md
+echo spec >02-docs/02.03-reference/spec.md
+git add 02-docs/02.03-reference/spec.md
 commit -m "feat(x): spec" -m "[spec]" -m "Stack: m"$'\n'"Human-Only: true"
 lint 0 "a protected file edited with [spec]"
 spec="$(git rev-parse HEAD)"
@@ -317,27 +317,27 @@ git -c core.hooksPath=/dev/null revert --no-edit HEAD >/dev/null
 lint 0 "a real revert of that commit, though its message names no [spec]"
 git reset -q --hard "$spec"
 for word in Merge Revert; do
-	echo more >>02-docs/02.02-spec.md
-	git add 02-docs/02.02-spec.md
+	echo more >>02-docs/02.03-reference/spec.md
+	git add 02-docs/02.03-reference/spec.md
 	commit -m "$word anything"
 	lint 1 "a one-parent commit that opens with '$word', editing a protected file"
 	says "header must be" "the '$word' commit is judged as any other"
 	git reset -q --hard "$spec"
 done
-echo more >>02-docs/02.02-spec.md
-git add 02-docs/02.02-spec.md
+echo more >>02-docs/02.03-reference/spec.md
+git add 02-docs/02.03-reference/spec.md
 commit -m 'Revert "feat(x): spec"' -m "This reverts commit 0123456789abcdef0123456789abcdef01234567."
 lint 1 "git's revert text naming a commit that does not exist"
 git reset -q --hard "$spec"
-echo more >>02-docs/02.02-spec.md
-git add 02-docs/02.02-spec.md
+echo more >>02-docs/02.03-reference/spec.md
+git add 02-docs/02.03-reference/spec.md
 commit -m 'Revert "feat(x): spec"'
 lint 1 "a revert subject with no 'This reverts commit' line"
 git reset -q --hard "$spec"
 # git's text naming a commit that exists is not yet a revert: the commit must hold the tree
 # git revert makes of that commit. A forger copies the text and edits a protected file under it.
-echo more >>02-docs/02.02-spec.md
-git add 02-docs/02.02-spec.md
+echo more >>02-docs/02.03-reference/spec.md
+git add 02-docs/02.03-reference/spec.md
 commit -m 'Revert "feat(x): spec"' -m "This reverts commit $spec."
 lint 1 "git's revert text naming a real commit, over a diff that is no inverse"
 says "header must be" "the forged revert is judged as any commit"
@@ -346,8 +346,8 @@ git reset -q --hard "$spec"
 # tree the "revert" of the second: P holds the forged tree, R undoes it back to the branch's
 # tree, and the revert of R onto the branch is P's tree. Neither is in the branch's history,
 # so the named commit is no ancestor of the one judged (CodeRabbit on PR #138).
-echo forged >>02-docs/02.02-spec.md
-git add 02-docs/02.02-spec.md
+echo forged >>02-docs/02.03-reference/spec.md
+git add 02-docs/02.03-reference/spec.md
 forged_p="$(git commit-tree -p "$spec" -m "p" "$(git write-tree)")"
 forged_r="$(git commit-tree -p "$forged_p" -m "r" "$(git rev-parse "$spec^{tree}")")"
 printf 'Revert "r"\n\nThis reverts commit %s.\n' "$forged_r" >"$tmp/forged-msg"
@@ -360,14 +360,14 @@ says "header must be" "the revert of a commit outside the branch is judged as an
 git reset -q --hard "$spec"
 git -c core.hooksPath=/dev/null revert --no-commit HEAD
 mkdir -p 02-docs
-echo extra >02-docs/02.01-design.md
-git add 02-docs/02.01-design.md
+echo extra >02-docs/02.04-explanation/design.md
+git add 02-docs/02.04-explanation/design.md
 commit -m 'Revert "feat(x): spec"' -m "This reverts commit $spec."
 lint 1 "a real revert with another protected file edited beside it"
 says "header must be" "the revert with a rider is judged as any commit"
 git reset -q --hard "$spec"
-echo more >>02-docs/02.02-spec.md
-git add 02-docs/02.02-spec.md
+echo more >>02-docs/02.03-reference/spec.md
+git add 02-docs/02.03-reference/spec.md
 commit -m "feat(x): more spec" -m "[spec]" -m "Stack: m"$'\n'"Human-Only: true"
 more="$(git rev-parse HEAD)"
 git -c core.hooksPath=/dev/null revert --no-commit HEAD
@@ -398,13 +398,13 @@ git -c core.hooksPath=/dev/null revert --no-commit HEAD
 printf 'Revert "feat(x): spec"\n\nThis reverts commit %s.\n' "$spec" >"$tmp/revert-msg"
 gate 0 "a revert in the making, judged in hook mode" .githooks/commit-msg "$tmp/revert-msg"
 mkdir -p 02-docs
-echo extra >02-docs/02.01-design.md
-git add 02-docs/02.01-design.md
+echo extra >02-docs/02.04-explanation/design.md
+git add 02-docs/02.04-explanation/design.md
 gate 1 "the same revert with another protected file staged beside it" .githooks/commit-msg "$tmp/revert-msg"
 says "header must be" "the revert with a rider is judged"
 git reset -q --hard "$spec"
-echo more >>02-docs/02.02-spec.md
-git add 02-docs/02.02-spec.md
+echo more >>02-docs/02.03-reference/spec.md
+git add 02-docs/02.03-reference/spec.md
 gate 1 "revert text over a staged edit that is no inverse" .githooks/commit-msg "$tmp/revert-msg"
 says "header must be" "the forged revert is judged"
 git reset -q --hard "$spec"
@@ -412,15 +412,15 @@ git reset -q --hard "$spec"
 # patch-id drops the line numbers, so a line the reverted commit removed, put back elsewhere,
 # read as its revert. A forger restores the line at the end of a protected file instead of in
 # its place.
-printf '%s\n' a b c d e f >02-docs/02.01-design.md
-git add 02-docs/02.01-design.md
+printf '%s\n' a b c d e f >02-docs/02.04-explanation/design.md
+git add 02-docs/02.04-explanation/design.md
 commit -m "feat(x): design" -m "[spec]" -m "Stack: m"$'\n'"Human-Only: true"
-sed -i.bak 3d 02-docs/02.01-design.md && rm 02-docs/02.01-design.md.bak
-git add 02-docs/02.01-design.md
+sed -i.bak 3d 02-docs/02.04-explanation/design.md && rm 02-docs/02.04-explanation/design.md.bak
+git add 02-docs/02.04-explanation/design.md
 commit -m "feat(x): drop c" -m "[spec]" -m "Stack: m"$'\n'"Human-Only: true"
 drop="$(git rev-parse HEAD)"
-echo c >>02-docs/02.01-design.md
-git add 02-docs/02.01-design.md
+echo c >>02-docs/02.04-explanation/design.md
+git add 02-docs/02.04-explanation/design.md
 printf 'Revert "feat(x): drop c"\n\nThis reverts commit %s.\n' "$drop" >"$tmp/moved-msg"
 gate 1 "the removed line put back elsewhere, judged in hook mode" .githooks/commit-msg "$tmp/moved-msg"
 says "header must be" "the moved line is judged as any commit"
@@ -472,8 +472,8 @@ git reset -q --hard "$spec"
 # reverted, and the commit is judged as any (a real revert of either, without [spec], is then
 # refused). git commit-tree makes candidates, the same change under other subjects, until two
 # share their first four digits (some 300 of them, by the birthday bound on 16^4).
-echo twin >02-docs/02.02-spec.md
-git add 02-docs/02.02-spec.md
+echo twin >02-docs/02.03-reference/spec.md
+git add 02-docs/02.03-reference/spec.md
 twins="$(git write-tree)" twin=""
 : >"$tmp/ids"
 for ((i = 0; i < 5000 && ${#twin} == 0; i++)); do
@@ -499,8 +499,8 @@ lint 1 "a real revert naming its commit by a tag spelt in hex"
 says "edits a protected spec file" "the tag names no commit"
 git tag -d fade0fade0 >/dev/null
 git reset -q --hard "$spec"
-echo more >>02-docs/02.02-spec.md
-git add 02-docs/02.02-spec.md
+echo more >>02-docs/02.03-reference/spec.md
+git add 02-docs/02.03-reference/spec.md
 commit -m "revert(x): undo the spec" -m "This reverts commit ${spec:0:7} (feat(x): spec, 2026-10-07)." -m "Stack: m"$'\n'"Human-Only: true"
 lint 1 "the reference form naming a real commit, over a diff that is no inverse"
 says "edits a protected spec file" "the forged reference revert is judged as any commit"
@@ -520,8 +520,8 @@ git -c core.hooksPath=/dev/null reset -q --hard "$spec"
 # A fixup!, squash! or amend! commit is spared the header and trailer gates while it waits
 # for an autosquash, but not the path guards: what it changes lands with the commit it folds
 # into, and the guards judge the message it carries now.
-echo fix >>02-docs/02.02-spec.md
-git add 02-docs/02.02-spec.md
+echo fix >>02-docs/02.03-reference/spec.md
+git add 02-docs/02.03-reference/spec.md
 gate 1 "a fixup commit that edits a protected file, without [spec]" \
 	git commit -q --fixup=HEAD
 says "edits a protected spec file" "the oracle guard judges a fixup"
@@ -529,8 +529,8 @@ gate 0 "the same fixup with [spec]" git commit -q --fixup=HEAD -m "[spec]"
 git -c core.hooksPath=/dev/null reset -q --hard "$spec"
 # A real merge: judged by its parents (lint mode) or by the merge git is making (hook mode).
 git switch -q -c agent/claude/stack/m-side "$spec"
-echo side >>02-docs/02.02-spec.md
-git add 02-docs/02.02-spec.md
+echo side >>02-docs/02.03-reference/spec.md
+git add 02-docs/02.03-reference/spec.md
 commit -m "feat(x): side" -m "[spec]" -m "Stack: m"$'\n'"Human-Only: true"
 git switch -q agent/claude/stack/m
 echo trunk >t.txt
@@ -577,8 +577,8 @@ says "--no-verify" "the refusal names the way out"
 # Why "HEAD has more than one parent" is not enough to call a commit an amend: so does the
 # parent of every plain commit made on top of a merge. A rule that took it for one would let
 # that commit borrow the word, so it stays refused.
-echo sneak >>02-docs/02.02-spec.md
-git add 02-docs/02.02-spec.md
+echo sneak >>02-docs/02.03-reference/spec.md
+git add 02-docs/02.03-reference/spec.md
 printf 'Merge sneaky\n' >"$tmp/borrow-msg"
 gate 1 "a new commit on top of a merge that borrows the word, over a protected file" \
 	.githooks/commit-msg "$tmp/borrow-msg"
@@ -611,7 +611,7 @@ plant -m "feat(x): wide policy" -m "$trail" < <(printf 'Makefile\0'; many 8000)
 lint 1 "a Makefile edit among thousands of paths, without [policy]"
 says "changes the gate's policy" "the policy guard saw the Makefile"
 git reset -q --hard "$spec"
-plant -m "feat(x): wide spec" -m "$trail" < <(printf '02-docs/02.01-design.md\0'; many 8000)
+plant -m "feat(x): wide spec" -m "$trail" < <(printf '02-docs/02.04-explanation/design.md\0'; many 8000)
 lint 1 "a spec edit among thousands of paths, without [spec]"
 says "edits a protected spec file" "the oracle guard saw the spec"
 git reset -q --hard "$spec"
@@ -623,14 +623,14 @@ git reset -q --hard "$spec"
 
 # A path is matched as it is, not as git prints it. Without -z git quotes a name holding
 # non-ASCII, quote, backslash or control characters, in quotes and with escapes, so it starts
-# with a quote and no pattern anchored at 03-fpl/03.01-features/ or .harness/quality/ takes it. Raw bytes that are
+# with a quote and no pattern anchored at 03-fpl/OLD/03.01-features/ or .harness/quality/ takes it. Raw bytes that are
 # no UTF-8 escape a `.` in a UTF-8 locale. A rename shows only its new name, so a spec file
-# moved out of 03-fpl/03.01-features/ was never seen (GPT review of the commit-lint workflow, finding 3).
+# moved out of 03-fpl/OLD/03.01-features/ was never seen (GPT review of the commit-lint workflow, finding 3).
 odd=(é '"q"' 'a\b' $'a\tb' $'a\nb' $'a\xffb')
 for name in "${odd[@]}"; do
 	printf -v shown '%q' "$name"
 	[ "$name" != $'a\xffb' ] || [ -n "$utf8" ] || continue
-	plant -m "feat(x): odd spec name" -m "$trail" < <(printf '03-fpl/03.01-features/x/examples/%s.fpl\0' "$name")
+	plant -m "feat(x): odd spec name" -m "$trail" < <(printf '03-fpl/OLD/03.01-features/x/examples/%s.fpl\0' "$name")
 	LC_ALL="${utf8:-C}" lint 1 "a spec file named $shown, without [spec]"
 	says "edits a protected spec file" "the oracle guard saw $shown"
 	git reset -q --hard "$spec"
@@ -644,15 +644,15 @@ for name in "${odd[@]}"; do
 	says "may not also change fpl/ or tests/" "the separation guard saw $shown"
 	git reset -q --hard "$spec"
 done
-plant -m "feat(x): odd spec name" -m "[spec]" -m "$trail" < <(printf '03-fpl/03.01-features/x/examples/é.fpl\0')
+plant -m "feat(x): odd spec name" -m "[spec]" -m "$trail" < <(printf '03-fpl/OLD/03.01-features/x/examples/é.fpl\0')
 lint 0 "a spec file named é, with [spec]"
 git reset -q --hard "$spec"
 # Hook mode, where git diff --cached would show a moved file under its new name only.
-plant -m "feat(x): example" -m "[spec]" -m "$trail" < <(printf '03-fpl/03.01-features/x/examples/a.fpl\0')
+plant -m "feat(x): example" -m "[spec]" -m "$trail" < <(printf '03-fpl/OLD/03.01-features/x/examples/a.fpl\0')
 git -c core.hooksPath=/dev/null reset -q --hard HEAD
-git mv 03-fpl/03.01-features/x/examples/a.fpl other.fpl
+git mv 03-fpl/OLD/03.01-features/x/examples/a.fpl other.fpl
 printf 'feat(x): move\n\n%s\n' "$trail" >"$tmp/move-msg"
-gate 1 "a spec file moved out of 03-fpl/03.01-features/, without [spec]" \
+gate 1 "a spec file moved out of 03-fpl/OLD/03.01-features/, without [spec]" \
 	env FPL_ATOMIC_GATE=off .githooks/commit-msg "$tmp/move-msg"
 says "edits a protected spec file" "the oracle guard saw the move"
 git reset -q --hard "$spec"
@@ -1124,8 +1124,8 @@ refuse hook breaking-trailer "no BREAKING-CHANGE trailer" "docs(x)!: a"$'\n\n'"$
 refuse hook breaking-bang "no '!' in the header" "docs(x): a"$'\n\n'"Stack: t"$'\n'"BREAKING-CHANGE: b"$'\n'"Human-Only: true"
 refuse hook provenance-mixed "Human-Only: true beside" "docs(x): a"$'\n\n'"Stack: t"$'\n'"Assisted-By: claude"$'\n'"Session-Id: s"$'\n'"Human-Only: true"
 mkdir -p 02-docs
-echo spec >02-docs/02.02-spec.md
-git add 02-docs/02.02-spec.md
+echo spec >02-docs/02.03-reference/spec.md
+git add 02-docs/02.03-reference/spec.md
 refuse hook spec-guard "edits a protected spec file" "docs(x): a"$'\n\n'"$tr"
 git reset -q
 : >Makefile
@@ -1136,7 +1136,7 @@ mkdir -p 03-fpl
 git add -f 03-fpl/x.py
 refuse hook policy-split "may not also change fpl/ or tests/" "docs(x): a [policy]"$'\n\n'"$tr"
 git reset -q
-rm -rf 02-docs/02.02-spec.md Makefile 03-fpl
+rm -rf 02-docs/02.03-reference/spec.md Makefile 03-fpl
 git -c core.hooksPath=/dev/null switch -q -c plain-branch
 printf '%s\n' "t@example.invalid" >"$(git rev-parse --git-path agent-identity)"
 refuse hook agent-territory "agent commit on 'plain-branch'" "docs(x): a"$'\n\n'"Assisted-By: claude"$'\n'"Session-Id: s"

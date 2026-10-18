@@ -53,7 +53,7 @@ TBD
 ### Which accelerator, and can they be one mechanism
 
 The stated working principle is that the project should accelerate itself
-(`02-docs/02.04-notes/02.04.03-mediating-project.md`). Three candidate accelerators are on the table.
+(`02-docs/02.05-project/notes/mediating-project.md`). Three candidate accelerators are on the table.
 Each is real, each has a cost, and every one of those costs lands on the same principle.
 
 **Liveness.** A live image shortens the loop between changing something and seeing it to
@@ -103,5 +103,5 @@ systems on Forth are likewise small enough to fit in a few pages (Gforth's Mini-
 
 ---
 
-Once §§1–6 are real, promote the settled semantics into `02-docs/02.02-spec.md` (grammar, evaluation,
+Once §§1–6 are real, promote the settled semantics into `02-docs/02.03-reference/spec.md` (grammar, evaluation,
 type system) and keep this file as the "why".

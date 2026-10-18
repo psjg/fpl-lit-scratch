@@ -14,10 +14,15 @@
 #   make repl ARGS=a  the REPL, with its arguments a:          make repl ARGS='-e "1 + 2"'
 .DEFAULT_GOAL := check
 LANES := fix quick check harden ready gates tools map venv pristine clean-noslop
-.PHONY: $(LANES) run repl
+.PHONY: $(LANES) run repl tangle-fpl
 
 $(LANES):
 	@$(MAKE) --no-print-directory -C 01-bootstrap $@
+
+# 03-fpl/**/*.md (except OLD/) → sibling *.fpl. Markdown is the source.
+tangle-fpl:
+	@$(CURDIR)/.venv/bin/python $(CURDIR)/01-bootstrap/tangle_fpl.py
+
 
 # The walker as the root runs it: the lanes' interpreter (.venv, the root's, synced by `venv`)
 # with the package, 01-bootstrap/fpl, put on its path. A relative path means what it means from

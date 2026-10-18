@@ -11,10 +11,11 @@ are already settled and the conventions every implementation attempt must follow
 session can pick up work without re-deciding groundwork.
 
 The language *vision* is deliberately unwritten. It gets drawn out in a dedicated interview
-(`02-docs/02.01-design.md`, populated by the `design-fpl` process). Until `DESIGN.md` has real content,
-do not invent language semantics.
+(`02-docs/02.04-explanation/design.md`, populated by the `design-fpl` process). Until that
+file has real content, do not invent language semantics.
 
-Keep talk about the vision sober, and the harness small: `02-docs/02.04-notes/02.04.02-sober.md`.
+Keep talk about the vision sober, and the harness small:
+`02-docs/02.05-project/notes/sober.md`.
 
 ## Repository layout
 
@@ -23,15 +24,16 @@ Keep talk about the vision sober, and the harness small: `02-docs/02.04-notes/02
   AGENTS.md           this file
   CLAUDE.md           Claude Code tooling notes only
   .agents/            settled decisions and conventions for agents (vendor-neutral)
-  02-docs/            the language's own documents: 02.01-design.md, 02.02-spec.md,
-                      02.03-roadmap.md, 02.04-notes/
+  02-docs/            human docs (Diátaxis) + project meta: tutorial, how-to, reference,
+                      explanation, and 02.05-project/ (roadmap, notes, ADRs)
   01-bootstrap/       the walker: the Python implementation, a project of its own (the
                       package fpl, its tests, pyproject.toml, Makefile, mutants.allow,
-                      HOLES.md, handoff/)
-  03-fpl/             FPL's own tree, the language written in itself; so far it holds
-                      03.01-features/, the conformance suite: the maintainer's specs and examples
+                      HOLES.md, handoff/, tangle_fpl.py)
+  03-fpl/             the FPL image: literate *.md tangled 1:1 to sibling *.fpl
+                      (make tangle-fpl). OLD/03.01-features/ is the archived oracle the
+                      walker corpus still reads; new conformance lives elsewhere later.
   Makefile            runs the noslop lanes (make check, ...) in 01-bootstrap/, and the walker from
-                      the root: make run FILE=<file.fpl>, make repl
+                      the root: make run FILE=<file.fpl>, make repl, make tangle-fpl
   .claude/            Claude Code commands, subagents, skill, hooks
   .harness/scripts/            acommit, commit-lint, restack, setup, agent-identity, new-worktree,
                       branch-lint, forward-only, layer, pr, review, land, task,
@@ -103,25 +105,28 @@ The gate's configuration is policy: it lives in the harness (`.harness/quality/`
 carries `[policy]` and no code, and `make check` refuses to run against an uncommitted one.
 Do not loosen a check to get to green; say which check is wrong and why.
 
-## The oracle rule
+## The FPL image and the oracle
 
-Conformance is driven by human-authored fixtures:
+`03-fpl/**/*.md` (except `OLD/`) is the image source. `make tangle-fpl` writes a sibling
+`.fpl`: prose becomes `;` comments; `fpl` (or bare) fences become raw source. Do not
+hand-edit `.fpl` files; do not invent language semantics in those notes until the
+maintainer has settled them.
 
-```
-03-fpl/03.01-features/<name>/spec.md               surface syntax, desugaring, semantics
-03-fpl/03.01-features/<name>/examples/*.fpl        programs exercising the feature
-03-fpl/03.01-features/<name>/examples/*.expected   expected stdout, or `ERROR: <line>:<col> <message>`
-```
+The old conformance suite lives at `03-fpl/OLD/03.01-features/` (`spec.md` +
+`examples/*.fpl` + `*.expected`). The walker corpus still reads it. A new oracle home
+is not chosen yet — do not scaffold new features under `03.01-features/`.
 
-**The maintainer writes `spec.md`, the `.fpl` examples, and the `.expected` files.** An
-agent's job is to make `make check` green against them. If an agent writes both a feature and
-its own oracle, the oracle proves nothing.
+**The oracle rule still holds for what remains of the suite:** the maintainer writes the
+fixtures; an agent makes `make check` green against them. If an agent writes both a
+program and its own expected output, the oracle proves nothing.
 
-`03-fpl/03.01-features/*/spec.md`, `03-fpl/03.01-features/*/examples/*`, `02-docs/02.01-design.md`, and `02-docs/02.02-spec.md` are
-protected two ways: `.githooks/commit-msg` rejects a commit touching them without the literal
-`[spec]` marker in the message, and the Claude `guard-specs` hook blocks the edit unless the
-session sets `FPL_SPEC_EDIT=1`. Other harnesses honour the `[spec]` rule by convention. If you think a spec
-is wrong, say so and let the maintainer decide — don't route around it.
+`03-fpl/OLD/03.01-features/*/spec.md`, `03-fpl/OLD/03.01-features/*/examples/*`,
+`02-docs/02.04-explanation/design.md`, and `02-docs/02.03-reference/spec.md` are
+protected two ways: `.githooks/commit-msg` rejects a commit touching them without the
+literal `[spec]` marker in the message, and the Claude `guard-specs` hook blocks the
+edit unless the session sets `FPL_SPEC_EDIT=1`. Other harnesses honour the `[spec]` rule
+by convention. If you think a spec is wrong, say so and let the maintainer decide —
+don't route around it.
 
 ## Commits & workflow
 
@@ -157,7 +162,7 @@ performance treated as a feature. (Claude sessions: load the `software-style` an
    `.agents/BRANCHES.md`.
 2. Pick a worktree (`git worktree list`) or make one (`.harness/scripts/new-worktree.sh <name>`; see
    `.agents/WORKTREES.md`).
-3. In it, find a feature whose `make check` is red — or scaffold one and stop for the
-   maintainer to fill the fixtures.
-4. Implement to green.
-5. Check for code-vs-spec drift before declaring done.
+3. In it, find work whose `make check` is red — walker holes, image notes under `03-fpl/`,
+   or docs under `02-docs/`. Do not scaffold new dirs under `03-fpl/OLD/03.01-features/`.
+4. Implement to green (`make tangle-fpl` when you change image markdown).
+5. Check for code-vs-spec drift against the archived corpus before declaring walker work done.

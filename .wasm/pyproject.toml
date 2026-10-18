@@ -1,0 +1,19 @@
+# Wheel of the tangled walker for Pyodide / marimo-wasm / JupyterLite.
+# Not the gate project; only a packaging stub. `fpl/` is a symlink to
+# ../01-bootstrap/python/fpl.
+#
+# Dist name is fpl-walker so micropip does not pick PyPI's Fantasy-PL
+# package also named `fpl` (that one pulls PTable and breaks in Pyodide).
+
+[project]
+name = "fpl-walker"
+version = "0.0.0"
+requires-python = ">=3.12"
+dependencies = ["lark", "icontract"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["fpl"]

@@ -2,7 +2,7 @@
 and tokenized.
 
 GET /            the page GET /snippets    {"<feature>/<file>": text} of
-03-fpl/03.01-features/*/examples/*.fpl under the root POST /tokenize   {"text",
+03-fpl/OLD/03.01-features/*/examples/*.fpl under the root POST /tokenize   {"text",
 "tokenizer", "wrap", "width", "claude"} -> {"text": the laid-out text,
 "tokens": [{"t": text or null, "h": hex bytes, "id": int, "n": byte
 length}], "count", "lines", "over", "claude"}
@@ -112,7 +112,7 @@ def layout(text: str, wrap: str, width: int) -> tuple[str, int]:
 
 
 def find_root(start: Path) -> Path | None:
-    """The nearest directory at or above start that holds 03-fpl/03.01-features/."""
+    """The nearest directory at or above start that holds 03-fpl/OLD/03.01-features/."""
     return next((d for d in (start, *start.parents) if (d / "fpl" / "features").is_dir()), None)
 
 
@@ -129,7 +129,7 @@ class App:
 
     def snippets(self) -> dict[str, str]:
         """The example programs under the root, by "<feature>/<file stem>"."""
-        paths = sorted(self.root.glob("03-fpl/03.01-features/*/examples/*.fpl"))
+        paths = sorted(self.root.glob("03-fpl/OLD/03.01-features/*/examples/*.fpl"))
         return {f"{p.parent.parent.name}/{p.stem}": p.read_text().rstrip("\n") for p in paths}
 
     def tokenize(self, body: object) -> dict[str, Any]:

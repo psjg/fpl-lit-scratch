@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 REPO = ROOT.parent
-EXAMPLE = REPO / "03-fpl/03.01-features/draft2/examples/01-frames.fpl"
+EXAMPLE = REPO / "03-fpl/OLD/03.01-features/draft2/examples/01-frames.fpl"
 PYTHON = os.environ.get("FPL_PYTHON", sys.executable)
 BIN = ROOT / "bin" / "fpl"
 

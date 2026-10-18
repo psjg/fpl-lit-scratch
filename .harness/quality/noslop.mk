@@ -106,7 +106,7 @@ pristine:
 # (FPL's tree, with no __init__) sits beside the package 01-bootstrap/fpl, and the example lives in
 # it; the entry has to find the package past it. A missing example, or an empty .expected that
 # would match an entry that prints nothing, is refused.
-ROOT_EXAMPLE := 03-fpl/03.01-features/draft2/examples/01-frames
+ROOT_EXAMPLE := 03-fpl/OLD/03.01-features/draft2/examples/01-frames
 
 rootrun:
 	@test -s $(ROOT)/$(ROOT_EXAMPLE).fpl -a -s $(ROOT)/$(ROOT_EXAMPLE).expected || { \

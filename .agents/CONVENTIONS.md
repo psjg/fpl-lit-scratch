@@ -3,10 +3,11 @@
 Canonical for every agent. The Claude `fpl-conventions` skill and the `.claude/commands/*`
 wrappers just point here. The walker, the Python implementation, is a project of its own in
 `01-bootstrap/`: its package is `fpl`, so `import fpl` and the module names below are what they
-were; only the directory moved, and with it the paths of its files. `03-fpl/03.01-features/`,
-the conformance suite, stays above the project, in the language's own tree `fpl/` at the root,
-because it is the language's, not the walker's: FPL can later test itself against it, and the
-walker is one implementation tested against it.
+were; only the directory moved, and with it the paths of its files.
+
+The FPL image is `03-fpl/`: literate `*.md` tangled 1:1 to sibling `*.fpl` (`make tangle-fpl`).
+The archived conformance suite at `03-fpl/OLD/03.01-features/` is what the walker corpus still
+reads; a new oracle home is open.
 
 ## Source tree (`01-bootstrap/fpl/`)
 
@@ -36,21 +37,31 @@ Hard rules:
   real source.
 - **Frozen dataclasses**, so `pyright` strict + `reportMatchNotExhaustive` actually bites.
 
-## Features and conformance
+## The FPL image (`03-fpl/`)
 
 ```
-03-fpl/03.01-features/
-  _template/
-    spec.md
-    examples/hello.fpl
-    examples/hello.expected
+03-fpl/
+  hello.md                 literate source (canon)
+  hello.fpl                tangled; do not hand-edit
+  OLD/03.01-features/      archived oracle the corpus still reads
+01-bootstrap/
+  tangle_fpl.py            md → fpl (prose → `;` comments; fpl fences → source)
+```
+
+`make tangle-fpl` from the root. A `.fpl` without a matching `.md` (outside `OLD/`) is an
+error. README and index.md under `03-fpl/` are not tangled.
+
+## Archived conformance (corpus only)
+
+```
+03-fpl/OLD/03.01-features/
   <name>/
-    spec.md              maintainer-authored: surface syntax, desugaring, semantics
-    examples/*.fpl        maintainer-authored programs
-    examples/*.expected   maintainer-authored expected output
+    spec.md
+    examples/*.fpl
+    examples/*.expected
 01-bootstrap/tests/
-  corpus.py              finds 03-fpl/03.01-features/ above the project: the examples every test reads
-  test_conformance.py    runs the driver on 03-fpl/03.01-features/*/examples/*.fpl, diffs .expected
+  corpus.py              finds 03-fpl/OLD/03.01-features/
+  test_conformance.py    runs the driver on those examples, diffs .expected
   test_ambiguity.py      asserts the grammar parses the corpus with zero Earley ambiguity
 ```
 
@@ -61,9 +72,10 @@ Hard rules:
 - Error case: a single line `ERROR: <line>:<col> <message>` — no Python traceback ever reaches
   the user.
 
-**The oracle rule:** the maintainer writes `spec.md`, the `.fpl` files, and the `.expected`
-files. The agent makes `make check` green against them. `spec.md`, the examples, `DESIGN.md`
-and `SPEC.md` are edit-protected (`[spec]` marker required).
+**The oracle rule:** the maintainer writes the fixtures that remain. The agent makes
+`make check` green against them. `spec.md`, the examples, `02-docs/02.04-explanation/design.md`
+and `02-docs/02.03-reference/spec.md` are edit-protected (`[spec]` marker required). Do not
+scaffold new feature dirs under the archived tree; the next oracle home is undecided.
 
 ## The gate (`make check` at the root)
 
@@ -74,12 +86,4 @@ lane in `01-bootstrap/`, so `make check` from the root is the walker's gate. It 
 per module, the layering of the source tree above, declared dependencies, dead and duplicate
 code, and named waivers.
 
-Green ⇔ done. A feature with a red or unrun `make check` is not done.
-
-## Adding a feature — the loop
-
-1. `03-fpl/03.01-features/<name>/` scaffolded from `_template/` (`/new-feature` does this, then stops).
-2. Maintainer fills `spec.md` + `examples/*.fpl` + `*.expected`.
-3. Agent: `make check` is now red. Implement across `grammar.lark` → `desugar.py` →
-   (rarely) `ast_core.py`/`eval.py` until green. Never touch `spec.md`.
-4. Check for code-vs-spec drift, commit, done.
+Green ⇔ done. Work with a red or unrun `make check` is not done.

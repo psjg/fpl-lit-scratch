@@ -1,9 +1,9 @@
 """Write the Quarto homepage from the checkout README.
 
-The README stays a Marimo notebook. Quarto does not run a ``{.marimo}`` fence,
-so this writes ``index.qmd`` with those fences rewritten to ``{python}``. The
-setup cell only imports ``fpl`` and is hidden. A cell that raises stays on the
-page. ``index.qmd`` is generated.
+The README stays a Marimo notebook. Quarto does not run a ``{.marimo}`` fence.
+This writes ``index.qmd`` with those fences dropped, and replaces the
+"Try it in Marimo" section with an iframe to the Marimo-wasm export at
+``try/index.html`` (built into ``.site/try/``). ``index.qmd`` is generated.
 """
 
 from __future__ import annotations
@@ -16,28 +16,39 @@ _FENCE = re.compile(
     r"^```python \{\.marimo([^}]*)\}\n(.*?)^```\n?",
     re.MULTILINE | re.DOTALL,
 )
+_TRY = re.compile(
+    r"^## Try it in Marimo\n.*\Z",
+    re.MULTILINE | re.DOTALL,
+)
 
 _HEADER = """---
 title: FPL
 execute:
-  enabled: true
-  error: true
+  enabled: false
 ---
+"""
+
+_IFRAME = """\
+## Try it in the browser
+
+Edit a cell and run it. The walker runs in Pyodide via Marimo-wasm.
+
+```{=html}
+<iframe
+  src="try/index.html"
+  title="FPL try notebook"
+  style="width:100%;height:42rem;border:1px solid #dee2e6;border-radius:0.25rem;"
+  loading="lazy"
+></iframe>
+```
 """
 
 
 def qmd(readme: str) -> str:
     """Return the Quarto page for one Marimo README."""
     body = _FRONT.sub("", readme, count=1)
-
-    def fence(match: re.Match[str]) -> str:
-        attrs = match.group(1)
-        code = match.group(2)
-        if 'name="setup"' in attrs:
-            return "```{python}\n#| echo: false\nimport fpl\n```\n"
-        return "```{python}\n" + code + "```\n"
-
-    body = _FENCE.sub(fence, body).lstrip("\n")
+    body = _FENCE.sub("", body)
+    body = _TRY.sub(_IFRAME, body).strip() + "\n"
     return _HEADER + "\n" + body
 
 

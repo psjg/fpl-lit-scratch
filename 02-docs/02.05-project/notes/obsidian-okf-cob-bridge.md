@@ -1,0 +1,85 @@
+# Obsidian, OKF, and the Radicle task graph
+
+Working note. Not an ADR yet. Captures the direction discussed 2026-10-18:
+Obsidian as a *view* on the work-breakdown; Radicle COBs as the *record* of
+task state; OKF as the exchange shape of markdown in the vault.
+
+## Three layers (do not collapse them)
+
+| Layer | What it is | Where it lives |
+| --- | --- | --- |
+| **OKF vault** | Markdown + YAML frontmatter, `index.md`, concepts | Tree under the checkout (e.g. `02-docs/`, image notes) |
+| **Typed / RDF views** | Optional plugins that add edge types or SPARQL | Same files, or a derived index — not part of OKF |
+| **Task COBs** | Signed ops, blockers, assignee, `todo`/`doing`/`done`/`dropped` | `refs/cobs/…` (`nl.psjs.dagtaak`), via `.harness/scripts/task` — see `.agents/TASKS.md` |
+
+OKF links are **untyped by design**: the kind of relationship sits in prose, not
+in the link. Consumers see a directed untyped graph. Plugins that add
+`knows:: [[…]]`, openCypher, or SPARQL are a parallel layer. Fine to use; do
+not pretend they are OKF.
+
+## Plugin fit (short)
+
+- **Typed Graph** — typed edges + openCypher in the vault. Good for WBS/depends-on
+  *views*. Not OKF-native typing.
+- **Dot Triples / obsidian-sparql** — vault → RDF, SPARQL in notes. Interop with
+  external tools; still an index over markdown.
+- **Open Ontologies** — maps `type:` / property fields toward RDF + OWL/SHACL.
+  Closest frontmatter→RDF story; heavier, desktop engine.
+- **Exocortex** — own asset/ontology model. Least “plain OKF”.
+
+Prefer Typed Graph or Canvas for task visualization. Reach for RDF/SPARQL only
+if you need cross-cutting queries beyond the WBS view.
+
+## Bridge: COB ↔ Obsidian
+
+Obsidian only sees the filesystem. COBs do not live in the tree (on purpose:
+state changes must not need a PR). So nothing “talks to rad” inside Obsidian
+without a bridge.
+
+```text
+.harness/scripts/task show|list|ready
+        │
+        ▼
+  exporter → markdown notes and/or .canvas
+        │
+        ▼
+  Obsidian (graph / Typed Graph / Kanban)
+        │
+        ▼  (optional, later)
+  importer → task start|done|block|edit
+```
+
+### Read path first
+
+1. Export each task to a note (or one board): frontmatter `type: Task`,
+   `status`, links for `blockedBy` / blockers.
+2. Kanban on `status` (`todo` / `doing` / `done` — map `dropped` explicitly).
+3. Graph or Canvas edges = blocker relations.
+
+COB remains authoritative for state. Notes are a **projection**.
+
+### Write path later
+
+Obsidian as WBS authoring UI is allowed only if edits go through `task`
+(edit / block / start / done). Do not keep task state only in the vault, or
+you undo the COB choice in `.agents/TASKS.md`.
+
+## OKF role for task notes
+
+Projected task notes MAY be OKF concepts (`type: Task`, listed from an
+`index.md` under e.g. `02-docs/02.05-project/tasks/` if we add that tree).
+Say clearly in the note or folder README: state is owned by the COB; the file
+is a view (or a draft until synced).
+
+## Suggested order of work
+
+1. Read-only exporter COB → vault (+ Kanban).
+2. Graph/Canvas view of blockers.
+3. Narrow write-back (`start` / `done` / `block`).
+4. RDF/SPARQL only if the query need appears.
+
+## Related
+
+- `.agents/TASKS.md` — COB model, `ready` / loops / actors
+- `02-docs/02.05-project/notes/issue-task-patch.md` — naming of work
+- OKF spec: [GoogleCloudPlatform/knowledge-catalog okf/SPEC.md](https://github.com/GoogleCloudPlatform/knowledge-catalog/blob/main/okf/SPEC.md) §6 (links untyped)

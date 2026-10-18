@@ -17,7 +17,7 @@
 #   3. Runs `.harness/scripts/setup.sh` inside the new worktree (hooks, stacked-commit config,
 #      identity report).
 #
-# It scaffolds nothing: an attempt's code and its `03-fpl/03.01-features/` are the first implementation
+# It scaffolds nothing: an attempt's code and its `03-fpl/OLD/03.01-features/` are the first implementation
 # session's job (.agents/CONVENTIONS.md).
 #
 # Usage:

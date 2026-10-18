@@ -3,8 +3,8 @@ Every citation of an example program names one that exists.
 
 The harness cites the maintainer's examples by name: HOLES.md, the docs
 and the test docstrings point at a program as a path under
-`03-fpl/03.01-features/`, as `examples/<name>` or, with a line, as
-`<name>:<line>`. A rename under `03-fpl/03.01-features/` leaves those citations
+`03-fpl/OLD/03.01-features/`, as `examples/<name>` or, with a line, as
+`<name>:<line>`. A rename under `03-fpl/OLD/03.01-features/` leaves those citations
 pointing at nothing, and nothing else notices. A bare name with no line
 is not taken as a citation: `python -m fpl file.fpl` and a test's
 `tmp_path / "p.fpl"` name no example.
@@ -49,7 +49,7 @@ def dangling(text: str) -> list[str]:
 
 def test_a_renamed_program_dangles() -> None:
     name = "gone.fpl"
-    path = f"03-fpl/03.01-features/draft1/examples/{name}"
+    path = f"03-fpl/OLD/03.01-features/draft1/examples/{name}"
     assert dangling(f"{path}:3, {name}:3 and draft1.fpl:2") == [
         path,
         name,

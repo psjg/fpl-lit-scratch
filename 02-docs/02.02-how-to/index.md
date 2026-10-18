@@ -1,5 +1,3 @@
----
-title: 2.4 Notes
----
+# How-to
 
 Placeholder. Rewrite this page later.

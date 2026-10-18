@@ -13,8 +13,8 @@
 #      both; all trailers are read from the trailer block git reads (interpret-trailers)
 #   5. known trailers appear in canonical order
 #   6. unless Human-Only, the commit author email equals .git/agent-identity
-#   7. oracle guard: editing 02-docs/02.01-design.md, 02-docs/02.02-spec.md, 03-fpl/03.01-features/*/spec.md or
-#      03-fpl/03.01-features/*/examples/* requires the literal marker [spec] in the message
+#   7. oracle guard: editing 02-docs/02.04-explanation/design.md, 02-docs/02.03-reference/spec.md, 03-fpl/OLD/03.01-features/*/spec.md or
+#      03-fpl/OLD/03.01-features/*/examples/* requires the literal marker [spec] in the message
 #  7b. policy guard: editing what sets how hard the gate judges (.harness/quality/, and the
 #      pyproject.toml, Makefile and mutants.allow of the root and of 01-bootstrap/)
 #      requires the literal marker [policy], and such a commit may not also touch
@@ -199,10 +199,10 @@ first="$(sed -n '1p' "$msg_file")"
 # 7. oracle guard, 7b. policy guard -------------------------------------------
 # One pass over the paths the commit changes. They are read raw and NUL-separated: without
 # -z git quotes a name holding non-ASCII, quote, backslash or control characters, in quotes
-# and with escapes, so it starts with a quote and no pattern anchored at 03-fpl/03.01-features/
+# and with escapes, so it starts with a quote and no pattern anchored at 03-fpl/OLD/03.01-features/
 # or .harness/quality/ takes it. --no-renames: a rename would show its new name only, and a spec file
-# moved out of 03-fpl/03.01-features/ would go unseen.
-protected='^(02-docs/02\.01-design\.md|02-docs/02\.02-spec\.md|03-fpl/03\.01-features/[^/]+/spec\.md|03-fpl/03\.01-features/[^/]+/examples/.+)$'
+# moved out of 03-fpl/OLD/03.01-features/ would go unseen.
+protected='^(02-docs/02\.04-explanation/design\.md|02-docs/02\.03-reference/spec\.md|03-fpl/OLD/03\.01-features/[^/]+/spec\.md|03-fpl/OLD/03\.01-features/[^/]+/examples/.+)$'
 policy='^(.harness/quality/.+|(01-bootstrap/)?(pyproject\.toml|Makefile|mutants\.allow))$'
 code='^(01-bootstrap/(fpl|tests)/|03-fpl/|tests/)'
 

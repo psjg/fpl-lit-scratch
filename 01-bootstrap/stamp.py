@@ -1003,9 +1003,9 @@ filters:
     - 01-bootstrap/01.05-labs/README.md
     - 01-bootstrap/01.06-nagini/README.md
     - 02-docs/README.md
-    - 02-docs/02.04-notes/README.md
+    - 02-docs/02.05-project/notes/README.md
     - 03-fpl/README.md
-    - 03-fpl/03.01-features/README.md
+    - 03-fpl/OLD/03.01-features/README.md
     - 01-bootstrap/01.01-boundary/01.01.01-source.qmd
     - 01-bootstrap/01.01-boundary/01.01.02-fon.qmd
     - 01-bootstrap/01.01-boundary/01.01.03-pipe.qmd
@@ -1034,18 +1034,18 @@ filters:
     - 01-bootstrap/01.04-compose/01.04.04-build.qmd
     - 01-bootstrap/01.05-labs/01.05.01-pipeline.qmd
     - 01-bootstrap/01.06-nagini/01.06.01-advance.qmd
-    - 02-docs/02.01-design.md
-    - 02-docs/02.02-spec.md
-    - 02-docs/02.03-roadmap.md
-    - 02-docs/02.04-notes/02.04.01-issue-task-patch.md
-    - 02-docs/02.04-notes/02.04.02-sober.md
-    - 02-docs/02.04-notes/02.04.03-mediating-project.md
-    - 03-fpl/03.01-features/draft1/spec.md
-    - 03-fpl/03.01-features/draft2/spec.md
-    - 03-fpl/03.01-features/draft3/spec.md
-    - 03-fpl/03.01-features/match/spec.md
-    - 03-fpl/03.01-features/server/spec.md
-    - 03-fpl/03.01-features/sketch/spec.md
+    - 02-docs/02.04-explanation/design.md
+    - 02-docs/02.03-reference/spec.md
+    - 02-docs/02.05-project/roadmap.md
+    - 02-docs/02.05-project/notes/issue-task-patch.md
+    - 02-docs/02.05-project/notes/sober.md
+    - 02-docs/02.05-project/notes/mediating-project.md
+    - 03-fpl/OLD/03.01-features/draft1/spec.md
+    - 03-fpl/OLD/03.01-features/draft2/spec.md
+    - 03-fpl/OLD/03.01-features/draft3/spec.md
+    - 03-fpl/OLD/03.01-features/match/spec.md
+    - 03-fpl/OLD/03.01-features/server/spec.md
+    - 03-fpl/OLD/03.01-features/sketch/spec.md
 website:
   title: "FPL"
   site-url: https://psjg.github.io/fpl-lit-scratch
@@ -1053,6 +1053,8 @@ website:
   sidebar:
     search: true
     contents:
+      - text: Werkbank
+        href: werkbank/index.html
       - section: 01-bootstrap/README.md
         contents:
           - section: 01-bootstrap/01.01-boundary/README.md
@@ -1126,29 +1128,29 @@ website:
       - section: 02-docs/README.md
         contents:
           - text: "2.1 Design"
-            href: 02-docs/02.01-design.md
+            href: 02-docs/02.04-explanation/design.md
           - text: "2.2 Spec"
-            href: 02-docs/02.02-spec.md
+            href: 02-docs/02.03-reference/spec.md
           - text: "2.3 Roadmap"
-            href: 02-docs/02.03-roadmap.md
-          - section: 02-docs/02.04-notes/README.md
+            href: 02-docs/02.05-project/roadmap.md
+          - section: 02-docs/02.05-project/notes/README.md
             contents:
               - text: "2.4.1 Issue, task, patch"
-                href: 02-docs/02.04-notes/02.04.01-issue-task-patch.md
+                href: 02-docs/02.05-project/notes/issue-task-patch.md
               - text: "2.4.2 Plumbing, not prophecy"
-                href: 02-docs/02.04-notes/02.04.02-sober.md
+                href: 02-docs/02.05-project/notes/sober.md
               - text: "2.4.3 The project that mediates the language"
-                href: 02-docs/02.04-notes/02.04.03-mediating-project.md
+                href: 02-docs/02.05-project/notes/mediating-project.md
       - section: 03-fpl/README.md
         contents:
-          - section: 03-fpl/03.01-features/README.md
+          - section: 03-fpl/OLD/03.01-features/README.md
             contents:
-              - 03-fpl/03.01-features/draft1/spec.md
-              - 03-fpl/03.01-features/draft2/spec.md
-              - 03-fpl/03.01-features/draft3/spec.md
-              - 03-fpl/03.01-features/match/spec.md
-              - 03-fpl/03.01-features/server/spec.md
-              - 03-fpl/03.01-features/sketch/spec.md
+              - 03-fpl/OLD/03.01-features/draft1/spec.md
+              - 03-fpl/OLD/03.01-features/draft2/spec.md
+              - 03-fpl/OLD/03.01-features/draft3/spec.md
+              - 03-fpl/OLD/03.01-features/match/spec.md
+              - 03-fpl/OLD/03.01-features/server/spec.md
+              - 03-fpl/OLD/03.01-features/sketch/spec.md
 format:
   html:
     theme: cosmo
@@ -1200,20 +1202,20 @@ book:
         - 01-bootstrap/01.06-nagini/01.06.01-advance.qmd
     - part: "2 Docs"
       chapters:
-        - 02-docs/02.01-design.md
-        - 02-docs/02.02-spec.md
-        - 02-docs/02.03-roadmap.md
-        - 02-docs/02.04-notes/02.04.01-issue-task-patch.md
-        - 02-docs/02.04-notes/02.04.02-sober.md
-        - 02-docs/02.04-notes/02.04.03-mediating-project.md
+        - 02-docs/02.04-explanation/design.md
+        - 02-docs/02.03-reference/spec.md
+        - 02-docs/02.05-project/roadmap.md
+        - 02-docs/02.05-project/notes/issue-task-patch.md
+        - 02-docs/02.05-project/notes/sober.md
+        - 02-docs/02.05-project/notes/mediating-project.md
     - part: "3.1 Features"
       chapters:
-        - 03-fpl/03.01-features/draft1/spec.md
-        - 03-fpl/03.01-features/draft2/spec.md
-        - 03-fpl/03.01-features/draft3/spec.md
-        - 03-fpl/03.01-features/match/spec.md
-        - 03-fpl/03.01-features/server/spec.md
-        - 03-fpl/03.01-features/sketch/spec.md
+        - 03-fpl/OLD/03.01-features/draft1/spec.md
+        - 03-fpl/OLD/03.01-features/draft2/spec.md
+        - 03-fpl/OLD/03.01-features/draft3/spec.md
+        - 03-fpl/OLD/03.01-features/match/spec.md
+        - 03-fpl/OLD/03.01-features/server/spec.md
+        - 03-fpl/OLD/03.01-features/sketch/spec.md
 format:
   pdf:
     pdf-engine: lualatex
