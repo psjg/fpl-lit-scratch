@@ -17,14 +17,17 @@ and ASCII `;;!` phrase bars between turns. See
 ;;! -( 22:52:09 )-< command 1 >-----------------------------{ head: 0 }-
 1 1 +
 |- [ 1 1 + ] : ...
-;;! -( 22:52:17 )-< command 2 >-------------{ head: 1; fuel: 12; ms: 0.4 }-
+;;! -( 22:52:17 )-< command 2 >-{ head: 1; &18446744073709551615; fuel: 12; ms: 0.4 }-
 ```
 
 The bar carries clock time, phrase number, and session head. After an eval, the **next**
-bar also names that phrase’s steps spent and wall ms. The bar field stays `fuel`; the
-literature synonym is **gas** (PLFA). If spent fuel later moves onto the `|-` line, call
-that component a **deadline** (prefer `@ <n>` chrome) — see
+bar also names that phrase’s steps spent and wall ms. Optional `&<decimal>` is a turn
+**state fingerprint** (stub may be random until a real hash lands). The bar field stays
+`fuel`; the literature synonym is **gas** (PLFA). If spent fuel later moves onto the `|-`
+line, call that component a **deadline** (prefer `@ <n>` chrome) — see
 [Evaluation judgments](../../02.04-explanation/inspiration/judgments.md) (`02.04.03`).
+Fail judgments and `err/` tags: [02.03.01 Errors](../../02.03-reference/errors.md).
+
 
 ## What the walker exposes
 
@@ -40,6 +43,8 @@ that component a **deadline** (prefer `@ <n>` chrome) — see
 ## Non-goals
 
 - Changing the session log schema to persist spent fuel or wall time.
+- A deterministic content hash for `&` (stub fingerprint is enough for now).
 - Filling the result type slot (`: ...`) with real types — separate concern.
 - Unicode box-drawing or other non-ASCII chrome on the bar.
 - Changing non-TTY pipes or `-e` output; costs stay a TTY transcript feature.
+

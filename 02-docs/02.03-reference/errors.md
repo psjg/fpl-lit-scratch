@@ -1,0 +1,45 @@
+---
+title: Errors and diagnostics
+---
+
+# 02.03.01 2026-10-19 — Errors and diagnostics
+
+Fact sheet for error **tags** and diagnostic chrome. This does **not** invent FPL
+language semantics or change the walker printer. Inspiration and sketches:
+[Evaluation judgments](../02.04-explanation/inspiration/judgments.md). Live site:
+[fpl-lit-scratch](https://psjg.github.io/fpl-lit-scratch/).
+
+## Judgment fail shape (locked, not printed)
+
+```text
+|- ! err/<tag> : Error [@ <deadline>]
+```
+
+- `!` — fail marker on the judgment line (not falsum, not a source caret).
+- `err/<tag>` — path under the `err/` namespace (FPL `/`, not deadline).
+- `@ <n>` — optional deadline (steps spent); see phrase costs / judgments.
+- Today’s TTY still uses `ERROR: <line>:<col> <message>`.
+
+## HTTP status aliases
+
+Optional numeric chrome where the HTTP gloss is honest. The **path tag** is the stable
+id for fixtures; the number may appear on a banner (`err/out-of-gas  408`).
+
+| Tag | HTTP | Gloss |
+| --- | --- | --- |
+| `err/out-of-gas` | 408 | Request Timeout — meter / budget exhausted |
+| `err/no-row` | 404 | Not Found — nothing matched |
+| *(later)* type / refuse | 422 | Unprocessable Entity |
+| *(later)* internal | 500 | Internal Server Error — walker bug |
+
+Do not assign a code for every slip. Path-only when no honest HTTP metaphor fits.
+
+## Clipper lore (chrome)
+
+For `err/out-of-gas` / 408, Clipper (Kakoune Clippy face) may say: Immortal Joe is
+coming; look out for your ice cream, Jack. Full ASCII sketch in
+[judgments](../02.04-explanation/inspiration/judgments.md).
+
+## Catalog
+
+Grows as tags land. Printer and under-span `^` are not wired yet.

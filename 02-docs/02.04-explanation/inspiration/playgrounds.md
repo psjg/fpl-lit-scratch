@@ -28,7 +28,18 @@ Talks and essays (*Inventing on Principle*, *Learnable Programming*): make the r
 The environment *is* the program: image, inspectors, live objects you can poke.
 
 - Steal: inspect state instead of guessing; the tool and the language grow together.
-- Not yet: an image, object inspectors, or a world that stays hot between edits.
+- Steal (browser): **path-browser** — Finder-like columns over `/`-scoped modules
+  (Unix / Plan 9 path scopes), body of the selected scope below — System Browser shape
+  without classes.
+- Not yet: an image, object inspectors, a hot world between edits, or a path-browser UI.
+
+### Glamorous Toolkit
+
+Moldable development: custom inspectors and views for the object in front of you
+(Pharo lineage).
+
+- Steal: the tool reshapes itself around the value.
+- Not yet: moldable inspectors over walker IR / stack.
 
 ### Light Table
 
@@ -79,6 +90,14 @@ Current state: playground uses **Monaco** with Quokka-style `|-` ghosts; Tab / A
 
 Turnstile ASCII inventory (notation only): [turnstiles.md](turnstiles.md).
 
+## Splash / MOTD (TTY chrome)
+
+Minecraft-style one-liner at REPL startup — not language keywords. Pool includes FPL /
+Favourite / Final Programming Language, don’t get eaten by a grue, west of a white house,
+Dunnet, meatdog, Chuck Norris, Gas Town’s Mayor / Overseer, Clipper quips. Full Clipper
+ASCII speaking diagnostics lives in [judgments](judgments.md); error tags in
+[02.03.01](../../02.03-reference/errors.md). Site: [fpl-lit-scratch](https://psjg.github.io/fpl-lit-scratch/).
+
 ## Where FPL `/try` sits today
 
 | Milestone | Tag | What it is |
@@ -109,4 +128,6 @@ Order of ambition after the pure buffer. Not a delivery promise — implementati
 | 6 | Document = program | Eve | Walkthrough/essay as the primary live buffer |
 | 7 | Scrub / time | Bret Victor | Parameter scrub; needs cheap deterministic re-run |
 
-**Smalltalk** sits beside this table as a north-star (“environment is the program”), not as a numbered part.
+**Smalltalk** (path-browser) and **Glamorous Toolkit** sit beside this table as north-stars,
+not as numbered parts. Parts 5–7 remain the home for Light Table / Eve / Bret Victor.
+

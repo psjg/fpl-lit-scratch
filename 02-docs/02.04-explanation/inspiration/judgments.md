@@ -63,6 +63,61 @@ Falsum is primarily a static / proof story. Printing ⊥ / `_|_` for “out of g
 absurdity** only; ASCII default for that job stays `_|_`. Transcript chrome stays
 ASCII-first, like the `;;!` bars. Do not steal FPL `?` / `_` (holes) for errors.
 
+### Two channels for failure
+
+| Channel | Shape | Job |
+| --- | --- | --- |
+| **Judgment / equate** | `|- ! err/out-of-gas : Error [@ n]` | Fail as a term-shaped line; `!` marks failure; `err/…` is the path tag |
+| **Locus + tip** | Source line + `^^^^` + Elm-ish prose; optional **Clipper** face | Point at the span; speak a hint (not a term) |
+
+`/` in `err/…` is FPL **path namespace** (like `.` elsewhere), not deadline chrome.
+Deadline stays `@ <n>`. HTTP status numbers are optional aliases on the banner
+(e.g. `408` for out-of-gas) — catalog in [Errors and diagnostics](../../02.03-reference/errors.md)
+(`02.03.01`). Public site today: [fpl-lit-scratch](https://psjg.github.io/fpl-lit-scratch/).
+
+## Diagnostics (Elm tone, Rust spans, Clipper face)
+
+**Tone:** Elm — human banner, plain “I …”, short hints. **Structure (later):** Rust /
+Elm carets under the bad span. **Peers:** Gleam, Roc (caret + hint). **Face:** Kakoune’s
+terminal assistant (Clippy ASCII), not a Kakoune typechecker — we call it **Clipper**.
+
+Canonical Clipper face (from Kakoune `assistant_clippy`):
+
+```text
+ ╭──╮
+ │  │
+ @  @  ╭
+ ││ ││ │
+ ││ ││ ╯
+ │╰─╯│
+ ╰───╯
+```
+
+### Full error sketch (illustration only — not printed yet)
+
+```text
+-- OUT OF GAS ---------------------------------------- err/out-of-gas  408
+
+I ran out of steps before this phrase could finish.
+
+3|  [ 1 drop ] 1000000 repeat
+   ^^^^^^^^^^^^^^^^^^^^^^^^^^
+The meter hit zero here.
+
+ ╭──╮
+ │  │
+ @  @  ╭
+ ││ ││ │  Immortal Joe is coming for you.
+ ││ ││ ╯  Oh boy — you better look out for
+ │╰─╯│    your ice cream, Jack!
+ ╰───╯
+
+Hint: Lower the loop, raise --fuel, or hitch a ride with meatdog.
+|- ! err/out-of-gas : Error @ 1000000
+```
+
+Today the TTY still prints `ERROR: l:c …`. Wiring this sketch is a later plan.
+
 ## Cousins at a glance
 
 | Family | What they do | Why not exactly the equateable REPL transcript |
@@ -137,12 +192,14 @@ separate feat if someone wants the theme in the TTY.
 
 ## Deferred (separate plan)
 
-Do **not** invent syntax in this note. When someone writes the next plan, it covers:
+Do **not** invent syntax in this note. Locked shapes for later work:
 
-1. Native error syntax so failures can live in the value domain. Shapes like
-   `|- error "cannot infer _ : number --" : Error` are **illustrations only** — the
-   shape (error as a term on the judgment line), not a locked surface.
-2. Deadline (spent fuel / gas) on the `|-` judgment line as `@ <n>`; bar may keep
-   `head` and wall `ms`.
+1. Fail judgment: `|- ! err/<tag> : Error [@ n]` with path tags under `err/` (see
+   [02.03.01](../../02.03-reference/errors.md)). Starter: `err/out-of-gas` (408),
+   `err/no-row` (404).
+2. Locus chrome: `^` under the span + Elm paragraphs + Clipper speaking the tip
+   (sketch above).
+3. Deadline on success lines as `@ <n>`; bar may keep `head`, `&`, wall `ms`.
 
 Until then, the ledger in [README.md](README.md) keeps those promises as `deferred`.
+
