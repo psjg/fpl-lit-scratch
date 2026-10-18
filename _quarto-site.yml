@@ -64,6 +64,7 @@ project:
     - 02-docs/02.05-project/notes/issue-task-patch.md
     - 02-docs/02.05-project/notes/sober.md
     - 02-docs/02.05-project/notes/mediating-project.md
+    - 02-docs/02.05-project/notes/repl-phrase-costs.md
     - 03-fpl/OLD/03.01-features/draft1/spec.md
     - 03-fpl/OLD/03.01-features/draft2/spec.md
     - 03-fpl/OLD/03.01-features/draft3/spec.md
@@ -188,6 +189,8 @@ website:
                     href: 02-docs/02.05-project/notes/sober.md
                   - text: The project that mediates the language
                     href: 02-docs/02.05-project/notes/mediating-project.md
+                  - text: REPL phrase costs
+                    href: 02-docs/02.05-project/notes/repl-phrase-costs.md
               - section: 02-docs/02.05-project/adr/README.md
       - section: 03-fpl/README.md
         contents:
