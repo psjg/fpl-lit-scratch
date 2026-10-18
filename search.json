@@ -515,67 +515,94 @@
     ]
   },
   {
-    "objectID": "02-docs/02.01-tutorial/README.html",
-    "href": "02-docs/02.01-tutorial/README.html",
-    "title": "2.1 Tutorial",
+    "objectID": "02-docs/02.01-tutorial/walkthrough.html",
+    "href": "02-docs/02.01-tutorial/walkthrough.html",
+    "title": "Walkthrough: first frames",
     "section": "",
-    "text": "Learning-oriented guides. Walk through FPL with a guide holding your hand.\nPlaceholder. Rewrite this page later. The OKF index is index.md.",
+    "text": "Glossary for this site:",
     "crumbs": [
       "2 Docs",
-      "2.1 Tutorial"
+      "2.1 Tutorial",
+      "Walkthrough: first frames"
     ]
   },
   {
-    "objectID": "01-bootstrap/01.06-nagini/README.html",
-    "href": "01-bootstrap/01.06-nagini/README.html",
-    "title": "1.6 Nagini",
+    "objectID": "02-docs/02.01-tutorial/walkthrough.html#run-a-frame",
+    "href": "02-docs/02.01-tutorial/walkthrough.html#run-a-frame",
+    "title": "Walkthrough: first frames",
+    "section": "1. Run a frame",
+    "text": "1. Run a frame\nThe fence below is wired to the hello-frames kata. Edit if you like, press play to run, or the check mark to grade against expected stdout.\nframes = \"\\n\".join(\n    [\n        \";;; ── frames ──\",\n        \"1 | 1 2 3 +\\t; 2 3 4\",\n        \"1 2 3 +\\t; [1‿2‿3 +]\",\n        \"2 | 3 +\\t; 5\",\n        \"1 | 1 2 3 [-] swap-args\\t; 1 2 3 - 1\",\n    ]\n)\nprint(fpl.run.default.src(frames), end=\"\")",
+    "crumbs": [
+      "2 Docs",
+      "2.1 Tutorial",
+      "Walkthrough: first frames"
+    ]
+  },
+  {
+    "objectID": "02-docs/02.01-tutorial/walkthrough.html#open-the-playground",
+    "href": "02-docs/02.01-tutorial/walkthrough.html#open-the-playground",
+    "title": "Walkthrough: first frames",
+    "section": "2. Open the playground",
+    "text": "2. Open the playground\nAnything you want to try without a prompt belongs in the Playground. Share with the #c= hash.",
+    "crumbs": [
+      "2 Docs",
+      "2.1 Tutorial",
+      "Walkthrough: first frames"
+    ]
+  },
+  {
+    "objectID": "02-docs/02.01-tutorial/walkthrough.html#grade-the-same-kata-on-its-page",
+    "href": "02-docs/02.01-tutorial/walkthrough.html#grade-the-same-kata-on-its-page",
+    "title": "Walkthrough: first frames",
+    "section": "3. Grade the same kata on its page",
+    "text": "3. Grade the same kata on its page\nOpen Hello frames, press Check. Same starter, same expected file under learn/kata/hello-frames/.",
+    "crumbs": [
+      "2 Docs",
+      "2.1 Tutorial",
+      "Walkthrough: first frames"
+    ]
+  },
+  {
+    "objectID": "02-docs/README.html",
+    "href": "02-docs/README.html",
+    "title": "2 Docs",
     "section": "",
-    "text": "Nagini\nGitHub shows this file for the folder. The verified note is 01.06.01-advance.\nNagini checks column on a frozen Span. The proof does not call Lark and does not override a dunder. The Nix JDK is not registered with java_home, so the run needs JAVA_HOME pointed at the Zulu 21 home.",
+    "text": "Human documentation for FPL, split by Diátaxis, plus project meta.\n\n\n\nFolder\nRole\n\n\n\n\n02.01-tutorial\nLearn by doing\n\n\n02.02-how-to\nSolve a concrete task\n\n\n02.03-reference\nSpec, glossary, facts\n\n\n02.04-explanation\nVision, rationale, ADRs\n\n\n02.05-project\nRoadmap, notes, project lists\n\n\n\nHarness how-tos for agents belong in skills, not here. The OKF index is index.md.",
+    "crumbs": [
+      "2 Docs"
+    ]
+  },
+  {
+    "objectID": "01-bootstrap/01.05-labs/README.html",
+    "href": "01-bootstrap/01.05-labs/README.html",
+    "title": "1.5 Labs",
+    "section": "",
+    "text": "Lab\nGitHub shows this file for the folder. The lab note is 01.05.01-pipeline.\nMarimo opens that file directly. Quarto renders the gitignored 01.05.01-pipeline.qmd alias, and on that page the cells stay live. Astro renders 01.05.01-pipeline.md as a static page, so the fence stays source.",
     "crumbs": [
       "1 Bootstrap",
-      "1.6 Nagini"
+      "1.5 Labs"
     ]
   },
   {
-    "objectID": "01-bootstrap/01.04-compose/README.html",
-    "href": "01-bootstrap/01.04-compose/README.html",
-    "title": "1.4 Compose",
+    "objectID": "01-bootstrap/01.03-repr/README.html",
+    "href": "01-bootstrap/01.03-repr/README.html",
+    "title": "1.3 Repr",
     "section": "",
-    "text": "Compositions\nGitHub shows this file for the folder. A composition is a program that orders passes. It is not the semantics. The OKF index is index.md.\n\n01.04.01-pass is the &gt;&gt; object.\n01.04.02-run is the chain the walker actually runs.\n01.04.04-build and 01.04.03-inspect are the longer chains, as signatures.",
+    "text": "Representations\nGitHub shows this file for the folder. Each sort carries the part number: 01.03.01-source.md and the rest. The OKF index is index.md.\n\n01.03.01-source\n01.03.02-tokens\n01.03.03-syntax\n01.03.04-resolved\n01.03.05-expanded\n01.03.06-elaborated\n01.03.07-core\n\nCore later splits into a value and a computation. This trial keeps one note for it.",
     "crumbs": [
       "1 Bootstrap",
-      "1.4 Compose"
+      "1.3 Repr"
     ]
   },
   {
-    "objectID": "01-bootstrap/01.02-pass/README.html",
-    "href": "01-bootstrap/01.02-pass/README.html",
-    "title": "1.2 Pass",
+    "objectID": "01-bootstrap/01.01-boundary/README.html",
+    "href": "01-bootstrap/01.01-boundary/README.html",
+    "title": "1.1 Boundary",
     "section": "",
-    "text": "Passes\nGitHub shows this file for the folder. The passes are 01.02.01-lex.md, 01.02.02-parse.md, and the rest. The OKF index is index.md.\n\n01.02.01-lex and 01.02.02-parse are two Larks. Lex yields tokens. Parse reads them.\n01.02.05-desugar is the walker’s fuse of resolve, expand, and lower.\n01.02.06-elaborate and 01.02.10-evaluate are the rest of the prefix that runs.\n01.02.03-resolve, 01.02.04-expand, 01.02.07-lower, 01.02.08-normalize, 01.02.09-optimize, and 01.02.11-codegen are signatures. They have no Python yet.",
+    "text": "Boundary\nGitHub shows this file for the folder. FON is the wire. It is not a compiler stage. The OKF index is index.md.\n\n01.01.01-source turns raw bytes into FON.\n01.01.02-fon is the inert codec.\n01.01.03-pipe is defonify, then the stage, then fonify.\n01.01.04-render turns the last FON value back into text.",
     "crumbs": [
       "1 Bootstrap",
-      "1.2 Pass"
-    ]
-  },
-  {
-    "objectID": "01-bootstrap/README.html",
-    "href": "01-bootstrap/README.html",
-    "title": "1 Bootstrap",
-    "section": "",
-    "text": "GitHub renders this file when you open the folder. A note’s name is its address. A concept is 01.02-pass/01.02.01-lex.md, not another README.md.\nWhat GitHub does with this tree:\n\nA README.md is the page of its folder. Every other .md renders when you open it, YAML frontmatter included.\nRelative links such as 01.02.01-lex navigate. [[wikilinks]] do not.\nGitHub does not run Astro, Quarto, or Marimo. The fences stay source.\nindex.md is the OKF root index. GitHub does not treat it as the folder page. This README does that job.\n\nThe other tools read the same files:\n\nObsidian opens the repo root as the vault. These notes are in that graph. Wikilinks are off.\nOKF concepts are the notes that carry type. index.md files are indexes and have no type. These READMEs have no type either.\nMarimo opens a filled note with marimo edit 01.02-pass/01.02.01-lex.md.\nAstro builds a static site from the concept notes and skips README.md and index.md.\nQuarto builds the reactive pages from the gitignored .qmd aliases.\n\n\n\n\n01.01 Boundary\n01.02 Passes\n01.03 Representations\n01.04 Compositions\n01.05 Lab\n01.06 Nagini\nSite",
-    "crumbs": [
-      "1 Bootstrap"
-    ]
-  },
-  {
-    "objectID": "01-bootstrap/README.html#map",
-    "href": "01-bootstrap/README.html#map",
-    "title": "1 Bootstrap",
-    "section": "",
-    "text": "01.01 Boundary\n01.02 Passes\n01.03 Representations\n01.04 Compositions\n01.05 Lab\n01.06 Nagini\nSite",
-    "crumbs": [
-      "1 Bootstrap"
+      "1.1 Boundary"
     ]
   },
   {
@@ -625,49 +652,70 @@
     "href": "index.html#try-it-in-the-browser",
     "title": "FPL",
     "section": "Try it in the browser",
-    "text": "Try it in the browser\nEdit a block and press play. Runs in Pyodide with this site’s fpl-walker wheel.\nframes = \"\n\".join(\n    [\n        \";;; ── frames ──\",\n        \"1 | 1 2 3 +    ; 2 3 4\",\n        \"1 2 3 +    ; [1‿2‿3 +]\",\n        \"2 | 3 +    ; 5\",\n        \"1 | 1 2 3 [-] swap-args    ; 1 2 3 - 1\",\n    ]\n)\nfpl.run.default.src(frames)\nfpl.run.default.src(\"\"\"\ndouble : n -- n\n    dup +\n\n2 double\n\"\"\")\nfpl.run.default.src(\"\"\"\n4 double\n\"\"\")"
+    "text": "Try it in the browser\nEdit a block and press play. Runs in Pyodide with this site’s fpl-walker wheel.\nFor a full editor, shareable #c= links, and graded katas, open the Playground or Katas.\nframes = \"\n\".join(\n    [\n        \";;; ── frames ──\",\n        \"1 | 1 2 3 +    ; 2 3 4\",\n        \"1 2 3 +    ; [1‿2‿3 +]\",\n        \"2 | 3 +    ; 5\",\n        \"1 | 1 2 3 [-] swap-args    ; 1 2 3 - 1\",\n    ]\n)\nfpl.run.default.src(frames)\nfpl.run.default.src(\"\"\"\ndouble : n -- n\n    dup +\n\n2 double\n\"\"\")\nfpl.run.default.src(\"\"\"\n4 double\n\"\"\")"
   },
   {
-    "objectID": "01-bootstrap/01.01-boundary/README.html",
-    "href": "01-bootstrap/01.01-boundary/README.html",
-    "title": "1.1 Boundary",
+    "objectID": "01-bootstrap/README.html",
+    "href": "01-bootstrap/README.html",
+    "title": "1 Bootstrap",
     "section": "",
-    "text": "Boundary\nGitHub shows this file for the folder. FON is the wire. It is not a compiler stage. The OKF index is index.md.\n\n01.01.01-source turns raw bytes into FON.\n01.01.02-fon is the inert codec.\n01.01.03-pipe is defonify, then the stage, then fonify.\n01.01.04-render turns the last FON value back into text.",
+    "text": "GitHub renders this file when you open the folder. A note’s name is its address. A concept is 01.02-pass/01.02.01-lex.md, not another README.md.\nWhat GitHub does with this tree:\n\nA README.md is the page of its folder. Every other .md renders when you open it, YAML frontmatter included.\nRelative links such as 01.02.01-lex navigate. [[wikilinks]] do not.\nGitHub does not run Astro, Quarto, or Marimo. The fences stay source.\nindex.md is the OKF root index. GitHub does not treat it as the folder page. This README does that job.\n\nThe other tools read the same files:\n\nObsidian opens the repo root as the vault. These notes are in that graph. Wikilinks are off.\nOKF concepts are the notes that carry type. index.md files are indexes and have no type. These READMEs have no type either.\nMarimo opens a filled note with marimo edit 01.02-pass/01.02.01-lex.md.\nAstro builds a static site from the concept notes and skips README.md and index.md.\nQuarto builds the reactive pages from the gitignored .qmd aliases.\n\n\n\n\n01.01 Boundary\n01.02 Passes\n01.03 Representations\n01.04 Compositions\n01.05 Lab\n01.06 Nagini\nSite",
     "crumbs": [
-      "1 Bootstrap",
-      "1.1 Boundary"
+      "1 Bootstrap"
     ]
   },
   {
-    "objectID": "01-bootstrap/01.03-repr/README.html",
-    "href": "01-bootstrap/01.03-repr/README.html",
-    "title": "1.3 Repr",
+    "objectID": "01-bootstrap/README.html#map",
+    "href": "01-bootstrap/README.html#map",
+    "title": "1 Bootstrap",
     "section": "",
-    "text": "Representations\nGitHub shows this file for the folder. Each sort carries the part number: 01.03.01-source.md and the rest. The OKF index is index.md.\n\n01.03.01-source\n01.03.02-tokens\n01.03.03-syntax\n01.03.04-resolved\n01.03.05-expanded\n01.03.06-elaborated\n01.03.07-core\n\nCore later splits into a value and a computation. This trial keeps one note for it.",
+    "text": "01.01 Boundary\n01.02 Passes\n01.03 Representations\n01.04 Compositions\n01.05 Lab\n01.06 Nagini\nSite",
     "crumbs": [
-      "1 Bootstrap",
-      "1.3 Repr"
+      "1 Bootstrap"
     ]
   },
   {
-    "objectID": "01-bootstrap/01.05-labs/README.html",
-    "href": "01-bootstrap/01.05-labs/README.html",
-    "title": "1.5 Labs",
+    "objectID": "01-bootstrap/01.02-pass/README.html",
+    "href": "01-bootstrap/01.02-pass/README.html",
+    "title": "1.2 Pass",
     "section": "",
-    "text": "Lab\nGitHub shows this file for the folder. The lab note is 01.05.01-pipeline.\nMarimo opens that file directly. Quarto renders the gitignored 01.05.01-pipeline.qmd alias, and on that page the cells stay live. Astro renders 01.05.01-pipeline.md as a static page, so the fence stays source.",
+    "text": "Passes\nGitHub shows this file for the folder. The passes are 01.02.01-lex.md, 01.02.02-parse.md, and the rest. The OKF index is index.md.\n\n01.02.01-lex and 01.02.02-parse are two Larks. Lex yields tokens. Parse reads them.\n01.02.05-desugar is the walker’s fuse of resolve, expand, and lower.\n01.02.06-elaborate and 01.02.10-evaluate are the rest of the prefix that runs.\n01.02.03-resolve, 01.02.04-expand, 01.02.07-lower, 01.02.08-normalize, 01.02.09-optimize, and 01.02.11-codegen are signatures. They have no Python yet.",
     "crumbs": [
       "1 Bootstrap",
-      "1.5 Labs"
+      "1.2 Pass"
     ]
   },
   {
-    "objectID": "02-docs/README.html",
-    "href": "02-docs/README.html",
-    "title": "2 Docs",
+    "objectID": "01-bootstrap/01.04-compose/README.html",
+    "href": "01-bootstrap/01.04-compose/README.html",
+    "title": "1.4 Compose",
     "section": "",
-    "text": "Human documentation for FPL, split by Diátaxis, plus project meta.\n\n\n\nFolder\nRole\n\n\n\n\n02.01-tutorial\nLearn by doing\n\n\n02.02-how-to\nSolve a concrete task\n\n\n02.03-reference\nSpec, glossary, facts\n\n\n02.04-explanation\nVision, rationale, ADRs\n\n\n02.05-project\nRoadmap, notes, project lists\n\n\n\nHarness how-tos for agents belong in skills, not here. The OKF index is index.md.",
+    "text": "Compositions\nGitHub shows this file for the folder. A composition is a program that orders passes. It is not the semantics. The OKF index is index.md.\n\n01.04.01-pass is the &gt;&gt; object.\n01.04.02-run is the chain the walker actually runs.\n01.04.04-build and 01.04.03-inspect are the longer chains, as signatures.",
     "crumbs": [
-      "2 Docs"
+      "1 Bootstrap",
+      "1.4 Compose"
+    ]
+  },
+  {
+    "objectID": "01-bootstrap/01.06-nagini/README.html",
+    "href": "01-bootstrap/01.06-nagini/README.html",
+    "title": "1.6 Nagini",
+    "section": "",
+    "text": "Nagini\nGitHub shows this file for the folder. The verified note is 01.06.01-advance.\nNagini checks column on a frozen Span. The proof does not call Lark and does not override a dunder. The Nix JDK is not registered with java_home, so the run needs JAVA_HOME pointed at the Zulu 21 home.",
+    "crumbs": [
+      "1 Bootstrap",
+      "1.6 Nagini"
+    ]
+  },
+  {
+    "objectID": "02-docs/02.01-tutorial/README.html",
+    "href": "02-docs/02.01-tutorial/README.html",
+    "title": "2.1 Tutorial",
+    "section": "",
+    "text": "Learning-oriented guides. Walk through FPL with a guide holding your hand.\nPlaceholder. Rewrite this page later. The OKF index is index.md.",
+    "crumbs": [
+      "2 Docs",
+      "2.1 Tutorial"
     ]
   },
   {

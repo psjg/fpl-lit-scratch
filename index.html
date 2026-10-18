@@ -148,6 +148,18 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <ul class="list-unstyled mt-1">
         <li class="sidebar-item">
   <div class="sidebar-item-container"> 
+  <a href="./try/index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Playground</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./try/kata.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Katas</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
   <a href="./werkbank/index.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">JupyterLite</span></a>
   </div>
@@ -413,8 +425,21 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
       </div>
       <ul id="quarto-sidebar-section-8" class="collapse list-unstyled sidebar-section depth1 show">  
           <li class="sidebar-item sidebar-item-section">
-      <span class="sidebar-item-text sidebar-link text-start">
- <span class="menu-text">2.1 Tutorial</span></span>
+      <div class="sidebar-item-container"> 
+            <a href="./02-docs/02.01-tutorial/README.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">2.1 Tutorial</span></a>
+          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-9" role="navigation" aria-expanded="false" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-9" class="collapse list-unstyled sidebar-section depth2 ">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./02-docs/02.01-tutorial/walkthrough.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Walkthrough: first frames</span></a>
+  </div>
+</li>
+      </ul>
   </li>
           <li class="sidebar-item sidebar-item-section">
       <span class="sidebar-item-text sidebar-link text-start">
@@ -702,6 +727,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="try-it-in-the-browser" class="level2">
 <h2 class="anchored" data-anchor-id="try-it-in-the-browser">Try it in the browser</h2>
 <p>Edit a block and press play. Runs in Pyodide with this site’s <code>fpl-walker</code> wheel.</p>
+<p>For a full editor, shareable <code>#c=</code> links, and graded katas, open the <a href="try/index.html">Playground</a> or <a href="try/kata.html">Katas</a>.</p>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="sourceCode python live code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>frames <span class="op">=</span> <span class="st">"</span></span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="er">".join(</span></span>
 <span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="er">    </span>[</span>

@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>FPL Katas</title>
+    <link rel="stylesheet" href="../assets/fpl-live.css" />
+    <link rel="stylesheet" href="../assets/fpl-playground.css" />
+  </head>
+  <body data-fpl-page="kata" class="fpl-try">
+    <header class="fpl-try-header">
+      <a class="fpl-try-brand" href="../index.html">FPL</a>
+      <nav class="fpl-try-nav">
+        <a href="index.html">Playground</a>
+        <a class="active" href="kata.html">Katas</a>
+        <a href="../werkbank/index.html">JupyterLite</a>
+        <a href="../marimo/index.html">Marimo</a>
+      </nav>
+    </header>
+    <main class="fpl-try-main fpl-kata-layout">
+      <aside class="fpl-kata-aside">
+        <h1>Katas</h1>
+        <nav id="fpl-kata-list" class="fpl-kata-list"></nav>
+      </aside>
+      <section class="fpl-kata-panel">
+        <div id="fpl-kata-prompt" class="fpl-kata-prompt"></div>
+        <div class="fpl-try-toolbar">
+          <button type="button" id="fpl-run" class="fpl-btn primary">Run</button>
+          <button type="button" id="fpl-check" class="fpl-btn primary">Check</button>
+          <button type="button" id="fpl-reset" class="fpl-btn">Reset</button>
+        </div>
+        <textarea
+          id="fpl-editor"
+          class="fpl-editor"
+          spellcheck="false"
+          aria-label="Kata editor"
+        ></textarea>
+        <pre id="fpl-out" class="fpl-live-out" aria-live="polite"></pre>
+      </section>
+    </main>
+    <script type="module" src="../assets/fpl-playground.js"></script>
+  </body>
+</html>

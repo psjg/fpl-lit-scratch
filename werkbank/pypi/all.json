@@ -16,8 +16,8 @@
           "python_version": "py3",
           "requires_python": null,
           "size": 27764,
-          "upload_time": "2026-10-18T17:42:59.752553Z",
-          "upload_time_iso_8601": "2026-10-18T17:42:59.752553Z",
+          "upload_time": "1980-01-01T00:00:00Z",
+          "upload_time_iso_8601": "1980-01-01T00:00:00Z",
           "url": "./asttokens-2.4.1-py2.py3-none-any.whl",
           "yanked": false,
           "yanked_reason": null
@@ -42,8 +42,8 @@
           "python_version": "py3",
           "requires_python": ">=3.8",
           "size": 7294,
-          "upload_time": "2026-10-18T18:46:58.547683Z",
-          "upload_time_iso_8601": "2026-10-18T18:46:58.547683Z",
+          "upload_time": "1980-01-01T00:00:00Z",
+          "upload_time_iso_8601": "1980-01-01T00:00:00Z",
           "url": "./comm-0.2.3-py3-none-any.whl",
           "yanked": false,
           "yanked_reason": null
@@ -57,19 +57,19 @@
         {
           "comment_text": "",
           "digests": {
-            "md5": "7e440fad18300d38836db62c50ce42c7",
-            "sha256": "e773534840c9d8c311023c3956b646ccf964aedfc24c275e4aaa54b35837d7ce"
+            "md5": "3fea381a9a0a4c2216adbd479a420d70",
+            "sha256": "23e44e13fa0cfec31d405cabebd5cfd3ce3ecbb3f35065291d09e4ea412f4953"
           },
           "downloads": -1,
           "filename": "fpl_walker-0.0.0-py3-none-any.whl",
           "has_sig": false,
-          "md5_digest": "7e440fad18300d38836db62c50ce42c7",
+          "md5_digest": "3fea381a9a0a4c2216adbd479a420d70",
           "packagetype": "bdist_wheel",
           "python_version": "py3",
           "requires_python": ">=3.12",
           "size": 73243,
-          "upload_time": "2026-10-18T19:07:05.574151Z",
-          "upload_time_iso_8601": "2026-10-18T19:07:05.574151Z",
+          "upload_time": "1980-01-01T00:00:00Z",
+          "upload_time_iso_8601": "1980-01-01T00:00:00Z",
           "url": "./fpl_walker-0.0.0-py3-none-any.whl",
           "yanked": false,
           "yanked_reason": null
@@ -94,8 +94,8 @@
           "python_version": "py3",
           "requires_python": null,
           "size": 40983,
-          "upload_time": "2026-10-18T17:42:59.752275Z",
-          "upload_time_iso_8601": "2026-10-18T17:42:59.752275Z",
+          "upload_time": "1980-01-01T00:00:00Z",
+          "upload_time_iso_8601": "1980-01-01T00:00:00Z",
           "url": "./icontract-2.7.3-py3-none-any.whl",
           "yanked": false,
           "yanked_reason": null
@@ -120,8 +120,8 @@
           "python_version": "py3",
           "requires_python": ">=3.8",
           "size": 113151,
-          "upload_time": "2026-10-18T17:42:59.751864Z",
-          "upload_time_iso_8601": "2026-10-18T17:42:59.751864Z",
+          "upload_time": "1980-01-01T00:00:00Z",
+          "upload_time_iso_8601": "1980-01-01T00:00:00Z",
           "url": "./lark-1.3.1-py3-none-any.whl",
           "yanked": false,
           "yanked_reason": null
@@ -146,8 +146,8 @@
           "python_version": "py3",
           "requires_python": ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*",
           "size": 11050,
-          "upload_time": "2026-10-18T17:42:59.752829Z",
-          "upload_time_iso_8601": "2026-10-18T17:42:59.752829Z",
+          "upload_time": "1980-01-01T00:00:00Z",
+          "upload_time_iso_8601": "1980-01-01T00:00:00Z",
           "url": "./six-1.17.0-py2.py3-none-any.whl",
           "yanked": false,
           "yanked_reason": null
@@ -172,8 +172,8 @@
           "python_version": "py3",
           "requires_python": ">=3.9",
           "size": 45571,
-          "upload_time": "2026-10-18T17:42:59.753105Z",
-          "upload_time_iso_8601": "2026-10-18T17:42:59.753105Z",
+          "upload_time": "1980-01-01T00:00:00Z",
+          "upload_time_iso_8601": "1980-01-01T00:00:00Z",
           "url": "./typing_extensions-4.16.0-py3-none-any.whl",
           "yanked": false,
           "yanked_reason": null
