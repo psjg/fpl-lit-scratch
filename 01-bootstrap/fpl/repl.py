@@ -482,6 +482,24 @@ def _told(said: _Said, stdout: TextIO, stderr: TextIO) -> None:
     stderr.write("".join(note + "\n" for note in said.notes))
 
 
+def _transcript(out: str) -> str:
+    """
+    Each non-empty line of a successful TTY eval, marked `|- ` so a
+    session reads as a round-trippable result prefix (shell convention;
+    not grammar). Blank lines stay blank.
+    """
+    if not out:
+        return out
+    parts: list[str] = []
+    for line in out.splitlines(keepends=True):
+        if line.endswith("\n"):
+            body, nl = line[:-1], "\n"
+        else:
+            body, nl = line, ""
+        parts.append(f"|- {body}{nl}" if body else line)
+    return "".join(parts)
+
+
 def _seen(call: _Call, log: Log) -> _Call:
     """
     The call checked against the head of `log`, unless it evaluates as
@@ -530,11 +548,14 @@ def _turn(
     env: Mapping[str, str],
     log: Log,
     streams: tuple[TextIO, TextIO],
+    *,
+    transcript: bool = False,
 ) -> tuple[_Call, Log]:
     """
     One input, entered as -e enters it, or one command, carried out and
     told; the call and log the next one starts from. A refusal is told,
-    and the head as it now stands adopted.
+    and the head as it now stands adopted. On a TTY loop, a successful
+    source eval's stdout lines are prefixed with `|- `.
     """
     stdout, stderr = streams
     try:
@@ -550,7 +571,15 @@ def _turn(
         _told(_Said(f"ERROR: {error}\n", (), 2), stdout, stderr)
         log = _loaded(call, env, log)
     else:
-        _told(_flagged(text, said), stdout, stderr)
+        said = _flagged(text, said)
+        if (
+            transcript
+            and this.action == "source"
+            and said.code == 0
+            and said.out
+        ):
+            said = replace(said, out=_transcript(said.out))
+        _told(said, stdout, stderr)
     return _seen(call, log), log
 
 
@@ -566,11 +595,14 @@ def _looped(
     read: Callable[[bool], str | None],
     streams: tuple[TextIO, TextIO],
     env: Mapping[str, str],
+    *,
+    transcript: bool = False,
 ) -> int:
     """
     Inputs and commands until the end or :quit, each checked against the
     head last seen: --head at first, else the head at start. Refused: a
-    log that does not load at start.
+    log that does not load at start. A TTY marks successful eval lines
+    with `|- `.
     """
     log = _loaded(call, env, EMPTY)
     if call.head is None:
@@ -578,7 +610,9 @@ def _looped(
     for text in itertools.takewhile(
         lambda t: t.split() != [":quit"], inputs(read)
     ):
-        call, log = _turn(call, text, env, log, streams)
+        call, log = _turn(
+            call, text, env, log, streams, transcript=transcript
+        )
     return 0
 
 
@@ -598,7 +632,13 @@ def main(
     try:
         call = _call(argv)
         if call.action == "loop":
-            return _looped(call, _reader(stdin), (stdout, stderr), env)
+            return _looped(
+                call,
+                _reader(stdin),
+                (stdout, stderr),
+                env,
+                transcript=stdin.isatty(),
+            )
         said = _said(call, env, EMPTY)[0]
     except UsageError:
         stderr.write(USAGE + "\n")

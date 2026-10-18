@@ -620,7 +620,9 @@ def test_the_loop_at_a_terminal(monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setattr(readline, "parse_and_bind", bindings.append)
         out, err = StringIO(), StringIO()
         assert main([*SESSION, "--head", "0"], Terminal(), out, err, env) == 0
-        assert out.getvalue() == "1\nERROR: head moved: the head is 2\n4\n"
+        assert out.getvalue() == (
+            "|- 1\nERROR: head moved: the head is 2\n|- 4\n"
+        )
         heads = [row.split(" ", 2)[:2] for row in err.getvalue().splitlines()]
         assert heads == [["HEAD", "1"], ["HEAD", "3"]]
         assert prompts == ["fpl> "] * 3 + ["...  "] * 2 + ["fpl> "] * 2
@@ -647,7 +649,7 @@ def test_a_definition_at_a_terminal(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(readline, "parse_and_bind", bindings.append)
     out, err = StringIO(), StringIO()
     assert main([], Terminal(), out, err, {}) == 0
-    assert (out.getvalue(), err.getvalue()) == ("2 3 4\n", "")
+    assert (out.getvalue(), err.getvalue()) == ("|- 2 3 4\n", "")
     assert prompts == ["fpl> ", "...  ", "...  ", "fpl> ", "fpl> "]
 
 
@@ -754,7 +756,7 @@ def test_the_loop_as_of_an_event_checks_no_head(
         monkeypatch.setattr(builtins, "input", typed)
         out, err = StringIO(), StringIO()
         assert main([*SESSION, "--at", "1"], Terminal(), out, err, env) == 0
-        assert (out.getvalue(), err.getvalue()) == ("2\n2\n", "")
+        assert (out.getvalue(), err.getvalue()) == ("|- 2\n|- 2\n", "")
 
 
 def _as_given(_work: Path, env: dict[str, str]) -> dict[str, str]:

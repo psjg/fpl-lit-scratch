@@ -1,15 +1,18 @@
 /**
  * /try playground + kata UI. Buffer is pure FPL; runtime wraps fpl.run.default.src.
- * Playground: Monaco + Quokka-style after-text decorations. Katas: textarea.
+ * Playground: Monaco Quokka ghosts + Tab-commit to `; |-` notes. Katas: textarea.
  */
 import { runFpl, checkExpected, learnBase } from "./fpl-runtime.js";
 
+const RESULT_PREFIX = "|- ";
+const TRAILING_NOTE = /[\t ]*(?:;|⍝)[ \t]*(.*)$/u;
+
 const DEFAULT_SRC = `\
 ;;; ── frames ──
-1 | 1 2 3 +\t; 2 3 4
-1 2 3 +\t; [1‿2‿3 +]
-2 | 3 +\t; 5
-1 | 1 2 3 [-] swap-args\t; 1 2 3 - 1
+1 | 1 2 3 +\t; |- 2 3 4
+1 2 3 +\t; |- [1‿2‿3 +]
+2 | 3 +\t; |- 5
+1 | 1 2 3 [-] swap-args\t; |- 1 2 3 - 1
 `;
 
 const LIVE_MS = 300;
@@ -43,7 +46,35 @@ function setOut(el, text, ok) {
   el.classList.remove("fpl-live-check-pass", "fpl-live-check-fail");
 }
 
-/** Pair stdout lines 1:1 with non-blank, non-;;; source lines. */
+/** Ghost decoration payload: leading spaces + `|- ` + value. */
+function formatGhost(value) {
+  return `  ${RESULT_PREFIX}${value}`;
+}
+
+/** Committed trailing note (valid FPL NOTE; `|-` is convention inside it). */
+function formatNote(value) {
+  return `\t; ${RESULT_PREFIX}${value}`;
+}
+
+/** Body of a trailing `;` / `⍝` note, with optional `|- ` stripped; else null. */
+function resultNoteBody(line) {
+  const m = String(line).match(TRAILING_NOTE);
+  if (!m) return null;
+  let body = m[1];
+  if (body.startsWith(RESULT_PREFIX)) body = body.slice(RESULT_PREFIX.length);
+  else if (body.startsWith("|-")) body = body.slice(2).replace(/^[ \t]+/u, "");
+  return body;
+}
+
+/** Drop a trailing result note so a fresh `; |- …` can be appended. */
+function stripResultNote(line) {
+  return String(line).replace(TRAILING_NOTE, "").replace(/[ \t]+$/u, "");
+}
+
+/**
+ * Pair stdout lines 1:1 with non-blank, non-;;; source lines.
+ * Matching committed `; |-` (or legacy `;`) notes → kind "committed" (no ghost).
+ */
 function pairLineResults(src, stdout) {
   const lines = String(src).split("\n");
   const outs = String(stdout)
@@ -57,7 +88,7 @@ function pairLineResults(src, stdout) {
     codeIdx.push(i);
   }
   if (codeIdx.length !== outs.length) return null;
-  /** @type {{ text: string, kind: "result" | "skip" | "empty" }[]} */
+  /** @type {{ text: string, kind: "result" | "committed" | "skip" | "empty" }[]} */
   const cells = lines.map((line) => {
     const t = line.trim();
     if (t === "") return { text: "", kind: "empty" };
@@ -65,7 +96,11 @@ function pairLineResults(src, stdout) {
     return { text: "", kind: "empty" };
   });
   for (let j = 0; j < codeIdx.length; j++) {
-    cells[codeIdx[j]] = { text: outs[j], kind: "result" };
+    const i = codeIdx[j];
+    const value = outs[j];
+    const note = resultNoteBody(lines[i]);
+    const kind = note === value ? "committed" : "result";
+    cells[i] = { text: value, kind };
   }
   return cells;
 }
@@ -113,7 +148,7 @@ function applyQuokkaDecorations(editor, monaco, cells, prevIds) {
       range: new monaco.Range(line, col, line, col),
       options: {
         after: {
-          content: `  ${cell.text}`,
+          content: formatGhost(cell.text),
           inlineClassName: "fpl-quokka-after",
           cursorStops: monaco.editor.InjectedTextCursorStops.None,
         },
@@ -124,12 +159,44 @@ function applyQuokkaDecorations(editor, monaco, cells, prevIds) {
   return editor.deltaDecorations(prevIds, next);
 }
 
+/**
+ * @param {import("monaco-editor").editor.ITextModel} model
+ * @param {import("monaco-editor")} monaco
+ * @param {number} lineIdx 0-based
+ * @param {string} value
+ */
+function commitResultNote(model, monaco, lineIdx, value) {
+  const lineNo = lineIdx + 1;
+  if (lineNo > model.getLineCount()) return;
+  const old = model.getLineContent(lineNo);
+  const next = stripResultNote(old) + formatNote(value);
+  if (next === old) return;
+  model.pushEditOperations(
+    [],
+    [
+      {
+        range: new monaco.Range(
+          lineNo,
+          1,
+          lineNo,
+          model.getLineMaxColumn(lineNo),
+        ),
+        text: next,
+      },
+    ],
+    () => null,
+  );
+}
+
 async function bootPlayground() {
   const host = $("fpl-editor");
   const out = $("fpl-out");
   const runBtn = /** @type {HTMLButtonElement} */ ($("fpl-run"));
   const clearBtn = /** @type {HTMLButtonElement} */ ($("fpl-clear"));
   const resetBtn = /** @type {HTMLButtonElement} */ ($("fpl-reset"));
+  const acceptBtn = /** @type {HTMLButtonElement | null} */ (
+    document.getElementById("fpl-accept")
+  );
 
   const monaco = await loadMonaco();
   const fromHash = readHash();
@@ -154,8 +221,11 @@ async function bootPlayground() {
   });
 
   let decoIds = /** @type {string[]} */ ([]);
+  /** @type {{ text: string, kind: string }[] | null} */
+  let lastCells = null;
   let timer = 0;
   let gen = 0;
+  let muteLive = false;
 
   const getSrc = () => editor.getValue();
 
@@ -169,14 +239,16 @@ async function bootPlayground() {
       const { ok, text } = await runFpl(src);
       setOut(out, text, ok);
       if (ok) {
-        const cells = pairLineResults(src, text);
-        decoIds = applyQuokkaDecorations(editor, monaco, cells, decoIds);
+        lastCells = pairLineResults(src, text);
+        decoIds = applyQuokkaDecorations(editor, monaco, lastCells, decoIds);
       } else {
+        lastCells = null;
         decoIds = applyQuokkaDecorations(editor, monaco, null, decoIds);
       }
       if (share) writeHash(src);
     } catch (err) {
       setOut(out, String(err), false);
+      lastCells = null;
       decoIds = applyQuokkaDecorations(editor, monaco, null, decoIds);
     } finally {
       if (btn) btn.disabled = false;
@@ -184,6 +256,7 @@ async function bootPlayground() {
   };
 
   const scheduleLive = () => {
+    if (muteLive) return;
     window.clearTimeout(timer);
     timer = window.setTimeout(() => {
       const my = ++gen;
@@ -193,6 +266,24 @@ async function bootPlayground() {
     }, LIVE_MS);
   };
 
+  const acceptIndices = (indices) => {
+    const model = editor.getModel();
+    if (!model || !lastCells) return;
+    const ordered = [...indices].sort((a, b) => b - a);
+    muteLive = true;
+    try {
+      for (const i of ordered) {
+        const cell = lastCells[i];
+        if (!cell || cell.kind !== "result" || !cell.text) continue;
+        commitResultNote(model, monaco, i, cell.text);
+      }
+    } finally {
+      muteLive = false;
+    }
+    writeHash(getSrc());
+    scheduleLive();
+  };
+
   runBtn.addEventListener("click", () => runOnce(runBtn, { share: true }));
   clearBtn.addEventListener("click", () => {
     window.clearTimeout(timer);
@@ -200,6 +291,7 @@ async function bootPlayground() {
     editor.setValue("");
     out.textContent = "";
     out.removeAttribute("data-ok");
+    lastCells = null;
     decoIds = applyQuokkaDecorations(editor, monaco, null, decoIds);
     writeHash("");
   });
@@ -208,15 +300,37 @@ async function bootPlayground() {
     editor.setValue(DEFAULT_SRC);
     out.textContent = "";
     out.removeAttribute("data-ok");
+    lastCells = null;
     decoIds = applyQuokkaDecorations(editor, monaco, null, decoIds);
     writeHash(DEFAULT_SRC);
     scheduleLive();
   });
+  if (acceptBtn) {
+    acceptBtn.addEventListener("click", () => {
+      if (!lastCells) return;
+      const idxs = [];
+      for (let i = 0; i < lastCells.length; i++) {
+        if (lastCells[i].kind === "result" && lastCells[i].text) idxs.push(i);
+      }
+      acceptIndices(idxs);
+    });
+  }
 
   editor.onDidChangeModelContent(() => scheduleLive());
   editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => {
     window.clearTimeout(timer);
     runOnce(runBtn, { share: true });
+  });
+  editor.addCommand(monaco.KeyCode.Tab, () => {
+    const pos = editor.getPosition();
+    if (pos && lastCells) {
+      const cell = lastCells[pos.lineNumber - 1];
+      if (cell && cell.kind === "result" && cell.text) {
+        acceptIndices([pos.lineNumber - 1]);
+        return;
+      }
+    }
+    editor.trigger("keyboard", "type", { text: "\t" });
   });
 
   scheduleLive();
