@@ -18,6 +18,7 @@ from argparse import ArgumentParser
 from bisect import bisect_left
 from collections.abc import Callable, Iterator, Mapping
 from dataclasses import dataclass, replace
+from datetime import datetime
 from pathlib import Path
 from typing import NoReturn, TextIO, override
 
@@ -429,13 +430,13 @@ def _plain(stdin: TextIO) -> Callable[[bool], str | None]:
     return read
 
 
-def _typed(on: bool) -> str | None:
+def _typed(_on: bool) -> str | None:
     """
-    A line from the terminal under readline, prompted by whether an
-    input goes on.
+    A line from the terminal under readline, with no prompt text so the
+    session reads as a utop-style transcript.
     """
     try:
-        return input("...  " if on else "fpl> ")
+        return input("")
     except EOFError:
         return None
 
@@ -450,6 +451,28 @@ def _reader(stdin: TextIO) -> Callable[[bool], str | None]:
     readline = importlib.import_module("readline")
     readline.parse_and_bind("tab: self-insert")
     return _typed
+
+
+BAR_WIDTH = 72
+
+
+def _phrase_bar(n: int, head: int, when: datetime) -> str:
+    """
+    ASCII DOC line between TTY phrases: `;;!` so paste is a DOC, then a
+    utop-shaped command bar with local time, phrase number, and head.
+    """
+    left = f";;! -( {when.strftime('%H:%M:%S')} )-< command {n} >-"
+    right = f"{{ head: {head} }}-"
+    pad = max(0, BAR_WIDTH - len(left) - len(right))
+    return left + ("-" * pad) + right
+
+
+def _result_line(value: str, typ: str = "...") -> str:
+    """
+    One TTY result line: turnstile, value, and a type slot (`...` until
+    the walker exposes a type; not FPL's `?` goal or `_` hole).
+    """
+    return f"|- {value} : {typ}"
 
 
 def _commanded(call: _Call, text: str) -> _Call:
@@ -484,9 +507,8 @@ def _told(said: _Said, stdout: TextIO, stderr: TextIO) -> None:
 
 def _transcript(out: str) -> str:
     """
-    Each non-empty line of a successful TTY eval, marked `|- ` so a
-    session reads as a round-trippable result prefix (shell convention;
-    not grammar). Blank lines stay blank.
+    Each non-empty line of a successful TTY eval as `|- value : ...`
+    (shell convention, not grammar). Blank lines stay blank.
     """
     if not out:
         return out
@@ -496,7 +518,7 @@ def _transcript(out: str) -> str:
             body, nl = line[:-1], "\n"
         else:
             body, nl = line, ""
-        parts.append(f"|- {body}{nl}" if body else line)
+        parts.append(_result_line(body) + nl if body else line)
     return "".join(parts)
 
 
@@ -555,7 +577,7 @@ def _turn(
     One input, entered as -e enters it, or one command, carried out and
     told; the call and log the next one starts from. A refusal is told,
     and the head as it now stands adopted. On a TTY loop, a successful
-    source eval's stdout lines are prefixed with `|- `.
+    source eval's stdout lines are written as `|- value : ...`.
     """
     stdout, stderr = streams
     try:
@@ -597,22 +619,38 @@ def _looped(
     env: Mapping[str, str],
     *,
     transcript: bool = False,
+    now: Callable[[], datetime] | None = None,
 ) -> int:
     """
     Inputs and commands until the end or :quit, each checked against the
     head last seen: --head at first, else the head at start. Refused: a
-    log that does not load at start. A TTY marks successful eval lines
-    with `|- `.
+    log that does not load at start. A TTY writes `;;!` phrase bars and
+    `|- value : ...` result lines.
     """
     log = _loaded(call, env, EMPTY)
     if call.head is None:
         call = _seen(call, log)
+    stdout, _stderr = streams
+    clock = now or datetime.now
+    phrase = 0
+    need_bar = True
+
+    def framed(on: bool) -> str | None:
+        nonlocal phrase, need_bar
+        if transcript and not on and need_bar:
+            phrase += 1
+            stdout.write(_phrase_bar(phrase, len(log.events), clock()) + "\n")
+            stdout.flush()
+            need_bar = False
+        return read(on)
+
     for text in itertools.takewhile(
-        lambda t: t.split() != [":quit"], inputs(read)
+        lambda t: t.split() != [":quit"], inputs(framed)
     ):
         call, log = _turn(
             call, text, env, log, streams, transcript=transcript
         )
+        need_bar = True
     return 0
 
 
@@ -622,6 +660,8 @@ def main(
     stdout: TextIO = sys.stdout,
     stderr: TextIO = sys.stderr,
     env: Mapping[str, str] = os.environ,
+    *,
+    now: Callable[[], datetime] | None = None,
 ) -> int:
     """
     Carry out argv; the output, or one ERROR line, to stdout; goals, the
@@ -638,6 +678,7 @@ def main(
                 (stdout, stderr),
                 env,
                 transcript=stdin.isatty(),
+                now=now,
             )
         said = _said(call, env, EMPTY)[0]
     except UsageError:
