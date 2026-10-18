@@ -993,6 +993,9 @@ filters:
         """project:
   type: website
   output-dir: .site
+  resources:
+    - assets/fpl-live.js
+    - assets/fpl-live.css
   render:
     - index.qmd
     - 01-bootstrap/README.md
@@ -1053,8 +1056,10 @@ website:
   sidebar:
     search: true
     contents:
-      - text: Werkbank
+      - text: JupyterLite
         href: werkbank/index.html
+      - text: Marimo
+        href: marimo/index.html
       - section: 01-bootstrap/README.md
         contents:
           - section: 01-bootstrap/01.01-boundary/README.md
@@ -1157,6 +1162,7 @@ format:
     toc: true
     toc-depth: 2
     code-overflow: wrap
+    css: assets/fpl-live.css
 """
     )
 

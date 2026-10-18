@@ -1,9 +1,9 @@
 """Write the Quarto homepage from the checkout README.
 
-The README stays a Marimo notebook. Quarto does not run a ``{.marimo}`` fence.
+The README stays a Marimo notebook. Quarto does not run ``{.marimo}`` fences.
 This writes ``index.qmd`` with those fences dropped, and replaces the
-"Try it in Marimo" section with an iframe to the Marimo-wasm export at
-``try/index.html`` (built into ``.site/try/``). ``index.qmd`` is generated.
+"Try it in Marimo" section with editable ``{.python .live}`` fences that
+``assets/fpl-live.js`` runs in Pyodide. ``index.qmd`` is generated.
 """
 
 from __future__ import annotations
@@ -25,21 +25,44 @@ _HEADER = """---
 title: FPL
 execute:
   enabled: false
+include-after-body:
+  - text: |
+      <script type="module" src="assets/fpl-live.js"></script>
 ---
 """
 
-_IFRAME = """\
+# Browser has no checkout files; keep examples self-contained (same as .wasm/try.py).
+_LIVE = """\
 ## Try it in the browser
 
-Edit a cell and run it. The walker runs in Pyodide via Marimo-wasm.
+Edit a block and press play. Runs in Pyodide with this site's `fpl-walker` wheel.
 
-```{=html}
-<iframe
-  src="try/index.html"
-  title="FPL try notebook"
-  style="width:100%;height:42rem;border:1px solid #dee2e6;border-radius:0.25rem;"
-  loading="lazy"
-></iframe>
+```{.python .live}
+frames = "\\n".join(
+    [
+        ";;; ── frames ──",
+        "1 | 1 2 3 +\\t; 2 3 4",
+        "1 2 3 +\\t; [1‿2‿3 +]",
+        "2 | 3 +\\t; 5",
+        "1 | 1 2 3 [-] swap-args\\t; 1 2 3 - 1",
+    ]
+)
+fpl.run.default.src(frames)
+```
+
+```{.python .live}
+fpl.run.default.src(\"\"\"
+double : n -- n
+    dup +
+
+2 double
+\"\"\")
+```
+
+```{.python .live}
+fpl.run.default.src(\"\"\"
+4 double
+\"\"\")
 ```
 """
 
@@ -48,7 +71,7 @@ def qmd(readme: str) -> str:
     """Return the Quarto page for one Marimo README."""
     body = _FRONT.sub("", readme, count=1)
     body = _FENCE.sub("", body)
-    body = _TRY.sub(_IFRAME, body).strip() + "\n"
+    body = _TRY.sub(_LIVE, body).strip() + "\n"
     return _HEADER + "\n" + body
 
 
