@@ -4,6 +4,9 @@ project:
   resources:
     - assets/fpl-live.js
     - assets/fpl-live.css
+    - assets/fpl-runtime.js
+    - assets/fpl-playground.js
+    - assets/fpl-playground.css
   render:
     - index.qmd
     - 01-bootstrap/README.md
@@ -15,6 +18,7 @@ project:
     - 01-bootstrap/01.06-nagini/README.md
     - 02-docs/README.md
     - 02-docs/02.01-tutorial/README.md
+    - 02-docs/02.01-tutorial/walkthrough.qmd
     - 02-docs/02.02-how-to/README.md
     - 02-docs/02.03-reference/README.md
     - 02-docs/02.04-explanation/README.md
@@ -70,6 +74,10 @@ website:
   sidebar:
     search: true
     contents:
+      - text: Playground
+        href: try/index.html
+      - text: Katas
+        href: try/kata.html
       - text: JupyterLite
         href: werkbank/index.html
       - text: Marimo
@@ -147,6 +155,9 @@ website:
       - section: 02-docs/README.md
         contents:
           - section: 02-docs/02.01-tutorial/README.md
+            contents:
+              - text: "Walkthrough: first frames"
+                href: 02-docs/02.01-tutorial/walkthrough.qmd
           - section: 02-docs/02.02-how-to/README.md
           - section: 02-docs/02.03-reference/README.md
             contents:

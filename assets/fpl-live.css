@@ -63,3 +63,40 @@ div.sourceCode.live code:focus {
 .fpl-live-out:empty {
   display: none;
 }
+
+.fpl-live-check {
+  appearance: none;
+  border: 1px solid #ced4da;
+  background: #fff;
+  color: #198754;
+  border-radius: 0.25rem;
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
+  line-height: 1;
+  font-size: 0.85rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 0.25rem;
+}
+
+.fpl-live-check:hover {
+  background: #f8f9fa;
+}
+
+.fpl-live-check:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+
+.fpl-live-out.fpl-live-check-pass {
+  border-color: #a3cfbb;
+  background: #d1e7dd;
+}
+
+.fpl-live-out.fpl-live-check-fail {
+  border-color: #f5c2c7;
+  background: #f8d7da;
+}

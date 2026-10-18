@@ -1,0 +1,39 @@
+---
+title: "Walkthrough: first frames"
+execute:
+  enabled: false
+include-after-body:
+  - text: |
+      <script type="module" src="../../assets/fpl-live.js"></script>
+---
+
+Glossary for this site:
+
+- **Playground** — free editor at [Playground](../../try/index.html); no grading.
+- **Kata** — graded exercise (prompt + Check) at [Katas](../../try/kata.html).
+- **Walkthrough** — tutorial prose with the same live editor and optional Check (this page).
+
+## 1. Run a frame
+
+The fence below is wired to the `hello-frames` kata. Edit if you like, press play to run, or the check mark to grade against expected stdout.
+
+```{.python .live kata="hello-frames"}
+frames = "\n".join(
+    [
+        ";;; ── frames ──",
+        "1 | 1 2 3 +\t; 2 3 4",
+        "1 2 3 +\t; [1‿2‿3 +]",
+        "2 | 3 +\t; 5",
+        "1 | 1 2 3 [-] swap-args\t; 1 2 3 - 1",
+    ]
+)
+print(fpl.run.default.src(frames), end="")
+```
+
+## 2. Open the playground
+
+Anything you want to try without a prompt belongs in the [Playground](../../try/index.html). Share with the `#c=` hash.
+
+## 3. Grade the same kata on its page
+
+Open [Hello frames](../../try/kata.html?id=hello-frames), press **Check**. Same starter, same expected file under `learn/kata/hello-frames/`.

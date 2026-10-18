@@ -37,6 +37,9 @@ _LIVE = """\
 
 Edit a block and press play. Runs in Pyodide with this site's `fpl-walker` wheel.
 
+For a full editor, shareable `#c=` links, and graded katas, open the
+[Playground](try/index.html) or [Katas](try/kata.html).
+
 ```{.python .live}
 frames = "\\n".join(
     [

@@ -12,8 +12,8 @@ rm -f .wasm/wheels/fpl-*.whl .wasm/wheels/fpl_walker-*.whl
 (cd .wasm && uv build --wheel -o wheels)
 test -f ".wasm/wheels/$wheel"
 
-# Marimo under marimo/ — keep try/ free for a future playground.
-rm -rf .site/marimo .site/try
+# Marimo under marimo/; playground HTML is copied to try/ after Quarto.
+rm -rf .site/marimo .site/try .site/learn
 (cd .wasm && uvx --from marimo marimo export html-wasm try.py -o ../.site/marimo --mode edit -f)
 
 (cd .wasm && python3 export_modules.py)
@@ -58,6 +58,9 @@ quarto render
 
 mv "$tmp/marimo" .site/marimo
 mv "$tmp/werkbank" .site/werkbank
-rm -rf .site/try
+
+rm -rf .site/try .site/learn
+cp -R assets/try .site/try
+cp -R learn .site/learn
 
 echo "Open .site/ with: python3 -m http.server --directory .site"

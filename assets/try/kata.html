@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>FPL Katas</title>
+    <link rel="stylesheet" href="../assets/fpl-live.css" />
+    <link rel="stylesheet" href="../assets/fpl-playground.css" />
+  </head>
+  <body data-fpl-page="kata" class="fpl-try fpl-try-app">
+    <header class="fpl-try-header">
+      <a class="fpl-try-brand" href="../index.html">FPL</a>
+      <span class="fpl-try-title">Katas</span>
+      <nav class="fpl-try-nav">
+        <a href="index.html">Playground</a>
+        <a class="active" href="kata.html">Katas</a>
+        <a href="../werkbank/index.html">JupyterLite</a>
+        <a href="../marimo/index.html">Marimo</a>
+      </nav>
+    </header>
+    <!-- Exercism-style: editor (majority) left, commentary / results right. Full bleed. -->
+    <main class="fpl-workspace fpl-workspace-kata">
+      <section class="fpl-pane fpl-pane-work" aria-label="Editor and output">
+        <div class="fpl-work-edit">
+          <div class="fpl-pane-bar">
+            <span class="fpl-pane-label">Edit</span>
+            <span class="fpl-file-tab">starter.py</span>
+          </div>
+          <textarea
+            id="fpl-editor"
+            class="fpl-editor"
+            spellcheck="false"
+            aria-label="Kata editor"
+          ></textarea>
+        </div>
+        <div class="fpl-work-term">
+          <div class="fpl-pane-bar">
+            <span class="fpl-pane-label">Term</span>
+          </div>
+          <pre id="fpl-out" class="fpl-term" aria-live="polite"></pre>
+        </div>
+        <footer class="fpl-action-bar">
+          <a class="fpl-link-muted" href="index.html">Playground</a>
+          <div class="fpl-pane-actions">
+            <button type="button" id="fpl-reset" class="fpl-btn">Reset</button>
+            <button type="button" id="fpl-run" class="fpl-btn">Run</button>
+            <button type="button" id="fpl-check" class="fpl-btn primary">Check</button>
+          </div>
+        </footer>
+      </section>
+      <div class="fpl-split" role="separator" aria-orientation="vertical"></div>
+      <aside class="fpl-pane fpl-pane-side" aria-label="Instructions and results">
+        <div class="fpl-side-tabs" role="tablist">
+          <button
+            type="button"
+            class="fpl-side-tab active"
+            data-tab="instructions"
+            role="tab"
+            aria-selected="true"
+          >
+            Instructions
+          </button>
+          <button
+            type="button"
+            class="fpl-side-tab"
+            data-tab="results"
+            role="tab"
+            aria-selected="false"
+          >
+            Results
+          </button>
+        </div>
+        <div class="fpl-side-body">
+          <div id="fpl-tab-instructions" class="fpl-side-panel active">
+            <nav id="fpl-kata-list" class="fpl-kata-list"></nav>
+            <div id="fpl-kata-prompt" class="fpl-kata-prompt"></div>
+          </div>
+          <div id="fpl-tab-results" class="fpl-side-panel" hidden>
+            <div id="fpl-results" class="fpl-results">
+              <p class="fpl-results-idle">Run <strong>Check</strong> to grade against expected stdout.</p>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </main>
+    <script type="module" src="../assets/fpl-playground.js"></script>
+  </body>
+</html>
