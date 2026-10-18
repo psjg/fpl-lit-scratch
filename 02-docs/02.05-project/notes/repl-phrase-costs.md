@@ -21,7 +21,9 @@ and ASCII `;;!` phrase bars between turns. See
 ```
 
 The bar carries clock time, phrase number, and session head. After an eval, the **next**
-bar also names that phrase’s steps spent and wall ms.
+bar also names that phrase’s steps spent and wall ms. If spent fuel later moves onto the
+`|-` line, call that component a **deadline** — see
+[Evaluation judgments](../../02.04-explanation/inspiration/judgments.md) (`02.04.04`).
 
 ## What the walker exposes
 

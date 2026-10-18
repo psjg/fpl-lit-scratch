@@ -25,6 +25,7 @@ project:
     - 02-docs/02.04-explanation/inspiration/README.md
     - 02-docs/02.04-explanation/inspiration/playgrounds.md
     - 02-docs/02.04-explanation/inspiration/turnstiles.md
+    - 02-docs/02.04-explanation/inspiration/judgments.md
     - 02-docs/02.05-project/README.md
     - 02-docs/02.05-project/notes/README.md
     - 02-docs/02.05-project/adr/README.md
@@ -177,6 +178,8 @@ website:
                     href: 02-docs/02.04-explanation/inspiration/playgrounds.md
                   - text: Turnstile notation
                     href: 02-docs/02.04-explanation/inspiration/turnstiles.md
+                  - text: Evaluation judgments
+                    href: 02-docs/02.04-explanation/inspiration/judgments.md
           - section: 02-docs/02.05-project/README.md
             contents:
               - text: Roadmap
