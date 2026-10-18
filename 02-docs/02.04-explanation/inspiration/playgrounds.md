@@ -1,0 +1,106 @@
+---
+title: Playgrounds and live programming
+---
+
+A map of systems that shape how we think about `/try`, katas, and literate walkthroughs. Axes first, brands second. This note does not invent FPL language semantics; it only situates the shell.
+
+## Taxonomy
+
+Three questions for every entry:
+
+1. **Where does the result live?** In-buffer ghost text (Quokka), a side column (Swift Playground), a separate Term, or the world/image itself (Smalltalk, many Bret Victor demos).
+2. **What runs?** Whole buffer, per expression, or a continuous live world.
+3. **What is the document?** Scratch pad, graded kata, literate essay, or a living image.
+
+## Core lineage
+
+### Bret Victor
+
+Talks and essays (*Inventing on Principle*, *Learnable Programming*): make the runtime visible; scrub inputs; kill the “edit → compile → pray” loop as a design ethic, not as a single app.
+
+- Steal: results tied to the thing you are looking at; time/input as something you can drag.
+- Not yet: scrubbing, timeline, or a real data→picture probe in FPL.
+
+### Smalltalk
+
+The environment *is* the program: image, inspectors, live objects you can poke.
+
+- Steal: inspect state instead of guessing; the tool and the language grow together.
+- Not yet: an image, object inspectors, or a world that stays hot between edits.
+
+### Light Table
+
+Chris Granger’s IDE research vehicle after the Kickstarter: instant eval, “no hidden state,” related code and values in context.
+
+- Steal: evaluate in place; surface what the program is doing now.
+- Not yet: a real inspector over walker IR/stack; Light Table itself is not our editor.
+
+### Eve
+
+Follow-on from the Light Table team (`witheve.com`): literate document with code embedded in prose; relational / reactive under the hood. Project inactive; the essays still matter.
+
+- Steal: document = program (closest cousin to Quarto walkthrough + live FPL blocks).
+- Not yet: Eve’s language or its grid/block IDE; we are not reimplementing Eve.
+
+### Quokka.js
+
+Live JS/TS scratchpad in the editor: **grayed-out values on the same line** as decorations, plus probe comments (`//?`, etc.). Values are not a separate source column and are not editable as code.
+
+- Steal: type → see; probes when you want a specific value.
+- Not yet: ghost text in the buffer. Our part-2 gutter is the wrong cousin if you expected Quokka.
+
+### Swift Playgrounds / Xcode playground
+
+Results in a **column beside the code**, often with richer value previews than a raw stdout string.
+
+- Steal: side-by-side “this line → that value.”
+- Not yet: Swift’s value widgets, timeline, or live views. Our gutter is a thin cousin (stdout lines paired 1:1 with source lines).
+
+## Cousins we already brushed in the scratch UI
+
+- **Tour of Go** — lesson left, editor + run right; walkthrough shape.
+- **TryAPL / J wasm playground** — full-bleed Edit | Term (or Term | Edit).
+- **Codecademy** — Learn | Edit | Term, edge to edge.
+- **CodePen** — editors + preview, full width.
+- **LeetCode / Exercism** — graded: prompt vs editor; Exercism puts commentary on the right.
+- **Observable** — reactive notebooks; code and view woven.
+- **JupyterLite / Marimo** — labs we already ship under `werkbank/` and `marimo/`; not the learn/try shell.
+
+## Editor substrate
+
+- **VS Code in the browser** (`vscode.dev`, code-server): full workbench. Possible to embed; heavy for `/try`.
+- **Monaco**: the editor core of VS Code (the CodePen / LeetCode path) — highlighting, decorations, no workbench.
+
+When the `<textarea>` is too thin, prefer **Monaco**, not a full VS Code embed. Quokka-style ghost text is much easier with Monaco decorations than with a textarea plus a side gutter.
+
+Current state: playground uses **Monaco** with Quokka-style after-text decorations (`repl-buffer-part3`). Katas still use a `<textarea>`. The Swift-cousin side gutter from part 2 is retired on `/try/`.
+
+## Where FPL `/try` sits today
+
+| Milestone | Tag | What it is |
+| --- | --- | --- |
+| Pure buffer | `repl-buffer-part1` | Edit holds FPL only; the site wraps `fpl.run.default.src` |
+| Live side results | `repl-buffer-part2` | Debounced run + side gutter (Swift-cousin); superseded on playground |
+| Instant inline | `repl-buffer-part3` | Monaco + grayed end-of-line decorations (Quokka-cousin) |
+
+Also true right now:
+
+- **Term** is still the full dump and the error surface.
+- The gutter uses a **1:1 pairing** of non-empty stdout lines with non-blank, non-`;;;` source lines. If counts differ, the gutter clears and Term carries the truth.
+- There is **no walker inspector API** feeding the UI.
+- Homepage `{.python .live}` fences stay **Python drivers** for the literate walker story; only playground, katas, and `data-kata` fences are pure FPL.
+
+## Long arc
+
+Order of ambition after the pure buffer. Not a delivery promise — implementation stays in separate plans; this note only names cousins and sequence.
+
+| Part | Name | Cousin | Intent |
+| --- | --- | --- | --- |
+| 1 | Pure FPL buffer | — | Done (`repl-buffer-part1`) |
+| 2 | Live side results | Swift-cousin gutter | Done (`repl-buffer-part2`); playground moved on |
+| 3 | Instant inline / probes | Quokka | Done on playground (`repl-buffer-part3`): Monaco after-text; no `//?` probes yet |
+| 4 | No hidden state | Light Table | Inspector over stack / walker IR |
+| 5 | Document = program | Eve | Walkthrough/essay as the primary live buffer |
+| 6 | Scrub / time | Bret Victor | Parameter scrub; needs cheap deterministic re-run |
+
+**Smalltalk** sits beside this table as a north-star (“environment is the program”), not as a numbered part.

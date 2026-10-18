@@ -22,6 +22,8 @@ project:
     - 02-docs/02.02-how-to/README.md
     - 02-docs/02.03-reference/README.md
     - 02-docs/02.04-explanation/README.md
+    - 02-docs/02.04-explanation/inspiration/README.md
+    - 02-docs/02.04-explanation/inspiration/playgrounds.md
     - 02-docs/02.05-project/README.md
     - 02-docs/02.05-project/notes/README.md
     - 02-docs/02.05-project/adr/README.md
@@ -167,6 +169,10 @@ website:
             contents:
               - text: Design
                 href: 02-docs/02.04-explanation/design.md
+              - section: 02-docs/02.04-explanation/inspiration/README.md
+                contents:
+                  - text: Playgrounds and live programming
+                    href: 02-docs/02.04-explanation/inspiration/playgrounds.md
           - section: 02-docs/02.05-project/README.md
             contents:
               - text: Roadmap
