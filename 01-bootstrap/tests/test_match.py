@@ -387,8 +387,10 @@ def test_a_pattern_after_a_bound_name_is_refused_where_written(
     is reported at the pattern, also once a name bound before it is
     pinned in.
     """
-    source = "twice : x -- y\n\tdup +\nf : a b -- "
-    "c\n\tmatch\n\t\ty\t{pattern}\tx\n1 | 2 f\n"
+    source = (
+        "twice : x -- y\n\tdup +\nf : a b -- "
+        f"c\n\tmatch\n\t\ty\t{pattern}\tx\n1 | 2 f\n"
+    )
     with pytest.raises(FplError) as refused:
         run(source)
     assert (refused.value.span, refused.value.message) == (span, message)

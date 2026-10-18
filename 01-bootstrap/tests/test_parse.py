@@ -289,8 +289,9 @@ def test_islands_side_by_side_leave_no_empty_text_between_them() -> None:
     assert text == Text("str", islands, AT)
 
 
-def test_a_string_is_read_with_its_islands_and_without_incidental_indentation(
-) -> None:
+def test_a_string_is_read_with_its_islands_and_without_incidental_indentation() -> (  # noqa: E501 -- long name; ruff format layout
+    None
+):
     program = parse("a\n\tx “p\n\t\tq ⟨c⟩ r” 「⟨raw⟩\n\t」\n")
     text, raw = program.lines[0].block[0].frames[0].cells[0].items[1:]
     island = Program((line((word("c"),)),), Span(1, 1))

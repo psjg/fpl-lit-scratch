@@ -58,8 +58,9 @@ def test_a_comment_attaches_by_its_level(kinds: list[str]) -> None:
     )
 
 
-def test_a_doc_belongs_to_the_head_above_or_around_it_and_a_string_holds_none(
-) -> None:
+def test_a_doc_belongs_to_the_head_above_or_around_it_and_a_string_holds_none() -> (  # noqa: E501 -- long name; ruff format layout
+    None
+):
     """
     A ;; above a head and one opening its body are both its docs, a ;;;
     in the body is a section, and a ; inside a string is no comment.

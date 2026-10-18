@@ -183,8 +183,9 @@ def test_a_definition_is_called_and_queried_at_its_word(
         )
 
 
-def test_a_clause_is_named_by_its_word_and_a_dispatcher_lists_its_clauses(
-) -> None:
+def test_a_clause_is_named_by_its_word_and_a_dispatcher_lists_its_clauses() -> (  # noqa: E501 -- long name; ruff format layout
+    None
+):
     """
     [law: clause-word] a clause's refusal names it by its word; a
     dispatcher carries its clauses' words in order.

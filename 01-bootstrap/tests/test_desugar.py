@@ -327,8 +327,9 @@ def test_a_child_under_a_thunk_or_code_slot_is_pushed_as_a_quotation(
     assert run(source) == printed
 
 
-def test_a_lone_literal_is_itself_and_literals_side_by_side_are_one_strand(
-) -> None:
+def test_a_lone_literal_is_itself_and_literals_side_by_side_are_one_strand() -> (  # noqa: E501 -- long name; ruff format layout
+    None
+):
     """
     [D2.1] 1‿2 is one value; the 3 beside no other literal is not a
     strand.

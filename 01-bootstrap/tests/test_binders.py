@@ -36,8 +36,9 @@ def test_a_binder_names_the_top_for_the_rest_of_its_line(
     assert run(source) == printed
 
 
-def test_a_binder_in_a_body_reaches_the_lines_after_it_and_their_children(
-) -> None:
+def test_a_binder_in_a_body_reaches_the_lines_after_it_and_their_children() -> (  # noqa: E501 -- long name; ruff format layout
+    None
+):
     """
     draft2 examples/07-scope-follows-the.fpl:3-5 and server.fpl:3-4: a
     name bound on a line of a body is read on the lines below it, and in
