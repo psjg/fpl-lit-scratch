@@ -1,4 +1,4 @@
-# 02.04.01 2026-09-19 — issue, task, patch
+# 02.05.01 2026-09-19 — issue, task, patch
 
 A proposal, not a decision. None of it is implemented. If it is accepted it moves into
 `.agents/TASKS.md` and this note goes away; if it is not, the note records why.

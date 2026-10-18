@@ -1,4 +1,4 @@
-# Obsidian, OKF, and the Radicle task graph
+# 02.05.04 2026-10-18 — Obsidian, OKF, and the Radicle task graph
 
 Working note. Not an ADR yet. Captures the direction discussed 2026-10-18:
 Obsidian as a *view* on the work-breakdown; Radicle COBs as the *record* of

@@ -1,4 +1,4 @@
-# 02.04.02 2026-09-19 — plumbing, not prophecy
+# 02.05.02 2026-09-19 — plumbing, not prophecy
 
 A standing instruction about tone and about the size of the harness, written down on the date
 the harness got most of its parts.

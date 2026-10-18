@@ -2,6 +2,8 @@
 title: Playgrounds and live programming
 ---
 
+# 02.04.01 2026-10-18 — Playgrounds and live programming
+
 A map of systems that shape how we think about `/try`, katas, and literate walkthroughs. Axes first, brands second. This note does not invent FPL language semantics; it only situates the shell.
 
 ## Taxonomy

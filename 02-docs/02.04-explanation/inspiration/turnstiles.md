@@ -2,6 +2,8 @@
 title: Turnstile notation
 ---
 
+# 02.04.02 2026-10-18 — Turnstile notation
+
 ASCII inventory of the four turnstile orientations. This note does **not** invent FPL language semantics; it records common logic notation and what the scratch shell uses today.
 
 ## The 2×2

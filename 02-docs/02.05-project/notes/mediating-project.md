@@ -1,4 +1,4 @@
-# 02.04.03 2026-09-20 — the project that mediates the language
+# 02.05.03 2026-09-20 — the project that mediates the language
 
 A note on one choice that has to be made before it can be made well, kept here so it is not
 made by accident.

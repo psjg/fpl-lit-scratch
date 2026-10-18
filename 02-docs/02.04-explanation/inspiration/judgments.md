@@ -2,7 +2,7 @@
 title: Evaluation judgments
 ---
 
-# 02.04.04 2026-10-18 — Evaluation judgments
+# 02.04.03 2026-10-18 — Evaluation judgments
 
 A map of cousins for treating the REPL transcript as **equateable oordelen**, not
 pretty-print. This note does **not** invent FPL language semantics; it names a pattern
@@ -27,6 +27,8 @@ Today the shell already uses [turnstile](turnstiles.md) form and bar costs:
 
 See [REPL phrase costs](../../02.05-project/notes/repl-phrase-costs.md) for what `fuel`
 and `ms` on the bar mean now (`fuel` = steps spent; `event.fuel` remains the budget).
+The same meter is also called **gas** in the literature (PLFA); see
+[Fuel, gas, and deadlines](#fuel-gas-and-deadlines) below.
 
 ## Axes
 
@@ -40,7 +42,40 @@ Three questions for every cousin below:
    (Result / error-union), or only on stderr / exception unwind?
 
 **Vocabulary.** When spent fuel later appears on the judgment line, call that component a
-**deadline** (steps taken under the meter). Keep wall `ms` on the bar.
+**deadline** (steps taken under the meter). Prefer chrome `@ <n>` (e.g.
+`|- 2 : ... @ 3`), not `/` — FPL tokens are Forth-like, so `/` is already a plausible
+word, and overloaded judgment punctuation fights the OCaml habit of one meaning per
+operator. Keep wall `ms` on the bar.
+
+### Markers (three jobs)
+
+| Job | Glyphs / chrome | What it means | Where it lives |
+| --- | --- | --- | --- |
+| **Falsum / absurdity** | ⊥, LaTeX `\lightning`, Unicode ↯ (U+21AF), ASCII `_|_` | Context is logically impossible (empty type, contradiction) | Elaborator / type checker / proof assistant — sometimes a value (`Void`, `Empty`) |
+| **Runtime failure as value** | Result / `Err`, error-union, handled effect | Computation failed but stayed a term you can match / equate | Evaluator — what belongs on `|-` once FPL has native error syntax |
+| **Diagnostic annotation** | `!`, `^` span, caret under source | “Look here in the buffer” — not a term | Printer / UI (today’s `ERROR: l:c …` is closer to this than to ⊥) |
+
+Falsum is primarily a static / proof story. Printing ⊥ / `_|_` for “out of gas” or
+“no row matches” would blur runtime with logic. Domain-theory “bottom”
+(nontermination) is yet another meaning — do not overload that word here.
+
+**↯** is a fine later *materialization* (glyph view / rich TTY) for **contradiction /
+absurdity** only; ASCII default for that job stays `_|_`. Transcript chrome stays
+ASCII-first, like the `;;!` bars. Do not steal FPL `?` / `_` (holes) for errors.
+
+## Cousins at a glance
+
+| Family | What they do | Why not exactly the equateable REPL transcript |
+| --- | --- | --- |
+| Rust / Zig / Swift Result, Elm / Roc | Errors as values (`Result`, error unions) | Often type-level; REPL rarely shows an equational `= Err(…)` term |
+| OCaml / SML exceptions | Exceptions are not values until caught | utop prints an exception; you do not equate it as a term |
+| Effect handlers (Eff, Koka, Unison abilities) | Failure is an effect; handlers make it a value again | Close to “error as first-class”; more runtime model than utop line |
+| Idris / Agda / Coq fuel (PLFA **gas**) | Nat budget so recursion is total | Literal “deadline”; proof technique more than REPL chrome |
+| Granule / graded modal types | Resources in types | Cost-as-part-of-meaning; not a spent-steps printout |
+| Lean `#eval` / `#check` | Commands that print judgments | Close to judgment lines; less “error as equateable value” |
+
+“Exceptions as values” is the intuitive label; the sharp variant is **errors in the
+value domain** (Result / error-union), not stack-unwinding.
 
 ## Lineage
 
@@ -56,10 +91,18 @@ return.
 ### Effect handlers
 
 Eff, Koka, Unison abilities: failure (and other effects) as something a handler can turn
-back into a value.
+back into a value. Eff (Bauer & Pretnar) is the research language that made algebraic
+effects + handlers programmable with an OCaml-ish surface; Koka and Unison are denser
+relatives.
 
 - Steal: failure as an effect you can handle, not only an exit.
 - Not yet: no effect system; Eff is a cousin, not a delivery promise.
+
+**Effects vs dependent types (sober).** Related axes, not the same: value-domain errors
+are Result-shaped; handlers are a control story that can *produce* such a value;
+dependent types can *index* or refine an error payload. Effect rows and graded
+modalities track effects in types without full dependent types. FPL has none of this
+yet.
 
 ### Restarts and supervision
 
@@ -69,20 +112,37 @@ restart without pretending the failure never happened.
 - Steal: a north-star for “gore restart” — recoverable failure in a live system.
 - Not yet: no design; not a numbered playground part. Open as ambition only.
 
-### Fuel and deadlines
+### Fuel, gas, and deadlines
 
-Idris / Agda fuel arguments for totality; graded / resource-aware types: cost as part of
-meaning.
+**Academic name.** A **fuel** (also **gas**) argument is a natural-number budget
+decremented on recursive calls so a definition is total. Classic homes: Coq fuel /
+`Program Fixpoint` patterns; PLFA (Wadler / Kokke / Siek) “gas” for interpreters in
+Agda; the same idea around step-indexing. Idris / Agda totality checkers are cousins
+(fuel is one decreasing measure). Granule and graded / coeffect systems track *how
+much* in types — cost as meaning — without always aborting at runtime.
+
+**What FPL did.** The walker got a pragmatic step budget so session re-runs cannot
+wedge forever (`feat(eval): bound each run line by a step budget`, default 1e6 steps /
+top-level run line; `HOLES.md` `fuel-scope`). The API and bar field stay `fuel` for
+now (`event.fuel` = budget; bar `fuel` = spent). **Gas** is the synonym; chrome may
+say “out of gas.”
+
+**Wasteland aside.** Mad Max flavour for this corner is welcome in prose and later
+glyph views — not a new language keyword. Renaming the bar key `fuel` → `gas` is a
+separate feat if someone wants the theme in the TTY.
 
 - Steal: spent steps as something you can name next to the result; **deadline** = that
-  spent count on a future judgment slot.
+  spent count on a future judgment slot (`@ <n>` chrome preference above).
 - Not yet: fuel and ms sit on the next `;;!` bar only; nothing on `|-` yet.
 
 ## Deferred (separate plan)
 
 Do **not** invent syntax in this note. When someone writes the next plan, it covers:
 
-1. Native error syntax so failures can live in the value domain.
-2. Deadline (spent fuel) on the `|-` judgment line (bar may keep `head` and wall `ms`).
+1. Native error syntax so failures can live in the value domain. Shapes like
+   `|- error "cannot infer _ : number --" : Error` are **illustrations only** — the
+   shape (error as a term on the judgment line), not a locked surface.
+2. Deadline (spent fuel / gas) on the `|-` judgment line as `@ <n>`; bar may keep
+   `head` and wall `ms`.
 
 Until then, the ledger in [README.md](README.md) keeps those promises as `deferred`.
