@@ -22,7 +22,7 @@ from collections.abc import Callable, Iterator, Mapping, Sequence
 from dataclasses import dataclass, replace
 from datetime import datetime
 from pathlib import Path
-from typing import NoReturn, TextIO, override
+from typing import Literal, NoReturn, TextIO, override
 
 from fpl.ast_surface import Line, Program
 from fpl.desugar import plain
@@ -466,25 +466,151 @@ def _reader(stdin: TextIO) -> Callable[[bool], str | None]:
 
 BAR_WIDTH = 72
 
-SPLASHES: tuple[str, ...] = (
+# Kakoune assistant_clippy; smoke / jonko tweak eyes and prop. Meatdog
+# stays plain ASCII.
+CLIPPER_FACE: tuple[str, ...] = (
+    " ╭──╮",
+    " │  │",
+    " @  @  ╭",
+    " ││ ││ │",
+    " ││ ││ ╯",
+    " │╰─╯│",
+    " ╰───╯",
+)
+CLIPPER_SMOKE_FACE: tuple[str, ...] = (
+    " ╭──╮",
+    " │  │",
+    " @  @  ╭~~o",
+    " ││ ││ │",
+    " ││ ││ ╯",
+    " │╰─╯│",
+    " ╰───╯",
+)
+CLIPPER_JONKO_FACE: tuple[str, ...] = (
+    " ╭──╮",
+    " │  │",
+    " O  O  ╭~",
+    " ││ ││ │",
+    " ││ ││ ╯",
+    " │╰─╯│",
+    " ╰───╯",
+)
+MEATDOG_FACE: tuple[str, ...] = (
+    " /\\_/\\",
+    "( o.o )",
+    " > ^ <",
+)
+
+_HELLO_CLIPPER: tuple[str, ...] = (
     "FPL - Favourite Programming Language",
     "FPL - Final Programming Language",
+    "Clipper: it looks like you're writing FPL.",
     "Don't get eaten by a grue.",
     "You are standing west of a white house.",
     "Dunnet awaits. Type carefully.",
-    "Low on gas? Meatdog can give you a lift.",
-    "Clipper: it looks like you're writing FPL.",
-    "Chuck Norris compiles without a meter.",
+)
+_BYE_CLIPPER: tuple[str, ...] = (
+    "Clipper: it looks like you're leaving FPL.",
+    "Save your ice cream for Immortal Joe.",
+    "See you west of the white house.",
+)
+_HELLO_SMOKE: tuple[str, ...] = (
+    "Clipper on a break. Meter still runs.",
     "Talk to the Mayor; you are the Overseer.",
+    "Chuck Norris compiles without a meter.",
+)
+_BYE_SMOKE: tuple[str, ...] = (
+    "Stub it out. Come back with fuel.",
+    "The Overseer will want a report.",
+)
+_HELLO_JONKO: tuple[str, ...] = (
+    "Peut-etre francais?",
+    "Don't get lost in the wasteland.",
+    "Big red eyes. Small step budget.",
     "Immortal Joe wants your ice cream, Jack.",
 )
+_BYE_JONKO: tuple[str, ...] = (
+    "Peut-etre a la prochaine.",
+    "Don't get lost in the wasteland.",
+    "Eyes still O. Fuel still finite.",
+)
+_HELLO_MEATDOG: tuple[str, ...] = (
+    "Meatdog: kut, here is the news.",
+    "Low on gas? Meatdog can give you a lift.",
+    "Woof. The meter lies; Meatdog does not.",
+)
+_BYE_MEATDOG: tuple[str, ...] = (
+    "Meatdog out. Sync your ice later.",
+    "Woof. Don't get lost in the wasteland.",
+    "Kut. Same time tomorrow?",
+)
+_HELLO_NONE: tuple[str, ...] = (
+    "FPL - Favourite Programming Language",
+    "Don't get eaten by a grue.",
+    "Don't get lost in the wasteland.",
+)
+_BYE_NONE: tuple[str, ...] = (
+    "Bye.",
+    "Don't get lost in the wasteland.",
+)
+
+
+@dataclass(frozen=True)
+class Assistant:
+    """
+    One TTY mascot for a REPL session: optional ASCII face and the
+    hello / bye line pools it speaks (chrome only, offline for now).
+    """
+
+    id: str
+    face: tuple[str, ...]
+    hello: tuple[str, ...]
+    bye: tuple[str, ...]
+
+
+ASSISTANTS: tuple[Assistant, ...] = (
+    Assistant("clipper", CLIPPER_FACE, _HELLO_CLIPPER, _BYE_CLIPPER),
+    Assistant("clipper-smoke", CLIPPER_SMOKE_FACE, _HELLO_SMOKE, _BYE_SMOKE),
+    Assistant("clipper-jonko", CLIPPER_JONKO_FACE, _HELLO_JONKO, _BYE_JONKO),
+    Assistant("meatdog", MEATDOG_FACE, _HELLO_MEATDOG, _BYE_MEATDOG),
+    Assistant("none", (), _HELLO_NONE, _BYE_NONE),
+)
+# smoke + jonko ~14%; meatdog / none uncommon; clipper the rest
+_ASSISTANT_WEIGHTS: tuple[int, ...] = (70, 7, 7, 10, 6)
+
+SPLASHES: tuple[str, ...] = tuple(line for a in ASSISTANTS for line in a.hello)
+
+
+def pick_assistant(rng: random.Random | None = None) -> Assistant:
+    """
+    One assistant for a session, weighted (smoke / jonko rare).
+    """
+    choice = rng.choices if rng is not None else random.choices
+    return choice(ASSISTANTS, weights=_ASSISTANT_WEIGHTS, k=1)[0]
+
+
+def speak(
+    assistant: Assistant,
+    kind: Literal["hello", "bye"],
+    *,
+    pick: Callable[[Sequence[str]], str] | None = None,
+) -> str:
+    """
+    Face (if any) plus one line from the hello or bye pool.
+    """
+    lines = assistant.hello if kind == "hello" else assistant.bye
+    choose = pick if pick is not None else random.choice
+    text = choose(lines)
+    if not assistant.face:
+        return text + "\n"
+    return "\n".join(assistant.face) + "\n" + text + "\n"
 
 
 def splash_line(
     pick: Callable[[Sequence[str]], str] | None = None,
 ) -> str:
     """
-    One Minecraft-style MOTD line for TTY startup (ASCII, chrome only).
+    One Minecraft-style MOTD line (ASCII); prefer `speak` for faces.
     """
     choose = pick if pick is not None else random.choice
     return choose(SPLASHES)
@@ -496,13 +622,15 @@ class Tty:
     Clocks for a TTY transcript: wall date for phrase bars, and a
     monotonic timer for per-phrase ms. Presence of a `Tty` means the
     loop writes bars and typed result lines. Optional `state_id` fills
-    `&` on each bar; `splash` prints a MOTD once at loop start.
+    `&` on each bar; `splash` greets (and later byes) with one
+    session `assistant`, picked if none is injected.
     """
 
     now: Callable[[], datetime] = datetime.now
     timer: Callable[[], float] = time.perf_counter
     state_id: Callable[[], int] | None = None
     splash: bool = False
+    assistant: Assistant | None = None
 
 
 def phrase_bar(  # noqa: PLR0913 -- bar fields are the chrome, not a bag type
@@ -707,8 +835,12 @@ def _looped(
     if call.head is None:
         call = _seen(call, log)
     stdout, _stderr = streams
+    session: Assistant | None = None
     if tty is not None and tty.splash:
-        stdout.write(splash_line() + "\n")
+        session = (
+            tty.assistant if tty.assistant is not None else pick_assistant()
+        )
+        stdout.write(speak(session, "hello"))
         stdout.flush()
     phrase = 0
     need_bar = True
@@ -741,6 +873,9 @@ def _looped(
             call, text, env, log, streams, tty=tty
         )
         need_bar = True
+    if session is not None:
+        stdout.write(speak(session, "bye"))
+        stdout.flush()
     return 0
 
 

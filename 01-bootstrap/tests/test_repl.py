@@ -8,6 +8,7 @@ successive -e calls enter.
 import builtins
 import contextlib
 import os
+import random
 import re
 import readline
 import shutil
@@ -28,15 +29,21 @@ from test_session import POOL
 from fpl.__main__ import main as run_file
 from fpl.log import RefusedError, keyed, load, locked
 from fpl.repl import (
+    ASSISTANTS,
+    CLIPPER_FACE,
+    MEATDOG_FACE,
     SPLASHES,
     USAGE,
+    Assistant,
     Tty,
     inputs,
     main,
     pending,
     phrase_bar,
+    pick_assistant,
     provenance,
     result_line,
+    speak,
     splash_line,
     transcript,
 )
@@ -645,7 +652,7 @@ def test_phrase_bar_and_result_line_are_ascii() -> None:
 
 def test_splash_line_is_from_the_motd_pool() -> None:
     """
-    MOTD lines are ASCII chrome from the fixed splash pool.
+    MOTD speech lines are ASCII chrome from the assistant hello pools.
     """
     line = splash_line(pick=lambda pool: pool[0])
     assert line == SPLASHES[0]
@@ -653,13 +660,39 @@ def test_splash_line_is_from_the_motd_pool() -> None:
     assert splash_line(pick=lambda pool: pool[-1]) == SPLASHES[-1]
 
 
-def test_the_loop_prints_motd_and_state_id(
+def test_speak_prints_face_or_line_only() -> None:
+    """
+    A faced assistant prefixes the line; `none` is the line alone.
+    """
+    clipper = next(a for a in ASSISTANTS if a.id == "clipper")
+    hello = speak(clipper, "hello", pick=lambda pool: pool[0])
+    assert CLIPPER_FACE[0] in hello
+    assert clipper.hello[0] in hello
+    assert hello.endswith("\n")
+    blank = next(a for a in ASSISTANTS if a.id == "none")
+    bye = speak(blank, "bye", pick=lambda pool: pool[0])
+    assert bye == blank.bye[0] + "\n"
+    assert "╭" not in bye
+    meat = next(a for a in ASSISTANTS if a.id == "meatdog")
+    assert MEATDOG_FACE[0] in speak(meat, "hello", pick=lambda p: p[0])
+    assert pick_assistant(rng=random.Random(0)).id in {
+        a.id for a in ASSISTANTS
+    }
+
+
+def test_the_loop_prints_hello_bye_and_state_id(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """
-    With splash and state_id on Tty, startup prints one MOTD and bars
-    carry `&`.
+    With splash and an injected assistant, the session greets, bars
+    carry `&`, and the same face says bye on EOF.
     """
+    guest = Assistant(
+        "clipper",
+        CLIPPER_FACE,
+        ("Hi from Clipper.",),
+        ("Bye from Clipper.",),
+    )
     lines = iter(["1"])
 
     def typed(_prompt: str) -> str:
@@ -683,15 +716,59 @@ def test_the_loop_prints_motd_and_state_id(
                 timer=_timer(0.0, 0.0004),
                 state_id=lambda: 99,
                 splash=True,
+                assistant=guest,
             ),
         )
         == 0
     )
     text = out.getvalue()
-    first, _, rest = text.partition("\n")
-    assert first in SPLASHES
-    assert "&99" in rest
-    assert "|- 1 : ..." in rest
+    assert "Hi from Clipper." in text
+    assert "Bye from Clipper." in text
+    assert CLIPPER_FACE[2] in text
+    assert "&99" in text
+    assert "|- 1 : ..." in text
+    assert text.index("Hi from Clipper.") < text.index("|- 1")
+    assert text.index("|- 1") < text.index("Bye from Clipper.")
+
+
+def test_the_loop_byes_on_quit(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    `:quit` ends the loop and still prints the session bye.
+    """
+    guest = Assistant("none", (), ("hello none",), ("bye none",))
+    lines = iter([":quit"])
+
+    def typed(_prompt: str) -> str:
+        line = next(lines, None)
+        if line is None:
+            raise EOFError
+        return line
+
+    monkeypatch.setattr(builtins, "input", typed)
+    monkeypatch.setattr(readline, "parse_and_bind", lambda _s: None)
+    out = StringIO()
+    assert (
+        main(
+            [],
+            Terminal(),
+            out,
+            StringIO(),
+            {},
+            tty=Tty(
+                now=lambda: FIXED,
+                timer=_timer(0.0),
+                splash=True,
+                assistant=guest,
+            ),
+        )
+        == 0
+    )
+    text = out.getvalue()
+    assert text.startswith("hello none\n")
+    assert text.endswith("bye none\n")
+    assert ";;!" in text  # phrase bar before :quit is read
 
 
 def test_the_loop_at_a_terminal(monkeypatch: pytest.MonkeyPatch) -> None:
