@@ -33,5 +33,5 @@ plan), `kept` (true in the tree), `dropped` (we no longer mean it — say why in
 | 02.04.03 | [judgments](judgments.md) | Deadline `@ <n>` on the `\|-` judgment line | deferred |
 | 02.04.03 | [judgments](judgments.md) | Restarts / supervision as a north-star | open |
 | 02.04.01 | [playgrounds](playgrounds.md) | Path-browser / Glamorous Toolkit cousins | open |
-| 02.04.01 | [playgrounds](playgrounds.md) | TTY MOTD splash pool | open |
-| 02.05.05 | [phrase-costs](../../02.05-project/notes/repl-phrase-costs.md) | Turn `&` fingerprint on the phrase bar | open |
+| 02.04.01 | [playgrounds](playgrounds.md) | TTY MOTD splash pool | kept |
+| 02.05.05 | [phrase-costs](../../02.05-project/notes/repl-phrase-costs.md) | Turn `&` fingerprint on the phrase bar | kept |
