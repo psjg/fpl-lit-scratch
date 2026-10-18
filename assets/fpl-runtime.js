@@ -83,6 +83,17 @@ else:
   return { ok, text };
 }
 
+/**
+ * Run pure FPL: inject buffer into fpl.run.default.src and print the result.
+ * @param {string} src
+ * @returns {Promise<{ ok: boolean, text: string }>}
+ */
+export async function runFpl(src) {
+  const pyodide = await ensurePyodide();
+  pyodide.globals.set("_fpl_buf", src);
+  return runSource('print(fpl.run.default.src(_fpl_buf), end="")');
+}
+
 /** Normalize trailing newlines for kata checks. */
 export function normalizeOut(s) {
   return String(s).replace(/\s+$/u, "") + "\n";

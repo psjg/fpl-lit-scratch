@@ -1,5 +1,5 @@
 # Hello frames
 
-Run the inlined frame examples through `fpl.run.default.src` and **print** the result (no extra trailing newline beyond what the runner returns).
+The editor holds pure FPL. Run it; the site wraps the buffer in the walker for you.
 
-The starter already has the right frames. Press **Check** when the stdout matches expected.
+The starter already has the right frames. Press **Check** when the output matches expected.

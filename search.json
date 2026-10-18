@@ -531,7 +531,7 @@
     "href": "02-docs/02.01-tutorial/walkthrough.html#run-a-frame",
     "title": "Walkthrough: first frames",
     "section": "1. Run a frame",
-    "text": "1. Run a frame\nThe fence below is wired to the hello-frames kata. Edit if you like, press play to run, or the check mark to grade against expected stdout.\nframes = \"\\n\".join(\n    [\n        \";;; ── frames ──\",\n        \"1 | 1 2 3 +\\t; 2 3 4\",\n        \"1 2 3 +\\t; [1‿2‿3 +]\",\n        \"2 | 3 +\\t; 5\",\n        \"1 | 1 2 3 [-] swap-args\\t; 1 2 3 - 1\",\n    ]\n)\nprint(fpl.run.default.src(frames), end=\"\")",
+    "text": "1. Run a frame\nThe fence below is pure FPL, wired to the hello-frames kata. Edit if you like, press play to run, or the check mark to grade against expected stdout.\n;;; ── frames ──\n1 | 1 2 3 + ; 2 3 4\n1 2 3 + ; [1‿2‿3 +]\n2 | 3 + ; 5\n1 | 1 2 3 [-] swap-args ; 1 2 3 - 1",
     "crumbs": [
       "2 Docs",
       "2.1 Tutorial",

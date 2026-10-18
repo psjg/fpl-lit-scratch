@@ -1,8 +1,9 @@
 /**
  * Editable Quarto fences (class `live`) with a play button.
- * Optional `kata="slug"` loads starter/expected from learn/kata/<slug>/ and adds Check.
+ * Optional `kata="slug"` loads pure FPL from learn/kata/<slug>/starter.fpl and uses runFpl.
+ * Plain .live fences still exec Python via runSource.
  */
-import { runSource, checkExpected, learnBase } from "./fpl-runtime.js";
+import { runSource, runFpl, checkExpected, learnBase } from "./fpl-runtime.js";
 
 function sourceBlocks() {
   return [...document.querySelectorAll("div.sourceCode.live, pre.sourceCode.live")];
@@ -73,7 +74,7 @@ function placeBtn(btn, block, wrap, toolbar) {
 async function loadKata(slug) {
   const base = learnBase() + "kata/" + encodeURIComponent(slug) + "/";
   const [starter, expected] = await Promise.all([
-    fetch(base + "starter.py").then((r) => {
+    fetch(base + "starter.fpl").then((r) => {
       if (!r.ok) throw new Error(`kata starter ${slug}: ${r.status}`);
       return r.text();
     }),
@@ -95,6 +96,8 @@ function attachPlay(block) {
 
   const toolbar = findToolbar(block);
   const out = ensureOut(wrap);
+  const slug = kataSlug(block);
+  const run = slug ? runFpl : runSource;
 
   const play = document.createElement("button");
   play.type = "button";
@@ -110,7 +113,7 @@ function attachPlay(block) {
     out.classList.remove("fpl-live-check-pass", "fpl-live-check-fail");
     try {
       const src = code.innerText.replace(/\u00a0/g, " ");
-      const { ok, text } = await runSource(src);
+      const { ok, text } = await run(src);
       out.textContent = text || "(no output)";
       out.dataset.ok = ok ? "1" : "0";
     } catch (err) {
@@ -121,7 +124,6 @@ function attachPlay(block) {
     }
   });
 
-  const slug = kataSlug(block);
   if (!slug) return;
 
   wrap.dataset.kata = slug;
@@ -159,7 +161,7 @@ function attachPlay(block) {
         if (!code.innerText.trim()) code.textContent = k.starter;
       }
       const src = code.innerText.replace(/\u00a0/g, " ");
-      const { text } = await runSource(src);
+      const { text } = await runFpl(src);
       const { pass, actual, expected } = checkExpected(text, expectedText);
       if (pass) {
         out.textContent = "PASS\n" + actual;
