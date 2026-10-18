@@ -36,14 +36,16 @@ import tomllib
 from pathlib import Path
 
 # The repository's own inputs, found from this file, so the check means the same from the root,
-# from 01-bootstrap/, or from anywhere else. Symlinks are not followed: a copy of the harness whose
-# .harness/scripts/ links back here (.harness/scripts/gates) judges its own 01-bootstrap/. A caller that names a
+# from 01-bootstrap/, or from anywhere else. Symlinks are not followed. A caller that names a
 # path is relative to its cwd.
-REPO = Path(os.path.abspath(__file__)).parent.parent
+# This file lives under <root>/.harness/scripts/. The walker is
+# <root>/01-bootstrap/; obligations sit beside this harness copy.
+HARNESS = Path(os.path.abspath(__file__)).parent.parent
+ROOT = HARNESS.parent
 DEFAULTS = {
-    "--source": str(REPO / "bootstrap" / "fpl"),
-    "--tests": str(REPO / "bootstrap" / "tests"),
-    "--obligations": str(REPO / "quality" / "obligations.toml"),
+    "--source": str(ROOT / "01-bootstrap" / "fpl"),
+    "--tests": str(ROOT / "01-bootstrap" / "tests"),
+    "--obligations": str(HARNESS / "quality" / "obligations.toml"),
 }
 
 
