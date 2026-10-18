@@ -32,31 +32,93 @@ function writeHash(src) {
   }
 }
 
+const LIVE_MS = 300;
+
 function setOut(el, text, ok) {
   el.textContent = text || "(no output)";
   el.dataset.ok = ok ? "1" : "0";
   el.classList.remove("fpl-live-check-pass", "fpl-live-check-fail");
 }
 
-async function runEditor(editor, out, btn, { share = false } = {}) {
-  btn.disabled = true;
+/** Pair stdout lines 1:1 with non-blank, non-;;; source lines. */
+function pairLineResults(src, stdout) {
+  const lines = String(src).split("\n");
+  const outs = String(stdout)
+    .replace(/\s+$/u, "")
+    .split("\n")
+    .filter((l) => l.length > 0);
+  const codeIdx = [];
+  for (let i = 0; i < lines.length; i++) {
+    const t = lines[i].trim();
+    if (t === "" || t.startsWith(";;;")) continue;
+    codeIdx.push(i);
+  }
+  if (codeIdx.length !== outs.length) return null;
+  /** @type {{ text: string, kind: "result" | "skip" | "empty" }[]} */
+  const cells = lines.map((line) => {
+    const t = line.trim();
+    if (t === "") return { text: "", kind: "empty" };
+    if (t.startsWith(";;;")) return { text: "", kind: "skip" };
+    return { text: "", kind: "empty" };
+  });
+  for (let j = 0; j < codeIdx.length; j++) {
+    cells[codeIdx[j]] = { text: outs[j], kind: "result" };
+  }
+  return cells;
+}
+
+function renderGutter(gutter, cells) {
+  gutter.replaceChildren();
+  if (!cells) return;
+  for (const cell of cells) {
+    const row = document.createElement("div");
+    row.className = "fpl-gutter-line";
+    if (cell.kind === "result") {
+      row.textContent = cell.text;
+    } else {
+      row.classList.add(cell.kind === "skip" ? "is-skip" : "is-empty");
+      row.textContent = "\u00a0";
+    }
+    gutter.appendChild(row);
+  }
+}
+
+function clearGutter(gutter) {
+  gutter.replaceChildren();
+}
+
+function syncScroll(editor, gutter) {
+  gutter.scrollTop = editor.scrollTop;
+}
+
+async function runEditor(editor, out, gutter, btn, { share = false } = {}) {
+  if (btn) btn.disabled = true;
   out.textContent = "Loading…";
   out.dataset.ok = "1";
   out.classList.remove("fpl-live-check-pass", "fpl-live-check-fail");
   try {
     const { ok, text } = await runFpl(editor.value);
     setOut(out, text, ok);
+    if (ok) {
+      const cells = pairLineResults(editor.value, text);
+      if (cells) renderGutter(gutter, cells);
+      else clearGutter(gutter);
+    } else {
+      clearGutter(gutter);
+    }
     if (share) writeHash(editor.value);
   } catch (err) {
     setOut(out, String(err), false);
+    clearGutter(gutter);
   } finally {
-    btn.disabled = false;
+    if (btn) btn.disabled = false;
   }
 }
 
 function bootPlayground() {
   const editor = /** @type {HTMLTextAreaElement} */ ($("fpl-editor"));
   const out = $("fpl-out");
+  const gutter = $("fpl-gutter");
   const runBtn = /** @type {HTMLButtonElement} */ ($("fpl-run"));
   const clearBtn = /** @type {HTMLButtonElement} */ ($("fpl-clear"));
   const resetBtn = /** @type {HTMLButtonElement} */ ($("fpl-reset"));
@@ -64,30 +126,58 @@ function bootPlayground() {
   const fromHash = readHash();
   editor.value = fromHash != null && fromHash !== "" ? fromHash : DEFAULT_SRC;
 
+  let timer = 0;
+  let gen = 0;
+
+  const scheduleLive = () => {
+    window.clearTimeout(timer);
+    timer = window.setTimeout(() => {
+      const my = ++gen;
+      runEditor(editor, out, gutter, null, { share: false }).then(() => {
+        if (my !== gen) return;
+      });
+    }, LIVE_MS);
+  };
+
   runBtn.addEventListener("click", () =>
-    runEditor(editor, out, runBtn, { share: true }),
+    runEditor(editor, out, gutter, runBtn, { share: true }),
   );
   clearBtn.addEventListener("click", () => {
+    window.clearTimeout(timer);
+    gen += 1;
     editor.value = "";
     out.textContent = "";
     out.removeAttribute("data-ok");
     out.classList.remove("fpl-live-check-pass", "fpl-live-check-fail");
+    clearGutter(gutter);
     writeHash("");
   });
   resetBtn.addEventListener("click", () => {
+    window.clearTimeout(timer);
     editor.value = DEFAULT_SRC;
     out.textContent = "";
     out.removeAttribute("data-ok");
     out.classList.remove("fpl-live-check-pass", "fpl-live-check-fail");
+    clearGutter(gutter);
     writeHash(DEFAULT_SRC);
+    scheduleLive();
+  });
+
+  editor.addEventListener("input", scheduleLive);
+  editor.addEventListener("scroll", () => syncScroll(editor, gutter));
+  gutter.addEventListener("scroll", () => {
+    editor.scrollTop = gutter.scrollTop;
   });
 
   editor.addEventListener("keydown", (ev) => {
     if ((ev.metaKey || ev.ctrlKey) && ev.key === "Enter") {
       ev.preventDefault();
-      runEditor(editor, out, runBtn, { share: true });
+      window.clearTimeout(timer);
+      runEditor(editor, out, gutter, runBtn, { share: true });
     }
   });
+
+  scheduleLive();
 }
 
 async function fetchText(url) {
@@ -180,7 +270,22 @@ async function bootKata() {
   editor.value = starterSrc;
   editor.disabled = false;
 
-  runBtn.addEventListener("click", () => runEditor(editor, out, runBtn));
+  const runKata = async (btn) => {
+    btn.disabled = true;
+    out.textContent = "Loading…";
+    out.dataset.ok = "1";
+    out.classList.remove("fpl-live-check-pass", "fpl-live-check-fail");
+    try {
+      const { ok, text } = await runFpl(editor.value);
+      setOut(out, text, ok);
+    } catch (err) {
+      setOut(out, String(err), false);
+    } finally {
+      btn.disabled = false;
+    }
+  };
+
+  runBtn.addEventListener("click", () => runKata(runBtn));
   resetBtn.addEventListener("click", () => {
     editor.value = starterSrc;
     out.textContent = "";
@@ -190,7 +295,7 @@ async function bootKata() {
   editor.addEventListener("keydown", (ev) => {
     if ((ev.metaKey || ev.ctrlKey) && ev.key === "Enter") {
       ev.preventDefault();
-      runEditor(editor, out, runBtn);
+      runKata(runBtn);
     }
   });
   checkBtn.addEventListener("click", async () => {

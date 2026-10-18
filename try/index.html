@@ -28,13 +28,22 @@
             <button type="button" id="fpl-run" class="fpl-btn primary">Run</button>
           </div>
         </div>
-        <textarea
-          id="fpl-editor"
-          class="fpl-editor"
-          spellcheck="false"
-          aria-label="FPL playground editor"
-        ></textarea>
-        <p class="fpl-pane-hint">⌘/Ctrl+Enter to run · share via <code>#c=</code></p>
+        <div class="fpl-edit-split">
+          <div
+            id="fpl-gutter"
+            class="fpl-result-gutter"
+            aria-label="Per-line results"
+          ></div>
+          <textarea
+            id="fpl-editor"
+            class="fpl-editor"
+            spellcheck="false"
+            aria-label="FPL playground editor"
+          ></textarea>
+        </div>
+        <p class="fpl-pane-hint">
+          Live as you type · ⌘/Ctrl+Enter to run · share via <code>#c=</code>
+        </p>
       </section>
       <div class="fpl-split" role="separator" aria-orientation="vertical"></div>
       <section class="fpl-pane fpl-pane-term" aria-label="Output">
