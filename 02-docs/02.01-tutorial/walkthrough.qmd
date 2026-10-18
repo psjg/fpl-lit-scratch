@@ -15,19 +15,14 @@ Glossary for this site:
 
 ## 1. Run a frame
 
-The fence below is wired to the `hello-frames` kata. Edit if you like, press play to run, or the check mark to grade against expected stdout.
+The fence below is pure FPL, wired to the `hello-frames` kata. Edit if you like, press play to run, or the check mark to grade against expected stdout.
 
 ```{.python .live kata="hello-frames"}
-frames = "\n".join(
-    [
-        ";;; ── frames ──",
-        "1 | 1 2 3 +\t; 2 3 4",
-        "1 2 3 +\t; [1‿2‿3 +]",
-        "2 | 3 +\t; 5",
-        "1 | 1 2 3 [-] swap-args\t; 1 2 3 - 1",
-    ]
-)
-print(fpl.run.default.src(frames), end="")
+;;; ── frames ──
+1 | 1 2 3 +	; 2 3 4
+1 2 3 +	; [1‿2‿3 +]
+2 | 3 +	; 5
+1 | 1 2 3 [-] swap-args	; 1 2 3 - 1
 ```
 
 ## 2. Open the playground

@@ -1,18 +1,14 @@
 /**
- * /try playground + kata UI. Uses shared fpl-runtime.js.
+ * /try playground + kata UI. Buffer is pure FPL; runtime wraps fpl.run.default.src.
  */
-import { runSource, checkExpected, learnBase } from "./fpl-runtime.js";
+import { runFpl, checkExpected, learnBase } from "./fpl-runtime.js";
 
-const DEFAULT_SRC = `frames = "\\n".join(
-    [
-        ";;; ── frames ──",
-        "1 | 1 2 3 +\\t; 2 3 4",
-        "1 2 3 +\\t; [1‿2‿3 +]",
-        "2 | 3 +\\t; 5",
-        "1 | 1 2 3 [-] swap-args\\t; 1 2 3 - 1",
-    ]
-)
-print(fpl.run.default.src(frames), end="")
+const DEFAULT_SRC = `\
+;;; ── frames ──
+1 | 1 2 3 +\t; 2 3 4
+1 2 3 +\t; [1‿2‿3 +]
+2 | 3 +\t; 5
+1 | 1 2 3 [-] swap-args\t; 1 2 3 - 1
 `;
 
 function $(id) {
@@ -48,7 +44,7 @@ async function runEditor(editor, out, btn, { share = false } = {}) {
   out.dataset.ok = "1";
   out.classList.remove("fpl-live-check-pass", "fpl-live-check-fail");
   try {
-    const { ok, text } = await runSource(editor.value);
+    const { ok, text } = await runFpl(editor.value);
     setOut(out, text, ok);
     if (share) writeHash(editor.value);
   } catch (err) {
@@ -161,7 +157,7 @@ async function bootKata() {
 
   if (!slug) {
     promptEl.innerHTML =
-      "<p><strong>Pick a kata</strong></p><p>Editor fills the left of the screen; instructions stay on the right (Exercism-style). Run to try; Check grades against expected stdout.</p>";
+      "<p><strong>Pick a kata</strong></p><p>Editor holds pure FPL on the left; instructions on the right. Run to try; Check grades against expected stdout.</p>";
     editor.value = "";
     editor.disabled = true;
     runBtn.disabled = true;
@@ -173,7 +169,7 @@ async function bootKata() {
   const base = learnBase() + "kata/" + encodeURIComponent(slug) + "/";
   const [promptMd, starter, expected] = await Promise.all([
     fetchText(base + "prompt.md"),
-    fetchText(base + "starter.py"),
+    fetchText(base + "starter.fpl"),
     fetchText(base + "expected"),
   ]);
 
@@ -203,7 +199,7 @@ async function bootKata() {
     out.textContent = "Loading…";
     out.classList.remove("fpl-live-check-pass", "fpl-live-check-fail");
     try {
-      const { text } = await runSource(editor.value);
+      const { text } = await runFpl(editor.value);
       const { pass, actual, expected: exp } = checkExpected(text, expected);
       if (pass) {
         out.textContent = actual;
