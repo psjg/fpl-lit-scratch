@@ -12,12 +12,13 @@ refuses included, with nothing written but a lock.
 import importlib
 import itertools
 import os
+import random
 import re
 import sys
 import time
 from argparse import ArgumentParser
 from bisect import bisect_left
-from collections.abc import Callable, Iterator, Mapping
+from collections.abc import Callable, Iterator, Mapping, Sequence
 from dataclasses import dataclass, replace
 from datetime import datetime
 from pathlib import Path
@@ -465,35 +466,64 @@ def _reader(stdin: TextIO) -> Callable[[bool], str | None]:
 
 BAR_WIDTH = 72
 
+SPLASHES: tuple[str, ...] = (
+    "FPL - Favourite Programming Language",
+    "FPL - Final Programming Language",
+    "Don't get eaten by a grue.",
+    "You are standing west of a white house.",
+    "Dunnet awaits. Type carefully.",
+    "Low on gas? Meatdog can give you a lift.",
+    "Clipper: it looks like you're writing FPL.",
+    "Chuck Norris compiles without a meter.",
+    "Talk to the Mayor; you are the Overseer.",
+    "Immortal Joe wants your ice cream, Jack.",
+)
+
+
+def splash_line(
+    pick: Callable[[Sequence[str]], str] | None = None,
+) -> str:
+    """
+    One Minecraft-style MOTD line for TTY startup (ASCII, chrome only).
+    """
+    choose = pick if pick is not None else random.choice
+    return choose(SPLASHES)
+
 
 @dataclass(frozen=True)
 class Tty:
     """
     Clocks for a TTY transcript: wall date for phrase bars, and a
     monotonic timer for per-phrase ms. Presence of a `Tty` means the
-    loop writes bars and typed result lines.
+    loop writes bars and typed result lines. Optional `state_id` fills
+    `&` on each bar; `splash` prints a MOTD once at loop start.
     """
 
     now: Callable[[], datetime] = datetime.now
     timer: Callable[[], float] = time.perf_counter
+    state_id: Callable[[], int] | None = None
+    splash: bool = False
 
 
-def phrase_bar(
+def phrase_bar(  # noqa: PLR0913 -- bar fields are the chrome, not a bag type
     n: int,
     head: int,
     when: datetime,
     *,
     fuel: int | None = None,
     ms: float | None = None,
+    state_id: int | None = None,
 ) -> str:
     """
     ASCII DOC line between TTY phrases: `;;!` so paste is a DOC, then a
     utop-shaped command bar with local time, phrase number, and head.
     Optional `fuel` and `ms` are the previous phrase's steps and wall
-    time.
+    time; optional `state_id` is a turn fingerprint as `&<decimal>`.
     """
     left = f";;! -( {when.strftime('%H:%M:%S')} )-< command {n} >-"
     fields = [f"head: {head}"]
+    if state_id is not None:
+        fields.append(f"&{state_id}")
     if fuel is not None:
         fields.append(f"fuel: {fuel}")
     if ms is not None:
@@ -677,6 +707,9 @@ def _looped(
     if call.head is None:
         call = _seen(call, log)
     stdout, _stderr = streams
+    if tty is not None and tty.splash:
+        stdout.write(splash_line() + "\n")
+        stdout.flush()
     phrase = 0
     need_bar = True
     last_fuel: int | None = None
@@ -686,12 +719,14 @@ def _looped(
         nonlocal phrase, need_bar, last_fuel, last_ms
         if tty is not None and not on and need_bar:
             phrase += 1
+            identity = None if tty.state_id is None else tty.state_id()
             bar = phrase_bar(
                 phrase,
                 len(log.events),
                 tty.now(),
                 fuel=last_fuel,
                 ms=last_ms,
+                state_id=identity,
             )
             stdout.write(bar + "\n")
             stdout.flush()
@@ -729,9 +764,12 @@ def main(  # noqa: PLR0913 -- argv and stdio/env plus optional Tty
     try:
         call = _call(argv)
         if call.action == "loop":
-            display = (
-                tty if tty is not None else (Tty() if stdin.isatty() else None)
-            )
+            display = tty
+            if display is None and stdin.isatty():
+                display = Tty(
+                    state_id=lambda: random.getrandbits(64),
+                    splash=True,
+                )
             return _looped(
                 call,
                 _reader(stdin),

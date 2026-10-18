@@ -28,6 +28,7 @@ from test_session import POOL
 from fpl.__main__ import main as run_file
 from fpl.log import RefusedError, keyed, load, locked
 from fpl.repl import (
+    SPLASHES,
     USAGE,
     Tty,
     inputs,
@@ -36,6 +37,7 @@ from fpl.repl import (
     phrase_bar,
     provenance,
     result_line,
+    splash_line,
     transcript,
 )
 
@@ -633,9 +635,63 @@ def test_phrase_bar_and_result_line_are_ascii() -> None:
     costs = phrase_bar(2, 1, FIXED, fuel=12, ms=0.4)
     assert costs.isascii()
     assert costs.endswith("{ head: 1; fuel: 12; ms: 0.4 }-")
+    finger = phrase_bar(2, 1, FIXED, fuel=12, ms=0.4, state_id=42)
+    assert "&42" in finger
+    assert finger.endswith("{ head: 1; &42; fuel: 12; ms: 0.4 }-")
     assert "─" not in bar
     assert result_line("2 3 4") == "|- 2 3 4 : ..."
     assert transcript("2 3 4\n") == "|- 2 3 4 : ...\n"
+
+
+def test_splash_line_is_from_the_motd_pool() -> None:
+    """
+    MOTD lines are ASCII chrome from the fixed splash pool.
+    """
+    line = splash_line(pick=lambda pool: pool[0])
+    assert line == SPLASHES[0]
+    assert line.isascii()
+    assert splash_line(pick=lambda pool: pool[-1]) == SPLASHES[-1]
+
+
+def test_the_loop_prints_motd_and_state_id(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    With splash and state_id on Tty, startup prints one MOTD and bars
+    carry `&`.
+    """
+    lines = iter(["1"])
+
+    def typed(_prompt: str) -> str:
+        line = next(lines, None)
+        if line is None:
+            raise EOFError
+        return line
+
+    monkeypatch.setattr(builtins, "input", typed)
+    monkeypatch.setattr(readline, "parse_and_bind", lambda _s: None)
+    out, err = StringIO(), StringIO()
+    assert (
+        main(
+            [],
+            Terminal(),
+            out,
+            err,
+            {},
+            tty=Tty(
+                now=lambda: FIXED,
+                timer=_timer(0.0, 0.0004),
+                state_id=lambda: 99,
+                splash=True,
+            ),
+        )
+        == 0
+    )
+    text = out.getvalue()
+    first, _, rest = text.partition("\n")
+    assert first in SPLASHES
+    assert "&99" in rest
+    assert "|- 1 : ..." in rest
 
 
 def test_the_loop_at_a_terminal(monkeypatch: pytest.MonkeyPatch) -> None:
