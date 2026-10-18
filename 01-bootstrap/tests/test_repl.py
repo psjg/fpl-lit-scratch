@@ -29,13 +29,14 @@ from fpl.__main__ import main as run_file
 from fpl.log import RefusedError, keyed, load, locked
 from fpl.repl import (
     USAGE,
-    _phrase_bar,
-    _result_line,
-    _transcript,
+    Tty,
     inputs,
     main,
     pending,
+    phrase_bar,
     provenance,
+    result_line,
+    transcript,
 )
 
 SESSION = ["--session", "s.fon"]
@@ -609,17 +610,32 @@ class Terminal(StringIO):
 FIXED = datetime(2026, 10, 18, 17, 53, 37)
 
 
+def _timer(*marks: float) -> Callable[[], float]:
+    """
+    A wall clock that returns the given marks in order.
+    """
+    ticks = iter(marks)
+
+    def now() -> float:
+        return next(ticks)
+
+    return now
+
+
 def test_phrase_bar_and_result_line_are_ascii() -> None:
     """
     TTY chrome is printable ASCII: `;;!` bars and `|- value : ...`.
     """
-    bar = _phrase_bar(4, 0, FIXED)
+    bar = phrase_bar(4, 0, FIXED)
     assert bar.isascii()
     assert bar.startswith(";;! -( 17:53:37 )-< command 4 >-")
     assert bar.endswith("{ head: 0 }-")
+    costs = phrase_bar(2, 1, FIXED, fuel=12, ms=0.4)
+    assert costs.isascii()
+    assert costs.endswith("{ head: 1; fuel: 12; ms: 0.4 }-")
     assert "─" not in bar
-    assert _result_line("2 3 4") == "|- 2 3 4 : ..."
-    assert _transcript("2 3 4\n") == "|- 2 3 4 : ...\n"
+    assert result_line("2 3 4") == "|- 2 3 4 : ..."
+    assert transcript("2 3 4\n") == "|- 2 3 4 : ...\n"
 
 
 def test_the_loop_at_a_terminal(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -627,7 +643,7 @@ def test_the_loop_at_a_terminal(monkeypatch: pytest.MonkeyPatch) -> None:
     At a terminal the loop reads with an empty prompt; an append from
     elsewhere moves the head, so the next input is refused, and the one
     after appends at the head it adopted. Phrase bars and typed results
-    mark the transcript.
+    mark the transcript; a bar after an eval names its fuel and ms.
     """
     prompts: list[str] = []
     with session() as (_, env):
@@ -653,14 +669,17 @@ def test_the_loop_at_a_terminal(monkeypatch: pytest.MonkeyPatch) -> None:
                 out,
                 err,
                 env,
-                now=lambda: FIXED,
+                tty=Tty(
+                    now=lambda: FIXED,
+                    timer=_timer(0.0, 0.0004, 9.0, 1.0, 1.0004),
+                ),
             )
             == 0
         )
-        bar1 = _phrase_bar(1, 0, FIXED)
-        bar2 = _phrase_bar(2, 1, FIXED)
-        bar3 = _phrase_bar(3, 2, FIXED)
-        bar4 = _phrase_bar(4, 3, FIXED)
+        bar1 = phrase_bar(1, 0, FIXED)
+        bar2 = phrase_bar(2, 1, FIXED, fuel=1, ms=0.4)
+        bar3 = phrase_bar(3, 2, FIXED)
+        bar4 = phrase_bar(4, 3, FIXED, fuel=1, ms=0.4)
         assert out.getvalue() == (
             f"{bar1}\n|- 1 : ...\n"
             f"{bar2}\nERROR: head moved: the head is 2\n"
@@ -676,7 +695,8 @@ def test_the_loop_at_a_terminal(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_a_definition_at_a_terminal(monkeypatch: pytest.MonkeyPatch) -> None:
     """
     At a terminal the body typed without its tab is the body; an empty
-    line ends the input. Continuations use the same empty prompt.
+    line ends the input. Continuations use the same empty prompt. A
+    definition has no fuel field; the following call's bar names both.
     """
     prompts: list[str] = []
     lines = iter(["plus-one : n -- n", "1 +", "", "1 2 3 plus-one"])
@@ -692,10 +712,23 @@ def test_a_definition_at_a_terminal(monkeypatch: pytest.MonkeyPatch) -> None:
     bindings: list[str] = []
     monkeypatch.setattr(readline, "parse_and_bind", bindings.append)
     out, err = StringIO(), StringIO()
-    assert main([], Terminal(), out, err, {}, now=lambda: FIXED) == 0
-    bar1 = _phrase_bar(1, 0, FIXED)
-    bar2 = _phrase_bar(2, 1, FIXED)
-    bar3 = _phrase_bar(3, 2, FIXED)
+    assert (
+        main(
+            [],
+            Terminal(),
+            out,
+            err,
+            {},
+            tty=Tty(
+                now=lambda: FIXED,
+                timer=_timer(0.0, 0.001, 1.0, 1.0004),
+            ),
+        )
+        == 0
+    )
+    bar1 = phrase_bar(1, 0, FIXED)
+    bar2 = phrase_bar(2, 1, FIXED, ms=1.0)
+    bar3 = phrase_bar(3, 2, FIXED, fuel=4, ms=0.4)
     assert (out.getvalue(), err.getvalue()) == (
         f"{bar1}\n{bar2}\n|- 2 3 4 : ...\n{bar3}\n",
         "",
@@ -812,13 +845,16 @@ def test_the_loop_as_of_an_event_checks_no_head(
                 out,
                 err,
                 env,
-                now=lambda: FIXED,
+                tty=Tty(
+                    now=lambda: FIXED,
+                    timer=_timer(0.0, 0.0004, 1.0, 1.0004),
+                ),
             )
             == 0
         )
-        bar1 = _phrase_bar(1, 1, FIXED)
-        bar2 = _phrase_bar(2, 1, FIXED)
-        bar3 = _phrase_bar(3, 2, FIXED)
+        bar1 = phrase_bar(1, 1, FIXED)
+        bar2 = phrase_bar(2, 1, FIXED, fuel=2, ms=0.4)
+        bar3 = phrase_bar(3, 2, FIXED, fuel=2, ms=0.4)
         assert (out.getvalue(), err.getvalue()) == (
             f"{bar1}\n|- 2 : ...\n{bar2}\n|- 2 : ...\n{bar3}\n",
             "",

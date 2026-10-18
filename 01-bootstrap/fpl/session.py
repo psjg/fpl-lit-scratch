@@ -12,6 +12,7 @@ from dataclasses import dataclass, replace
 from functools import cache, cached_property
 from pathlib import Path
 
+from fpl.ast_core import Run, Statement
 from fpl.driver import Lines, checked, printed, stacks
 from fpl.errors import FplError, Span
 from fpl.log import SCHEMA, Event, Log, RefusedError, Status, Who, prefixed
@@ -51,13 +52,15 @@ class Outcome:
     """
     An entered input: its event, the bytes of the body and output it
     names, the output for stdout and the notes for stderr (goals met,
-    the caret under an error, inputs changed).
+    the caret under an error, inputs changed). `spent` is the steps the
+    input's own run lines took in this enter, not kept on the event.
     """
 
     event: Event
     bodies: Mapping[Multihash, bytes]
     out: str
     notes: tuple[str, ...]
+    spent: int | None = None
 
 
 @cache
@@ -184,7 +187,12 @@ class _Entry:
         )
 
     def logged(
-        self, status: Status, out: str, notes: tuple[str, ...]
+        self,
+        status: Status,
+        out: str,
+        notes: tuple[str, ...],
+        *,
+        spent: int | None = None,
     ) -> Outcome:
         """
         The input as an event with its output.
@@ -196,10 +204,18 @@ class _Entry:
             out=content(shown),
             status=status,
         )
-        return Outcome(event, {event.body: body, event.out: shown}, out, notes)
+        return Outcome(
+            event, {event.body: body, event.out: shown}, out, notes, spent
+        )
 
 
-def _failed(entry: _Entry, error: FplError, notes: tuple[str, ...]) -> Outcome:
+def _failed(
+    entry: _Entry,
+    error: FplError,
+    notes: tuple[str, ...],
+    *,
+    spent: int | None = None,
+) -> Outcome:
     """
     The error as an error event: its line at its place in the input, or
     `@<seq>` and its place in the earlier input it lies in; the caret
@@ -214,8 +230,30 @@ def _failed(entry: _Entry, error: FplError, notes: tuple[str, ...]) -> Outcome:
     line = f"ERROR: {where}{local.span.line}:{local.span.col} {local.message}"
     caret = local.render(texts[owner]).partition("\n")[2]
     return entry.logged(
-        "error", line + "\n", (*notes, caret) if caret else notes
+        "error",
+        line + "\n",
+        (*notes, caret) if caret else notes,
+        spent=spent,
     )
+
+
+def _phrase_spent(
+    entry: _Entry,
+    statements: tuple[Statement, ...],
+    per_run: list[int | None],
+) -> int | None:
+    """
+    Steps the input's own run lines took: history replay is omitted.
+    """
+    runs = (s for s in statements if isinstance(s, Run))
+    total = 0
+    any_spent = False
+    for run, n in zip(runs, per_run, strict=False):
+        if entry.owner(run.span.line) != len(entry.parts) or n is None:
+            continue
+        total += n
+        any_spent = True
+    return total if any_spent else None
 
 
 def _by_part(entry: _Entry, lines: Lines) -> list[Lines]:
@@ -272,7 +310,8 @@ def enter(log: Log, text: str, context: Context, at: Event | None) -> Outcome:
     margin rule on, becomes an error event whose state is its parent's.
     The program at `at` is run once more, under the fuel it was accepted
     with, for the lines to compare the new run's with; if that run fails
-    (it was accepted under another evaluator), nothing is named.
+    (it was accepted under another evaluator), nothing is named. `spent`
+    on the outcome is the input's own run lines only.
     """
     entry = _Entry(
         log,
@@ -282,14 +321,24 @@ def enter(log: Log, text: str, context: Context, at: Event | None) -> Outcome:
         text if text.endswith("\n") else text + "\n",
     )
     notes: tuple[str, ...] = ()
+    statements: tuple[Statement, ...] = ()
+    per_run: list[int | None] = []
     try:
         entry.margin()
         statements, goals = checked(entry.source + entry.text)
         notes = entry.noted(goals)
-        left = stacks(statements, context.fuel)
+        left = stacks(statements, context.fuel, spent=per_run)
     except FplError as error:
-        return _failed(entry, error, notes)
-    return _changed(entry, left, _earlier(entry, left), notes)
+        return _failed(
+            entry,
+            error,
+            notes,
+            spent=_phrase_spent(entry, statements, per_run),
+        )
+    cost = _phrase_spent(entry, statements, per_run)
+    return replace(
+        _changed(entry, left, _earlier(entry, left), notes), spent=cost
+    )
 
 
 def rewind(log: Log, target: Event | None, context: Context) -> Event:

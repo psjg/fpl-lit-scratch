@@ -14,8 +14,8 @@ import fpl.eval
 from fpl.ast_core import Statement, Strand
 from fpl.desugar import desugar
 from fpl.driver import run, stacks
-from fpl.errors import FplError
-from fpl.eval import Stack, State, evaluate
+from fpl.errors import FplError, Span
+from fpl.eval import Meter, Stack, State, evaluate
 from fpl.parse import parse
 
 NESTED = "1 2 3 [1 +] each"
@@ -65,6 +65,26 @@ def test_fuel_bounds_the_steps_of_a_run_line(
         outcome(statements, steps - 1)
         == f"ERROR: {source.count(chr(10))}:1 out of fuel"
     )
+
+
+def test_meter_reports_steps_spent() -> None:
+    """
+    A meter names the steps taken as budget minus left; the evaluate
+    sink records that per run line, also when the line then runs out of
+    fuel.
+    """
+    meter = Meter(5, Span(1, 1))
+    meter.spend()
+    meter.spend()
+    assert (meter.spent(), meter.left) == (2, 3)
+    assert Meter(None, Span(1, 1)).spent() is None
+    spent: list[int | None] = []
+    assert evaluate(desugar(parse("1\n")), 100, spent=spent) == ((1,),)
+    assert spent == [1]
+    spent.clear()
+    with pytest.raises(FplError, match=r"out of fuel"):
+        evaluate(desugar(parse(NESTED + "\n")), 1, spent=spent)
+    assert spent == [1]
 
 
 def test_a_nested_run_spends_the_line_fuel() -> None:

@@ -41,14 +41,20 @@ def checked(source: str) -> tuple[tuple[Statement, ...], tuple[Goal, ...]]:
 
 
 def stacks(
-    statements: tuple[Statement, ...], fuel: int | None = None
+    statements: tuple[Statement, ...],
+    fuel: int | None = None,
+    *,
+    spent: list[int | None] | None = None,
 ) -> Lines:
     """
     Each run line's line and the stack it leaves, within fuel steps a
-    line, or with no bound when fuel is None.
+    line, or with no bound when fuel is None. When `spent` is given,
+    each run line appends the steps it took, in order, even on failure.
     """
     lines = (s.span.line for s in statements if isinstance(s, Run))
-    return tuple(zip(lines, evaluate(statements, fuel), strict=True))
+    return tuple(
+        zip(lines, evaluate(statements, fuel, spent=spent), strict=True)
+    )
 
 
 def printed(left: Lines) -> str:

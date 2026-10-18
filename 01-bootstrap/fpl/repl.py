@@ -14,6 +14,7 @@ import itertools
 import os
 import re
 import sys
+import time
 from argparse import ArgumentParser
 from bisect import bisect_left
 from collections.abc import Callable, Iterator, Mapping
@@ -161,12 +162,15 @@ def provenance(env: Mapping[str, str]) -> tuple[Who, str, str]:
 @dataclass(frozen=True)
 class _Said:
     """
-    What a call prints, and its exit status.
+    What a call prints, and its exit status. `entered` is set when the
+    call ran `enter`; `spent` is the input's own steps when it did.
     """
 
     out: str
     notes: tuple[str, ...]
     code: int
+    spent: int | None = None
+    entered: bool = False
 
 
 @dataclass(frozen=True)
@@ -217,7 +221,13 @@ def _entered(
     return _Change(
         outcome.event,
         outcome.bodies,
-        _Said(shown + outcome.out, outcome.notes, code),
+        _Said(
+            shown + outcome.out,
+            outcome.notes,
+            code,
+            outcome.spent,
+            entered=True,
+        ),
     )
 
 
@@ -456,18 +466,44 @@ def _reader(stdin: TextIO) -> Callable[[bool], str | None]:
 BAR_WIDTH = 72
 
 
-def _phrase_bar(n: int, head: int, when: datetime) -> str:
+@dataclass(frozen=True)
+class Tty:
+    """
+    Clocks for a TTY transcript: wall date for phrase bars, and a
+    monotonic timer for per-phrase ms. Presence of a `Tty` means the
+    loop writes bars and typed result lines.
+    """
+
+    now: Callable[[], datetime] = datetime.now
+    timer: Callable[[], float] = time.perf_counter
+
+
+def phrase_bar(
+    n: int,
+    head: int,
+    when: datetime,
+    *,
+    fuel: int | None = None,
+    ms: float | None = None,
+) -> str:
     """
     ASCII DOC line between TTY phrases: `;;!` so paste is a DOC, then a
     utop-shaped command bar with local time, phrase number, and head.
+    Optional `fuel` and `ms` are the previous phrase's steps and wall
+    time.
     """
     left = f";;! -( {when.strftime('%H:%M:%S')} )-< command {n} >-"
-    right = f"{{ head: {head} }}-"
+    fields = [f"head: {head}"]
+    if fuel is not None:
+        fields.append(f"fuel: {fuel}")
+    if ms is not None:
+        fields.append(f"ms: {ms:.1f}")
+    right = "{ " + "; ".join(fields) + " }-"
     pad = max(0, BAR_WIDTH - len(left) - len(right))
     return left + ("-" * pad) + right
 
 
-def _result_line(value: str, typ: str = "...") -> str:
+def result_line(value: str, typ: str = "...") -> str:
     """
     One TTY result line: turnstile, value, and a type slot (`...` until
     the walker exposes a type; not FPL's `?` goal or `_` hole).
@@ -505,7 +541,7 @@ def _told(said: _Said, stdout: TextIO, stderr: TextIO) -> None:
     stderr.write("".join(note + "\n" for note in said.notes))
 
 
-def _transcript(out: str) -> str:
+def transcript(out: str) -> str:
     """
     Each non-empty line of a successful TTY eval as `|- value : ...`
     (shell convention, not grammar). Blank lines stay blank.
@@ -518,7 +554,7 @@ def _transcript(out: str) -> str:
             body, nl = line[:-1], "\n"
         else:
             body, nl = line, ""
-        parts.append(_result_line(body) + nl if body else line)
+        parts.append(result_line(body) + nl if body else line)
     return "".join(parts)
 
 
@@ -564,22 +600,25 @@ def _flagged(text: str, said: _Said) -> _Said:
     )
 
 
-def _turn(
+def _turn(  # noqa: PLR0913 -- call/env/log/streams plus optional Tty
     call: _Call,
     text: str,
     env: Mapping[str, str],
     log: Log,
     streams: tuple[TextIO, TextIO],
     *,
-    transcript: bool = False,
-) -> tuple[_Call, Log]:
+    tty: Tty | None = None,
+) -> tuple[_Call, Log, int | None, float | None]:
     """
     One input, entered as -e enters it, or one command, carried out and
-    told; the call and log the next one starts from. A refusal is told,
-    and the head as it now stands adopted. On a TTY loop, a successful
-    source eval's stdout lines are written as `|- value : ...`.
+    told; the call and log the next one starts from, and on a TTY the
+    steps and wall ms of an entered source (else None). A refusal is
+    told, and the head as it now stands adopted. On a TTY loop, a
+    successful source eval's stdout lines are written as
+    `|- value : ...`.
     """
     stdout, stderr = streams
+    started = tty.timer() if tty is not None else 0.0
     try:
         this = (
             _commanded(call, text)
@@ -587,22 +626,29 @@ def _turn(
             else replace(call, action="source", value=text)
         )
         if this.action == "canonical":
-            return this, log
+            return this, log, None, None
         said, log = _said(this, env, log)
     except RefusedError as error:
         _told(_Said(f"ERROR: {error}\n", (), 2), stdout, stderr)
         log = _loaded(call, env, log)
-    else:
-        said = _flagged(text, said)
-        if (
-            transcript
-            and this.action == "source"
-            and said.code == 0
-            and said.out
-        ):
-            said = replace(said, out=_transcript(said.out))
-        _told(said, stdout, stderr)
-    return _seen(call, log), log
+        return _seen(call, log), log, None, None
+    said = _flagged(text, said)
+    if (
+        tty is not None
+        and this.action == "source"
+        and said.code == 0
+        and said.out
+    ):
+        said = replace(said, out=transcript(said.out))
+    _told(said, stdout, stderr)
+    if tty is not None and said.entered:
+        return (
+            _seen(call, log),
+            log,
+            said.spent,
+            (tty.timer() - started) * 1000.0,
+        )
+    return _seen(call, log), log, None, None
 
 
 def _loaded(call: _Call, env: Mapping[str, str], memory: Log) -> Log:
@@ -618,67 +664,80 @@ def _looped(
     streams: tuple[TextIO, TextIO],
     env: Mapping[str, str],
     *,
-    transcript: bool = False,
-    now: Callable[[], datetime] | None = None,
+    tty: Tty | None = None,
 ) -> int:
     """
     Inputs and commands until the end or :quit, each checked against the
     head last seen: --head at first, else the head at start. Refused: a
     log that does not load at start. A TTY writes `;;!` phrase bars and
-    `|- value : ...` result lines.
+    `|- value : ...` result lines; a bar may name the previous phrase's
+    fuel and wall ms.
     """
     log = _loaded(call, env, EMPTY)
     if call.head is None:
         call = _seen(call, log)
     stdout, _stderr = streams
-    clock = now or datetime.now
     phrase = 0
     need_bar = True
+    last_fuel: int | None = None
+    last_ms: float | None = None
 
     def framed(on: bool) -> str | None:
-        nonlocal phrase, need_bar
-        if transcript and not on and need_bar:
+        nonlocal phrase, need_bar, last_fuel, last_ms
+        if tty is not None and not on and need_bar:
             phrase += 1
-            stdout.write(_phrase_bar(phrase, len(log.events), clock()) + "\n")
+            bar = phrase_bar(
+                phrase,
+                len(log.events),
+                tty.now(),
+                fuel=last_fuel,
+                ms=last_ms,
+            )
+            stdout.write(bar + "\n")
             stdout.flush()
             need_bar = False
+            last_fuel, last_ms = None, None
         return read(on)
 
     for text in itertools.takewhile(
         lambda t: t.split() != [":quit"], inputs(framed)
     ):
-        call, log = _turn(
-            call, text, env, log, streams, transcript=transcript
+        call, log, last_fuel, last_ms = _turn(
+            call, text, env, log, streams, tty=tty
         )
         need_bar = True
     return 0
 
 
-def main(
+def main(  # noqa: PLR0913 -- argv and stdio/env plus optional Tty
     argv: list[str],
     stdin: TextIO = sys.stdin,
     stdout: TextIO = sys.stdout,
     stderr: TextIO = sys.stderr,
     env: Mapping[str, str] = os.environ,
     *,
-    now: Callable[[], datetime] | None = None,
+    tty: Tty | None = None,
 ) -> int:
     """
     Carry out argv; the output, or one ERROR line, to stdout; goals, the
     caret under an error, inputs changed and the new head to stderr, all
     after any append is durable. An OSError is a refusal: its line names
-    the path the system refused.
+    the path the system refused. `tty` supplies clocks when the loop is
+    driven as a transcript (tests); at a real terminal it is built from
+    `stdin.isatty()`.
     """
     try:
         call = _call(argv)
         if call.action == "loop":
+            display = (
+                tty if tty is not None else (Tty() if stdin.isatty() else None)
+            )
             return _looped(
                 call,
                 _reader(stdin),
                 (stdout, stderr),
                 env,
-                transcript=stdin.isatty(),
-                now=now,
+                tty=display,
             )
         said = _said(call, env, EMPTY)[0]
     except UsageError:
