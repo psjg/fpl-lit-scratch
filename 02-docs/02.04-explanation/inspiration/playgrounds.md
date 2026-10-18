@@ -47,7 +47,7 @@ Follow-on from the Light Table team (`witheve.com`): literate document with code
 Live JS/TS scratchpad in the editor: **grayed-out values on the same line** as decorations, plus probe comments (`//?`, etc.). Values are not a separate source column and are not editable as code.
 
 - Steal: type → see; probes when you want a specific value.
-- Not yet: ghost text in the buffer. Our part-2 gutter is the wrong cousin if you expected Quokka.
+- Now: Monaco after-text ghosts with `|-`; Tab commits into `; |- …` notes (`repl-buffer-part4`). Still no `//?`-style probes.
 
 ### Swift Playgrounds / Xcode playground
 
@@ -73,7 +73,9 @@ Results in a **column beside the code**, often with richer value previews than a
 
 When the `<textarea>` is too thin, prefer **Monaco**, not a full VS Code embed. Quokka-style ghost text is much easier with Monaco decorations than with a textarea plus a side gutter.
 
-Current state: playground uses **Monaco** with Quokka-style after-text decorations (`repl-buffer-part3`). Katas still use a `<textarea>`. The Swift-cousin side gutter from part 2 is retired on `/try/`.
+Current state: playground uses **Monaco** with Quokka-style `|-` ghosts; Tab / Accept commits `; |- …` notes (`repl-buffer-part4`). Katas still use a `<textarea>`. The Swift-cousin side gutter from part 2 is retired on `/try/`.
+
+Turnstile ASCII inventory (notation only): [turnstiles.md](turnstiles.md).
 
 ## Where FPL `/try` sits today
 
@@ -82,11 +84,12 @@ Current state: playground uses **Monaco** with Quokka-style after-text decoratio
 | Pure buffer | `repl-buffer-part1` | Edit holds FPL only; the site wraps `fpl.run.default.src` |
 | Live side results | `repl-buffer-part2` | Debounced run + side gutter (Swift-cousin); superseded on playground |
 | Instant inline | `repl-buffer-part3` | Monaco + grayed end-of-line decorations (Quokka-cousin) |
+| Roundtrip transcript | `repl-buffer-part4` | Ghost `|-`; Tab commits `; |- …`; TTY REPL prefixes `|- ` |
 
 Also true right now:
 
-- **Term** is still the full dump and the error surface.
-- The gutter uses a **1:1 pairing** of non-empty stdout lines with non-blank, non-`;;;` source lines. If counts differ, the gutter clears and Term carries the truth.
+- **Term** is still the full dump and the error surface (raw walker stdout, no `|-` prefix).
+- Pairing is **1:1** of non-empty stdout lines with non-blank, non-`;;;` source lines. Matching committed `; |-` notes suppress the ghost; mismatch shows a ghost to refresh. If counts differ, decorations clear and Term carries the truth.
 - There is **no walker inspector API** feeding the UI.
 - Homepage `{.python .live}` fences stay **Python drivers** for the literate walker story; only playground, katas, and `data-kata` fences are pure FPL.
 
@@ -99,8 +102,9 @@ Order of ambition after the pure buffer. Not a delivery promise — implementati
 | 1 | Pure FPL buffer | — | Done (`repl-buffer-part1`) |
 | 2 | Live side results | Swift-cousin gutter | Done (`repl-buffer-part2`); playground moved on |
 | 3 | Instant inline / probes | Quokka | Done on playground (`repl-buffer-part3`): Monaco after-text; no `//?` probes yet |
-| 4 | No hidden state | Light Table | Inspector over stack / walker IR |
-| 5 | Document = program | Eve | Walkthrough/essay as the primary live buffer |
-| 6 | Scrub / time | Bret Victor | Parameter scrub; needs cheap deterministic re-run |
+| 4 | Roundtrip transcript | Quokka commit + utop | Done (`repl-buffer-part4`): Tab → `; |- …`; TTY `|- ` prefix; no grammar yet |
+| 5 | No hidden state | Light Table | Inspector over stack / walker IR |
+| 6 | Document = program | Eve | Walkthrough/essay as the primary live buffer |
+| 7 | Scrub / time | Bret Victor | Parameter scrub; needs cheap deterministic re-run |
 
 **Smalltalk** sits beside this table as a north-star (“environment is the program”), not as a numbered part.
