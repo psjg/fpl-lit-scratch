@@ -119,9 +119,11 @@ grid of tiles (`repl-buffer-part7`).
 - **Now (MVP):** signed integer focus `(i, j)`; only **visited** tiles are materialized;
   each tile has its **own buffer** (`localStorage` map; `#c=` shares the active tile
   only). Camera state is discrete `{ i, j, peek, scaleE }` with `scaleE = 0` locked —
-  no float pan. **Edge-peek:** snap so the focused tile fills most of the viewport while
-  a fixed strip of the neighbor on the peek side stays visible (never lose the sheet).
-  One dockview guest lives in the focused tile; other tiles are placeholders.
+  no float pan. Default view is **peek center** (focused dock fills the viewport);
+  after a move, a brief directional peek shows ~40px of the neighbor, then snaps back.
+  Trackpad/wheel swipe moves tiles when focus is not in Edit/Term (Monaco/`#fpl-out`
+  keep normal scroll). One dockview guest lives in the focused tile; other tiles are
+  placeholders.
 - **Cousins (not clones):** [niri](https://github.com/YaLTeR/niri) / PaperWM (1D strip);
   Glamorous Toolkit **Pager** / TreePager (1D tool trail). This pass jumps to 2D sparse
   rather than shipping 1D first.
