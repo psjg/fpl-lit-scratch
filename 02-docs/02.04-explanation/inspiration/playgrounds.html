@@ -617,6 +617,7 @@ ul.task-list li input[type="checkbox"] {
   <li><a href="#core-lineage" id="toc-core-lineage" class="nav-link" data-scroll-target="#core-lineage">Core lineage</a></li>
   <li><a href="#cousins-we-already-brushed-in-the-scratch-ui" id="toc-cousins-we-already-brushed-in-the-scratch-ui" class="nav-link" data-scroll-target="#cousins-we-already-brushed-in-the-scratch-ui">Cousins we already brushed in the scratch UI</a></li>
   <li><a href="#editor-substrate" id="toc-editor-substrate" class="nav-link" data-scroll-target="#editor-substrate">Editor substrate</a></li>
+  <li><a href="#navigation-miller-vs-explorer-vs-tabs" id="toc-navigation-miller-vs-explorer-vs-tabs" class="nav-link" data-scroll-target="#navigation-miller-vs-explorer-vs-tabs">Navigation: Miller vs explorer vs tabs</a></li>
   <li><a href="#splash-motd-local-tty-chrome" id="toc-splash-motd-local-tty-chrome" class="nav-link" data-scroll-target="#splash-motd-local-tty-chrome">Splash / MOTD (local TTY chrome)</a></li>
   <li><a href="#where-fpl-try-sits-today" id="toc-where-fpl-try-sits-today" class="nav-link" data-scroll-target="#where-fpl-try-sits-today">Where FPL <code>/try</code> sits today</a></li>
   <li><a href="#long-arc" id="toc-long-arc" class="nav-link" data-scroll-target="#long-arc">Long arc</a></li>
@@ -673,7 +674,7 @@ ul.task-list li input[type="checkbox"] {
 <p>The environment <em>is</em> the program: image, inspectors, live objects you can poke.</p>
 <ul>
 <li>Steal: inspect state instead of guessing; the tool and the language grow together.</li>
-<li>Steal (browser): <strong>path-browser</strong> — Finder-like columns over <code>/</code>-scoped modules (Unix / Plan 9 path scopes), body of the selected scope below — System Browser shape without classes.</li>
+<li>Steal (browser): <strong>path-browser</strong> — Finder-like columns over <code>/</code>-scoped modules (Unix / Plan 9 path scopes), body of the selected scope below — System Browser shape without classes. Longer argument (explorer vs tabs vs Miller): <a href="#navigation-miller-vs-explorer-vs-tabs">Navigation</a> below.</li>
 <li>Now (MVP on <code>/try</code>, <code>repl-buffer-part5</code>): Miller columns above Edit | Term over buffer <code>name/</code> scopes. Click navigates in the full buffer; Focus (or double-click) shows only that scope’s body (edits splice back; <code>#c=</code> stays the full source). Outline is a client-side indent heuristic, not a second desugar. <strong>Examples</strong> mode tab is stubbed (kata library next). Still not: an image, object inspectors, or a hot world between edits.</li>
 </ul>
 </section>
@@ -737,8 +738,131 @@ ul.task-list li input[type="checkbox"] {
 <li><strong>Monaco</strong>: the editor core of VS Code (the CodePen / LeetCode path) — highlighting, decorations, no workbench.</li>
 </ul>
 <p>When the <code>&lt;textarea&gt;</code> is too thin, prefer <strong>Monaco</strong>, not a full VS Code embed. Quokka-style ghost text is much easier with Monaco decorations than with a textarea plus a side gutter.</p>
-<p>Current state: playground uses <strong>Monaco</strong> with Quokka-style <code>|-</code> ghosts; Tab / Accept commits <code>; |- …</code> notes (<code>repl-buffer-part4</code>); Miller <strong>path-browser</strong> columns over buffer paths (<code>repl-buffer-part5</code>). Katas still use a <code>&lt;textarea&gt;</code>. The Swift-cousin side gutter from part 2 is retired on <code>/try/</code>.</p>
+<p>Current state: playground uses <strong>Monaco</strong> with Quokka-style <code>|-</code> ghosts; Tab / Accept commits <code>; |- …</code> notes (<code>repl-buffer-part4</code>); Miller <strong>path-browser</strong> columns over buffer paths (<code>repl-buffer-part5</code>); <strong>dockable</strong> Paths / Edit / Term (<code>repl-buffer-part6</code>). Katas still use a <code>&lt;textarea&gt;</code>. The Swift-cousin side gutter from part 2 is retired on <code>/try/</code>.</p>
+<section id="docking" class="level3">
+<h3 class="anchored" data-anchor-id="docking">Docking</h3>
+<p>RemedyBG / VS-ish panels on <code>/try</code> only — <strong>client-only</strong> progressive enhancement on the static Pages host. <code>curl …/try/</code> still returns real Paths / Edit / Term markup (<code>data-dock</code> sections); docking moves those nodes into <a href="https://dockview.dev">dockview</a> panels when the bundle loads. No app-shell SPA, no client router: Playground / Katas / docs stay separate documents.</p>
+<p>Default layout: Paths on top (collapsible / closable), Edit | Term below. Drag title bars to split, reorder, and tab-stack. Layout persists in <code>localStorage</code> (<code>fpl-try-dock-v1</code>); <strong>Reset layout</strong> restores the default. Closing Paths replaces the old Hide columns escape; header <strong>Paths</strong> reopens the panel.</p>
+<p>Out of scope for this host (future dock <em>components</em> once the shell exists): floating OS windows, kata-page docking, Light Table / inspector panes, project-file Miller, yazi previews.</p>
+</section>
+<section id="scroll-host-locked-zui" class="level3">
+<h3 class="anchored" data-anchor-id="scroll-host-locked-zui">Scroll host / locked ZUI</h3>
+<p>Docking is the <strong>guest</strong> inside one workspace. Above it sits the <strong>host</strong>: a sparse 2D grid of tiles (<code>repl-buffer-part7</code>).</p>
+<ul>
+<li><strong>Now (MVP):</strong> signed integer focus <code>(i, j)</code>; only <strong>visited</strong> tiles are materialized; each tile has its <strong>own buffer</strong> (<code>localStorage</code> map; <code>#c=</code> shares the active tile only). Camera state is discrete <code>{ i, j, peek, scaleE }</code> with <code>scaleE = 0</code> locked — no float pan. Default view is <strong>peek center</strong> (focused dock fills the viewport); after a move, a brief directional peek shows ~40px of the neighbor, then snaps back. Trackpad/wheel swipe moves tiles when focus is not in Edit/Term (Monaco/<code>#fpl-out</code> keep normal scroll). One dockview guest lives in the focused tile; other tiles are placeholders.</li>
+<li><strong>Cousins (not clones):</strong> <a href="https://github.com/YaLTeR/niri">niri</a> / PaperWM (1D strip); Glamorous Toolkit <strong>Pager</strong> / TreePager (1D tool trail). This pass jumps to 2D sparse rather than shipping 1D first.</li>
+<li><strong>Later (allude):</strong> locked gridded ZUI via discrete <code>scaleE</code> steps (half-scale ladder), not free Pad++ zoom.</li>
+</ul>
+<p>Layering: curlable HTML shell (<code>data-tile</code> + <code>data-dock</code>) → (enhance) tile host → dock guest in the focused tile; fail closed to a single-tile static dock. Playground / Katas / docs stay <strong>separate documents</strong> — no client router, no empty <code>#root</code> SPA.</p>
 <p>Turnstile ASCII inventory (notation only): <a href="turnstiles.html">turnstiles.md</a>.</p>
+</section>
+</section>
+<section id="navigation-miller-vs-explorer-vs-tabs" class="level2">
+<h2 class="anchored" data-anchor-id="navigation-miller-vs-explorer-vs-tabs">Navigation: Miller vs explorer vs tabs</h2>
+<p>The playaround question is the same as every large IDE: <strong>where am I in a large space?</strong> Two common scales both fail.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Pattern</th>
+<th>Strength</th>
+<th>Breaks when</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Project <strong>explorer</strong> / folder tree (Cursor left bar)</td>
+<td>Whole checkout visible</td>
+<td>Depth × width × noise; scroll-hell</td>
+</tr>
+<tr class="even">
+<td><strong>Horizontal tabs</strong></td>
+<td>“What do I have open?”</td>
+<td>Tab spam; no hierarchy</td>
+</tr>
+<tr class="odd">
+<td>Vertical / tree-tabs</td>
+<td>Open set + a bit of structure</td>
+<td>Often a second tree beside the explorer</td>
+</tr>
+<tr class="even">
+<td><strong>dired</strong></td>
+<td>List + actions in the buffer</td>
+<td>One directory at a time; no path columns</td>
+</tr>
+<tr class="odd">
+<td><strong>Miller columns</strong> (Finder / NeXT; Mark Miller)</td>
+<td>Path = columns; focus on <em>here</em></td>
+<td>Weak for fifty unrelated open files with no path</td>
+</tr>
+</tbody>
+</table>
+<p>Miller is a candidate to replace <strong>both</strong> explorer and tabs for a path-shaped world: navigate <code>demo/ → math/ → inc</code>, not the whole disk tree; the “open set” is the selected path plus the body below (Focus = one scope), not twenty tab strips. That is closer to a Smalltalk System Browser / path-browser than to “IDE with files + tabs.”</p>
+<p><strong>Lived cousins</strong> (not requirements for <code>/try</code>): terminal file managers — <strong>yazi</strong> (column + preview), <strong>vifm</strong> / <strong>mc</strong> (dual-pane), <strong>broot</strong> (tree + fuzzy). Dired was strong for <em>action in a directory</em>; Miller is stronger for <em>depth without tree spam</em>.</p>
+<p><strong>FPL fit:</strong> <code>/</code>-scoped modules, body under the columns, no class browser. The shell wants path structure the language already speaks.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Layer</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Buffer-path Miller on <code>/try</code> (indent heuristic, navigate + Focus)</td>
+<td><strong>now</strong> (<code>repl-buffer-part5</code>)</td>
+</tr>
+<tr class="even">
+<td>Dockable Paths / Edit / Term on <code>/try</code> (dockview; curlable shell; Reset layout)</td>
+<td><strong>now</strong> (<code>repl-buffer-part6</code>)</td>
+</tr>
+<tr class="odd">
+<td>Close / reopen Paths (replaces Hide columns when dock enhances)</td>
+<td><strong>now</strong>; static fallback still has Hide columns</td>
+</tr>
+<tr class="even">
+<td>Miller arrow-key nav; reopen Edit / Term without full Reset</td>
+<td><strong>open</strong> (dock UX; not the scroll host)</td>
+</tr>
+<tr class="odd">
+<td>Examples mode = kata / library columns</td>
+<td><strong>open</strong> (stub today)</td>
+</tr>
+<tr class="even">
+<td>Miller as primary playaround nav (mental model vs explorer + tabs)</td>
+<td><strong>vision</strong></td>
+</tr>
+<tr class="odd">
+<td>Sparse 2D tile host (edge-peek; per-tile buffers; discrete camera)</td>
+<td><strong>now</strong> (<code>repl-buffer-part7</code>)</td>
+</tr>
+<tr class="even">
+<td>Locked gridded ZUI (<code>scaleE ≠ 0</code> discrete zoom steps)</td>
+<td><strong>allude</strong> — same camera, later</td>
+</tr>
+<tr class="odd">
+<td>Workspace / project-file Miller (real paths, not only buffer <code>name/</code>)</td>
+<td><strong>vision</strong> — separate feat plan</td>
+</tr>
+<tr class="even">
+<td>Inspector / Light Table panels as further dock components</td>
+<td><strong>open</strong> (dock guest exists; panes not yet)</td>
+</tr>
+<tr class="odd">
+<td>yazi-parity (previews, richer chrome)</td>
+<td><strong>allude</strong> only — not a promise to clone yazi</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Escape hatch:</strong> close or minimize Paths (or Hide columns when JS/dock fails) → Edit | Term fills the height (Tour of Go / early <code>/try</code>) when the browser is in the way.</p>
 </section>
 <section id="splash-motd-local-tty-chrome" class="level2">
 <h2 class="anchored" data-anchor-id="splash-motd-local-tty-chrome">Splash / MOTD (local TTY chrome)</h2>
@@ -786,6 +910,16 @@ ul.task-list li input[type="checkbox"] {
 <td>Path-browser columns</td>
 <td><code>repl-buffer-part5</code></td>
 <td>Miller strip above Edit; buffer <code>name/</code> outline; navigate + Focus; Examples tab stub</td>
+</tr>
+<tr class="even">
+<td>Dockable panels</td>
+<td><code>repl-buffer-part6</code></td>
+<td>Paths / Edit / Term via dockview; curlable <code>data-dock</code> shell; persist + Reset layout</td>
+</tr>
+<tr class="odd">
+<td>Sparse 2D tiles</td>
+<td><code>repl-buffer-part7</code></td>
+<td>Integer <code>(i,j)</code> sheet; edge-peek; per-tile buffers; one dock guest in focus</td>
 </tr>
 </tbody>
 </table>
@@ -847,10 +981,22 @@ ul.task-list li input[type="checkbox"] {
 <td>Done MVP (<code>repl-buffer-part5</code>): Miller columns; navigate + Focus; Examples stub</td>
 </tr>
 <tr class="even">
+<td>4c</td>
+<td>Dockable panels</td>
+<td>RemedyBG / VS</td>
+<td>Done MVP (<code>repl-buffer-part6</code>): Paths / Edit / Term dock; curlable shell</td>
+</tr>
+<tr class="odd">
+<td>4d</td>
+<td>Sparse 2D tiles</td>
+<td>niri / GT Pager cousins</td>
+<td>Done MVP (<code>repl-buffer-part7</code>): edge-peek grid; per-tile buffers</td>
+</tr>
+<tr class="even">
 <td>5</td>
 <td>No hidden state</td>
 <td>Light Table</td>
-<td>Inspector over stack / walker IR</td>
+<td>Inspector over stack / walker IR (future dock components)</td>
 </tr>
 <tr class="odd">
 <td>6</td>
@@ -866,7 +1012,7 @@ ul.task-list li input[type="checkbox"] {
 </tr>
 </tbody>
 </table>
-<p><strong>Glamorous Toolkit</strong> stays a north-star beside this table. Parts 5–7 remain Light Table / Eve / Bret Victor. Path-browser Examples mode (kata library columns) is still open.</p>
+<p><strong>Glamorous Toolkit</strong> (Pager trail), <strong>locked ZUI</strong> (<code>scaleE</code> later), and <strong>Miller-as-shell-nav</strong> stay north-stars beside this table — not numbered delivery parts. The sparse 2D tile host is part 4d. Parts 5–7 remain Light Table / Eve / Bret Victor. Path-browser Examples mode is still open; see <a href="#navigation-miller-vs-explorer-vs-tabs">Navigation</a> and <a href="#scroll-host--locked-zui">Scroll host / locked ZUI</a>.</p>
 
 
 </section>
