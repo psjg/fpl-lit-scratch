@@ -31,7 +31,12 @@ The environment *is* the program: image, inspectors, live objects you can poke.
 - Steal (browser): **path-browser** — Finder-like columns over `/`-scoped modules
   (Unix / Plan 9 path scopes), body of the selected scope below — System Browser shape
   without classes.
-- Not yet: an image, object inspectors, a hot world between edits, or a path-browser UI.
+- Now (MVP on `/try`, `repl-buffer-part5`): Miller columns above Edit | Term over
+  buffer `name/` scopes. Click navigates in the full buffer; Focus (or double-click)
+  shows only that scope’s body (edits splice back; `#c=` stays the full source).
+  Outline is a client-side indent heuristic, not a second desugar. **Examples** mode
+  tab is stubbed (kata library next). Still not: an image, object inspectors, or a
+  hot world between edits.
 
 ### Glamorous Toolkit
 
@@ -86,7 +91,7 @@ Results in a **column beside the code**, often with richer value previews than a
 
 When the `<textarea>` is too thin, prefer **Monaco**, not a full VS Code embed. Quokka-style ghost text is much easier with Monaco decorations than with a textarea plus a side gutter.
 
-Current state: playground uses **Monaco** with Quokka-style `|-` ghosts; Tab / Accept commits `; |- …` notes (`repl-buffer-part4`). Katas still use a `<textarea>`. The Swift-cousin side gutter from part 2 is retired on `/try/`.
+Current state: playground uses **Monaco** with Quokka-style `|-` ghosts; Tab / Accept commits `; |- …` notes (`repl-buffer-part4`); Miller **path-browser** columns over buffer paths (`repl-buffer-part5`). Katas still use a `<textarea>`. The Swift-cousin side gutter from part 2 is retired on `/try/`.
 
 Turnstile ASCII inventory (notation only): [turnstiles.md](turnstiles.md).
 
@@ -110,6 +115,7 @@ Diagnostic Clipper sketches: [judgments](judgments.md). Error tags:
 | Live side results | `repl-buffer-part2` | Debounced run + side gutter (Swift-cousin); superseded on playground |
 | Instant inline | `repl-buffer-part3` | Monaco + grayed end-of-line decorations (Quokka-cousin) |
 | Roundtrip transcript | `repl-buffer-part4` | Ghost `|-`; Tab commits `; |- …`; TTY utop transcript (`|- value : ...`, `;;!` bars) |
+| Path-browser columns | `repl-buffer-part5` | Miller strip above Edit; buffer `name/` outline; navigate + Focus; Examples tab stub |
 
 Also true right now:
 
@@ -128,10 +134,11 @@ Order of ambition after the pure buffer. Not a delivery promise — implementati
 | 2 | Live side results | Swift-cousin gutter | Done (`repl-buffer-part2`); playground moved on |
 | 3 | Instant inline / probes | Quokka | Done on playground (`repl-buffer-part3`): Monaco after-text; no `//?` probes yet |
 | 4 | Roundtrip transcript | Quokka commit + utop | Done (`repl-buffer-part4`): Tab → `; |- …`; TTY promptless `|- value : ...` + ASCII `;;!` phrase bars |
+| 4b | Path-browser | Smalltalk / Finder | Done MVP (`repl-buffer-part5`): Miller columns; navigate + Focus; Examples stub |
 | 5 | No hidden state | Light Table | Inspector over stack / walker IR |
 | 6 | Document = program | Eve | Walkthrough/essay as the primary live buffer |
 | 7 | Scrub / time | Bret Victor | Parameter scrub; needs cheap deterministic re-run |
 
-**Smalltalk** (path-browser) and **Glamorous Toolkit** sit beside this table as north-stars,
-not as numbered parts. Parts 5–7 remain the home for Light Table / Eve / Bret Victor.
+**Glamorous Toolkit** stays a north-star beside this table. Parts 5–7 remain Light Table /
+Eve / Bret Victor. Path-browser Examples mode (kata library columns) is still open.
 

@@ -17,7 +17,7 @@ Error tag catalog: [02.03.01 Errors](../../02.03-reference/errors.md). Site:
 Live scratch shell: [Playground](../../../try/index.html). Milestone tags on
 `psjg/fpl-lit-scratch`: `repl-buffer-part1` (pure FPL buffer), `repl-buffer-part2` (side
 gutter), `repl-buffer-part3` (Monaco Quokka-style inline), `repl-buffer-part4`
-(roundtrip `|-` / Tab-commit).
+(roundtrip `|-` / Tab-commit), `repl-buffer-part5` (Miller path-browser columns).
 
 ## Promises
 
@@ -32,7 +32,9 @@ plan), `kept` (true in the tree), `dropped` (we no longer mean it — say why in
 | 02.04.03 | [judgments](judgments.md) | Locus `^` + Elm tip + Clipper speaker | deferred |
 | 02.04.03 | [judgments](judgments.md) | Deadline `@ <n>` on the `\|-` judgment line | deferred |
 | 02.04.03 | [judgments](judgments.md) | Restarts / supervision as a north-star | open |
-| 02.04.01 | [playgrounds](playgrounds.md) | Path-browser / Glamorous Toolkit cousins | open |
+| 02.04.01 | [playgrounds](playgrounds.md) | Path-browser buffer columns (navigate + Focus) | kept |
+| 02.04.01 | [playgrounds](playgrounds.md) | Path-browser Examples mode (kata library) | open |
+| 02.04.01 | [playgrounds](playgrounds.md) | Glamorous Toolkit moldable inspectors | open |
 | 02.04.01 | [playgrounds](playgrounds.md) | TTY MOTD splash pool | kept |
 | 02.04.01 | [playgrounds](playgrounds.md) | TTY mascot hello+bye (offline) | kept |
 | 02.05.05 | [phrase-costs](../../02.05-project/notes/repl-phrase-costs.md) | Turn `&` fingerprint on the phrase bar | kept |
