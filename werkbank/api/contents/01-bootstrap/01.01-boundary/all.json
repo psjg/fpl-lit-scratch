@@ -1,0 +1,71 @@
+{
+  "content": [
+    {
+      "content": null,
+      "created": "1980-01-01T00:00:00Z",
+      "format": null,
+      "hash": null,
+      "hash_algorithm": null,
+      "last_modified": "1980-01-01T00:00:00Z",
+      "mimetype": null,
+      "name": "01.01.02-fon.ipynb",
+      "path": "01-bootstrap/01.01-boundary/01.01.02-fon.ipynb",
+      "size": 23079,
+      "type": "notebook",
+      "writable": true
+    },
+    {
+      "content": null,
+      "created": "1980-01-01T00:00:00Z",
+      "format": null,
+      "hash": null,
+      "hash_algorithm": null,
+      "last_modified": "1980-01-01T00:00:00Z",
+      "mimetype": null,
+      "name": "01.01.03-pipe.ipynb",
+      "path": "01-bootstrap/01.01-boundary/01.01.03-pipe.ipynb",
+      "size": 8626,
+      "type": "notebook",
+      "writable": true
+    },
+    {
+      "content": null,
+      "created": "1980-01-01T00:00:00Z",
+      "format": null,
+      "hash": null,
+      "hash_algorithm": null,
+      "last_modified": "1980-01-01T00:00:00Z",
+      "mimetype": null,
+      "name": "01.01.01-source.ipynb",
+      "path": "01-bootstrap/01.01-boundary/01.01.01-source.ipynb",
+      "size": 2370,
+      "type": "notebook",
+      "writable": true
+    },
+    {
+      "content": null,
+      "created": "1980-01-01T00:00:00Z",
+      "format": null,
+      "hash": null,
+      "hash_algorithm": null,
+      "last_modified": "1980-01-01T00:00:00Z",
+      "mimetype": null,
+      "name": "01.01.04-render.ipynb",
+      "path": "01-bootstrap/01.01-boundary/01.01.04-render.ipynb",
+      "size": 2357,
+      "type": "notebook",
+      "writable": true
+    }
+  ],
+  "created": "1980-01-01T00:00:00Z",
+  "format": "json",
+  "hash": null,
+  "hash_algorithm": null,
+  "last_modified": "1980-01-01T00:00:00Z",
+  "mimetype": null,
+  "name": "01.01-boundary",
+  "path": "01-bootstrap/01.01-boundary",
+  "size": null,
+  "type": "directory",
+  "writable": true
+}
