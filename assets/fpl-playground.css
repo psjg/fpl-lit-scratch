@@ -148,7 +148,7 @@ html.fpl-dock-ready .fpl-dock-paths .fpl-miller {
   border-bottom: none;
 }
 
-/* Paths beside Edit: size from columns (JS); modes/hint wrap inside the panel. */
+/* Paths beside Edit: fixed panel width; Miller scrolls horizontally. */
 html.fpl-dock-ready.fpl-paths-side .fpl-dock-paths.fpl-dock-mounted {
   max-width: 100%;
 }
