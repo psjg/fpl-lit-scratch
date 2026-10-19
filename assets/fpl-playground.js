@@ -401,6 +401,11 @@ async function bootPlayground() {
   const millerHint = $("fpl-miller-hint");
   const focusBtn = /** @type {HTMLButtonElement} */ ($("fpl-focus"));
   const unfocusBtn = /** @type {HTMLButtonElement} */ ($("fpl-unfocus"));
+  const browserToggle = /** @type {HTMLButtonElement} */ (
+    $("fpl-browser-toggle")
+  );
+  const browser = miller.closest(".fpl-browser");
+  const BROWSER_COLLAPSE_KEY = "fpl-try-browser-collapsed";
 
   const monaco = await loadMonaco();
   const fromHash = readHash();
@@ -648,6 +653,27 @@ async function bootPlayground() {
 
   focusBtn.addEventListener("click", () => enterFocus());
   unfocusBtn.addEventListener("click", () => exitFocus());
+
+  const setBrowserCollapsed = (collapsed) => {
+    if (!browser) return;
+    browser.classList.toggle("collapsed", collapsed);
+    browserToggle.setAttribute("aria-expanded", collapsed ? "false" : "true");
+    browserToggle.textContent = collapsed ? "Show columns" : "Hide columns";
+    try {
+      localStorage.setItem(BROWSER_COLLAPSE_KEY, collapsed ? "1" : "0");
+    } catch {
+      /* private mode */
+    }
+  };
+  browserToggle.addEventListener("click", () => {
+    setBrowserCollapsed(!browser?.classList.contains("collapsed"));
+  });
+  try {
+    setBrowserCollapsed(localStorage.getItem(BROWSER_COLLAPSE_KEY) === "1");
+  } catch {
+    setBrowserCollapsed(false);
+  }
+
   window.addEventListener("keydown", (ev) => {
     if (ev.key === "Escape" && focus) {
       ev.preventDefault();
