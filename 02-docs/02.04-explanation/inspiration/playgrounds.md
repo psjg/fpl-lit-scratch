@@ -167,6 +167,7 @@ wants path structure the language already speaks.
 | --- | --- |
 | Buffer-path Miller on `/try` (indent heuristic, navigate + Focus) | **now** (`repl-buffer-part5`) |
 | Dockable Paths / Edit / Term on `/try` (dockview; curlable shell; Reset layout) | **now** (`repl-buffer-part6`) |
+| Paths beside Edit = **content-width Miller strip** (editable Edit, not yazi preview) | **now** |
 | Close / reopen Paths (replaces Hide columns when dock enhances) | **now**; static fallback still has Hide columns |
 | Miller arrow-key nav; reopen Edit / Term without full Reset | **open** (dock UX; not the scroll host) |
 | Examples mode = kata / library columns | **open** (stub today) |
