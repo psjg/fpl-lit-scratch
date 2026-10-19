@@ -6,7 +6,6 @@
  */
 import { runFpl, checkExpected, learnBase } from "./fpl-runtime.js";
 import { initDock } from "./fpl-dock.js";
-import { initTiles, peekActiveTileSrc } from "./fpl-tiles.js";
 
 const RESULT_PREFIX = "|- ";
 const TRAILING_NOTE = /[\t ]*(?:;|⍝)[ \t]*(.*)$/u;
@@ -413,13 +412,8 @@ async function bootPlayground() {
 
   const monaco = await loadMonaco();
   const fromHash = readHash();
-  const stored = peekActiveTileSrc(DEFAULT_SRC);
   const initial =
-    fromHash != null && fromHash !== ""
-      ? fromHash
-      : stored != null && stored !== ""
-        ? stored
-        : DEFAULT_SRC;
+    fromHash != null && fromHash !== "" ? fromHash : DEFAULT_SRC;
 
   const editor = monaco.editor.create(host, {
     value: initial,
@@ -438,6 +432,17 @@ async function bootPlayground() {
     insertSpaces: false,
   });
 
+  // Dock after Monaco so panel show/resize can call editor.layout().
+  const dock = await initDock({
+    onLayout: () => {
+      try {
+        editor.layout();
+      } catch {
+        /* editor disposed */
+      }
+    },
+  });
+
   let decoIds = /** @type {string[]} */ ([]);
   /** @type {{ text: string, kind: string }[] | null} */
   let lastCells = null;
@@ -445,40 +450,6 @@ async function bootPlayground() {
   let outlineTimer = 0;
   let gen = 0;
   let muteLive = false;
-
-  const layoutEditor = () => {
-    try {
-      editor.layout();
-    } catch {
-      /* editor disposed */
-    }
-  };
-
-  // Tile host before dock: dock lives inside the focused tile's #fpl-dock.
-  const tiles = initTiles({
-    initialSrc: initial,
-    getSrc: () => editor.getValue(),
-    setSrc: (src) => {
-      muteLive = true;
-      try {
-        editor.setValue(src);
-      } finally {
-        muteLive = false;
-      }
-      lastCells = null;
-      decoIds = applyQuokkaDecorations(editor, monaco, null, decoIds);
-      writeHash(src);
-      scheduleOutline();
-      scheduleLive();
-      layoutEditor();
-    },
-    onLayout: layoutEditor,
-  });
-
-  // Dock after Monaco so panel show/resize can call editor.layout().
-  const dock = await initDock({
-    onLayout: layoutEditor,
-  });
   let mode = "paths";
   /** @type {OutlineNode} */
   let outline = parseOutline(initial);
@@ -780,8 +751,6 @@ async function bootPlayground() {
 
   editor.onDidChangeModelContent(() => {
     if (focus) writeHash(getSrc());
-    else writeHash(editor.getValue());
-    if (tiles) tiles.persistActive();
     scheduleOutline();
     scheduleLive();
   });

@@ -73,97 +73,13 @@ body {
   color: #fff;
 }
 
-/* Sparse 2D tile world (edge-peek host). Without enhance: one tile fills. */
-.fpl-viewport {
-  flex: 1 1 auto;
-  min-height: 0;
-  width: 100%;
-  position: relative;
-  overflow: hidden;
-  background: #111;
-}
-
-.fpl-world {
-  position: absolute;
-  left: 0;
-  top: 0;
-  will-change: transform;
-}
-
-html:not(.fpl-tiles-ready) .fpl-world {
-  inset: 0;
-  width: 100%;
-  height: 100%;
-}
-
-html:not(.fpl-tiles-ready) .fpl-tile {
-  width: 100%;
-  height: 100%;
-}
-
-.fpl-tile {
-  position: absolute;
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-  background: #1e1e1e;
-  border: 1px solid #333;
-  overflow: hidden;
-}
-
-.fpl-tile-focus {
-  border-color: #555;
-  box-shadow: inset 0 0 0 1px #094771;
-}
-
-.fpl-tile-chrome {
-  flex: 0 0 auto;
-  padding: 0.15rem 0.5rem;
-  font-size: 0.68rem;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  color: #888;
-  background: #151515;
-  border-bottom: 1px solid #333;
-}
-
-.fpl-tile-stub {
-  flex: 1 1 auto;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #666;
-  font-size: 0.85rem;
-  padding: 1rem;
-  text-align: center;
-}
-
-.fpl-tile-actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.3rem;
-  margin-left: 0.5rem;
-}
-
-.fpl-tile-coord {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 0.78rem;
-  color: #9a9a9a;
-  min-width: 3.5rem;
-}
-
-/* Dock host: fills the focused tile (or viewport when tiles not enhanced). */
+/* Dock host: fills below header. Static fallback until html.fpl-dock-ready. */
 .fpl-dock {
   flex: 1 1 auto;
   min-height: 0;
   width: 100%;
   overflow: hidden;
   background: #1e1e1e;
-}
-
-.fpl-tile > .fpl-dock {
-  flex: 1 1 auto;
-  min-height: 0;
 }
 
 html:not(.fpl-dock-ready) .fpl-dock {
