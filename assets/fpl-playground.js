@@ -1,9 +1,11 @@
 /**
  * /try playground + kata UI. Buffer is pure FPL; runtime wraps fpl.run.default.src.
- * Playground: Monaco Quokka ghosts + Tab-commit to `; |-` notes; Miller path-browser.
+ * Playground: Monaco Quokka ghosts + Tab-commit to `; |-` notes; Miller path-browser;
+ * dockable Paths/Edit/Term via fpl-dock.js (progressive enhancement).
  * Katas: textarea.
  */
 import { runFpl, checkExpected, learnBase } from "./fpl-runtime.js";
+import { initDock } from "./fpl-dock.js";
 
 const RESULT_PREFIX = "|- ";
 const TRAILING_NOTE = /[\t ]*(?:;|⍝)[ \t]*(.*)$/u;
@@ -401,10 +403,11 @@ async function bootPlayground() {
   const millerHint = $("fpl-miller-hint");
   const focusBtn = /** @type {HTMLButtonElement} */ ($("fpl-focus"));
   const unfocusBtn = /** @type {HTMLButtonElement} */ ($("fpl-unfocus"));
-  const browserToggle = /** @type {HTMLButtonElement} */ (
-    $("fpl-browser-toggle")
+  const browserToggle = /** @type {HTMLButtonElement | null} */ (
+    document.getElementById("fpl-browser-toggle")
   );
-  const browser = miller.closest(".fpl-browser");
+  const pathsSection = miller.closest("[data-dock='paths']");
+  const browser = pathsSection || miller.closest(".fpl-browser");
   const BROWSER_COLLAPSE_KEY = "fpl-try-browser-collapsed";
 
   const monaco = await loadMonaco();
@@ -427,6 +430,17 @@ async function bootPlayground() {
     padding: { top: 12 },
     tabSize: 4,
     insertSpaces: false,
+  });
+
+  // Dock after Monaco so panel show/resize can call editor.layout().
+  const dock = await initDock({
+    onLayout: () => {
+      try {
+        editor.layout();
+      } catch {
+        /* editor disposed */
+      }
+    },
   });
 
   let decoIds = /** @type {string[]} */ ([]);
@@ -654,24 +668,26 @@ async function bootPlayground() {
   focusBtn.addEventListener("click", () => enterFocus());
   unfocusBtn.addEventListener("click", () => exitFocus());
 
-  const setBrowserCollapsed = (collapsed) => {
-    if (!browser) return;
-    browser.classList.toggle("collapsed", collapsed);
-    browserToggle.setAttribute("aria-expanded", collapsed ? "false" : "true");
-    browserToggle.textContent = collapsed ? "Show columns" : "Hide columns";
+  // Collapse Hide columns only when docking did not enhance (static fallback).
+  if (!dock && browserToggle && browser) {
+    const setBrowserCollapsed = (collapsed) => {
+      browser.classList.toggle("collapsed", collapsed);
+      browserToggle.setAttribute("aria-expanded", collapsed ? "false" : "true");
+      browserToggle.textContent = collapsed ? "Show columns" : "Hide columns";
+      try {
+        localStorage.setItem(BROWSER_COLLAPSE_KEY, collapsed ? "1" : "0");
+      } catch {
+        /* private mode */
+      }
+    };
+    browserToggle.addEventListener("click", () => {
+      setBrowserCollapsed(!browser.classList.contains("collapsed"));
+    });
     try {
-      localStorage.setItem(BROWSER_COLLAPSE_KEY, collapsed ? "1" : "0");
+      setBrowserCollapsed(localStorage.getItem(BROWSER_COLLAPSE_KEY) === "1");
     } catch {
-      /* private mode */
+      setBrowserCollapsed(false);
     }
-  };
-  browserToggle.addEventListener("click", () => {
-    setBrowserCollapsed(!browser?.classList.contains("collapsed"));
-  });
-  try {
-    setBrowserCollapsed(localStorage.getItem(BROWSER_COLLAPSE_KEY) === "1");
-  } catch {
-    setBrowserCollapsed(false);
   }
 
   window.addEventListener("keydown", (ev) => {

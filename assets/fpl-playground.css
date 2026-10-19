@@ -73,12 +73,104 @@ body {
   color: #fff;
 }
 
-.fpl-browser {
+/* Dock host: fills below header. Static fallback until html.fpl-dock-ready. */
+.fpl-dock {
   flex: 1 1 auto;
   min-height: 0;
+  width: 100%;
+  overflow: hidden;
+  background: #1e1e1e;
+}
+
+html:not(.fpl-dock-ready) .fpl-dock {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+html:not(.fpl-dock-ready) .fpl-dock > [data-dock="paths"] {
+  grid-column: 1 / -1;
+  grid-row: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+html:not(.fpl-dock-ready) .fpl-dock > [data-dock="edit"] {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+html:not(.fpl-dock-ready) .fpl-dock > [data-dock="term"] {
+  grid-column: 2;
+  grid-row: 2;
+}
+
+html.fpl-dock-ready .fpl-dock,
+html.fpl-dock-ready .fpl-dock.fpl-dock--ready {
+  display: block;
+  position: relative;
+}
+
+html.fpl-dock-ready .fpl-dock > .dv-shell,
+html.fpl-dock-ready .fpl-dock > .dockview-theme-dark {
+  height: 100%;
+  width: 100%;
+}
+
+.fpl-dock-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-left: 0.5rem;
+}
+
+html.fpl-dock-ready #fpl-browser-toggle {
+  display: none;
+}
+
+html.fpl-dock-ready .fpl-dock-section.fpl-dock-mounted {
+  height: 100%;
+  width: 100%;
+  min-height: 0;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  background: #1e1e1e;
+}
+
+html.fpl-dock-ready .fpl-dock-paths .fpl-miller {
+  flex: 1 1 auto;
+  height: auto;
+  min-height: 4rem;
+  border-bottom: none;
+}
+
+/* Theme dockview chrome toward existing pane bars */
+html.fpl-dock-ready .dv-tabs-and-actions-container,
+html.fpl-dock-ready .dv-groupview > .dv-header {
+  background: #252526;
+  border-bottom: 1px solid #333;
+}
+
+html.fpl-dock-ready .dv-tab {
+  color: #9a9a9a;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+html.fpl-dock-ready .dv-tab.dv-active-tab {
+  color: #e8e8e8;
+  background: #1e1e1e;
+}
+
+html.fpl-dock-ready .dv-separator-border,
+html.fpl-dock-ready .dv-resize-container {
+  background: #111;
 }
 
 .fpl-browser-modes {
@@ -120,6 +212,8 @@ body {
   gap: 0.35rem;
 }
 
+.fpl-dock-paths.collapsed .fpl-miller,
+.fpl-dock-paths.collapsed .fpl-miller-hint,
 .fpl-browser.collapsed .fpl-miller,
 .fpl-browser.collapsed .fpl-miller-hint {
   display: none;
@@ -216,7 +310,7 @@ body {
   background: #252526;
 }
 
-/* Playground: Edit | Term — equal share of the full viewport width */
+/* Playground: Edit | Term — equal share (kata + legacy workspace grids) */
 .fpl-workspace-play {
   grid-template-columns: minmax(0, 1fr) 4px minmax(0, 1fr);
 }
@@ -600,6 +694,27 @@ body {
 }
 
 @media (max-width: 800px) {
+  html:not(.fpl-dock-ready) .fpl-dock {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto minmax(45vh, 1fr) minmax(30vh, 1fr);
+    overflow: auto;
+  }
+
+  html:not(.fpl-dock-ready) .fpl-dock > [data-dock="paths"] {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  html:not(.fpl-dock-ready) .fpl-dock > [data-dock="edit"] {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  html:not(.fpl-dock-ready) .fpl-dock > [data-dock="term"] {
+    grid-column: 1;
+    grid-row: 3;
+  }
+
   .fpl-workspace-play,
   .fpl-workspace-kata {
     grid-template-columns: 1fr;
