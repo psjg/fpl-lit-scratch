@@ -120,6 +120,11 @@ body {
   gap: 0.35rem;
 }
 
+.fpl-browser.collapsed .fpl-miller,
+.fpl-browser.collapsed .fpl-miller-hint {
+  display: none;
+}
+
 .fpl-miller {
   flex: 0 0 auto;
   display: flex;
