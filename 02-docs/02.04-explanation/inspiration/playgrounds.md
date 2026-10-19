@@ -33,11 +33,15 @@ The environment *is* the program: image, inspectors, live objects you can poke.
   without classes. Longer argument (explorer vs tabs vs Miller):
   [Navigation](#navigation-miller-vs-explorer-vs-tabs) below.
 - Now (MVP on `/try`, `repl-buffer-part5`): Miller columns above Edit | Term over
-  buffer `name/` scopes. Click navigates in the full buffer; Focus (or double-click)
-  shows only that scope’s body (edits splice back; `#c=` stays the full source).
+  buffer `name/` scopes. Click navigates in the full buffer; sticky Focus (or
+  double-click) shows only that scope’s body with the body selected (edits splice
+  back; `#c=` stays the full source; Miller retargets while Focus stays on).
   Outline is a client-side indent heuristic, not a second desugar. **Examples** mode
   tab is stubbed (kata library next). Still not: an image, object inspectors, or a
   hot world between edits.
+- Cousin (structure, not yet ours): Interlisp-D **DEdit** / later SEdit — modeless
+  structure editor on a selected expression. Our Focus+selection is the UI contract
+  (“the selection *is* the scope”); real structure ops and an AST outline are north-star.
 
 ### Glamorous Toolkit
 
@@ -172,7 +176,9 @@ wants path structure the language already speaks.
 | Close / reopen Paths (replaces Hide columns when dock enhances) | **now**; static fallback still has Hide columns |
 | Miller arrow-key nav (↑↓ siblings, → into / Focus, ← up; gated out of Monaco) | **now** |
 | Miller ↔ Edit focus (→ at leaf → Monaco; ← at column 1 → Paths) | **now** |
-| Sticky scope-Focus (miller retargets body; Escape exits) | **taste** (`focus-sticky`) |
+| Sticky scope-Focus (miller retargets body; Escape exits) | **now** (chose over escape-only taste) |
+| Selection persists in Focus (whole body + nav range) | **now** |
+| Structure ops on selection (DEdit-style; not text-only) | **vision** |
 | Reopen Edit / Term without full Reset | **open** (dock UX) |
 | Examples mode = kata / library columns | **open** (stub today) |
 | Miller as primary playaround nav (mental model vs explorer + tabs) | **vision** |
