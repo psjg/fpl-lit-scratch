@@ -92,7 +92,24 @@ Results in a **column beside the code**, often with richer value previews than a
 
 When the `<textarea>` is too thin, prefer **Monaco**, not a full VS Code embed. Quokka-style ghost text is much easier with Monaco decorations than with a textarea plus a side gutter.
 
-Current state: playground uses **Monaco** with Quokka-style `|-` ghosts; Tab / Accept commits `; |- …` notes (`repl-buffer-part4`); Miller **path-browser** columns over buffer paths (`repl-buffer-part5`). Katas still use a `<textarea>`. The Swift-cousin side gutter from part 2 is retired on `/try/`.
+Current state: playground uses **Monaco** with Quokka-style `|-` ghosts; Tab / Accept commits `; |- …` notes (`repl-buffer-part4`); Miller **path-browser** columns over buffer paths (`repl-buffer-part5`); **dockable** Paths / Edit / Term (`repl-buffer-part6`). Katas still use a `<textarea>`. The Swift-cousin side gutter from part 2 is retired on `/try/`.
+
+### Docking
+
+RemedyBG / VS-ish panels on `/try` only — **client-only** progressive enhancement on the
+static Pages host. `curl …/try/` still returns real Paths / Edit / Term markup
+(`data-dock` sections); docking moves those nodes into [dockview](https://dockview.dev)
+panels when the bundle loads. No app-shell SPA, no client router: Playground / Katas /
+docs stay separate documents.
+
+Default layout: Paths on top (collapsible / closable), Edit | Term below. Drag title bars
+to split, reorder, and tab-stack. Layout persists in `localStorage` (`fpl-try-dock-v1`);
+**Reset layout** restores the default. Closing Paths replaces the old Hide columns escape;
+header **Paths** reopens the panel.
+
+Out of scope for this host (future dock *components* once the shell exists): floating OS
+windows, kata-page docking, Light Table / inspector panes, project-file Miller, yazi
+previews.
 
 Turnstile ASCII inventory (notation only): [turnstiles.md](turnstiles.md).
 
@@ -123,15 +140,17 @@ wants path structure the language already speaks.
 
 | Layer | Status |
 | --- | --- |
-| Buffer-path Miller on `/try` (indent heuristic, navigate + Focus, Hide columns) | **now** (`repl-buffer-part5`) |
-| Collapse to Go-playground Edit \| Term (Hide; later: re-click **Buffer paths**) | Hide **now**; toggle UX alluded |
+| Buffer-path Miller on `/try` (indent heuristic, navigate + Focus) | **now** (`repl-buffer-part5`) |
+| Dockable Paths / Edit / Term on `/try` (dockview; curlable shell; Reset layout) | **now** (`repl-buffer-part6`) |
+| Close / reopen Paths (replaces Hide columns when dock enhances) | **now**; static fallback still has Hide columns |
 | Examples mode = kata / library columns | **open** (stub today) |
 | Miller as primary playaround nav (mental model vs explorer + tabs) | **vision** |
 | Workspace / project-file Miller (real paths, not only buffer `name/`) | **vision** — separate feat plan |
+| Inspector / Light Table panels as further dock components | **open** (host exists; panes not yet) |
 | yazi-parity (previews, richer chrome) | **allude** only — not a promise to clone yazi |
 
-**Escape hatch:** Hide columns → full-bleed Edit \| Term (Tour of Go / early `/try`)
-when the browser is in the way.
+**Escape hatch:** close or minimize Paths (or Hide columns when JS/dock fails) →
+Edit \| Term fills the height (Tour of Go / early `/try`) when the browser is in the way.
 
 ## Splash / MOTD (local TTY chrome)
 
@@ -154,6 +173,7 @@ Diagnostic Clipper sketches: [judgments](judgments.md). Error tags:
 | Instant inline | `repl-buffer-part3` | Monaco + grayed end-of-line decorations (Quokka-cousin) |
 | Roundtrip transcript | `repl-buffer-part4` | Ghost `|-`; Tab commits `; |- …`; TTY utop transcript (`|- value : ...`, `;;!` bars) |
 | Path-browser columns | `repl-buffer-part5` | Miller strip above Edit; buffer `name/` outline; navigate + Focus; Examples tab stub |
+| Dockable panels | `repl-buffer-part6` | Paths / Edit / Term via dockview; curlable `data-dock` shell; persist + Reset layout |
 
 Also true right now:
 
@@ -173,7 +193,8 @@ Order of ambition after the pure buffer. Not a delivery promise — implementati
 | 3 | Instant inline / probes | Quokka | Done on playground (`repl-buffer-part3`): Monaco after-text; no `//?` probes yet |
 | 4 | Roundtrip transcript | Quokka commit + utop | Done (`repl-buffer-part4`): Tab → `; |- …`; TTY promptless `|- value : ...` + ASCII `;;!` phrase bars |
 | 4b | Path-browser | Smalltalk / Finder | Done MVP (`repl-buffer-part5`): Miller columns; navigate + Focus; Examples stub |
-| 5 | No hidden state | Light Table | Inspector over stack / walker IR |
+| 4c | Dockable panels | RemedyBG / VS | Done MVP (`repl-buffer-part6`): Paths / Edit / Term dock; curlable shell |
+| 5 | No hidden state | Light Table | Inspector over stack / walker IR (future dock components) |
 | 6 | Document = program | Eve | Walkthrough/essay as the primary live buffer |
 | 7 | Scrub / time | Bret Victor | Parameter scrub; needs cheap deterministic re-run |
 

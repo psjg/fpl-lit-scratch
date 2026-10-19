@@ -7,7 +7,7 @@ are looking at, what we stole, what we have not built.
 
 | ID | Note |
 | --- | --- |
-| 02.04.01 | [Playgrounds](playgrounds.md) — Monaco, Miller nav vision, long arc, MOTD |
+| 02.04.01 | [Playgrounds](playgrounds.md) — Monaco, Miller nav, docking, long arc, MOTD |
 | 02.04.02 | [Turnstiles](turnstiles.md) — ASCII ⊢ inventory |
 | 02.04.03 | [Judgments](judgments.md) — equateable oordelen, Clipper, diagnostics |
 
@@ -17,7 +17,8 @@ Error tag catalog: [02.03.01 Errors](../../02.03-reference/errors.md). Site:
 Live scratch shell: [Playground](../../../try/index.html). Milestone tags on
 `psjg/fpl-lit-scratch`: `repl-buffer-part1` (pure FPL buffer), `repl-buffer-part2` (side
 gutter), `repl-buffer-part3` (Monaco Quokka-style inline), `repl-buffer-part4`
-(roundtrip `|-` / Tab-commit), `repl-buffer-part5` (Miller path-browser columns).
+(roundtrip `|-` / Tab-commit), `repl-buffer-part5` (Miller path-browser columns),
+`repl-buffer-part6` (dockable Paths / Edit / Term).
 
 ## Promises
 
@@ -33,8 +34,10 @@ plan), `kept` (true in the tree), `dropped` (we no longer mean it — say why in
 | 02.04.03 | [judgments](judgments.md) | Deadline `@ <n>` on the `\|-` judgment line | deferred |
 | 02.04.03 | [judgments](judgments.md) | Restarts / supervision as a north-star | open |
 | 02.04.01 | [playgrounds](playgrounds.md) | Path-browser buffer columns (navigate + Focus) | kept |
+| 02.04.01 | [playgrounds](playgrounds.md) | Dockable Paths/Edit/Term on `/try` | kept |
 | 02.04.01 | [playgrounds](playgrounds.md) | Path-browser Examples mode (kata library) | open |
 | 02.04.01 | [playgrounds](playgrounds.md) | Path-browser as playaround nav (vs explorer + tab spam) | open |
+| 02.04.01 | [playgrounds](playgrounds.md) | Inspector / Light Table panels as dock components | open |
 | 02.04.01 | [playgrounds](playgrounds.md) | Glamorous Toolkit moldable inspectors | open |
 | 02.04.01 | [playgrounds](playgrounds.md) | TTY MOTD splash pool | kept |
 | 02.04.01 | [playgrounds](playgrounds.md) | TTY mascot hello+bye (offline) | kept |
