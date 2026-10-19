@@ -486,10 +486,11 @@ async function bootPlayground() {
     navDeco = editor.deltaDecorations(navDeco, []);
   };
 
-  /** Select the whole focused body and paint the same nav range as navigateTo. */
+  /** Select the whole focused body (Monaco selection only — no nav-range wash). */
   const paintScopeSelection = () => {
     const model = editor.getModel();
     if (!model) return;
+    clearNavDeco();
     const endLine = model.getLineCount();
     const range = new monaco.Range(
       1,
@@ -498,15 +499,6 @@ async function bootPlayground() {
       model.getLineMaxColumn(endLine),
     );
     editor.setSelection(range);
-    navDeco = editor.deltaDecorations(navDeco, [
-      {
-        range,
-        options: {
-          className: "fpl-nav-range",
-          isWholeLine: true,
-        },
-      },
-    ]);
   };
 
   /**
