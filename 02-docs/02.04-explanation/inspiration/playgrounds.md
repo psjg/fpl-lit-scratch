@@ -171,7 +171,7 @@ wants path structure the language already speaks.
 | --- | --- |
 | Buffer-path Miller on `/try` (indent heuristic, navigate + Focus) | **now** (`repl-buffer-part5`) |
 | Dockable Paths / Edit / Term on `/try` (dockview; curlable shell; Reset layout) | **now** (`repl-buffer-part6`) |
-| Paths beside Edit = **content-width Miller strip** (editable Edit, not yazi preview) | **now** |
+| Paths beside Edit = **fixed width**; Miller scrolls horizontally (tip kept in view) | **now** |
 | No empty child column after a leaf / empty dir (no “No children” gutter) | **now** |
 | Close / reopen Paths (replaces Hide columns when dock enhances) | **now**; static fallback still has Hide columns |
 | Miller arrow-key nav (↑↓ siblings, → into / Focus, ← up; gated out of Monaco) | **now** |
