@@ -1,6 +1,7 @@
 /**
  * /try playground + kata UI. Buffer is pure FPL; runtime wraps fpl.run.default.src.
- * Playground: Monaco Quokka ghosts + Tab-commit to `; |-` notes. Katas: textarea.
+ * Playground: Monaco Quokka ghosts + Tab-commit to `; |-` notes; Miller path-browser.
+ * Katas: textarea.
  */
 import { runFpl, checkExpected, learnBase } from "./fpl-runtime.js";
 
@@ -13,9 +14,20 @@ const DEFAULT_SRC = `\
 1 2 3 +\t; |- [1‿2‿3 +]
 2 | 3 +\t; |- 5
 1 | 1 2 3 [-] swap-args\t; |- 1 2 3 - 1
+
+;;; ── paths (Miller columns) ──
+demo/
+	math/
+		inc : n -- n
+			1 +
+		twice : n -- n
+			dup *
+	greet : --
+		;;; say hi
 `;
 
 const LIVE_MS = 300;
+const OUTLINE_MS = 200;
 const MONACO_VER = "0.52.2";
 const MONACO_BASE = `https://cdn.jsdelivr.net/npm/monaco-editor@${MONACO_VER}/min/vs`;
 
@@ -188,6 +200,194 @@ function commitResultNote(model, monaco, lineIdx, value) {
   );
 }
 
+/** Line with trailing notes stripped; leading tabs kept. */
+function codeLine(line) {
+  return stripResultNote(line);
+}
+
+function tabCount(line) {
+  let n = 0;
+  while (line[n] === "\t") n += 1;
+  return n;
+}
+
+/**
+ * @typedef {{
+ *   kind: "root" | "dir" | "def" | "phrase",
+ *   name: string,
+ *   start: number,
+ *   end: number,
+ *   headEnd: number,
+ *   children: OutlineNode[],
+ * }} OutlineNode
+ */
+
+/** @returns {{ kind: string, name: string }} */
+function classifyCode(code) {
+  const body = code.replace(/^\t+/u, "");
+  if (body === "" || body.startsWith(";;;")) return { kind: "skip", name: "" };
+  if (/^[A-Za-z_][\w./-]*\/$/u.test(body)) {
+    return { kind: "dir", name: body };
+  }
+  const def = body.match(/^([A-Za-z_][\w./-]*)\s*:/u);
+  if (def) return { kind: "def", name: def[1] };
+  const label = body.length > 28 ? `${body.slice(0, 28)}…` : body;
+  return { kind: "phrase", name: label };
+}
+
+/**
+ * @param {string[]} lines
+ * @param {number} from
+ * @param {number} to
+ * @param {number} baseIndent
+ * @returns {OutlineNode[]}
+ */
+function parseLevel(lines, from, to, baseIndent) {
+  /** @type {OutlineNode[]} */
+  const out = [];
+  let i = from;
+  while (i < to) {
+    const code = codeLine(lines[i]);
+    if (code.trim() === "") {
+      i += 1;
+      continue;
+    }
+    const ind = tabCount(code);
+    if (ind < baseIndent) break;
+    if (ind > baseIndent) {
+      i += 1;
+      continue;
+    }
+    const kinded = classifyCode(code);
+    if (kinded.kind === "skip") {
+      i += 1;
+      continue;
+    }
+    let j = i + 1;
+    while (j < to) {
+      const next = codeLine(lines[j]);
+      if (next.trim() === "") {
+        j += 1;
+        continue;
+      }
+      if (tabCount(next) <= baseIndent) break;
+      j += 1;
+    }
+    if (kinded.kind === "dir") {
+      out.push({
+        kind: "dir",
+        name: kinded.name,
+        start: i,
+        end: j,
+        headEnd: i + 1,
+        children: parseLevel(lines, i + 1, j, baseIndent + 1),
+      });
+    } else {
+      out.push({
+        kind: kinded.kind === "def" ? "def" : "phrase",
+        name: kinded.name,
+        start: i,
+        end: j,
+        headEnd: i + 1,
+        children: [],
+      });
+    }
+    i = j;
+  }
+  return out;
+}
+
+/** @param {string} src @returns {OutlineNode} */
+function parseOutline(src) {
+  const lines = String(src).split("\n");
+  return {
+    kind: "root",
+    name: "(buffer)",
+    start: 0,
+    end: lines.length,
+    headEnd: 0,
+    children: parseLevel(lines, 0, lines.length, 0),
+  };
+}
+
+/** @param {string[]} lines @param {OutlineNode} node */
+function bodyIndentOf(lines, node) {
+  const from = node.kind === "dir" ? node.headEnd : node.start;
+  let min = Infinity;
+  for (let i = from; i < node.end; i++) {
+    const code = codeLine(lines[i]);
+    if (code.trim() === "") continue;
+    min = Math.min(min, tabCount(code));
+  }
+  return Number.isFinite(min) ? min : tabCount(codeLine(lines[node.start]));
+}
+
+/** @param {string[]} lines @param {OutlineNode} node */
+function extractBody(lines, node) {
+  const from = node.kind === "dir" ? node.headEnd : node.start;
+  const indent = bodyIndentOf(lines, node);
+  return lines
+    .slice(from, node.end)
+    .map((line) => {
+      let n = 0;
+      while (n < indent && line[n] === "\t") n += 1;
+      return line.slice(n);
+    })
+    .join("\n");
+}
+
+/** @param {string} body @param {number} tabs */
+function indentBody(body, tabs) {
+  const prefix = "\t".repeat(tabs);
+  return body
+    .split("\n")
+    .map((line) => (line === "" ? line : prefix + line))
+    .join("\n");
+}
+
+/**
+ * @param {HTMLElement} host
+ * @param {OutlineNode} root
+ * @param {OutlineNode[]} path
+ * @param {(col: number, node: OutlineNode, ev: MouseEvent) => void} onPick
+ */
+function renderMiller(host, root, path, onPick) {
+  host.replaceChildren();
+  /** @type {OutlineNode[][]} */
+  const columns = [root.children];
+  for (const node of path) {
+    columns.push(node.kind === "dir" ? node.children : []);
+  }
+  columns.forEach((items, col) => {
+    const colEl = document.createElement("div");
+    colEl.className = "fpl-miller-col";
+    colEl.setAttribute("role", "listbox");
+    colEl.setAttribute("aria-label", `Column ${col + 1}`);
+    if (items.length === 0 && col > 0) {
+      const empty = document.createElement("div");
+      empty.className = "fpl-miller-empty";
+      empty.textContent = "No children";
+      colEl.appendChild(empty);
+    }
+    for (const item of items) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "fpl-miller-item" + (item.kind === "dir" ? " dir" : "");
+      btn.textContent = item.name;
+      btn.title = item.name;
+      btn.setAttribute("role", "option");
+      if (path[col] === item) btn.classList.add("selected");
+      btn.addEventListener("click", (ev) => onPick(col, item, ev));
+      btn.addEventListener("dblclick", (ev) => {
+        ev.preventDefault();
+        onPick(col, item, ev);
+      });
+      colEl.appendChild(btn);
+    }
+    host.appendChild(colEl);
+  });
+}
+
 async function bootPlayground() {
   const host = $("fpl-editor");
   const out = $("fpl-out");
@@ -197,6 +397,10 @@ async function bootPlayground() {
   const acceptBtn = /** @type {HTMLButtonElement | null} */ (
     document.getElementById("fpl-accept")
   );
+  const miller = $("fpl-miller");
+  const millerHint = $("fpl-miller-hint");
+  const focusBtn = /** @type {HTMLButtonElement} */ ($("fpl-focus"));
+  const unfocusBtn = /** @type {HTMLButtonElement} */ ($("fpl-unfocus"));
 
   const monaco = await loadMonaco();
   const fromHash = readHash();
@@ -224,10 +428,155 @@ async function bootPlayground() {
   /** @type {{ text: string, kind: string }[] | null} */
   let lastCells = null;
   let timer = 0;
+  let outlineTimer = 0;
   let gen = 0;
   let muteLive = false;
+  let mode = "paths";
+  /** @type {OutlineNode} */
+  let outline = parseOutline(initial);
+  /** @type {OutlineNode[]} */
+  let path = [];
+  /** @type {{
+   *   node: OutlineNode,
+   *   bodyIndent: number,
+   *   prefix: string,
+   *   suffix: string,
+   * } | null} */
+  let focus = null;
+  let navDeco = /** @type {string[]} */ ([]);
 
-  const getSrc = () => editor.getValue();
+  const selected = () => path[path.length - 1] || null;
+
+  const getSrc = () => {
+    if (!focus) return editor.getValue();
+    const body = indentBody(editor.getValue(), focus.bodyIndent);
+    return focus.prefix + body + focus.suffix;
+  };
+
+  const setFocusChrome = () => {
+    const on = focus != null;
+    unfocusBtn.hidden = !on;
+    focusBtn.hidden = on;
+    focusBtn.disabled = !selected();
+    millerHint.textContent = on
+      ? "Focused scope · edits splice into the full buffer · Escape exits"
+      : mode === "examples"
+        ? "Examples library next — switch back to Buffer paths"
+        : "Click to jump · double-click or Focus for scope body · outline is a buffer heuristic";
+  };
+
+  const clearNavDeco = () => {
+    navDeco = editor.deltaDecorations(navDeco, []);
+  };
+
+  const navigateTo = (node) => {
+    if (focus) exitFocus();
+    const model = editor.getModel();
+    if (!model) return;
+    const start = Math.min(node.start + 1, model.getLineCount());
+    const endLine = Math.min(Math.max(node.end, node.start + 1), model.getLineCount());
+    const range = new monaco.Range(
+      start,
+      1,
+      endLine,
+      model.getLineMaxColumn(endLine),
+    );
+    editor.revealLineInCenter(start);
+    editor.setSelection(range);
+    navDeco = editor.deltaDecorations(navDeco, [
+      {
+        range,
+        options: {
+          className: "fpl-nav-range",
+          isWholeLine: true,
+        },
+      },
+    ]);
+    focusBtn.disabled = false;
+  };
+
+  const paintMiller = () => {
+    if (mode === "examples") {
+      miller.replaceChildren();
+      const empty = document.createElement("div");
+      empty.className = "fpl-miller-empty";
+      empty.textContent =
+        "Kata / examples library next. Use Buffer paths for now.";
+      miller.appendChild(empty);
+      setFocusChrome();
+      return;
+    }
+    renderMiller(miller, outline, path, (col, node, ev) => {
+      path = path.slice(0, col);
+      path.push(node);
+      paintMiller();
+      navigateTo(node);
+      if (ev.type === "dblclick") enterFocus();
+    });
+    setFocusChrome();
+  };
+
+  const refreshOutline = () => {
+    outline = parseOutline(getSrc());
+    // Drop selection path entries that no longer exist by name+start match.
+    /** @type {OutlineNode[]} */
+    const nextPath = [];
+    let cursor = outline;
+    for (const old of path) {
+      const hit = cursor.children.find(
+        (c) => c.name === old.name && c.kind === old.kind,
+      );
+      if (!hit) break;
+      nextPath.push(hit);
+      cursor = hit;
+    }
+    path = nextPath;
+    paintMiller();
+  };
+
+  const scheduleOutline = () => {
+    window.clearTimeout(outlineTimer);
+    outlineTimer = window.setTimeout(refreshOutline, OUTLINE_MS);
+  };
+
+  const enterFocus = () => {
+    const node = selected();
+    if (!node || focus) return;
+    const full = getSrc();
+    const lines = full.split("\n");
+    const from = node.kind === "dir" ? node.headEnd : node.start;
+    const bodyIndent = bodyIndentOf(lines, node);
+    const prefix = lines.slice(0, from).join("\n") + (from > 0 ? "\n" : "");
+    const suffix =
+      node.end < lines.length ? "\n" + lines.slice(node.end).join("\n") : "";
+    focus = { node, bodyIndent, prefix, suffix };
+    muteLive = true;
+    try {
+      editor.setValue(extractBody(lines, node));
+      clearNavDeco();
+      decoIds = applyQuokkaDecorations(editor, monaco, null, decoIds);
+    } finally {
+      muteLive = false;
+    }
+    setFocusChrome();
+    scheduleLive();
+  };
+
+  const exitFocus = () => {
+    if (!focus) return;
+    const full = getSrc();
+    focus = null;
+    muteLive = true;
+    try {
+      editor.setValue(full);
+    } finally {
+      muteLive = false;
+    }
+    writeHash(full);
+    setFocusChrome();
+    refreshOutline();
+    scheduleLive();
+  };
 
   const runOnce = async (btn, { share = false } = {}) => {
     if (btn) btn.disabled = true;
@@ -238,7 +587,7 @@ async function bootPlayground() {
     try {
       const { ok, text } = await runFpl(src);
       setOut(out, text, ok);
-      if (ok) {
+      if (ok && !focus) {
         lastCells = pairLineResults(src, text);
         decoIds = applyQuokkaDecorations(editor, monaco, lastCells, decoIds);
       } else {
@@ -267,6 +616,7 @@ async function bootPlayground() {
   };
 
   const acceptIndices = (indices) => {
+    if (focus) return;
     const model = editor.getModel();
     if (!model || !lastCells) return;
     const ordered = [...indices].sort((a, b) => b - a);
@@ -284,30 +634,71 @@ async function bootPlayground() {
     scheduleLive();
   };
 
+  for (const btn of document.querySelectorAll(".fpl-browser-mode")) {
+    btn.addEventListener("click", () => {
+      mode = btn.getAttribute("data-mode") || "paths";
+      for (const b of document.querySelectorAll(".fpl-browser-mode")) {
+        const on = b === btn;
+        b.classList.toggle("active", on);
+        b.setAttribute("aria-selected", on ? "true" : "false");
+      }
+      paintMiller();
+    });
+  }
+
+  focusBtn.addEventListener("click", () => enterFocus());
+  unfocusBtn.addEventListener("click", () => exitFocus());
+  window.addEventListener("keydown", (ev) => {
+    if (ev.key === "Escape" && focus) {
+      ev.preventDefault();
+      exitFocus();
+    }
+  });
+
   runBtn.addEventListener("click", () => runOnce(runBtn, { share: true }));
   clearBtn.addEventListener("click", () => {
     window.clearTimeout(timer);
     gen += 1;
-    editor.setValue("");
+    focus = null;
+    muteLive = true;
+    try {
+      editor.setValue("");
+    } finally {
+      muteLive = false;
+    }
     out.textContent = "";
     out.removeAttribute("data-ok");
     lastCells = null;
     decoIds = applyQuokkaDecorations(editor, monaco, null, decoIds);
+    clearNavDeco();
     writeHash("");
+    path = [];
+    setFocusChrome();
+    refreshOutline();
   });
   resetBtn.addEventListener("click", () => {
     window.clearTimeout(timer);
-    editor.setValue(DEFAULT_SRC);
+    focus = null;
+    muteLive = true;
+    try {
+      editor.setValue(DEFAULT_SRC);
+    } finally {
+      muteLive = false;
+    }
     out.textContent = "";
     out.removeAttribute("data-ok");
     lastCells = null;
     decoIds = applyQuokkaDecorations(editor, monaco, null, decoIds);
+    clearNavDeco();
     writeHash(DEFAULT_SRC);
+    path = [];
+    setFocusChrome();
+    refreshOutline();
     scheduleLive();
   });
   if (acceptBtn) {
     acceptBtn.addEventListener("click", () => {
-      if (!lastCells) return;
+      if (!lastCells || focus) return;
       const idxs = [];
       for (let i = 0; i < lastCells.length; i++) {
         if (lastCells[i].kind === "result" && lastCells[i].text) idxs.push(i);
@@ -316,14 +707,18 @@ async function bootPlayground() {
     });
   }
 
-  editor.onDidChangeModelContent(() => scheduleLive());
+  editor.onDidChangeModelContent(() => {
+    if (focus) writeHash(getSrc());
+    scheduleOutline();
+    scheduleLive();
+  });
   editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => {
     window.clearTimeout(timer);
     runOnce(runBtn, { share: true });
   });
   editor.addCommand(monaco.KeyCode.Tab, () => {
     const pos = editor.getPosition();
-    if (pos && lastCells) {
+    if (pos && lastCells && !focus) {
       const cell = lastCells[pos.lineNumber - 1];
       if (cell && cell.kind === "result" && cell.text) {
         acceptIndices([pos.lineNumber - 1]);
@@ -333,6 +728,7 @@ async function bootPlayground() {
     editor.trigger("keyboard", "type", { text: "\t" });
   });
 
+  paintMiller();
   scheduleLive();
 }
 

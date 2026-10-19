@@ -22,38 +22,82 @@
         <a href="../marimo/index.html">Marimo</a>
       </nav>
     </header>
-    <main class="fpl-workspace fpl-workspace-play">
-      <section class="fpl-pane fpl-pane-edit" aria-label="Editor">
-        <div class="fpl-pane-bar">
-          <span class="fpl-pane-label">Edit</span>
-          <div class="fpl-pane-actions">
-            <button type="button" id="fpl-clear" class="fpl-btn">Clear</button>
-            <button type="button" id="fpl-reset" class="fpl-btn">Reset</button>
-            <button type="button" id="fpl-accept" class="fpl-btn">
-              Accept results
-            </button>
-            <button type="button" id="fpl-run" class="fpl-btn primary">Run</button>
+    <div class="fpl-browser">
+      <div class="fpl-browser-modes" role="tablist" aria-label="Browser mode">
+        <button
+          type="button"
+          class="fpl-browser-mode active"
+          role="tab"
+          aria-selected="true"
+          data-mode="paths"
+          id="fpl-mode-paths"
+        >
+          Buffer paths
+        </button>
+        <button
+          type="button"
+          class="fpl-browser-mode"
+          role="tab"
+          aria-selected="false"
+          data-mode="examples"
+          id="fpl-mode-examples"
+        >
+          Examples
+        </button>
+        <div class="fpl-browser-actions">
+          <button type="button" id="fpl-focus" class="fpl-btn" disabled>
+            Focus
+          </button>
+          <button type="button" id="fpl-unfocus" class="fpl-btn" hidden>
+            Exit focus
+          </button>
+        </div>
+      </div>
+      <div
+        id="fpl-miller"
+        class="fpl-miller"
+        role="navigation"
+        aria-label="Path browser columns"
+      ></div>
+      <p id="fpl-miller-hint" class="fpl-miller-hint">
+        Click to jump · double-click or Focus for scope body · outline is a
+        buffer heuristic
+      </p>
+      <main class="fpl-workspace fpl-workspace-play">
+        <section class="fpl-pane fpl-pane-edit" aria-label="Editor">
+          <div class="fpl-pane-bar">
+            <span class="fpl-pane-label">Edit</span>
+            <div class="fpl-pane-actions">
+              <button type="button" id="fpl-clear" class="fpl-btn">Clear</button>
+              <button type="button" id="fpl-reset" class="fpl-btn">Reset</button>
+              <button type="button" id="fpl-accept" class="fpl-btn">
+                Accept results
+              </button>
+              <button type="button" id="fpl-run" class="fpl-btn primary">
+                Run
+              </button>
+            </div>
           </div>
-        </div>
-        <div
-          id="fpl-editor"
-          class="fpl-monaco"
-          aria-label="FPL playground editor"
-        ></div>
-        <p class="fpl-pane-hint">
-          Ghost <code>|-</code> results · Tab (or Accept) commits
-          <code>; |- …</code> · ⌘/Ctrl+Enter to run · share via
-          <code>#c=</code>
-        </p>
-      </section>
-      <div class="fpl-split" role="separator" aria-orientation="vertical"></div>
-      <section class="fpl-pane fpl-pane-term" aria-label="Output">
-        <div class="fpl-pane-bar">
-          <span class="fpl-pane-label">Term</span>
-        </div>
-        <pre id="fpl-out" class="fpl-term" aria-live="polite"></pre>
-      </section>
-    </main>
+          <div
+            id="fpl-editor"
+            class="fpl-monaco"
+            aria-label="FPL playground editor"
+          ></div>
+          <p class="fpl-pane-hint">
+            Ghost <code>|-</code> results · Tab (or Accept) commits
+            <code>; |- …</code> · ⌘/Ctrl+Enter to run · share via
+            <code>#c=</code>
+          </p>
+        </section>
+        <div class="fpl-split" role="separator" aria-orientation="vertical"></div>
+        <section class="fpl-pane fpl-pane-term" aria-label="Output">
+          <div class="fpl-pane-bar">
+            <span class="fpl-pane-label">Term</span>
+          </div>
+          <pre id="fpl-out" class="fpl-term" aria-live="polite"></pre>
+        </section>
+      </main>
+    </div>
     <script type="module" src="../assets/fpl-playground.js"></script>
   </body>
 </html>
