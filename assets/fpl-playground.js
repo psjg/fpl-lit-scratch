@@ -357,20 +357,18 @@ function renderMiller(host, root, path, onPick) {
   host.replaceChildren();
   /** @type {OutlineNode[][]} */
   const columns = [root.children];
+  // Only open a following column when the selection is a non-empty dir.
+  // Leaf / empty dir: no "No children" dead column.
   for (const node of path) {
-    columns.push(node.kind === "dir" ? node.children : []);
+    if (node.kind === "dir" && node.children.length > 0) {
+      columns.push(node.children);
+    }
   }
   columns.forEach((items, col) => {
     const colEl = document.createElement("div");
     colEl.className = "fpl-miller-col";
     colEl.setAttribute("role", "listbox");
     colEl.setAttribute("aria-label", `Column ${col + 1}`);
-    if (items.length === 0 && col > 0) {
-      const empty = document.createElement("div");
-      empty.className = "fpl-miller-empty";
-      empty.textContent = "No children";
-      colEl.appendChild(empty);
-    }
     for (const item of items) {
       const btn = document.createElement("button");
       btn.type = "button";
