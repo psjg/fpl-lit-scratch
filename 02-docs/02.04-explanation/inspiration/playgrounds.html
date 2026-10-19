@@ -753,7 +753,7 @@ ul.task-list li input[type="checkbox"] {
 <li><strong>Locked gridded ZUI</strong> — later: a 2D sheet of tiles at fixed scale (or discrete zoom steps), not free Pad++ pan/zoom theater. “ZUI feel” by moving the viewport over a grid, not by continuous camera freedom.</li>
 </ul>
 <p>Layering: curlable HTML shell → (enhance) scroll host → dock guest in the focused tile; fail closed to today’s static dock / CSS grid. Playground / Katas / docs stay <strong>separate documents</strong> — no client router, no empty <code>#root</code> SPA. Host and dock are progressive layout behavior; the first bytes must still read as hypertext (HTMX hypermedia doctrine).</p>
-<p>Not built yet. Part6 is only the dock guest in a single tile.</p>
+<p>Part6 is the dock guest in a single tile (live). A <strong>2D pseudo-ZUI scroller</strong> (integer camera, edge-peek, trackpad tile-move — browser pan stand-in, not real <code>scaleE</code> ZUI) was tried on <code>try-tiles</code> and parked — tag <code>repl-buffer-2d-pseudo-zui-failed</code>. That parks the scroller, not tiles-as-such: a focused tile hosting the dock (and a <strong>1D niri-style strip</strong>) stay open.</p>
 <p>Turnstile ASCII inventory (notation only): <a href="turnstiles.html">turnstiles.md</a>.</p>
 </section>
 </section>
