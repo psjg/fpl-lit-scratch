@@ -33,7 +33,7 @@ ul.task-list li input[type="checkbox"] {
 <script src="../../../site_libs/quarto-search/fuse.min.js"></script>
 <script src="../../../site_libs/quarto-search/quarto-search.js"></script>
 <meta name="quarto:offset" content="../../../">
-<link href="../../../02-docs/02.05-project/README.html" rel="next">
+<link href="../../../02-docs/02.04-explanation/inspiration/judgments.html" rel="next">
 <link href="../../../02-docs/02.04-explanation/inspiration/playgrounds.html" rel="prev">
 <script src="../../../site_libs/quarto-html/quarto.js" type="module"></script>
 <script src="../../../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
@@ -421,6 +421,12 @@ ul.task-list li input[type="checkbox"] {
       <ul id="quarto-sidebar-section-11" class="collapse list-unstyled sidebar-section depth2 ">  
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
+  <a href="../../../02-docs/02.03-reference/errors.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Errors and diagnostics</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
   <a href="../../../02-docs/02.03-reference/spec.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">Spec</span></a>
   </div>
@@ -461,6 +467,12 @@ ul.task-list li input[type="checkbox"] {
   <div class="sidebar-item-container"> 
   <a href="../../../02-docs/02.04-explanation/inspiration/turnstiles.html" class="sidebar-item-text sidebar-link active">
  <span class="menu-text">Turnstile notation</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../../02-docs/02.04-explanation/inspiration/judgments.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Evaluation judgments</span></a>
   </div>
 </li>
       </ul>
@@ -507,6 +519,18 @@ ul.task-list li input[type="checkbox"] {
   <div class="sidebar-item-container"> 
   <a href="../../../02-docs/02.05-project/notes/mediating-project.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">The project that mediates the language</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../../02-docs/02.05-project/notes/obsidian-okf-cob-bridge.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Obsidian, OKF, COB bridge</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../../02-docs/02.05-project/notes/repl-phrase-costs.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">REPL phrase costs</span></a>
   </div>
 </li>
       </ul>
@@ -587,8 +611,11 @@ ul.task-list li input[type="checkbox"] {
     <h2 id="toc-title">On this page</h2>
    
   <ul class="collapse">
-  <li><a href="#the-22" id="toc-the-22" class="nav-link active" data-scroll-target="#the-22">The 2×2</a></li>
+  <li><a href="#turnstile-notation" id="toc-turnstile-notation" class="nav-link active" data-scroll-target="#turnstile-notation">02.04.02 2026-10-18 — Turnstile notation</a>
+  <ul class="collapse">
+  <li><a href="#the-22" id="toc-the-22" class="nav-link" data-scroll-target="#the-22">The 2×2</a></li>
   <li><a href="#what-fpl-uses-now-shell-ui" id="toc-what-fpl-uses-now-shell-ui" class="nav-link" data-scroll-target="#what-fpl-uses-now-shell-ui">What FPL uses now (shell / UI)</a></li>
+  </ul></li>
   </ul>
 </nav>
     </div>
@@ -614,6 +641,8 @@ ul.task-list li input[type="checkbox"] {
 </header>
 
 
+<section id="turnstile-notation" class="level1">
+<h1>02.04.02 2026-10-18 — Turnstile notation</h1>
 <p>ASCII inventory of the four turnstile orientations. This note does <strong>not</strong> invent FPL language semantics; it records common logic notation and what the scratch shell uses today.</p>
 <section id="the-22" class="level2">
 <h2 class="anchored" data-anchor-id="the-22">The 2×2</h2>
@@ -652,11 +681,12 @@ ul.task-list li input[type="checkbox"] {
 <ul>
 <li>Playground ghost: grayed <code>|- &lt;value&gt;</code> at end of line (decoration).</li>
 <li>Tab / Accept commits a trailing note <code>; |- &lt;value&gt;</code> (valid FPL <code>NOTE</code> today; <code>|-</code> inside the note is convention until a later <code>[spec]</code>).</li>
-<li>TTY interactive REPL prefixes successful eval stdout lines with <code>|-</code> (prompts stay <code>fpl&gt;</code>). Non-TTY and <code>-e</code> stay raw.</li>
+<li>TTY interactive REPL is promptless (no <code>fpl&gt;</code>). Successful eval lines are <code>|- &lt;value&gt; : ...</code> (ASCII type slot; not FPL’s <code>?</code> goal or <code>_</code> hole). Between phrases: <code>;;! -( HH:MM:SS )-&lt; command N &gt;-…{ head: H }-</code> — a DOC line so paste skips it; a smarter REPL may later treat <code>;;!</code> as a phrase separator. After an eval the next bar may add <code>fuel</code> (steps spent) and <code>ms</code> (wall time) — see <a href="../../02.05-project/notes/repl-phrase-costs.html">REPL phrase costs</a>. Cousins for equateable judgments, deadlines, and errors-as-values: <a href="judgments.html">Evaluation judgments</a>. Non-TTY and <code>-e</code> stay raw.</li>
 </ul>
 <p><code>|=</code>, <code>-|</code>, and <code>=|</code> are <strong>not</strong> wired. Giving them meaning in the grammar is a future, maintainer-owned decision.</p>
 
 
+</section>
 </section>
 
 </main> <!-- /main -->
@@ -1067,8 +1097,8 @@ ul.task-list li input[type="checkbox"] {
       </a>          
   </div>
   <div class="nav-page nav-page-next">
-      <a href="../../../02-docs/02.05-project/README.html" class="pagination-link" aria-label="2.5 Project">
-        <span class="nav-page-text">2.5 Project</span> <i class="bi bi-arrow-right-short"></i>
+      <a href="../../../02-docs/02.04-explanation/inspiration/judgments.html" class="pagination-link" aria-label="Evaluation judgments">
+        <span class="nav-page-text">Evaluation judgments</span> <i class="bi bi-arrow-right-short"></i>
       </a>
   </div>
 </nav>
