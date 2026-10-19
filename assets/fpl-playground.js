@@ -348,6 +348,20 @@ function indentBody(body, tabs) {
 }
 
 /**
+ * @param {OutlineNode | null | undefined} a
+ * @param {OutlineNode | null | undefined} b
+ */
+function sameOutlineNode(a, b) {
+  return (
+    a != null &&
+    b != null &&
+    a.name === b.name &&
+    a.kind === b.kind &&
+    a.start === b.start
+  );
+}
+
+/**
  * @param {HTMLElement} host
  * @param {OutlineNode} root
  * @param {OutlineNode[]} path
@@ -357,16 +371,19 @@ function renderMiller(host, root, path, onPick) {
   host.replaceChildren();
   /** @type {OutlineNode[][]} */
   const columns = [root.children];
-  // Only open a following column when the selection is a non-empty dir.
-  // Leaf / empty dir: no "No children" dead column.
-  for (const node of path) {
+  // Commit-by-depth: open children only for path nodes we have moved past
+  // (path continues). Tip sits in the rightmost column among its siblings.
+  for (let i = 0; i < path.length - 1; i++) {
+    const node = path[i];
     if (node.kind === "dir" && node.children.length > 0) {
       columns.push(node.children);
     }
   }
+  const last = columns.length - 1;
   columns.forEach((items, col) => {
     const colEl = document.createElement("div");
-    colEl.className = "fpl-miller-col";
+    colEl.className =
+      "fpl-miller-col" + (col === last ? " fpl-miller-col-active" : "");
     colEl.setAttribute("role", "listbox");
     colEl.setAttribute("aria-label", `Column ${col + 1}`);
     for (const item of items) {
@@ -376,7 +393,7 @@ function renderMiller(host, root, path, onPick) {
       btn.textContent = item.name;
       btn.title = item.name;
       btn.setAttribute("role", "option");
-      if (path[col] === item) btn.classList.add("selected");
+      if (sameOutlineNode(path[col], item)) btn.classList.add("selected");
       btn.addEventListener("click", (ev) => onPick(col, item, ev));
       btn.addEventListener("dblclick", (ev) => {
         ev.preventDefault();
@@ -479,7 +496,7 @@ async function bootPlayground() {
       ? "Focused · Miller retargets scope · Escape exits"
       : mode === "examples"
         ? "Examples library next — switch back to Buffer paths"
-        : "Arrows navigate · → Edit at leaf · ← from col 1 back · Enter/Focus for scope body";
+        : "↑↓ pick · → commit deeper · ← up · Enter/Focus scope · → Edit at leaf";
   };
 
   const clearNavDeco = () => {
@@ -610,8 +627,13 @@ async function bootPlayground() {
     renderMiller(miller, outline, path, (col, node, ev) => {
       path = path.slice(0, col);
       path.push(node);
+      // Clicking a dir commits into its children (blue pick in the new column).
+      if (node.kind === "dir" && node.children.length > 0) {
+        path.push(node.children[0]);
+      }
       paintMiller();
-      navigateTo(node);
+      const tip = selected();
+      if (tip) navigateTo(tip);
       if (ev.type === "dblclick") enterFocus();
     });
     setFocusChrome();
