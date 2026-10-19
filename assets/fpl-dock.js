@@ -1,7 +1,8 @@
 /**
  * Progressive docking for /try: dockview over the curlable Paths/Edit/Term shell.
  * Fail → leave the static CSS grid; success → html.fpl-dock-ready.
- * When Paths sits beside Edit, panel width tracks the Miller columns (content-width).
+ * When Paths sits beside Edit, panel width stays fixed (default / drag / layout);
+ * Miller columns scroll horizontally inside the panel.
  */
 const DOCKVIEW_VER = "8.6.0";
 // dockview's main.esm.mjs is `export * from "dockview-core"` (bare specifier — breaks
@@ -12,13 +13,8 @@ const PANEL_IDS = /** @type {const} */ (["paths", "edit", "term"]);
 const TITLES = { paths: "Paths", edit: "Edit", term: "Term" };
 /** Floor so Paths cannot be crushed empty (~12rem). */
 const PATHS_MIN_W = 192;
-/** Placeholder before first Miller measure (~2 columns). */
+/** Default Paths width when side-docked (~2 columns); user may drag wider/narrower. */
 const PATHS_DEFAULT_W = 352;
-const PATHS_MAX_HOST_FRAC = 0.6;
-/** Matches `.fpl-miller-col { flex: 0 0 11rem }` — used when offsetWidth is 0. */
-const MILLER_COL_W = 176;
-/** Extra chrome: section padding only (modes wrap; do not size the panel). */
-const PATHS_CHROME_X = 12;
 
 /**
  * @typedef {{
@@ -66,7 +62,6 @@ export async function initDock(opts = {}) {
   let api = null;
   let saveTimer = 0;
   let applying = false;
-  let sizing = false;
 
   const renderer = (id) => {
     const el = sections[id];
@@ -118,7 +113,7 @@ export async function initDock(opts = {}) {
   };
 
   const persist = () => {
-    if (!api || applying || sizing) return;
+    if (!api || applying) return;
     window.clearTimeout(saveTimer);
     saveTimer = window.setTimeout(() => {
       try {
@@ -157,31 +152,9 @@ export async function initDock(opts = {}) {
     return false;
   };
 
-  /** Intrinsic width from Miller columns only (modes/hint wrap inside). */
-  const measurePathsContentWidth = () => {
-    const miller = document.getElementById("fpl-miller");
-    if (!(miller instanceof HTMLElement)) return PATHS_DEFAULT_W;
-    const colEls = miller.querySelectorAll(".fpl-miller-col");
-    const n = colEls.length;
-    if (n === 0) {
-      // Empty / examples stub: one column of space.
-      return PATHS_MIN_W + PATHS_CHROME_X;
-    }
-    let cols = 0;
-    for (const col of colEls) {
-      if (col instanceof HTMLElement) {
-        const w = col.offsetWidth || col.clientWidth;
-        cols += w > 0 ? w : MILLER_COL_W;
-      }
-    }
-    // Prefer sum of columns; scrollWidth can collapse when the panel is already too narrow.
-    const inner = Math.max(cols, n * MILLER_COL_W);
-    return Math.ceil(inner + PATHS_CHROME_X);
-  };
-
   /**
-   * When Paths is left/right of Edit, snap panel width to Miller content.
-   * Vertical Paths-above leaves height alone.
+   * When Paths is beside Edit: mark side layout + scroll Miller to tip.
+   * Does not resize the Paths panel — width stays default / drag / saved layout.
    */
   const syncPathsWidth = () => {
     if (!api || applying) return;
@@ -201,32 +174,15 @@ export async function initDock(opts = {}) {
       }
     }
     document.documentElement.classList.toggle("fpl-paths-side", horizontal);
-    if (!horizontal) {
-      try {
-        panel.api.setConstraints({
-          minimumWidth: PATHS_MIN_W,
-          maximumWidth: Number.MAX_SAFE_INTEGER,
-        });
-      } catch {
-        /* older binding */
-      }
-      return;
-    }
-    const hostW = Math.max(host.clientWidth, 320);
-    const maxW = Math.floor(hostW * PATHS_MAX_HOST_FRAC);
-    const want = Math.min(Math.max(measurePathsContentWidth(), PATHS_MIN_W), maxW);
-    sizing = true;
     try {
       panel.api.setConstraints({
         minimumWidth: PATHS_MIN_W,
-        maximumWidth: maxW,
+        maximumWidth: Number.MAX_SAFE_INTEGER,
       });
-      panel.api.setSize({ width: want });
-    } catch (err) {
-      console.warn("fpl-dock: setSize Paths failed", err);
-    } finally {
-      sizing = false;
+    } catch {
+      /* older binding */
     }
+    if (!horizontal) return;
     const miller = document.getElementById("fpl-miller");
     if (miller instanceof HTMLElement) {
       // Keep the deepest column in view (Finder-style).
@@ -236,7 +192,7 @@ export async function initDock(opts = {}) {
   };
 
   /**
-   * Default: Paths left of Edit (content-width), Term right of Edit.
+   * Default: Paths left of Edit (fixed width), Term right of Edit.
    * @param {NonNullable<typeof api>} dock
    */
   const applyDefault = (dock) => {
