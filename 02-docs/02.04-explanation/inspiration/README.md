@@ -7,7 +7,7 @@ are looking at, what we stole, what we have not built.
 
 | ID | Note |
 | --- | --- |
-| 02.04.01 | [Playgrounds](playgrounds.md) — Monaco, Miller nav, docking, long arc, MOTD |
+| 02.04.01 | [Playgrounds](playgrounds.md) — Monaco, Miller nav, docking, scroll-host vision, MOTD |
 | 02.04.02 | [Turnstiles](turnstiles.md) — ASCII ⊢ inventory |
 | 02.04.03 | [Judgments](judgments.md) — equateable oordelen, Clipper, diagnostics |
 
@@ -35,6 +35,8 @@ plan), `kept` (true in the tree), `dropped` (we no longer mean it — say why in
 | 02.04.03 | [judgments](judgments.md) | Restarts / supervision as a north-star | open |
 | 02.04.01 | [playgrounds](playgrounds.md) | Path-browser buffer columns (navigate + Focus) | kept |
 | 02.04.01 | [playgrounds](playgrounds.md) | Dockable Paths/Edit/Term on `/try` | kept |
+| 02.04.01 | [playgrounds](playgrounds.md) | Scroll host + dock guest (locked ZUI arc) | open |
+| 02.04.01 | [playgrounds](playgrounds.md) | GT Pager–cousin workspace trail | open |
 | 02.04.01 | [playgrounds](playgrounds.md) | Path-browser Examples mode (kata library) | open |
 | 02.04.01 | [playgrounds](playgrounds.md) | Path-browser as playaround nav (vs explorer + tab spam) | open |
 | 02.04.01 | [playgrounds](playgrounds.md) | Inspector / Light Table panels as dock components | open |

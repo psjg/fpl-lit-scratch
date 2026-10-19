@@ -111,6 +111,27 @@ Out of scope for this host (future dock *components* once the shell exists): flo
 windows, kata-page docking, Light Table / inspector panes, project-file Miller, yazi
 previews.
 
+### Scroll host / locked ZUI
+
+Docking is the **guest** inside one workspace. Above it sits a longer-arc **host**: a
+scrollable space of workspaces/tiles. Two cousins name the shape without being
+requirements:
+
+- **1D strip** — [niri](https://github.com/YaLTeR/niri) / PaperWM scrollable-tiling: columns
+  on an infinite horizontal strip; new tiles extend the strip instead of squeezing the
+  viewport. Glamorous Toolkit’s **Pager** / TreePager is the in-image cousin: inspect →
+  pane to the right → scroll the trail (tool trail, not a window manager).
+- **Locked gridded ZUI** — later: a 2D sheet of tiles at fixed scale (or discrete zoom
+  steps), not free Pad++ pan/zoom theater. “ZUI feel” by moving the viewport over a
+  grid, not by continuous camera freedom.
+
+Layering: curlable HTML shell → (enhance) scroll host → dock guest in the focused tile;
+fail closed to today’s static dock / CSS grid. Playground / Katas / docs stay **separate
+documents** — no client router, no empty `#root` SPA. Host and dock are progressive
+layout behavior; the first bytes must still read as hypertext (HTMX hypermedia doctrine).
+
+Not built yet. Part6 is only the dock guest in a single tile.
+
 Turnstile ASCII inventory (notation only): [turnstiles.md](turnstiles.md).
 
 ## Navigation: Miller vs explorer vs tabs
@@ -143,10 +164,13 @@ wants path structure the language already speaks.
 | Buffer-path Miller on `/try` (indent heuristic, navigate + Focus) | **now** (`repl-buffer-part5`) |
 | Dockable Paths / Edit / Term on `/try` (dockview; curlable shell; Reset layout) | **now** (`repl-buffer-part6`) |
 | Close / reopen Paths (replaces Hide columns when dock enhances) | **now**; static fallback still has Hide columns |
+| Miller arrow-key nav; reopen Edit / Term without full Reset | **open** (dock UX; not the scroll host) |
 | Examples mode = kata / library columns | **open** (stub today) |
 | Miller as primary playaround nav (mental model vs explorer + tabs) | **vision** |
+| Scroll host (1D strip of workspaces; niri / GT Pager cousins) | **vision** |
+| Locked gridded ZUI (2D sheet of tiles) | **allude** — longer arc under the scroll host |
 | Workspace / project-file Miller (real paths, not only buffer `name/`) | **vision** — separate feat plan |
-| Inspector / Light Table panels as further dock components | **open** (host exists; panes not yet) |
+| Inspector / Light Table panels as further dock components | **open** (dock guest exists; panes not yet) |
 | yazi-parity (previews, richer chrome) | **allude** only — not a promise to clone yazi |
 
 **Escape hatch:** close or minimize Paths (or Hide columns when JS/dock fails) →
@@ -198,8 +222,10 @@ Order of ambition after the pure buffer. Not a delivery promise — implementati
 | 6 | Document = program | Eve | Walkthrough/essay as the primary live buffer |
 | 7 | Scrub / time | Bret Victor | Parameter scrub; needs cheap deterministic re-run |
 
-**Glamorous Toolkit** and **Miller-as-shell-nav** (explorer + tab spam replaced by
-path columns + body) stay north-stars beside this table — not numbered delivery parts.
-Parts 5–7 remain Light Table / Eve / Bret Victor. Path-browser Examples mode (kata
-library columns) is still open; see [Navigation](#navigation-miller-vs-explorer-vs-tabs).
+**Glamorous Toolkit** (incl. Pager trail), **scroll host / locked ZUI**, and
+**Miller-as-shell-nav** (explorer + tab spam replaced by path columns + body) stay
+north-stars beside this table — not numbered delivery parts. Parts 5–7 remain Light
+Table / Eve / Bret Victor. Path-browser Examples mode (kata library columns) is still
+open; see [Navigation](#navigation-miller-vs-explorer-vs-tabs) and
+[Scroll host / locked ZUI](#scroll-host--locked-zui).
 
