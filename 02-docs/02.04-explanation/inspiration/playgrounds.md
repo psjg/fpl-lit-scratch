@@ -177,7 +177,7 @@ wants path structure the language already speaks.
 | Miller arrow-key nav (↑↓ siblings, → into / Focus, ← up; gated out of Monaco) | **now** |
 | Miller ↔ Edit focus (→ at leaf → Monaco; ← at column 1 → Paths) | **now** |
 | Sticky scope-Focus (miller retargets body; Escape exits) | **now** (chose over escape-only taste) |
-| Selection persists in Focus (whole body + nav range) | **now** |
+| Selection persists in Focus (whole body; no nav-range wash) | **now** |
 | Structure ops on selection (DEdit-style; not text-only) | **vision** |
 | Reopen Edit / Term without full Reset | **open** (dock UX) |
 | Examples mode = kata / library columns | **open** (stub today) |
