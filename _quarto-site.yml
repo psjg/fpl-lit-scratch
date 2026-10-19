@@ -8,6 +8,7 @@ project:
     - assets/fpl-playground.js
     - assets/fpl-playground.css
     - assets/fpl-dock.js
+    - assets/fpl-tiles.js
   render:
     - index.qmd
     - 01-bootstrap/README.md
