@@ -30,7 +30,8 @@ The environment *is* the program: image, inspectors, live objects you can poke.
 - Steal: inspect state instead of guessing; the tool and the language grow together.
 - Steal (browser): **path-browser** — Finder-like columns over `/`-scoped modules
   (Unix / Plan 9 path scopes), body of the selected scope below — System Browser shape
-  without classes.
+  without classes. Longer argument (explorer vs tabs vs Miller):
+  [Navigation](#navigation-miller-vs-explorer-vs-tabs) below.
 - Now (MVP on `/try`, `repl-buffer-part5`): Miller columns above Edit | Term over
   buffer `name/` scopes. Click navigates in the full buffer; Focus (or double-click)
   shows only that scope’s body (edits splice back; `#c=` stays the full source).
@@ -95,6 +96,43 @@ Current state: playground uses **Monaco** with Quokka-style `|-` ghosts; Tab / A
 
 Turnstile ASCII inventory (notation only): [turnstiles.md](turnstiles.md).
 
+## Navigation: Miller vs explorer vs tabs
+
+The playaround question is the same as every large IDE: **where am I in a large
+space?** Two common scales both fail.
+
+| Pattern | Strength | Breaks when |
+| --- | --- | --- |
+| Project **explorer** / folder tree (Cursor left bar) | Whole checkout visible | Depth × width × noise; scroll-hell |
+| **Horizontal tabs** | “What do I have open?” | Tab spam; no hierarchy |
+| Vertical / tree-tabs | Open set + a bit of structure | Often a second tree beside the explorer |
+| **dired** | List + actions in the buffer | One directory at a time; no path columns |
+| **Miller columns** (Finder / NeXT; Mark Miller) | Path = columns; focus on *here* | Weak for fifty unrelated open files with no path |
+
+Miller is a candidate to replace **both** explorer and tabs for a path-shaped world:
+navigate `demo/ → math/ → inc`, not the whole disk tree; the “open set” is the selected
+path plus the body below (Focus = one scope), not twenty tab strips. That is closer to
+a Smalltalk System Browser / path-browser than to “IDE with files + tabs.”
+
+**Lived cousins** (not requirements for `/try`): terminal file managers — **yazi**
+(column + preview), **vifm** / **mc** (dual-pane), **broot** (tree + fuzzy). Dired was
+strong for *action in a directory*; Miller is stronger for *depth without tree spam*.
+
+**FPL fit:** `/`-scoped modules, body under the columns, no class browser. The shell
+wants path structure the language already speaks.
+
+| Layer | Status |
+| --- | --- |
+| Buffer-path Miller on `/try` (indent heuristic, navigate + Focus, Hide columns) | **now** (`repl-buffer-part5`) |
+| Collapse to Go-playground Edit \| Term (Hide; later: re-click **Buffer paths**) | Hide **now**; toggle UX alluded |
+| Examples mode = kata / library columns | **open** (stub today) |
+| Miller as primary playaround nav (mental model vs explorer + tabs) | **vision** |
+| Workspace / project-file Miller (real paths, not only buffer `name/`) | **vision** — separate feat plan |
+| yazi-parity (previews, richer chrome) | **allude** only — not a promise to clone yazi |
+
+**Escape hatch:** Hide columns → full-bleed Edit \| Term (Tour of Go / early `/try`)
+when the browser is in the way.
+
 ## Splash / MOTD (local TTY chrome)
 
 **Offline for now** — local `make repl` only; not part of the published site face.
@@ -139,6 +177,8 @@ Order of ambition after the pure buffer. Not a delivery promise — implementati
 | 6 | Document = program | Eve | Walkthrough/essay as the primary live buffer |
 | 7 | Scrub / time | Bret Victor | Parameter scrub; needs cheap deterministic re-run |
 
-**Glamorous Toolkit** stays a north-star beside this table. Parts 5–7 remain Light Table /
-Eve / Bret Victor. Path-browser Examples mode (kata library columns) is still open.
+**Glamorous Toolkit** and **Miller-as-shell-nav** (explorer + tab spam replaced by
+path columns + body) stay north-stars beside this table — not numbered delivery parts.
+Parts 5–7 remain Light Table / Eve / Bret Victor. Path-browser Examples mode (kata
+library columns) is still open; see [Navigation](#navigation-miller-vs-explorer-vs-tabs).
 
