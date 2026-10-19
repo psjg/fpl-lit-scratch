@@ -1,19 +1,28 @@
 /**
  * Progressive docking for /try: dockview over the curlable Paths/Edit/Term shell.
  * Fail → leave the static CSS grid; success → html.fpl-dock-ready.
+ * When Paths sits beside Edit, panel width tracks the Miller columns (content-width).
  */
 const DOCKVIEW_VER = "8.6.0";
 // dockview's main.esm.mjs is `export * from "dockview-core"` (bare specifier — breaks
 // in the browser). Import the self-contained dockview-core ESM; CSS stays on `dockview`.
 const DOCKVIEW_ESM = `https://cdn.jsdelivr.net/npm/dockview-core@${DOCKVIEW_VER}/dist/package/main.esm.mjs`;
-const STORAGE_KEY = "fpl-try-dock-v1";
+const STORAGE_KEY = "fpl-try-dock-v2";
 const PANEL_IDS = /** @type {const} */ (["paths", "edit", "term"]);
 const TITLES = { paths: "Paths", edit: "Edit", term: "Term" };
+/** Floor so Paths cannot be crushed empty (~12rem). */
+const PATHS_MIN_W = 192;
+/** Placeholder before first Miller measure (~2 columns). */
+const PATHS_DEFAULT_W = 352;
+const PATHS_MAX_HOST_FRAC = 0.6;
+/** Extra chrome: section padding + modes/hint slack. */
+const PATHS_CHROME_X = 8;
 
 /**
  * @typedef {{
  *   reset: () => void,
  *   showPaths: () => void,
+ *   syncPathsWidth: () => void,
  *   dispose: () => void,
  * }} FplDock
  */
@@ -55,6 +64,7 @@ export async function initDock(opts = {}) {
   let api = null;
   let saveTimer = 0;
   let applying = false;
+  let sizing = false;
 
   const renderer = (id) => {
     const el = sections[id];
@@ -70,6 +80,9 @@ export async function initDock(opts = {}) {
           requestAnimationFrame(() => onLayout());
         }
         syncPathsButton();
+        if (id === "paths") {
+          requestAnimationFrame(() => syncPathsWidth());
+        }
       },
       dispose() {},
     };
@@ -103,7 +116,7 @@ export async function initDock(opts = {}) {
   };
 
   const persist = () => {
-    if (!api || applying) return;
+    if (!api || applying || sizing) return;
     window.clearTimeout(saveTimer);
     saveTimer = window.setTimeout(() => {
       try {
@@ -115,26 +128,119 @@ export async function initDock(opts = {}) {
   };
 
   /**
-   * Default: Paths on top (~30%), Edit | Term below.
+   * Paths beside Edit/Term (same vertical band, side-by-side).
+   * @returns {boolean}
+   */
+  const isPathsHorizontal = () => {
+    const pathsEl = sections.paths;
+    const editEl = sections.edit;
+    const termEl = sections.term;
+    if (!pathsEl.isConnected) return false;
+    const pr = pathsEl.getBoundingClientRect();
+    if (pr.width < 2 || pr.height < 2) return false;
+    for (const other of [editEl, termEl]) {
+      if (!other.isConnected) continue;
+      const or_ = other.getBoundingClientRect();
+      if (or_.width < 2) continue;
+      const overlapY =
+        Math.min(pr.bottom, or_.bottom) - Math.max(pr.top, or_.top);
+      const band = Math.min(pr.height, or_.height);
+      if (band <= 0 || overlapY < band * 0.45) continue;
+      const gap = Math.min(
+        Math.abs(pr.right - or_.left),
+        Math.abs(or_.right - pr.left),
+      );
+      if (gap < 48) return true;
+    }
+    return false;
+  };
+
+  /** Intrinsic width of Miller columns + modes chrome. */
+  const measurePathsContentWidth = () => {
+    const miller = document.getElementById("fpl-miller");
+    const modes = sections.paths.querySelector(".fpl-browser-modes");
+    const hint = document.getElementById("fpl-miller-hint");
+    let inner = 0;
+    if (miller instanceof HTMLElement) {
+      let cols = 0;
+      for (const col of miller.querySelectorAll(".fpl-miller-col")) {
+        if (col instanceof HTMLElement) cols += col.offsetWidth || col.clientWidth;
+      }
+      inner = Math.max(cols, miller.scrollWidth, miller.offsetWidth);
+    }
+    if (modes instanceof HTMLElement) {
+      inner = Math.max(inner, modes.scrollWidth, modes.offsetWidth);
+    }
+    if (hint instanceof HTMLElement && !hint.hidden) {
+      // Hint can wrap; do not let a long sentence force a huge panel.
+      inner = Math.max(inner, Math.min(hint.scrollWidth, inner || PATHS_DEFAULT_W));
+    }
+    if (inner < PATHS_MIN_W) inner = PATHS_DEFAULT_W;
+    return Math.ceil(inner + PATHS_CHROME_X);
+  };
+
+  /**
+   * When Paths is left/right of Edit, snap panel width to Miller content.
+   * Vertical Paths-above leaves height alone.
+   */
+  const syncPathsWidth = () => {
+    if (!api || applying) return;
+    const panel = api.getPanel("paths");
+    if (!panel) {
+      document.documentElement.classList.remove("fpl-paths-side");
+      return;
+    }
+    const horizontal = isPathsHorizontal();
+    document.documentElement.classList.toggle("fpl-paths-side", horizontal);
+    if (!horizontal) {
+      try {
+        panel.api.setConstraints({
+          minimumWidth: PATHS_MIN_W,
+          maximumWidth: Number.MAX_SAFE_INTEGER,
+        });
+      } catch {
+        /* older binding */
+      }
+      return;
+    }
+    const hostW = Math.max(host.clientWidth, 320);
+    const maxW = Math.floor(hostW * PATHS_MAX_HOST_FRAC);
+    const want = Math.min(Math.max(measurePathsContentWidth(), PATHS_MIN_W), maxW);
+    sizing = true;
+    try {
+      panel.api.setConstraints({
+        minimumWidth: PATHS_MIN_W,
+        maximumWidth: maxW,
+      });
+      panel.api.setSize({ width: want });
+    } catch (err) {
+      console.warn("fpl-dock: setSize Paths failed", err);
+    } finally {
+      sizing = false;
+    }
+    if (onLayout) requestAnimationFrame(() => onLayout());
+  };
+
+  /**
+   * Default: Paths left of Edit (content-width), Term right of Edit.
    * @param {NonNullable<typeof api>} dock
    */
   const applyDefault = (dock) => {
     applying = true;
     try {
       dock.clear();
-      const h = Math.max(host.clientHeight, 240);
-      const pathsH = Math.round(h * 0.3);
-      dock.addPanel({
-        id: "paths",
-        component: "paths",
-        title: TITLES.paths,
-        initialHeight: pathsH,
-      });
       dock.addPanel({
         id: "edit",
         component: "edit",
         title: TITLES.edit,
-        position: { referencePanel: "paths", direction: "below" },
+      });
+      dock.addPanel({
+        id: "paths",
+        component: "paths",
+        title: TITLES.paths,
+        initialWidth: PATHS_DEFAULT_W,
+        minimumWidth: PATHS_MIN_W,
+        position: { referencePanel: "edit", direction: "left" },
       });
       dock.addPanel({
         id: "term",
@@ -146,7 +252,10 @@ export async function initDock(opts = {}) {
       applying = false;
     }
     syncPathsButton();
-    if (onLayout) requestAnimationFrame(() => onLayout());
+    requestAnimationFrame(() => {
+      syncPathsWidth();
+      if (onLayout) onLayout();
+    });
   };
 
   const tryRestore = () => {
@@ -170,22 +279,15 @@ export async function initDock(opts = {}) {
     } finally {
       applying = false;
     }
-    // Ensure every known panel still has a component binding.
-    for (const id of PANEL_IDS) {
-      if (!api.getPanel(id) && id !== "paths") {
-        // Missing edit/term → full reset; paths alone may be closed on purpose.
-        if (id === "edit" || id === "term") {
-          applyDefault(api);
-          return;
-        }
-      }
-    }
     if (!api.getPanel("edit") || !api.getPanel("term")) {
       applyDefault(api);
       return;
     }
     syncPathsButton();
-    if (onLayout) requestAnimationFrame(() => onLayout());
+    requestAnimationFrame(() => {
+      syncPathsWidth();
+      if (onLayout) onLayout();
+    });
   };
 
   const layoutHost = () => {
@@ -197,16 +299,26 @@ export async function initDock(opts = {}) {
 
   tryRestore();
   layoutHost();
+  requestAnimationFrame(() => syncPathsWidth());
 
   api.onDidLayoutChange(() => {
     persist();
     if (onLayout) onLayout();
     syncPathsButton();
   });
-  api.onDidRemovePanel(() => syncPathsButton());
-  api.onDidAddPanel(() => syncPathsButton());
+  api.onDidRemovePanel(() => {
+    syncPathsButton();
+    document.documentElement.classList.remove("fpl-paths-side");
+  });
+  api.onDidAddPanel(() => {
+    syncPathsButton();
+    requestAnimationFrame(() => syncPathsWidth());
+  });
 
-  const ro = new ResizeObserver(() => layoutHost());
+  const ro = new ResizeObserver(() => {
+    layoutHost();
+    syncPathsWidth();
+  });
   ro.observe(host);
 
   document.documentElement.classList.add("fpl-dock-ready");
@@ -233,17 +345,18 @@ export async function initDock(opts = {}) {
     pathsBtn.addEventListener("click", () => {
       if (!api || api.getPanel("paths")) return;
       const ref = api.getPanel("edit") || api.getPanel("term");
-      const h = Math.max(host.clientHeight, 240);
       api.addPanel({
         id: "paths",
         component: "paths",
         title: TITLES.paths,
-        initialHeight: Math.round(h * 0.3),
+        initialWidth: PATHS_DEFAULT_W,
+        minimumWidth: PATHS_MIN_W,
         position: ref
-          ? { referencePanel: ref.id, direction: "above" }
+          ? { referencePanel: ref.id, direction: "left" }
           : undefined,
       });
       syncPathsButton();
+      requestAnimationFrame(() => syncPathsWidth());
       persist();
     });
   }
@@ -259,11 +372,15 @@ export async function initDock(opts = {}) {
       persist();
     },
     showPaths: () => pathsBtn?.click(),
+    syncPathsWidth: () => {
+      requestAnimationFrame(() => syncPathsWidth());
+    },
     dispose: () => {
       window.clearTimeout(saveTimer);
       ro.disconnect();
       api?.dispose();
       document.documentElement.classList.remove("fpl-dock-ready");
+      document.documentElement.classList.remove("fpl-paths-side");
       host.classList.remove("fpl-dock--ready");
     },
   };

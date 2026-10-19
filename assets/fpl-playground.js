@@ -523,6 +523,7 @@ async function bootPlayground() {
         "Kata / examples library next. Use Buffer paths for now.";
       miller.appendChild(empty);
       setFocusChrome();
+      dock?.syncPathsWidth?.();
       return;
     }
     renderMiller(miller, outline, path, (col, node, ev) => {
@@ -533,6 +534,7 @@ async function bootPlayground() {
       if (ev.type === "dblclick") enterFocus();
     });
     setFocusChrome();
+    dock?.syncPathsWidth?.();
   };
 
   const refreshOutline = () => {
