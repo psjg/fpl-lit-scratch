@@ -486,6 +486,29 @@ async function bootPlayground() {
     navDeco = editor.deltaDecorations(navDeco, []);
   };
 
+  /** Select the whole focused body and paint the same nav range as navigateTo. */
+  const paintScopeSelection = () => {
+    const model = editor.getModel();
+    if (!model) return;
+    const endLine = model.getLineCount();
+    const range = new monaco.Range(
+      1,
+      1,
+      endLine,
+      model.getLineMaxColumn(endLine),
+    );
+    editor.setSelection(range);
+    navDeco = editor.deltaDecorations(navDeco, [
+      {
+        range,
+        options: {
+          className: "fpl-nav-range",
+          isWholeLine: true,
+        },
+      },
+    ]);
+  };
+
   /**
    * Rematch a selection path onto a freshly parsed outline by name+kind.
    * @param {OutlineNode} root
@@ -540,7 +563,7 @@ async function bootPlayground() {
     muteLive = true;
     try {
       editor.setValue(extractBody(lines, tip));
-      clearNavDeco();
+      paintScopeSelection();
       decoIds = applyQuokkaDecorations(editor, monaco, null, decoIds);
     } finally {
       muteLive = false;
@@ -699,7 +722,7 @@ async function bootPlayground() {
     muteLive = true;
     try {
       editor.setValue(extractBody(lines, node));
-      clearNavDeco();
+      paintScopeSelection();
       decoIds = applyQuokkaDecorations(editor, monaco, null, decoIds);
     } finally {
       muteLive = false;
@@ -721,6 +744,9 @@ async function bootPlayground() {
     writeHash(full);
     setFocusChrome();
     refreshOutline();
+    const tip = selected();
+    if (tip) navigateTo(tip);
+    else clearNavDeco();
     scheduleLive();
   };
 
