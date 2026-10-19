@@ -479,7 +479,7 @@ async function bootPlayground() {
       ? "Focused scope · edits splice into the full buffer · Escape exits"
       : mode === "examples"
         ? "Examples library next — switch back to Buffer paths"
-        : "Click to jump · double-click or Focus for scope body · outline is a buffer heuristic";
+        : "Click or arrows to navigate · double-click or Focus for scope body · outline is a buffer heuristic";
   };
 
   const clearNavDeco = () => {
@@ -533,6 +533,69 @@ async function bootPlayground() {
     });
     setFocusChrome();
     dock?.syncPathsWidth?.();
+    focusSelectedMillerItem();
+  };
+
+  /** Focus the selected miller button so further arrows stay on Paths. */
+  const focusSelectedMillerItem = () => {
+    const btns = miller.querySelectorAll(".fpl-miller-item.selected");
+    const last = btns[btns.length - 1];
+    if (last instanceof HTMLElement) {
+      last.focus({ preventScroll: true });
+    }
+  };
+
+  /**
+   * Siblings of the path tip in its column (root children if path empty).
+   * @returns {{ items: OutlineNode[], index: number }}
+   */
+  const siblingsOfTip = () => {
+    const parent = path.length > 1 ? path[path.length - 2] : outline;
+    const items = parent.children;
+    const tip = selected();
+    if (!tip) return { items, index: -1 };
+    const index = items.findIndex(
+      (c) => c.name === tip.name && c.kind === tip.kind && c.start === tip.start,
+    );
+    return { items, index };
+  };
+
+  /**
+   * @param {OutlineNode[]} items
+   * @param {number} index
+   */
+  const selectSiblingAt = (items, index) => {
+    if (!items.length) return;
+    const i = ((index % items.length) + items.length) % items.length;
+    const node = items[i];
+    path = path.length === 0 ? [node] : path.slice(0, -1).concat(node);
+    paintMiller();
+    navigateTo(node);
+  };
+
+  /** → / Enter: into first child, or Focus on leaf. */
+  const millerEnter = () => {
+    const tip = selected();
+    if (!tip) {
+      if (outline.children.length) selectSiblingAt(outline.children, 0);
+      return;
+    }
+    if (tip.kind === "dir" && tip.children.length > 0) {
+      path = path.concat(tip.children[0]);
+      paintMiller();
+      navigateTo(tip.children[0]);
+      return;
+    }
+    enterFocus();
+  };
+
+  const millerBack = () => {
+    if (path.length === 0) return;
+    path = path.slice(0, -1);
+    paintMiller();
+    const tip = selected();
+    if (tip) navigateTo(tip);
+    else clearNavDeco();
   };
 
   const refreshOutline = () => {
@@ -694,6 +757,40 @@ async function bootPlayground() {
     if (ev.key === "Escape" && focus) {
       ev.preventDefault();
       exitFocus();
+      return;
+    }
+    if (mode !== "paths") return;
+    const t = /** @type {HTMLElement | null} */ (ev.target);
+    if (!t || !t.closest || !t.closest("#fpl-miller, [data-dock='paths']")) {
+      return;
+    }
+    if (
+      t.closest(".monaco-editor") ||
+      t.closest("#fpl-out") ||
+      t.tagName === "TEXTAREA" ||
+      t.tagName === "INPUT"
+    ) {
+      return;
+    }
+    if (ev.key === "ArrowUp" || ev.key === "ArrowDown") {
+      ev.preventDefault();
+      const { items, index } = siblingsOfTip();
+      if (!items.length) return;
+      if (index < 0) {
+        selectSiblingAt(items, ev.key === "ArrowUp" ? items.length - 1 : 0);
+      } else {
+        selectSiblingAt(items, index + (ev.key === "ArrowUp" ? -1 : 1));
+      }
+      return;
+    }
+    if (ev.key === "ArrowRight" || ev.key === "Enter") {
+      ev.preventDefault();
+      millerEnter();
+      return;
+    }
+    if (ev.key === "ArrowLeft") {
+      ev.preventDefault();
+      millerBack();
     }
   });
 
