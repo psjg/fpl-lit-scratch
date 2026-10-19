@@ -171,6 +171,7 @@ wants path structure the language already speaks.
 | No empty child column after a leaf / empty dir (no “No children” gutter) | **now** |
 | Close / reopen Paths (replaces Hide columns when dock enhances) | **now**; static fallback still has Hide columns |
 | Miller arrow-key nav (↑↓ siblings, → into / Focus, ← up; gated out of Monaco) | **now** |
+| Miller ↔ Edit focus (→ at leaf → Monaco; ← at column 1 → Paths) | **now** |
 | Reopen Edit / Term without full Reset | **open** (dock UX) |
 | Examples mode = kata / library columns | **open** (stub today) |
 | Miller as primary playaround nav (mental model vs explorer + tabs) | **vision** |
