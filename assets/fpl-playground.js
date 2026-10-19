@@ -479,7 +479,7 @@ async function bootPlayground() {
       ? "Focused scope · edits splice into the full buffer · Escape exits"
       : mode === "examples"
         ? "Examples library next — switch back to Buffer paths"
-        : "Click or arrows to navigate · double-click or Focus for scope body · outline is a buffer heuristic";
+        : "Arrows navigate · → Edit at leaf · ← from col 1 back · Enter/Focus for scope body";
   };
 
   const clearNavDeco = () => {
@@ -573,8 +573,11 @@ async function bootPlayground() {
     navigateTo(node);
   };
 
-  /** → / Enter: into first child, or Focus on leaf. */
-  const millerEnter = () => {
+  /**
+   * → / Enter: into first child; on leaf → focuses Monaco, Enter enters scope-Focus.
+   * @param {"editor" | "scope"} leafAction
+   */
+  const millerDescend = (leafAction) => {
     const tip = selected();
     if (!tip) {
       if (outline.children.length) selectSiblingAt(outline.children, 0);
@@ -584,6 +587,10 @@ async function bootPlayground() {
       path = path.concat(tip.children[0]);
       paintMiller();
       navigateTo(tip.children[0]);
+      return;
+    }
+    if (leafAction === "editor") {
+      editor.focus();
       return;
     }
     enterFocus();
@@ -783,9 +790,14 @@ async function bootPlayground() {
       }
       return;
     }
-    if (ev.key === "ArrowRight" || ev.key === "Enter") {
+    if (ev.key === "ArrowRight") {
       ev.preventDefault();
-      millerEnter();
+      millerDescend("editor");
+      return;
+    }
+    if (ev.key === "Enter") {
+      ev.preventDefault();
+      millerDescend("scope");
       return;
     }
     if (ev.key === "ArrowLeft") {
@@ -854,6 +866,21 @@ async function bootPlayground() {
   editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => {
     window.clearTimeout(timer);
     runOnce(runBtn, { share: true });
+  });
+  // ← at column 1: hand focus back to the Miller selection.
+  editor.onKeyDown((ev) => {
+    if (ev.keyCode !== monaco.KeyCode.LeftArrow) return;
+    if (mode !== "paths") return;
+    const pos = editor.getPosition();
+    if (!pos || pos.column !== 1) return;
+    ev.preventDefault();
+    ev.stopPropagation();
+    if (!selected()) {
+      if (outline.children.length) selectSiblingAt(outline.children, 0);
+      else return;
+    } else {
+      focusSelectedMillerItem();
+    }
   });
   editor.addCommand(monaco.KeyCode.Tab, () => {
     const pos = editor.getPosition();
