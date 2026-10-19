@@ -113,24 +113,24 @@ previews.
 
 ### Scroll host / locked ZUI
 
-Docking is the **guest** inside one workspace. Above it sits a longer-arc **host**: a
-scrollable space of workspaces/tiles. Two cousins name the shape without being
-requirements:
+Docking is the **guest** inside one workspace. Above it sits the **host**: a sparse 2D
+grid of tiles (`repl-buffer-part7`).
 
-- **1D strip** — [niri](https://github.com/YaLTeR/niri) / PaperWM scrollable-tiling: columns
-  on an infinite horizontal strip; new tiles extend the strip instead of squeezing the
-  viewport. Glamorous Toolkit’s **Pager** / TreePager is the in-image cousin: inspect →
-  pane to the right → scroll the trail (tool trail, not a window manager).
-- **Locked gridded ZUI** — later: a 2D sheet of tiles at fixed scale (or discrete zoom
-  steps), not free Pad++ pan/zoom theater. “ZUI feel” by moving the viewport over a
-  grid, not by continuous camera freedom.
+- **Now (MVP):** signed integer focus `(i, j)`; only **visited** tiles are materialized;
+  each tile has its **own buffer** (`localStorage` map; `#c=` shares the active tile
+  only). Camera state is discrete `{ i, j, peek, scaleE }` with `scaleE = 0` locked —
+  no float pan. **Edge-peek:** snap so the focused tile fills most of the viewport while
+  a fixed strip of the neighbor on the peek side stays visible (never lose the sheet).
+  One dockview guest lives in the focused tile; other tiles are placeholders.
+- **Cousins (not clones):** [niri](https://github.com/YaLTeR/niri) / PaperWM (1D strip);
+  Glamorous Toolkit **Pager** / TreePager (1D tool trail). This pass jumps to 2D sparse
+  rather than shipping 1D first.
+- **Later (allude):** locked gridded ZUI via discrete `scaleE` steps (half-scale ladder),
+  not free Pad++ zoom.
 
-Layering: curlable HTML shell → (enhance) scroll host → dock guest in the focused tile;
-fail closed to today’s static dock / CSS grid. Playground / Katas / docs stay **separate
-documents** — no client router, no empty `#root` SPA. Host and dock are progressive
-layout behavior; the first bytes must still read as hypertext (HTMX hypermedia doctrine).
-
-Not built yet. Part6 is only the dock guest in a single tile.
+Layering: curlable HTML shell (`data-tile` + `data-dock`) → (enhance) tile host → dock
+guest in the focused tile; fail closed to a single-tile static dock. Playground / Katas /
+docs stay **separate documents** — no client router, no empty `#root` SPA.
 
 Turnstile ASCII inventory (notation only): [turnstiles.md](turnstiles.md).
 
@@ -167,8 +167,8 @@ wants path structure the language already speaks.
 | Miller arrow-key nav; reopen Edit / Term without full Reset | **open** (dock UX; not the scroll host) |
 | Examples mode = kata / library columns | **open** (stub today) |
 | Miller as primary playaround nav (mental model vs explorer + tabs) | **vision** |
-| Scroll host (1D strip of workspaces; niri / GT Pager cousins) | **vision** |
-| Locked gridded ZUI (2D sheet of tiles) | **allude** — longer arc under the scroll host |
+| Sparse 2D tile host (edge-peek; per-tile buffers; discrete camera) | **now** (`repl-buffer-part7`) |
+| Locked gridded ZUI (`scaleE ≠ 0` discrete zoom steps) | **allude** — same camera, later |
 | Workspace / project-file Miller (real paths, not only buffer `name/`) | **vision** — separate feat plan |
 | Inspector / Light Table panels as further dock components | **open** (dock guest exists; panes not yet) |
 | yazi-parity (previews, richer chrome) | **allude** only — not a promise to clone yazi |
@@ -198,6 +198,7 @@ Diagnostic Clipper sketches: [judgments](judgments.md). Error tags:
 | Roundtrip transcript | `repl-buffer-part4` | Ghost `|-`; Tab commits `; |- …`; TTY utop transcript (`|- value : ...`, `;;!` bars) |
 | Path-browser columns | `repl-buffer-part5` | Miller strip above Edit; buffer `name/` outline; navigate + Focus; Examples tab stub |
 | Dockable panels | `repl-buffer-part6` | Paths / Edit / Term via dockview; curlable `data-dock` shell; persist + Reset layout |
+| Sparse 2D tiles | `repl-buffer-part7` | Integer `(i,j)` sheet; edge-peek; per-tile buffers; one dock guest in focus |
 
 Also true right now:
 
@@ -218,14 +219,15 @@ Order of ambition after the pure buffer. Not a delivery promise — implementati
 | 4 | Roundtrip transcript | Quokka commit + utop | Done (`repl-buffer-part4`): Tab → `; |- …`; TTY promptless `|- value : ...` + ASCII `;;!` phrase bars |
 | 4b | Path-browser | Smalltalk / Finder | Done MVP (`repl-buffer-part5`): Miller columns; navigate + Focus; Examples stub |
 | 4c | Dockable panels | RemedyBG / VS | Done MVP (`repl-buffer-part6`): Paths / Edit / Term dock; curlable shell |
+| 4d | Sparse 2D tiles | niri / GT Pager cousins | Done MVP (`repl-buffer-part7`): edge-peek grid; per-tile buffers |
 | 5 | No hidden state | Light Table | Inspector over stack / walker IR (future dock components) |
 | 6 | Document = program | Eve | Walkthrough/essay as the primary live buffer |
 | 7 | Scrub / time | Bret Victor | Parameter scrub; needs cheap deterministic re-run |
 
-**Glamorous Toolkit** (incl. Pager trail), **scroll host / locked ZUI**, and
-**Miller-as-shell-nav** (explorer + tab spam replaced by path columns + body) stay
-north-stars beside this table — not numbered delivery parts. Parts 5–7 remain Light
-Table / Eve / Bret Victor. Path-browser Examples mode (kata library columns) is still
-open; see [Navigation](#navigation-miller-vs-explorer-vs-tabs) and
+**Glamorous Toolkit** (Pager trail), **locked ZUI** (`scaleE` later), and
+**Miller-as-shell-nav** stay north-stars beside this table — not numbered delivery
+parts. The sparse 2D tile host is part 4d. Parts 5–7 remain Light Table / Eve / Bret
+Victor. Path-browser Examples mode is still open; see
+[Navigation](#navigation-miller-vs-explorer-vs-tabs) and
 [Scroll host / locked ZUI](#scroll-host--locked-zui).
 

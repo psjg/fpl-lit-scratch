@@ -7,7 +7,7 @@ are looking at, what we stole, what we have not built.
 
 | ID | Note |
 | --- | --- |
-| 02.04.01 | [Playgrounds](playgrounds.md) — Monaco, Miller nav, docking, scroll-host vision, MOTD |
+| 02.04.01 | [Playgrounds](playgrounds.md) — Monaco, Miller, docking, sparse 2D tiles, MOTD |
 | 02.04.02 | [Turnstiles](turnstiles.md) — ASCII ⊢ inventory |
 | 02.04.03 | [Judgments](judgments.md) — equateable oordelen, Clipper, diagnostics |
 
@@ -18,7 +18,8 @@ Live scratch shell: [Playground](../../../try/index.html). Milestone tags on
 `psjg/fpl-lit-scratch`: `repl-buffer-part1` (pure FPL buffer), `repl-buffer-part2` (side
 gutter), `repl-buffer-part3` (Monaco Quokka-style inline), `repl-buffer-part4`
 (roundtrip `|-` / Tab-commit), `repl-buffer-part5` (Miller path-browser columns),
-`repl-buffer-part6` (dockable Paths / Edit / Term).
+`repl-buffer-part6` (dockable Paths / Edit / Term), `repl-buffer-part7` (sparse 2D
+tiles; edge-peek; per-tile buffers). Baseline before tiles: `repl-buffer-pre-tiles`.
 
 ## Promises
 
@@ -35,7 +36,8 @@ plan), `kept` (true in the tree), `dropped` (we no longer mean it — say why in
 | 02.04.03 | [judgments](judgments.md) | Restarts / supervision as a north-star | open |
 | 02.04.01 | [playgrounds](playgrounds.md) | Path-browser buffer columns (navigate + Focus) | kept |
 | 02.04.01 | [playgrounds](playgrounds.md) | Dockable Paths/Edit/Term on `/try` | kept |
-| 02.04.01 | [playgrounds](playgrounds.md) | Scroll host + dock guest (locked ZUI arc) | open |
+| 02.04.01 | [playgrounds](playgrounds.md) | Sparse 2D tile host (edge-peek; per-tile buffers) | kept |
+| 02.04.01 | [playgrounds](playgrounds.md) | Scroll host + dock guest (locked ZUI `scaleE`) | open |
 | 02.04.01 | [playgrounds](playgrounds.md) | GT Pager–cousin workspace trail | open |
 | 02.04.01 | [playgrounds](playgrounds.md) | Path-browser Examples mode (kata library) | open |
 | 02.04.01 | [playgrounds](playgrounds.md) | Path-browser as playaround nav (vs explorer + tab spam) | open |
