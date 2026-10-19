@@ -476,7 +476,7 @@ async function bootPlayground() {
     focusBtn.hidden = on;
     focusBtn.disabled = !selected();
     millerHint.textContent = on
-      ? "Focused scope · edits splice into the full buffer · Escape exits"
+      ? "Focused · Miller retargets scope · Escape exits"
       : mode === "examples"
         ? "Examples library next — switch back to Buffer paths"
         : "Arrows navigate · → Edit at leaf · ← from col 1 back · Enter/Focus for scope body";
@@ -486,8 +486,91 @@ async function bootPlayground() {
     navDeco = editor.deltaDecorations(navDeco, []);
   };
 
+  /** Select the whole focused body (Monaco selection only — no nav-range wash). */
+  const paintScopeSelection = () => {
+    const model = editor.getModel();
+    if (!model) return;
+    clearNavDeco();
+    const endLine = model.getLineCount();
+    const range = new monaco.Range(
+      1,
+      1,
+      endLine,
+      model.getLineMaxColumn(endLine),
+    );
+    editor.setSelection(range);
+  };
+
+  /**
+   * Rematch a selection path onto a freshly parsed outline by name+kind.
+   * @param {OutlineNode} root
+   * @param {OutlineNode[]} oldPath
+   * @returns {OutlineNode[]}
+   */
+  const rematchPath = (root, oldPath) => {
+    /** @type {OutlineNode[]} */
+    const nextPath = [];
+    let cursor = root;
+    for (const old of oldPath) {
+      const hit = cursor.children.find(
+        (c) => c.name === old.name && c.kind === old.kind,
+      );
+      if (!hit) break;
+      nextPath.push(hit);
+      cursor = hit;
+    }
+    return nextPath;
+  };
+
+  /**
+   * Keep Focus on: stitch edits, reparse outline, show the tip's body.
+   * Call after miller path updates while `focus` is set.
+   */
+  const retargetFocus = () => {
+    const full = getSrc();
+    outline = parseOutline(full);
+    path = rematchPath(outline, path);
+    const tip = selected();
+    if (!tip) {
+      focus = null;
+      muteLive = true;
+      try {
+        editor.setValue(full);
+      } finally {
+        muteLive = false;
+      }
+      writeHash(full);
+      setFocusChrome();
+      paintMiller();
+      scheduleLive();
+      return;
+    }
+    const lines = full.split("\n");
+    const from = tip.kind === "dir" ? tip.headEnd : tip.start;
+    const bodyIndent = bodyIndentOf(lines, tip);
+    const prefix = lines.slice(0, from).join("\n") + (from > 0 ? "\n" : "");
+    const suffix =
+      tip.end < lines.length ? "\n" + lines.slice(tip.end).join("\n") : "";
+    focus = { node: tip, bodyIndent, prefix, suffix };
+    muteLive = true;
+    try {
+      editor.setValue(extractBody(lines, tip));
+      paintScopeSelection();
+      decoIds = applyQuokkaDecorations(editor, monaco, null, decoIds);
+    } finally {
+      muteLive = false;
+    }
+    writeHash(full);
+    setFocusChrome();
+    paintMiller();
+    scheduleLive();
+  };
+
   const navigateTo = (node) => {
-    if (focus) exitFocus();
+    if (focus) {
+      retargetFocus();
+      return;
+    }
     const model = editor.getModel();
     if (!model) return;
     const start = Math.min(node.start + 1, model.getLineCount());
@@ -602,24 +685,13 @@ async function bootPlayground() {
     paintMiller();
     const tip = selected();
     if (tip) navigateTo(tip);
+    else if (focus) retargetFocus();
     else clearNavDeco();
   };
 
   const refreshOutline = () => {
     outline = parseOutline(getSrc());
-    // Drop selection path entries that no longer exist by name+start match.
-    /** @type {OutlineNode[]} */
-    const nextPath = [];
-    let cursor = outline;
-    for (const old of path) {
-      const hit = cursor.children.find(
-        (c) => c.name === old.name && c.kind === old.kind,
-      );
-      if (!hit) break;
-      nextPath.push(hit);
-      cursor = hit;
-    }
-    path = nextPath;
+    path = rematchPath(outline, path);
     paintMiller();
   };
 
@@ -642,7 +714,7 @@ async function bootPlayground() {
     muteLive = true;
     try {
       editor.setValue(extractBody(lines, node));
-      clearNavDeco();
+      paintScopeSelection();
       decoIds = applyQuokkaDecorations(editor, monaco, null, decoIds);
     } finally {
       muteLive = false;
@@ -664,6 +736,9 @@ async function bootPlayground() {
     writeHash(full);
     setFocusChrome();
     refreshOutline();
+    const tip = selected();
+    if (tip) navigateTo(tip);
+    else clearNavDeco();
     scheduleLive();
   };
 
