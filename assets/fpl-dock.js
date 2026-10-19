@@ -15,8 +15,10 @@ const PATHS_MIN_W = 192;
 /** Placeholder before first Miller measure (~2 columns). */
 const PATHS_DEFAULT_W = 352;
 const PATHS_MAX_HOST_FRAC = 0.6;
-/** Extra chrome: section padding + modes/hint slack. */
-const PATHS_CHROME_X = 8;
+/** Matches `.fpl-miller-col { flex: 0 0 11rem }` — used when offsetWidth is 0. */
+const MILLER_COL_W = 176;
+/** Extra chrome: section padding only (modes wrap; do not size the panel). */
+const PATHS_CHROME_X = 12;
 
 /**
  * @typedef {{
@@ -155,27 +157,25 @@ export async function initDock(opts = {}) {
     return false;
   };
 
-  /** Intrinsic width of Miller columns + modes chrome. */
+  /** Intrinsic width from Miller columns only (modes/hint wrap inside). */
   const measurePathsContentWidth = () => {
     const miller = document.getElementById("fpl-miller");
-    const modes = sections.paths.querySelector(".fpl-browser-modes");
-    const hint = document.getElementById("fpl-miller-hint");
-    let inner = 0;
-    if (miller instanceof HTMLElement) {
-      let cols = 0;
-      for (const col of miller.querySelectorAll(".fpl-miller-col")) {
-        if (col instanceof HTMLElement) cols += col.offsetWidth || col.clientWidth;
+    if (!(miller instanceof HTMLElement)) return PATHS_DEFAULT_W;
+    const colEls = miller.querySelectorAll(".fpl-miller-col");
+    const n = colEls.length;
+    if (n === 0) {
+      // Empty / examples stub: one column of space.
+      return PATHS_MIN_W + PATHS_CHROME_X;
+    }
+    let cols = 0;
+    for (const col of colEls) {
+      if (col instanceof HTMLElement) {
+        const w = col.offsetWidth || col.clientWidth;
+        cols += w > 0 ? w : MILLER_COL_W;
       }
-      inner = Math.max(cols, miller.scrollWidth, miller.offsetWidth);
     }
-    if (modes instanceof HTMLElement) {
-      inner = Math.max(inner, modes.scrollWidth, modes.offsetWidth);
-    }
-    if (hint instanceof HTMLElement && !hint.hidden) {
-      // Hint can wrap; do not let a long sentence force a huge panel.
-      inner = Math.max(inner, Math.min(hint.scrollWidth, inner || PATHS_DEFAULT_W));
-    }
-    if (inner < PATHS_MIN_W) inner = PATHS_DEFAULT_W;
+    // Prefer sum of columns; scrollWidth can collapse when the panel is already too narrow.
+    const inner = Math.max(cols, n * MILLER_COL_W);
     return Math.ceil(inner + PATHS_CHROME_X);
   };
 
@@ -190,7 +190,16 @@ export async function initDock(opts = {}) {
       document.documentElement.classList.remove("fpl-paths-side");
       return;
     }
-    const horizontal = isPathsHorizontal();
+    // Prefer geometry; if rects are not ready yet, assume side layout after default/left add.
+    let horizontal = isPathsHorizontal();
+    if (!horizontal && panel.api) {
+      // Default and reopen use direction left — treat as side until geometry says otherwise.
+      const pr = sections.paths.getBoundingClientRect();
+      const er = sections.edit.getBoundingClientRect();
+      if (pr.width > 2 && er.width > 2 && Math.abs(pr.top - er.top) < 80) {
+        horizontal = true;
+      }
+    }
     document.documentElement.classList.toggle("fpl-paths-side", horizontal);
     if (!horizontal) {
       try {
@@ -217,6 +226,11 @@ export async function initDock(opts = {}) {
       console.warn("fpl-dock: setSize Paths failed", err);
     } finally {
       sizing = false;
+    }
+    const miller = document.getElementById("fpl-miller");
+    if (miller instanceof HTMLElement) {
+      // Keep the deepest column in view (Finder-style).
+      miller.scrollLeft = miller.scrollWidth;
     }
     if (onLayout) requestAnimationFrame(() => onLayout());
   };
@@ -373,7 +387,10 @@ export async function initDock(opts = {}) {
     },
     showPaths: () => pathsBtn?.click(),
     syncPathsWidth: () => {
-      requestAnimationFrame(() => syncPathsWidth());
+      // Two frames: column DOM + dockview geometry both need to settle.
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => syncPathsWidth());
+      });
     },
     dispose: () => {
       window.clearTimeout(saveTimer);

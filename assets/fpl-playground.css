@@ -148,17 +148,24 @@ html.fpl-dock-ready .fpl-dock-paths .fpl-miller {
   border-bottom: none;
 }
 
-/* Paths beside Edit: Miller reports intrinsic column width; panel sized in JS. */
+/* Paths beside Edit: size from columns (JS); modes/hint wrap inside the panel. */
 html.fpl-dock-ready.fpl-paths-side .fpl-dock-paths.fpl-dock-mounted {
-  width: max-content;
-  min-width: 100%;
   max-width: 100%;
+}
+
+html.fpl-dock-ready.fpl-paths-side .fpl-dock-paths .fpl-browser-modes {
+  flex-wrap: wrap;
+  row-gap: 0.25rem;
+}
+
+html.fpl-dock-ready.fpl-paths-side .fpl-dock-paths .fpl-miller-hint {
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 html.fpl-dock-ready.fpl-paths-side .fpl-dock-paths .fpl-miller {
   flex: 1 1 auto;
-  width: max-content;
-  min-width: 100%;
+  width: 100%;
   height: auto;
   min-height: 0;
   overflow-x: auto;
@@ -167,6 +174,8 @@ html.fpl-dock-ready.fpl-paths-side .fpl-dock-paths .fpl-miller {
 
 html.fpl-dock-ready.fpl-paths-side .fpl-miller-col {
   height: 100%;
+  flex: 0 0 11rem;
+  min-width: 11rem;
 }
 
 /* Theme dockview chrome toward existing pane bars */
