@@ -148,6 +148,27 @@ html.fpl-dock-ready .fpl-dock-paths .fpl-miller {
   border-bottom: none;
 }
 
+/* Paths beside Edit: Miller reports intrinsic column width; panel sized in JS. */
+html.fpl-dock-ready.fpl-paths-side .fpl-dock-paths.fpl-dock-mounted {
+  width: max-content;
+  min-width: 100%;
+  max-width: 100%;
+}
+
+html.fpl-dock-ready.fpl-paths-side .fpl-dock-paths .fpl-miller {
+  flex: 1 1 auto;
+  width: max-content;
+  min-width: 100%;
+  height: auto;
+  min-height: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+html.fpl-dock-ready.fpl-paths-side .fpl-miller-col {
+  height: 100%;
+}
+
 /* Theme dockview chrome toward existing pane bars */
 html.fpl-dock-ready .dv-tabs-and-actions-container,
 html.fpl-dock-ready .dv-groupview > .dv-header {
