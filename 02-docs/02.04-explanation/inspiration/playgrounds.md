@@ -130,7 +130,11 @@ fail closed to today’s static dock / CSS grid. Playground / Katas / docs stay 
 documents** — no client router, no empty `#root` SPA. Host and dock are progressive
 layout behavior; the first bytes must still read as hypertext (HTMX hypermedia doctrine).
 
-Not built yet. Part6 is only the dock guest in a single tile.
+Part6 is the dock guest in a single tile (live). A **2D pseudo-ZUI scroller**
+(integer camera, edge-peek, trackpad tile-move — browser pan stand-in, not real
+`scaleE` ZUI) was tried on `try-tiles` and parked — tag
+`repl-buffer-2d-pseudo-zui-failed`. That parks the scroller, not tiles-as-such: a
+focused tile hosting the dock (and a **1D niri-style strip**) stay open.
 
 Turnstile ASCII inventory (notation only): [turnstiles.md](turnstiles.md).
 
