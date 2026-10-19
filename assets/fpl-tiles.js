@@ -1,9 +1,13 @@
 /**
  * Sparse 2D tile host for /try: discrete camera, edge-peek, per-tile buffers.
  * scaleE is always 0 in this MVP (locked ZUI door left open).
+ * Trackpad/wheel moves tiles when focus is outside Monaco/Term (no edge-jank).
  */
 const STORAGE_KEY = "fpl-try-tiles-v1";
 const PEEK_PX = 40;
+const WHEEL_THRESHOLD = 100;
+const WHEEL_COOLDOWN_MS = 220;
+const PEEK_SETTLE_MS = 150;
 /** @typedef {"center" | "N" | "E" | "S" | "W"} Peek */
 /** @typedef {{ i: number, j: number, peek: Peek, scaleE: number }} Camera */
 
@@ -36,12 +40,18 @@ export function initTiles(opts) {
   let cam = {
     i: state.focus.i | 0,
     j: state.focus.j | 0,
-    peek: normalizePeek(state.peek),
+    // Full dock by default (ignore stale directional peek from buggy builds).
+    peek: "center",
     scaleE: 0,
   };
   /** @type {Record<string, { src: string }>} */
   let tiles = { ...state.tiles };
   ensureTile(tiles, cam.i, cam.j, opts.initialSrc ?? "");
+
+  let peekTimer = 0;
+  let wheelCooldownUntil = 0;
+  let accX = 0;
+  let accY = 0;
 
   const keyOf = (i, j) => `${i},${j}`;
 
@@ -116,17 +126,18 @@ export function initTiles(opts) {
       el.style.top = `${j * cellH}px`;
     }
 
+    // Focus fills the viewport; directional peek shows ~PEEK_PX of the neighbor.
     let scrollX = cam.i * cellW;
     let scrollY = cam.j * cellH;
     switch (cam.peek) {
       case "E":
-        scrollX = cam.i * cellW + (cellW - PEEK_PX);
+        scrollX = cam.i * cellW + PEEK_PX;
         break;
       case "W":
         scrollX = cam.i * cellW - PEEK_PX;
         break;
       case "S":
-        scrollY = cam.j * cellH + (cellH - PEEK_PX);
+        scrollY = cam.j * cellH + PEEK_PX;
         break;
       case "N":
         scrollY = cam.j * cellH - PEEK_PX;
@@ -165,11 +176,22 @@ export function initTiles(opts) {
     persist();
   };
 
+  const settlePeekCenter = () => {
+    window.clearTimeout(peekTimer);
+    peekTimer = window.setTimeout(() => {
+      if (cam.peek === "center") return;
+      cam = { ...cam, peek: "center", scaleE: 0 };
+      paint();
+      persist();
+    }, PEEK_SETTLE_MS);
+  };
+
   /**
    * @param {number} di
    * @param {number} dj
    */
   const move = (di, dj) => {
+    if (di === 0 && dj === 0) return;
     persistActive();
     const ni = cam.i + di;
     const nj = cam.j + dj;
@@ -177,18 +199,20 @@ export function initTiles(opts) {
     cam = {
       i: ni,
       j: nj,
-      peek: peekFromDelta(di, dj, cam.peek),
+      peek: peekFromDelta(di, dj, "center"),
       scaleE: 0,
     };
     opts.setSrc(tiles[keyOf(ni, nj)].src);
     paint();
     persist();
+    settlePeekCenter();
   };
 
   const home = () => {
+    window.clearTimeout(peekTimer);
     persistActive();
     ensureTile(tiles, 0, 0, "");
-    cam = { i: 0, j: 0, peek: "E", scaleE: 0 };
+    cam = { i: 0, j: 0, peek: "center", scaleE: 0 };
     opts.setSrc(tiles["0,0"].src);
     paint();
     persist();
@@ -197,7 +221,6 @@ export function initTiles(opts) {
   // Seed editor if store had a different active tile than hash/default already loaded.
   const activeKey = keyOf(cam.i, cam.j);
   if (tiles[activeKey] && tiles[activeKey].src !== opts.getSrc()) {
-    // Prefer hash/editor initial already applied; sync into store.
     tiles[activeKey] = { src: opts.getSrc() };
   }
 
@@ -214,12 +237,18 @@ export function initTiles(opts) {
   bind("fpl-tile-e", () => move(1, 0));
   bind("fpl-tile-home", () => home());
 
+  /** @param {EventTarget | null} t */
+  const isEditorScrollTarget = (t) => {
+    if (!(t instanceof Element)) return false;
+    if (t.closest(".monaco-editor")) return true;
+    if (t.closest("#fpl-out")) return true;
+    const tag = t.tagName;
+    return tag === "TEXTAREA" || tag === "INPUT";
+  };
+
   window.addEventListener("keydown", (ev) => {
     if (ev.metaKey || ev.ctrlKey || ev.altKey) return;
-    const t = /** @type {HTMLElement | null} */ (ev.target);
-    if (t && (t.closest(".monaco-editor") || t.tagName === "TEXTAREA" || t.tagName === "INPUT")) {
-      return;
-    }
+    if (isEditorScrollTarget(ev.target)) return;
     if (ev.key === "ArrowUp") {
       ev.preventDefault();
       move(0, -1);
@@ -237,6 +266,40 @@ export function initTiles(opts) {
       home();
     }
   });
+
+  viewport.addEventListener(
+    "wheel",
+    (ev) => {
+      if (isEditorScrollTarget(ev.target)) return;
+      // Also respect focus inside Monaco even if the wheel target is a child overlay.
+      const ae = document.activeElement;
+      if (ae && isEditorScrollTarget(ae)) return;
+
+      ev.preventDefault();
+      const now = performance.now();
+      if (now < wheelCooldownUntil) return;
+
+      accX += ev.deltaX;
+      accY += ev.deltaY;
+      if (Math.abs(accX) < WHEEL_THRESHOLD && Math.abs(accY) < WHEEL_THRESHOLD) {
+        return;
+      }
+      if (Math.abs(accX) >= Math.abs(accY)) {
+        const di = accX > 0 ? 1 : -1;
+        accX = 0;
+        accY = 0;
+        wheelCooldownUntil = now + WHEEL_COOLDOWN_MS;
+        move(di, 0);
+      } else {
+        const dj = accY > 0 ? 1 : -1;
+        accX = 0;
+        accY = 0;
+        wheelCooldownUntil = now + WHEEL_COOLDOWN_MS;
+        move(0, dj);
+      }
+    },
+    { passive: false },
+  );
 
   const ro = new ResizeObserver(() => paint());
   ro.observe(viewport);
@@ -271,7 +334,7 @@ function loadState(fallback) {
   /** @type {{ focus: { i: number, j: number }, peek: Peek, tiles: Record<string, { src: string }> }} */
   const empty = {
     focus: { i: 0, j: 0 },
-    peek: "E",
+    peek: "center",
     tiles: { "0,0": { src: fallback } },
   };
   try {
@@ -293,7 +356,7 @@ function loadState(fallback) {
     if (!tiles[`${i},${j}`]) tiles[`${i},${j}`] = { src: fallback };
     return {
       focus: { i, j },
-      peek: normalizePeek(data.peek),
+      peek: "center",
       tiles,
     };
   } catch {
@@ -310,12 +373,6 @@ function loadState(fallback) {
 function ensureTile(tiles, i, j, seed) {
   const k = `${i},${j}`;
   if (!tiles[k]) tiles[k] = { src: seed };
-}
-
-/** @param {unknown} p @returns {Peek} */
-function normalizePeek(p) {
-  if (p === "N" || p === "E" || p === "S" || p === "W" || p === "center") return p;
-  return "E";
 }
 
 /**
