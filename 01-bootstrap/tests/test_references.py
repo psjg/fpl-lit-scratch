@@ -33,18 +33,24 @@ CITERS = sorted(
 # A full path, `examples/<name>`, or `<name>:<line>`; a glob or a brace
 # never matches. A path is taken whole, whatever leads to its
 # `features/` (`03-fpl/OLD/03.01-features/`, or a stale
-# `fpl/features/`), and is read from the repository root.
+# `fpl/features/`), and is read from the repository root or, as a
+# Markdown link is, from the directory of the page that cites it.
 PATH = re.compile(r"[\w./-]*\bfeatures/[\w.-]+/examples/[\w.-]+\.fpl\b")
 NAME = re.compile(
     r"(?:\bexamples/([\w.-]+\.fpl)\b|(?<![\w./-])([\w.-]+\.fpl):\d)"
 )
 
 
-def dangling(text: str) -> list[str]:
+def dangling(text: str, page: Path = REPO) -> list[str]:
     """
-    The citations in `text` that name no example program.
+    The citations in `text`, a file in directory `page`, that name no
+    example program.
     """
-    paths = [m for m in PATH.findall(text) if not (REPO / m).is_file()]
+    paths = [
+        m
+        for m in PATH.findall(text)
+        if not (REPO / m).is_file() and not (page / m).is_file()
+    ]
     names = [a or b for a, b in NAME.findall(text) if (a or b) not in NAMES]
     return paths + names
 
@@ -59,6 +65,13 @@ def test_a_renamed_program_dangles() -> None:
     ]
 
 
+def test_a_link_is_read_from_the_page_that_holds_it() -> None:
+    name = "draft1.fpl"
+    link = f"../03-fpl/OLD/03.01-features/draft1/examples/{name}"
+    assert dangling(f"[x]({link})", REPO / "02-docs") == []
+    assert dangling(f"[x]({link})") == [link]
+
+
 def test_a_path_from_before_the_move_dangles() -> None:
     name = "draft1.fpl"
     stale = f"fpl/features/draft1/examples/{name}"
@@ -67,7 +80,9 @@ def test_a_path_from_before_the_move_dangles() -> None:
 
 def test_every_citation_names_a_program() -> None:
     found = {
-        str(p.relative_to(REPO)): dangling(p.read_text(encoding="utf-8"))
+        str(p.relative_to(REPO)): dangling(
+            p.read_text(encoding="utf-8"), p.parent
+        )
         for p in CITERS
     }
     assert {p: d for p, d in found.items() if d} == {}
