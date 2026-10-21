@@ -247,20 +247,20 @@ def files(tree: Path) -> set[Path]:
     }
 
 
-def stale() -> list[Path]:
+def stale(committed: Path = OUT) -> list[Path]:
     """
-    The files of python/fpl that differ from a fresh tangle, or that
-    one of them lacks, as paths relative to 01-bootstrap/.
+    The files of ``committed`` that differ from a fresh tangle, or that
+    one of them lacks, as paths relative to ``committed``.
     """
     with tempfile.TemporaryDirectory() as tmp:
         fresh = Path(tmp) / "fpl"
         build(fresh)
         return [
-            OUT.relative_to(ROOT) / rel
-            for rel in sorted(files(fresh) | files(OUT))
+            rel
+            for rel in sorted(files(fresh) | files(committed))
             if not (fresh / rel).is_file()
-            or not (OUT / rel).is_file()
-            or (fresh / rel).read_bytes() != (OUT / rel).read_bytes()
+            or not (committed / rel).is_file()
+            or (fresh / rel).read_bytes() != (committed / rel).read_bytes()
         ]
 
 
@@ -302,7 +302,8 @@ def main(argv: list[str]) -> int:
         return 0
     behind = stale()
     for path in behind:
-        print(f"tangle: stale: {path}", file=sys.stderr)
+        shown = OUT.relative_to(ROOT) / path
+        print(f"tangle: stale: {shown}", file=sys.stderr)
     if behind:
         print(
             "tangle: python/fpl is not what the notes tangle to; run"
