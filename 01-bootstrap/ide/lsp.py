@@ -71,18 +71,6 @@ def semantic(
     Every word of the document, classified.
     """
     text = ls.workspace.get_text_document(params.text_document.uri).source
-    rows = analysis._rows(text)
-    units = [
-        analysis.Token(
-            t.line,
-            analysis.utf16(rows[t.line], t.col),
-            analysis.utf16(rows[t.line], t.col + t.length)
-            - analysis.utf16(rows[t.line], t.col),
-            t.kind,
-            t.mods,
-        )
-        for t in analysis.tokens(text)
-    ]
     return types.SemanticTokens(data=analysis.encode(units))
 
 

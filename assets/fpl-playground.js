@@ -7,6 +7,7 @@
 import { runFpl, checkExpected, learnBase } from "./fpl-runtime.js";
 import { initDock } from "./fpl-dock.js";
 import { registerFpl } from "./fpl-language.js";
+import { registerService } from "./fpl-service.js";
 
 const RESULT_PREFIX = "|- ";
 const TRAILING_NOTE = /[\t ]*(?:;|⍝)[ \t]*(.*)$/u;
@@ -434,9 +435,11 @@ async function bootPlayground() {
   // Tokens come from fpl-language.js, generated from grammar.lark and lex.py
   // (01-bootstrap/ide/gen_highlight.py); the theme only gives them colours.
   registerFpl(monaco);
+  registerService(monaco);
   monaco.editor.defineTheme("fpl-dark", {
     base: "vs-dark",
     inherit: true,
+    semanticHighlighting: true,
     colors: {},
     rules: [
       { token: "comment.doc", foreground: "7ec699", fontStyle: "italic" },
@@ -451,6 +454,11 @@ async function bootPlayground() {
       { token: "type.path", foreground: "4ec9b0" },
       { token: "delimiter.bar", foreground: "569cd6", fontStyle: "bold" },
       { token: "delimiter.island", foreground: "d7ba7d" },
+      // semantic tokens (fpl-semantic.js): binder vs use
+      { token: "function", foreground: "dcdcaa" },
+      { token: "function.declaration", foreground: "ffd866", fontStyle: "bold" },
+      { token: "parameter", foreground: "9cdcfe", fontStyle: "italic" },
+      { token: "parameter.declaration", foreground: "9cdcfe", fontStyle: "bold italic" },
     ],
   });
 
@@ -458,6 +466,7 @@ async function bootPlayground() {
     value: initial,
     language: "fpl",
     theme: "fpl-dark",
+    "semanticHighlighting.enabled": true,
     fontSize: 14,
     fontFamily: "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
     lineNumbers: "on",

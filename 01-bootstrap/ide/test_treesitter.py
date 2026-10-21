@@ -47,3 +47,42 @@ def test_a_block_comment_line_opens_no_block(tmp_path: Path) -> None:
 
 def test_unclosed_bracket_is_an_error(tmp_path: Path) -> None:
     assert "ERROR" in tree("[ 1 2\n", tmp_path)
+
+
+def test_generated_files_are_current() -> None:
+    """grammar.js, scanner.c and highlights.scm match their generator."""
+    root = Path(__file__).resolve().parents[1]
+    out = subprocess.run(
+        ["python3", "-m", "ide.gen_treesitter", "--check"],
+        cwd=root,
+        capture_output=True,
+        text=True,
+        env={
+            "PYTHONPATH": str(root),
+            "PATH": __import__("os").environ["PATH"],
+        },
+    )
+    assert out.returncode == 0, out.stdout + out.stderr
+
+
+def test_corpus_passes() -> None:
+    out = subprocess.run(
+        ["tree-sitter", "test"], cwd=GRAMMAR, capture_output=True, text=True
+    )
+    assert out.returncode == 0, out.stdout
+
+
+def test_differential_against_lark() -> None:
+    """Fixtures, generated and mutated programs: same shapes."""
+    root = Path(__file__).resolve().parents[1]
+    out = subprocess.run(
+        ["python3", "ide/diff_treesitter.py", "40", "7"],
+        cwd=root,
+        capture_output=True,
+        text=True,
+        env={
+            "PYTHONPATH": str(root),
+            "PATH": __import__("os").environ["PATH"],
+        },
+    )
+    assert out.returncode == 0, out.stdout + out.stderr

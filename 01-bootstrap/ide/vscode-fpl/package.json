@@ -1,0 +1,19 @@
+{
+  "name": "vscode-fpl",
+  "displayName": "FPL",
+  "version": "0.0.1",
+  "publisher": "fpl",
+  "engines": { "vscode": "^1.85.0" },
+  "main": "./extension.js",
+  "activationEvents": ["onLanguage:fpl"],
+  "dependencies": { "vscode-languageclient": "9.0.1" },
+  "contributes": {
+    "languages": [{ "id": "fpl", "extensions": [".fpl"], "aliases": ["FPL"] }],
+    "grammars": [{ "language": "fpl", "scopeName": "source.fpl", "path": "../fpl.tmLanguage.json" }],
+    "configuration": {
+      "properties": {
+        "fpl.server": { "type": "string", "default": "", "description": "Absolute path of 01-bootstrap/ide/fpl-ls" }
+      }
+    }
+  }
+}
