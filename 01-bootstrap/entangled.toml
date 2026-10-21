@@ -1,0 +1,7 @@
+version = "2.4"
+style = "basic"
+watch_list = ["01.0*/**/*.md"]
+ignore_list = ["**/index.md", "**/README.md", "01.05-labs/**"]
+annotation = "naked"
+namespace_default = "private"
+hooks = ["~shebang", "~spdx_license", "~repl", "~brei"]
