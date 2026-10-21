@@ -1750,4 +1750,4 @@ def spread(values: tuple[Value, ...]) -> tuple[Item, ...]:
 
 
 _desugar_fn = desugar
-desugar = Pass("desugar", _desugar_fn)
+desugar = Pass("desugar", _desugar_fn, source="Syntax", target="Core")
