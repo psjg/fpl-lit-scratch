@@ -77,4 +77,4 @@ inverse. The stdio wrapper is `defonify >> stage >> fonify`.
   changing this decision.
 - `stdio = Pass("stdio", lambda stage: stage)` in the pipe page is an identity placeholder;
   the boundary logic lives in the stage-aware `_run`. The formula is not yet one generic,
-  type-driven wrapper.
+  type-driven wrapper ([TD-0006](../techdebt/TD-0006-pipe-reparses-rendered-text.md)).

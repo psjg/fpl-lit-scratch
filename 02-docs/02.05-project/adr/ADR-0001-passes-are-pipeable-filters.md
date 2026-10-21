@@ -90,8 +90,9 @@ stderr. The representations lead; a pass is named after the arrow between two of
 - A `>>` chain orders passes; it is not the semantics (`01.04.04-build.md`). Resolve, expand
   and elaborate may interleave later without breaking this decision.
 - The shell route is a way to run the same passes, not a second implementation. Today, after
-  `parse`, the filters send rendered source text and re-parse it, and the pipeline lab shows
-  only the in-process half.
+  `parse`, the filters send rendered source text and re-parse it
+  ([TD-0006](../techdebt/TD-0006-pipe-reparses-rendered-text.md)), and the pipeline lab shows
+  only the in-process half ([TD-0007](../techdebt/TD-0007-pipeline-lab-missing-fon-cell.md)).
 - Each pass is meant to be a pure transformation; purity is not stated as a rule or checked.
 - How the shell route relates to other ways of running the passes is
   [ADR-0012](ADR-0012-pipeline-is-a-computation-graph.md) (draft): it would become one

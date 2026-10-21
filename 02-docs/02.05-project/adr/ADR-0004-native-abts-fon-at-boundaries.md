@@ -95,9 +95,11 @@ nothing of FON. `>>` is the composition operator in both places.
   `01-bootstrap/python/fpl/__main__.py`).
 - Each filter needs a lossless FON codec for its input and output representation. Only text
   and tokens have one. After `parse` the tree contradicts this decision: the filters render
-  the program back to source text and the next stage re-lexes and re-parses it.
+  the program back to source text and the next stage re-lexes and re-parses it
+  ([TD-0006](../techdebt/TD-0006-pipe-reparses-rendered-text.md)).
 - The two routes must give the same result. A test that compares the in-process chain with
-  the piped one, per boundary, would check it; none exists yet.
+  the piped one, per boundary, would check it; none exists yet
+  ([TD-0007](../techdebt/TD-0007-pipeline-lab-missing-fon-cell.md)).
 - The three levels (semantic passes; materialisation, object to FON value; transport, FON
   value to bytes) and the small materialisation kernel that ends the regress are not written
   down as such. The FON module's `read` and `write` beside the pipe's `fonify_*` and

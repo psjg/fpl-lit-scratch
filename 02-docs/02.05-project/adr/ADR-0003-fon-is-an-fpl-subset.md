@@ -82,7 +82,8 @@ decodes left to right on a stack (`1 2 Add`), lexically ASCII.
 - The seed FON in `01.01.02-fon.md` is a braced data profile (`⟨⟩ {} () []`) read by a Lark
   LALR grammar, not a postfix stream decoded on a stack. The page calls it "the seed's FON
   reader and writer" but does not say whether the braced form is the eventual FON. Until
-  that is settled, the braced form should not be treated as normative.
+  that is settled, the braced form should not be treated as normative
+  ([TD-0009](../techdebt/TD-0009-seed-fon-braced-not-postfix.md)).
 - Binding-aware ABTs (hygiene, alpha-equivalence and substitution in the representation) are
   the intent; the walker's AST in `01-bootstrap/python/fpl/ast_surface.py` carries spans but
   no binding structure yet.

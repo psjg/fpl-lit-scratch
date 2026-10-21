@@ -87,7 +87,8 @@ There is one `fpl` executable. `fpl <stage>` runs one stage as a filter; `fpl <f
   around the shared adapter in `python/fpl/pipe/__init__.py`, so `python -m fpl.lex` works as
   well. It never re-implements the stage or starts another FPL tool.
 - `01-bootstrap/pyproject.toml` has no `[project.scripts]` entry, so packaging does not yet
-  install an `fpl` command; the route today is `python -m fpl <stage>`.
+  install an `fpl` command; the route today is `python -m fpl <stage>`
+  ([TD-0010](../techdebt/TD-0010-click-undeclared.md)).
 - The command list is a hand-written tuple (`COMMANDS`), and the adapter dispatches on the
   stage name in `_run`. Deriving both from a registry of `Pass` objects with input and output
   types is a proposal, not part of this decision.

@@ -69,4 +69,4 @@ constraint on it.
   `flake.nix`); `01-bootstrap/pyproject.toml` lists only `lark` and `icontract`, so an install
   from the package metadata would lack it. The deptry gate excludes the tangled `python/`
   tree, so it does not flag this. Adding `click` is a policy change to `pyproject.toml`
-  (`.agents/QUALITY.md`).
+  (`.agents/QUALITY.md`); see [TD-0010](../techdebt/TD-0010-click-undeclared.md).
