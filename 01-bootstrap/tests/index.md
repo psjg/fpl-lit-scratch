@@ -17,6 +17,7 @@
 * [test_lit_codec](test_lit_codec.py) - test_lit_codec
 * [test_lit_fon](test_lit_fon.py) - test_lit_fon
 * [test_lit_entry](test_lit_entry.py) - test_lit_entry
+* [test_lit_equivalence](test_lit_equivalence.py) - test_lit_equivalence
 * [test_lit_pipe](test_lit_pipe.py) - test_lit_pipe
 * [test_lit_graph](test_lit_graph.py) - test_lit_graph
 * [test_lit_parse](test_lit_parse.py) - test_lit_parse
