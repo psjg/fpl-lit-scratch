@@ -93,6 +93,7 @@ FPL
 │   ├── <a href="02-docs/02.04-explanation/design.md">02.01-design.md</a>
 │   ├── <a href="02-docs/02.03-reference/spec.md">02.02-spec.md</a>
 │   ├── <a href="02-docs/02.05-project/roadmap.md">02.03-roadmap.md</a>
+│   ├── <a href="02-docs/02.05-project/inbox/README.md">02.05-inbox/</a>      # design ideas to answer, one DI-NNNN file each
 │   └── <a href="02-docs/02.05-project/notes/">02.05-notes/</a>
 │       ├── <a href="02-docs/02.05-project/notes/02.05.01-issue-task-patch.md">02.05.01-issue-task-patch.md</a>
 │       ├── <a href="02-docs/02.05-project/notes/02.05.02-sober.md">02.05.02-sober.md</a>
