@@ -704,15 +704,10 @@ def transcript(out: str) -> str:
     Each non-empty line of a successful TTY eval as `|- value : ...`
     (shell convention, not grammar). Blank lines stay blank.
     """
-    if not out:
-        return out
     parts: list[str] = []
     for line in out.splitlines(keepends=True):
-        if line.endswith("\n"):
-            body, nl = line[:-1], "\n"
-        else:
-            body, nl = line, ""
-        parts.append(result_line(body) + nl if body else line)
+        body = line.removesuffix("\n")
+        parts.append(result_line(body) + line[len(body) :] if body else line)
     return "".join(parts)
 
 
@@ -790,14 +785,7 @@ def _turn(  # noqa: PLR0913 -- call/env/log/streams plus optional Tty
         _told(_Said(f"ERROR: {error}\n", (), 2), stdout, stderr)
         log = _loaded(call, env, log)
         return _seen(call, log), log, None, None
-    said = _flagged(text, said)
-    if (
-        tty is not None
-        and this.action == "source"
-        and said.code == 0
-        and said.out
-    ):
-        said = replace(said, out=transcript(said.out))
+    said = _transcribed(this, _flagged(text, said), tty)
     _told(said, stdout, stderr)
     if tty is not None and said.entered:
         return (
@@ -807,6 +795,16 @@ def _turn(  # noqa: PLR0913 -- call/env/log/streams plus optional Tty
             (tty.timer() - started) * 1000.0,
         )
     return _seen(call, log), log, None, None
+
+
+def _transcribed(this: _Call, said: _Said, tty: Tty | None) -> _Said:
+    """
+    What a turn tells: on a TTY, a source that ran shows its stdout
+    lines as `|- value : ...`; anything else is told as it was said.
+    """
+    if tty is None or this.action != "source" or said.code != 0:
+        return said
+    return replace(said, out=transcript(said.out))
 
 
 def _loaded(call: _Call, env: Mapping[str, str], memory: Log) -> Log:

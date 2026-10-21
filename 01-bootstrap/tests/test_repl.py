@@ -659,6 +659,15 @@ def test_phrase_bar_and_result_line_are_ascii() -> None:
     assert transcript("2 3 4\n") == "|- 2 3 4 : ...\n"
 
 
+def test_a_transcript_keeps_blank_lines_and_an_open_last_line() -> None:
+    """
+    A blank line of the output stays blank, a last line with no newline
+    is shown without one, and no output shows as nothing.
+    """
+    assert transcript("1\n\n2") == "|- 1 : ...\n\n|- 2 : ..."
+    assert transcript("") == ""
+
+
 def test_splash_line_is_from_the_motd_pool() -> None:
     """
     MOTD speech lines are ASCII chrome from the assistant hello pools.
@@ -738,6 +747,29 @@ def test_the_loop_prints_hello_bye_and_state_id(
     assert "|- 1 : ..." in text
     assert text.index("Hi from Clipper.") < text.index("|- 1")
     assert text.index("|- 1") < text.index("Bye from Clipper.")
+
+
+def test_a_loop_at_a_terminal_makes_its_own_tty(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    Read from a terminal and given no `Tty`, the loop makes one with the
+    real clocks: its result lines are typed and its bars carry `&`.
+    """
+    lines = iter(["1"])
+
+    def typed(_prompt: str) -> str:
+        line = next(lines, None)
+        if line is None:
+            raise EOFError
+        return line
+
+    monkeypatch.setattr(builtins, "input", typed)
+    monkeypatch.setattr(readline, "parse_and_bind", _unbound)
+    out = StringIO()
+    assert main([], Terminal(), out, StringIO(), {}) == 0
+    assert "|- 1 : ..." in out.getvalue()
+    assert re.search(r"; &\d+;", out.getvalue())
 
 
 def test_the_loop_byes_on_quit(
