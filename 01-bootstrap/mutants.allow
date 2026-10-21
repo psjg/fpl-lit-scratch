@@ -1,19 +1,18 @@
-fpl.fon.x__placed__mutmut_3 -- equivalent: Lark's LALR parser never reports a None or negative position for FON (0 of 27857 failures in a random probe)
-fpl.fon.x__placed__mutmut_4 -- equivalent: Lark's LALR parser never reports a None position for FON (0 of 27857 failures in a random probe)
-fpl.fon.x__placed__mutmut_8 -- equivalent: the None or negative branch is unreached; Lark's LALR parser always reports a position for FON
-fpl.fon.x__placed__mutmut_9 -- equivalent: the None or negative branch is unreached; Lark's LALR parser always reports a position for FON
-fpl.fon.x__scalar__mutmut_5 -- unreachable: the match covers the JSON scalar union, as pyright proves
+fpl.fon.x__cell__mutmut_9 -- equivalent: None and False are both false for inline
+fpl.fon.x__dict__mutmut_11 -- equivalent: dict/n pops 2n values, so keys and values always pair up
+fpl.fon.x__dict__mutmut_4 -- equivalent: dict/n pops 2n values, so keys and values always pair up
+fpl.fon.x__dict__mutmut_7 -- equivalent: dict/n pops 2n values, so keys and values always pair up
+fpl.fon.x__refusal__mutmut_3 -- equivalent: X is a name character, so it never reaches _refusal
 fpl.fon.x__scalar__mutmut_11 -- unreachable: the match covers the JSON scalar union, as pyright proves
+fpl.fon.x__scalar__mutmut_5 -- unreachable: the match covers the JSON scalar union, as pyright proves
+fpl.fon.x__string__mutmut_5 -- equivalent: _string is called only at a quote or at # or $ before a quote, never at X
 fpl.fon.xǁFltǁwritten__mutmut_10 -- equivalent: copysign of any positive magnitude has the sign of x
 fpl.fon.xǁFltǁwritten__mutmut_11 -- equivalent: copysign(1, x) is 1 or -1, never 0
 fpl.fon.xǁFltǁwritten__mutmut_12 -- equivalent: copysign(1, x) is 1 or -1, so < 1 and < 0 agree
-fpl.fon.xǁFltǁwritten__mutmut_31 -- equivalent: float.hex() never writes X
-fpl.fon.xǁFltǁwritten__mutmut_32 -- equivalent: float.hex() never writes X
+fpl.fon.xǁFltǁwritten__mutmut_58 -- equivalent: a format of :013x never writes X
+fpl.fon.xǁFonErrorǁ__init____mutmut_22 -- equivalent: str.rfind reads a start of None as 0
+fpl.fon.xǁFonErrorǁ__init____mutmut_4 -- equivalent: str.count reads a start of None as 0
 fpl.fon.xǁNumǁwritten__mutmut_6 -- equivalent: Decimal formats F and f alike for finite, infinite and nan values
-fpl.fon.xǁ_Buildǁdict__mutmut_4 -- equivalent: the grammar gives a dict an even number of children
-fpl.fon.xǁ_Buildǁdict__mutmut_7 -- equivalent: the grammar gives a dict an even number of children
-fpl.fon.xǁ_Buildǁdict__mutmut_11 -- equivalent: the grammar gives a dict an even number of children
-fpl.fon.xǁ_Buildǁdict__mutmut_21 -- equivalent: a key follows the { so its code offset is never 0
 fpl.lex.x__brackets__mutmut_5 -- equivalent: element 0 of a split is the text before the first match whatever maxsplit is
 fpl.lex.x__brackets__mutmut_7 -- equivalent: element 0 of a split is the text before the first match whatever maxsplit is
 fpl.lex.x__pair__mutmut_74 -- equivalent: None and False are both false for verbatim
@@ -39,6 +38,7 @@ fpl.parse.xǁ_Buildǁtext__mutmut_43 -- equivalent: a string's interior starts a
 fpl.print.xǁ_Outǁtext__mutmut_6 -- equivalent: a raw string has exactly one part
 fpl.print.xǁ_Outǁitem__mutmut_12 -- unreachable: the match covers the Item union, as pyright proves
 fpl.print.xǁ_Outǁframes__mutmut_1 -- equivalent: None and False are both false for written
+fpl.fon.x__past__mutmut_5 -- timeout: the mutant matches from offset 0 each time, so the reader never advances
 fpl.lex.x__pair__mutmut_20 -- timeout: the mutant returns a negative offset for a block comment at a line start and the scan never ends
 fpl.lex.x__special__mutmut_20 -- timeout: the mutant finds a newline before a line comment on line 2 and the scan never advances
 fpl.lex.x__special__mutmut_28 -- timeout: the mutant returns -1 for a line comment with no newline after it and the scan never ends
@@ -139,7 +139,6 @@ fpl.driver.x_stacks__mutmut_8 -- equivalent: evaluate yields one stack per run l
 fpl.driver.x_stacks__mutmut_13 -- equivalent: evaluate yields one stack per run line, so zip meets equal lengths and strict never acts
 fpl.eval.x_final__mutmut_2 -- equivalent: final runs only under metered, which sets FUEL first, so the default is never read
 fpl.eval.x_repeat__mutmut_6 -- timeout: with and, a negative count is not refused and its rounds never reach 0; the test that meets it hangs, which is its kill
-fpl.fon.x__cell__mutmut_10 -- equivalent: None and False are both false for inline
 fpl.log.x__fields__mutmut_20 -- equivalent: the keys were just checked to be the fifteen of FIELDS, so zip meets equal lengths
 fpl.log.x__fields__mutmut_23 -- equivalent: the keys were just checked to be the fifteen of FIELDS, so zip meets equal lengths
 fpl.log.x__fields__mutmut_24 -- equivalent: the keys were just checked to be the fifteen of FIELDS, so zip meets equal lengths
