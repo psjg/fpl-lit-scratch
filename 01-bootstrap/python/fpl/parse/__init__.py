@@ -172,30 +172,54 @@ class FplIndenter(Indenter):
         except DedentError as failure:
             raise MisindentedError(token) from failure
 
-'''
+"""
 LALR over grammar.lark.
+"""
 
-```python {.marimo name="tree" unparsable="true"} @cache def parser() ->
-Lark: """ The LALR parser, fed by the tab indenter. """ return Lark(
-GRAMMAR.read_text(), parser="lalr", postlex=FplIndenter(),
-propagate_positions=True, maybe_placeholders=False, )
+@cache
+def parser() -> Lark:
+    """
+    The LALR parser, fed by the tab indenter.
+    """
+    return Lark(
+        GRAMMAR.read_text(),
+        parser="lalr",
+        postlex=FplIndenter(),
+        propagate_positions=True,
+        maybe_placeholders=False,
+    )
 
 
-def _tree(source: str, lexed: Prelexed) -> Tree[Token]: """ Lark's tree
-for the pre-lexed code, or its failure placed in the source. """ try:
-return _from_tokens(code_tokens(lexed.code)) except UnexpectedToken as
-failure: comment = isinstance(failure.token, Token) and
-failure.token.type in{ "NOTE", "DOC", } message = ( "a comment cannot
-stand inside an enclosure" if comment else "unexpected input" ) raise
-FplError( placed(source, lexed, failure.pos_in_stream), message ) from
-None except UnexpectedInput as failure: raise FplError( placed(source,
-lexed, failure.pos_in_stream), "unexpected input" ) from None except
-MisindentedError as failure: where_ = placed(source, lexed,
-failure.token.end_pos) raise FplError(where_, "dedent to a level never
-opened") from None ```
+def _tree(source: str, lexed: Prelexed) -> Tree[Token]:
+    """
+    Lark's tree for the pre-lexed code, or its failure placed in the
+    source.
+    """
+    try:
+        return _from_tokens(code_tokens(lexed.code))
+    except UnexpectedToken as failure:
+        comment = isinstance(failure.token, Token) and (
+            failure.token.type in {"NOTE", "DOC"}
+        )
+        message = (
+            "a comment cannot stand inside an enclosure"
+            if comment
+            else "unexpected input"
+        )
+        raise FplError(
+            placed(source, lexed, failure.pos_in_stream), message
+        ) from None
+    except UnexpectedInput as failure:
+        raise FplError(
+            placed(source, lexed, failure.pos_in_stream), "unexpected input"
+        ) from None
+    except MisindentedError as failure:
+        where_ = placed(source, lexed, failure.token.end_pos)
+        raise FplError(where_, "dedent to a level never opened") from None
 
+"""
 A failure points into the source, not into the code string.
-'''
+"""
 
 def within(source: str, line: int, col: int) -> bool:
     """
