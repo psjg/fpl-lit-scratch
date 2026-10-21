@@ -228,6 +228,14 @@ is the representation's name and whose single item is the value.
 representation is refused, naming both, so a stage fed the wrong stage's
 output says so instead of misreading it.
 
+A document nests far deeper than the text it came from: every level of a
+source program costs up to six levels of FON in its syntax tree, so the
+FON reader's default bound of 64 stops a program about ten levels deep.
+A document is read with `DEPTH`, a bound past anything the writer can
+produce in one interpreter: Python's recursion gives out in `write` near
+fifty source levels, and the in-process chain near ninety, long before
+the reader would refuse.
+
 The representation names are the ones `Pass` carries as its source and
 target: `Source` (text), `Tokens`, `Syntax` (the surface `Program`),
 `Core` (the statements), `Stacks` (what evaluation leaves) and `Error`,
@@ -260,13 +268,19 @@ class Codec[A]:
         return cast(A, from_fon(payload))
 
 
+DEPTH = 1024
+"""
+The deepest nesting a document may have.
+"""
+
+
 def _document(data: bytes) -> tuple[str, Value]:
     """
     A document's representation name and value; anything else, FON that
     does not read included, is refused with a ValueError.
     """
     try:
-        value = read(data.decode())
+        value = read(data.decode(), max_depth=DEPTH)
     except FplError as error:
         raise ValueError(f"not FON: {error.message}") from None
     match value:
