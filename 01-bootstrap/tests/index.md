@@ -1,6 +1,7 @@
 # Walker tests
 
 * [corpus](corpus.py) - corpus
+* [lit](lit.py) - lit
 * [test_ambiguity](test_ambiguity.py) - test_ambiguity
 * [test_binders](test_binders.py) - test_binders
 * [test_comments](test_comments.py) - test_comments
@@ -12,6 +13,7 @@
 * [test_fon](test_fon.py) - test_fon
 * [test_fuel](test_fuel.py) - test_fuel
 * [test_lex](test_lex.py) - test_lex
+* [test_lit_tangle](test_lit_tangle.py) - test_lit_tangle
 * [test_log](test_log.py) - test_log
 * [test_main](test_main.py) - test_main
 * [test_match](test_match.py) - test_match
