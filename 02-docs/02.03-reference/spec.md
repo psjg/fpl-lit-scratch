@@ -4,8 +4,6 @@ title: "The FPL language specification"
 description: "The normative language specification: a skeleton that fills in as semantics settle."
 ---
 
-# SPEC.md — the FPL language specification
-
 > **Status: SKELETON.** Sections fill in as semantics settle — promoted here from
 > `02-docs/02.04-explanation/design.md` once decided, and from maintainer-authored `features/<name>/spec.md` as
 > features land. This file is the normative reference; `02-docs/02.04-explanation/design.md` holds the *why*.
