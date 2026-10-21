@@ -169,12 +169,6 @@ A hole is closed by the commit that removes its entry; that commit's body names 
 
 
 
-## fon-unwritable
-- Depends on it: fpl/fon.py (write, embed), tests/test_fon.py::test_json_embeds_and_reads_back
-- Default in force: a text holding an unbalanced “ or 「, or a symbol that spells another kind (1, #a, true), has no FON spelling; write gives the text as is and read refuses it or reads another value; the JSON property draws texts without “ and ”; a JSON key that is not a plain symbol is kept as text
-- Closes by: design, an escape in strings or a statement that such values are outside the profile
-- Evidence: handoff/SHAR-syntax.org:621 "FON-data" (no escape; its strategy filters balanced quotes)
-
 ## comment-levels
 - Depends on it: fpl/grammar.lark (NOTE, DOC), fpl/parse.py (_Build.comment), fpl/print.py (comment), fpl/trivia.py
 - Default in force: PSJ's decisions of 2026-09-29: the level is bound to position, as in Lisp. ; (and ⍝, which counts as ;) is a note after the code of its line, continued by the ; lines right under it, one token with them; a blank line ends a note; ;; ;;; ;;;; stand on a line of their own: ;; the doc of the next code line, ;;; a section, ;;;; the file; ;; or deeper after code is refused at the comment

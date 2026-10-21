@@ -167,14 +167,15 @@ def test_header_bytes(a: Event, b: Event) -> None:
 
 def test_record_spelling() -> None:
     """
-    A record is one FON dict, its keys in header order, then id and mac.
+    A record is one postfix FON dict, its keys in header order, then id
+    and mac.
     """
     assert re.fullmatch(
-        r"\{ schema 1 evaluator &45600:\d+ kind input seq 2 deps "
-        r"⟨ \$45600:\d+ ⟩ links ⟨⟩"
-        r" body &0:6:\d+ out &0:2:\d+ status ok who agent model “Claude Opus "
-        "5.5” session “s”"
-        r" fuel 1000000 id \$45600:\d+ mac &0:32:\d+ \}",
+        r"#schema 1 #evaluator &45600:\d+ #kind #input #seq 2 #deps "
+        r"\$45600:\d+ list/1 #links list/0"
+        r" #body &0:6:\d+ #out &0:2:\d+ #status #ok #who #agent"
+        r' #model "Claude Opus 5\.5" #session "s"'
+        r" #fuel 1000000 #id \$45600:\d+ #mac &0:32:\d+ dict/15",
         LINE.decode(),
     )
 
@@ -182,33 +183,34 @@ def test_record_spelling() -> None:
 @pytest.mark.parametrize(
     ("old", "new", "reason"),
     [
-        ("{ schema 1 ", "{ ", "fields differ from schema evaluator"),
-        (LINE.decode(), "⟨⟩", "fields differ from schema evaluator"),
-        (LINE.decode(), "{", "1:1 { never closed"),
-        ("schema 1", "schema 2", "schema 2 is unknown"),
-        ("seq 2", "seq 2.5", "seq is not a number below 2^64"),
-        ("seq 2", "seq -1", "seq is not a number below 2^64"),
-        ("seq 2", f"seq {2**64}", "seq is not a number below 2^64"),
-        ("seq 2", "seq x", "seq is not a number below 2^64"),
-        ("evaluator &", "evaluator $", "evaluator is not a hash"),
-        ("kind input", "kind bogus", "kind is not one of input rewind"),
-        ("status ok", "status “ok”", "status is not one of ok error"),
-        ("deps ⟨ $", "deps ⟨ &", "an item of deps is not an identity"),
-        ("links ⟨⟩", "links _", "links is not a list"),
+        (" dict/15", " list/30", "fields differ from schema evaluator"),
+        ("#evaluator &", "#schema &", "1:11 repeated key #schema"),
+        (LINE.decode(), "list/0", "fields differ from schema evaluator"),
+        (LINE.decode(), "{", "1:1 { refused: FON is postfix, not braced"),
+        ("#schema 1", "#schema 2", "schema 2 is unknown"),
+        ("#seq 2", "#seq 2.5", "seq is not a number below 2^64"),
+        ("#seq 2", "#seq -1", "seq is not a number below 2^64"),
+        ("#seq 2", f"#seq {2**64}", "seq is not a number below 2^64"),
+        ("#seq 2", "#seq #x", "seq is not a number below 2^64"),
+        ("#evaluator &", "#evaluator $", "evaluator is not a hash"),
+        ("#kind #input", "#kind #bogus", "kind is not one of input rewind"),
+        ("#status #ok", '#status "ok"', "status is not one of ok error"),
+        ("#deps $", "#deps &", "an item of deps is not an identity"),
+        ("#links list/0", "#links _", "links is not a list"),
         (
-            "model “Claude",
-            "model “Clé",
+            '#model "Claude',
+            '#model "Cl\\u{e9}',
             "model is not printable ASCII of at most 256 characters",
         ),
         (
-            "session “s”",
-            "session s",
+            '#session "s"',
+            "#session #s",
             "session is not printable ASCII of at most 256",
         ),
-        ("id $", "id &", "id is not an identity"),
-        ("who agent", "who operator", "id does not recompute"),
-        ("seq 2", "seq 2.0", "not canonical"),
-        ("fuel 1000000", "fuel  1000000", "not canonical"),
+        ("#id $", "#id &", "id is not an identity"),
+        ("#who #agent", "#who #operator", "id does not recompute"),
+        ("#seq 2", "#seq 2.0", "not canonical"),
+        ("#fuel 1000000", "#fuel  1000000", "not canonical"),
     ],
 )
 def test_record_refused(old: str, new: str, reason: str) -> None:

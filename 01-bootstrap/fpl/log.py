@@ -152,8 +152,8 @@ def mac(ident: Multihash, key: bytes) -> Multihash:
 
 def record(event: Event, key: bytes) -> bytes:
     """
-    The event as one canonical FON dict and a newline, UTF-8: its fields
-    in header order, then id and mac.
+    The event as one canonical FON dict and a newline, ASCII: its fields
+    in header order, then id and mac, then dict/15.
     """
     values: tuple[Value, ...] = (
         Num(Decimal(event.schema)),
