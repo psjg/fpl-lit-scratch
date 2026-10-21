@@ -702,4 +702,4 @@ def _checked(statements):
 
 
 _elaborate_fn = elaborate
-elaborate = Pass("elaborate", _checked)
+elaborate = Pass("elaborate", _checked, source="Core", target="Core")

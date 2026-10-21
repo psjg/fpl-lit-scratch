@@ -363,4 +363,4 @@ def _lex(source: str) -> Tokens:
     return Tokens(source, lexed, _pack(code_tokens(lexed.code)))
 
 
-lex = Pass("lex", _lex)
+lex = Pass("lex", _lex, source="Source", target="Tokens")

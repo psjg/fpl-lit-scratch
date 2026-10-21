@@ -6,8 +6,14 @@ evaluate ```
 
 The executable chain is the prefix the walker actually runs. `desugar`
 stands in for resolve, expand, and lower.
+
+`run_now` is a [PassCompose](01.04.01-pass.md): data, not a closure.
+This page runs it with `direct`, in process. `COMPOSITIONS` names the
+compositions other tools can find by name, so a command line or a graph
+view need not import them one by one.
 """
 
+from fpl.arrow import PassCompose, direct
 from fpl.ast_core import Run
 from fpl.desugar import desugar, listing
 from fpl.elaborate import elaborate
@@ -18,6 +24,8 @@ from fpl.parse import parse
 from fpl.print import render
 
 run_now = lex >> parse >> desugar >> elaborate >> evaluate
+
+COMPOSITIONS: dict[str, PassCompose[str, object]] = {"run": run_now}
 
 INDENT_COLUMNS = 4
 
@@ -48,7 +56,7 @@ def _run(source: str, session: str) -> str:
     Render one program. `session` is accepted and not stored.
     """
     del session
-    return render(listing(run_now(_notebook_indent(source))))
+    return render(listing(direct(run_now, _notebook_indent(source))))
 
 
 class Session:

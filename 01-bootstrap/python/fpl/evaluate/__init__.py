@@ -878,4 +878,4 @@ def _run(statements):
 
 
 _eval_fn = evaluate
-evaluate = Pass("eval", _run)
+evaluate = Pass("eval", _run, source="Core", target="Stacks")
