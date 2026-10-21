@@ -24,13 +24,13 @@ $(LANES):
 
 # 03-fpl/**/*.md (except OLD/) → sibling *.fpl. Markdown is the source.
 tangle-fpl:
-	@$(CURDIR)/.venv/bin/python $(CURDIR)/01-bootstrap/tangle_fpl.py
+	@$(CURDIR)/.harness/.venv/bin/python $(CURDIR)/01-bootstrap/tangle_fpl.py
 
 
 # The walker as the root runs it: the lanes' interpreter (.venv, the root's, synced by `venv`)
 # with the package, 01-bootstrap/fpl, put on its path. A relative path means what it means from
 # the root, so FILE and a REPL's --session are written from there.
-FPLPY := PYTHONPATH=$(CURDIR)/01-bootstrap $(CURDIR)/.venv/bin/python
+FPLPY := PYTHONPATH=$(CURDIR)/01-bootstrap $(CURDIR)/.harness/.venv/bin/python
 
 # The venv is prepared inside 01-bootstrap/ with its chatter sent to stderr, so stdout is the
 # program's output and nothing else: `make run` prints what `python -m fpl` prints.
