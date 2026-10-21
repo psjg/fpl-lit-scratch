@@ -12,6 +12,7 @@ are looking at, what we stole, what we have not built.
 | 02.04.02 | [Turnstiles](02.04.02-turnstiles.md) — ASCII ⊢ inventory |
 | 02.04.03 | [Judgments](02.04.03-judgments.md) — equateable oordelen, Clipper, diagnostics |
 | 02.04.04 | [Debugging](02.04.04-debugging.md) — time travel, steppers, restarts, accessible stepping |
+| 02.04.04 | [Editor tooling](02.04.04-editor-tooling.md) — highlighting, semantic tokens, LSP, tree-sitter from the grammar |
 
 Error tag catalog: [02.03.01 Errors](../../02.03-reference/02.03.01-errors.md). Site:
 [fpl-lit-scratch](https://psjg.github.io/fpl-lit-scratch/).
