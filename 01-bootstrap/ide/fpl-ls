@@ -1,0 +1,5 @@
+#!/bin/sh
+# Start the FPL language server on stdio. Needs uv; installs pygls on first use.
+here=$(cd "$(dirname "$0")/.." && pwd)
+PYTHONPATH="$here" exec uv run --no-project --with pygls --with lark --with icontract \
+  python -m ide.lsp

@@ -82,7 +82,13 @@ def test_highlighters_read_lex_py() -> None:
 
 def test_a_form_feed_is_not_a_line_break() -> None:
     found = analysis.tokens("a\n\f\nb c\nd e\n")
-    assert [(t.line, t.col) for t in found] == [(0, 0), (2, 0), (2, 2), (3, 0), (3, 2)]
+    assert [(t.line, t.col) for t in found] == [
+        (0, 0),
+        (2, 0),
+        (2, 2),
+        (3, 0),
+        (3, 2),
+    ]
 
 
 def test_utf16_columns_count_astral_characters_twice() -> None:
@@ -92,3 +98,35 @@ def test_utf16_columns_count_astral_characters_twice() -> None:
 def test_a_number_with_modifiers_is_still_a_number() -> None:
     assert lex.shape("5´")[1] == "number"
     assert "[´`¨˜⁼˙]*" in gen_highlight.shapes()["number"]
+
+
+CURRY = "curry : x q -- q'\n\tswap enclose swap ,\nlcurry : x q -- q'\n\t[ swap ] swap , curry\n"
+
+
+def test_hover_gives_the_definition_line() -> None:
+    assert "curry : x q -- q'" in analysis.hover(CURRY, 3, 20)
+    assert analysis.hover(CURRY, 1, 2) is None
+
+
+def test_goto_finds_the_definition_and_the_binder() -> None:
+    assert analysis.goto(CURRY, 3, 20) == (0, 0, 5)
+    assert analysis.goto(CURRY, 1, 0) is None
+
+
+def test_completion_lists_definitions_and_parameters_in_scope() -> None:
+    labels = {name for name, _, _ in analysis.complete(CURRY, 1)}
+    assert {"curry", "lcurry", "x", "q"} <= labels
+
+
+def test_rename_a_definition_everywhere_and_a_parameter_in_its_block() -> None:
+    names = analysis.rename(CURRY, 0, 1, "k")
+    assert [(line, col) for line, col, _, _ in names] == [(0, 0), (3, 17)]
+    params = analysis.rename(CURRY, 0, 8, "z")
+    assert {line for line, *_ in params} == {0}
+
+
+def test_serve_speaks_json_in_utf16_units() -> None:
+    import json
+
+    src = "“😀” x\n[ 1\n"
+    assert json.loads(analysis.serve("diagnose", src))[0][0] == 1

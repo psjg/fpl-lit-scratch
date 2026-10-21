@@ -58,6 +58,8 @@ quarto render
 
 mv "$tmp/marimo" .site/marimo
 mv "$tmp/werkbank" .site/werkbank
+# The playground's language service (assets/fpl-service.js) unpacks this beside the wheels.
+python3 01-bootstrap/ide/pack_analysis.py .site/werkbank/pypi/fpl-bootstrap.zip
 
 rm -rf .site/try .site/ide .site/learn
 cp -R assets/try .site/try

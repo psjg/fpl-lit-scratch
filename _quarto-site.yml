@@ -7,6 +7,7 @@ project:
     - assets/fpl-runtime.js
     - assets/fpl-playground.js
     - assets/fpl-language.js
+    - assets/fpl-service.js
     - assets/fpl-playground.css
     - assets/fpl-dock.js
     - assets/fpl-telemetry.js
