@@ -1,0 +1,11 @@
+# rule: body-dangling
+# remedy: point the typed body link at a file of the bundle
+# A typed body link (an inline field or a link title) whose target is no file of the bundle;
+# f-dangling leaves such a target to this rule, so it is reported once.
+SELECT ?path ?detail WHERE {
+  ?s ?e ?t ; okf:path ?path .
+  FILTER(STRSTARTS(STR(?e), STR(body:)))
+  FILTER(STRSTARTS(STR(?t), STR(b:)) || STRSTARTS(STR(?t), "urn:okf:"))
+  FILTER NOT EXISTS { ?t okf:path ?p }
+  BIND(CONCAT(STRAFTER(STR(?e), "#"), " ", STR(?t)) AS ?detail)
+} ORDER BY ?path ?detail

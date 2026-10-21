@@ -1,0 +1,7 @@
+# Body relations the context does not declare: an inline field key or a link title, as
+# `key -> href`. They stay untyped links; declare the key in context.jsonld to type them.
+SELECT ?path ?form ?value WHERE {
+  { ?s okf:undeclaredField ?value . BIND("field" AS ?form) }
+  UNION { ?s okf:undeclaredTitle ?value . BIND("title" AS ?form) }
+  ?s okf:path ?path .
+} ORDER BY ?path ?form ?value

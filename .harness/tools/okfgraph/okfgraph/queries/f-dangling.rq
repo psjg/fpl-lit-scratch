@@ -6,6 +6,8 @@ SELECT ?path ?detail WHERE {
     FILTER(isIRI(?t) && ?e != rdf:type)
     FILTER(STRSTARTS(STR(?t), STR(b:)) || STRSTARTS(STR(?t), "urn:okf:"))
     FILTER NOT EXISTS { ?t okf:path ?p }
+    # A target a typed body link names is k-body-dangling's.
+    FILTER NOT EXISTS { ?s ?be ?t . FILTER(STRSTARTS(STR(?be), STR(body:))) }
     BIND(CONCAT(REPLACE(STR(?e), "^.*[#/]", ""), " ", STR(?t)) AS ?detail)
   } UNION {
     ?s okf:linksOutside ?out ; okf:path ?path .

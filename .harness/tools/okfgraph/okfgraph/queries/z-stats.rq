@@ -7,6 +7,7 @@ SELECT ?what (COUNT(*) AS ?n) WHERE {
   UNION { ?s okf:linksTo ?o . BIND("edge: linksTo (body)" AS ?what) }
   UNION { ?s okf:embeds ?o . BIND("edge: embeds (body image)" AS ?what) }
   UNION { ?s ?p ?o . FILTER(STRSTARTS(STR(?p), STR(rel:))) BIND("edge: typed (frontmatter)" AS ?what) }
+  UNION { ?s ?p ?o . FILTER(STRSTARTS(STR(?p), STR(body:))) BIND("edge: typed (body)" AS ?what) }
   UNION { ?s okf:linksToExternal ?o . BIND("link: external URL" AS ?what) }
   UNION { ?s ?p ?o . BIND("triples" AS ?what) }
 } GROUP BY ?what ORDER BY ?what
