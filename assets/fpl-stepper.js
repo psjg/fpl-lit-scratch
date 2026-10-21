@@ -118,7 +118,7 @@ export function mountStepper(root, opts = {}) {
   const bFwd = mk("Forward", "One step forward", () => move(() => model.forward()));
   const bEnd = mk("End", "Jump to the last step", () => move(() => model.go(model.last)));
   const bPlay = mk("Play", "Play forward, announcing only the pause", () => play());
-  const list = el("ol", { class: "fpl-step-list", "aria-label": "Every step of this run" });
+  const list = el("ol", { start: "0", class: "fpl-step-list", "aria-label": "Every step of this run" });
 
   root.replaceChildren(
     el("div", { class: "fpl-step-bar" },
