@@ -11,13 +11,14 @@
 #include <string.h>
 
 enum { NL, INNER_NL, INDENT, DEDENT, STRING, RAW_STRING, BLOCK_COMMENT, NOTE };
-#define MAX_DEPTH 64
+#define MAX_DEPTH 32
 
 typedef struct {
-  uint8_t depth;          /* levels open */
-  uint8_t pending_dedent; /* dedents still to emit */
-  uint8_t pending_indent; /* 0 or 1 */
-  uint8_t eof_done;       /* the line break at EOF was emitted */
+  uint8_t depth;            /* levels open */
+  uint8_t pending_dedent;   /* dedents still to emit */
+  uint8_t pending_indent;   /* tabs of the level to open, or 0 */
+  uint8_t eof_done;         /* the line break at EOF was emitted */
+  uint8_t level[MAX_DEPTH]; /* tabs of each open level, as Lark's Indenter */
 } Scanner;
 
 void *tree_sitter_fpl_external_scanner_create(void) {
@@ -72,8 +73,8 @@ bool tree_sitter_fpl_external_scanner_scan(void *p, TSLexer *l,
     return true;
   }
   if (s->pending_indent && valid[INDENT]) {
+    s->level[s->depth++] = s->pending_indent;
     s->pending_indent = 0;
-    s->depth++;
     l->result_symbol = INDENT;
     return true;
   }
@@ -124,6 +125,17 @@ bool tree_sitter_fpl_external_scanner_scan(void *p, TSLexer *l,
       next(l);
       for (;;) {
         if (l->lookahead == '\n') { tabs = 0; counting = true; }
+        else if (counting && l->lookahead == 0x27E6) {
+          /* a block comment is nothing to the pre-lexer: after it the line
+             is blank if it ends here, else its tabs still count */
+          if (!pair(l, 0x27E6, 0x27E7)) return false;
+          counting = false;
+          while (l->lookahead == ' ' || l->lookahead == '\f' ||
+                 l->lookahead == '\r') next(l);
+          if (l->lookahead == '\n') { tabs = 0; counting = true; }
+          else if (l->eof(l)) { tabs = 0; break; }
+          else break;
+        }
         else if (l->lookahead == '\t' && counting) tabs++;
         else if (l->lookahead == ' ' || l->lookahead == '\f' ||
                  l->lookahead == '\r' || l->lookahead == '\t') counting = false;
@@ -132,8 +144,17 @@ bool tree_sitter_fpl_external_scanner_scan(void *p, TSLexer *l,
       }
       if (l->eof(l)) { s->eof_done = 1; tabs = 0; }
       if (!inner) {
-        if (tabs > s->depth) s->pending_indent = 1;
-        else s->pending_dedent = s->depth - tabs;
+        unsigned top = s->depth ? s->level[s->depth - 1] : 0;
+        if (tabs > top) {
+          if (s->depth >= MAX_DEPTH) return false;
+          s->pending_indent = (uint8_t)tabs;
+        } else {
+          unsigned d = s->depth;
+          while (d && s->level[d - 1] > tabs) d--;
+          /* a dedent to a level no line opened is refused, as in Lark */
+          if (tabs && (!d || s->level[d - 1] != tabs)) return false;
+          s->pending_dedent = s->depth - d;
+        }
       }
     }
     if (l->eof(l) && !inner && s->pending_dedent == 0 && s->depth) {

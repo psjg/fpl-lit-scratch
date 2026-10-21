@@ -78,3 +78,17 @@ def test_highlighters_read_lex_py() -> None:
     for mod in lex.MODS:
         assert mod in mon
     assert "→" in gen_highlight.shapes()["sigil"]
+
+
+def test_a_form_feed_is_not_a_line_break() -> None:
+    found = analysis.tokens("a\n\f\nb c\nd e\n")
+    assert [(t.line, t.col) for t in found] == [(0, 0), (2, 0), (2, 2), (3, 0), (3, 2)]
+
+
+def test_utf16_columns_count_astral_characters_twice() -> None:
+    assert analysis.utf16("“😀” x", 4) == 5
+
+
+def test_a_number_with_modifiers_is_still_a_number() -> None:
+    assert lex.shape("5´")[1] == "number"
+    assert "[´`¨˜⁼˙]*" in gen_highlight.shapes()["number"]

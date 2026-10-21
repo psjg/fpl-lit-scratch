@@ -25,10 +25,12 @@ def publish(ls: LanguageServer, uri: str) -> None:
     Diagnose the open text of `uri` and send the result.
     """
     text = ls.workspace.get_text_document(uri).source
+    rows = analysis._rows(text)
     found = [
         types.Diagnostic(
             range=types.Range(
-                types.Position(d.line, d.start), types.Position(d.line, d.end)
+                types.Position(d.line, analysis.utf16(rows[d.line], d.start)),
+                types.Position(d.line, analysis.utf16(rows[d.line], d.end)),
             ),
             message=d.message,
             severity=types.DiagnosticSeverity.Error,
@@ -69,7 +71,19 @@ def semantic(
     Every word of the document, classified.
     """
     text = ls.workspace.get_text_document(params.text_document.uri).source
-    return types.SemanticTokens(data=analysis.encode(analysis.tokens(text)))
+    rows = analysis._rows(text)
+    units = [
+        analysis.Token(
+            t.line,
+            analysis.utf16(rows[t.line], t.col),
+            analysis.utf16(rows[t.line], t.col + t.length)
+            - analysis.utf16(rows[t.line], t.col),
+            t.kind,
+            t.mods,
+        )
+        for t in analysis.tokens(text)
+    ]
+    return types.SemanticTokens(data=analysis.encode(units))
 
 
 if __name__ == "__main__":

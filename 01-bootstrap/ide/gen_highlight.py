@@ -53,7 +53,8 @@ def shapes() -> dict[str, str]:
     mods = lex.MODS
     return {
         "sigil": sigil,
-        "number": lex.NUMBER.pattern,
+        # a number with its modifiers, as lex.shape reads `5´`
+        "number": f"(?:{sigil})?{lex.NUMBER.pattern}[{mods}]*",
         "mods": f"[{mods}]+",
     }
 
