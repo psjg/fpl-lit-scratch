@@ -1,3 +1,9 @@
+---
+type: Readme
+title: "tokview"
+description: "A local page that shows how tokenizers cut FPL source."
+---
+
 # tokview
 
 A local page that shows how a tokenizer cuts FPL source. Paste or pick a program and every

@@ -1,3 +1,9 @@
+---
+type: AgentDoc
+title: "Commit message and authorship convention"
+description: "The Conventional Commits header, the git-trailer provenance block, and the machine-account authorship model."
+---
+
 # COMMITS.md — commit message & authorship convention
 
 Every commit MUST follow this. The header is

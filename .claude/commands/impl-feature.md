@@ -1,4 +1,5 @@
 ---
+type: AgentDoc
 description: Refuse — implement against the archived corpus or image notes, not new feature scaffolds
 argument-hint: <name>
 ---

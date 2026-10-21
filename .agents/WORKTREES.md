@@ -1,3 +1,9 @@
+---
+type: AgentDoc
+title: "The worktrees layout"
+description: "One object store, many working trees under worktrees/, and the two sides a commit may not mix."
+---
+
 # WORKTREES.md — the `worktrees/<name>/` layout
 
 ## The model

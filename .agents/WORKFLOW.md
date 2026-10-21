@@ -1,3 +1,9 @@
+---
+type: AgentDoc
+title: "Stacked commits"
+description: "The git-native stacked-commits workflow: base, stack, restack, land."
+---
+
 # WORKFLOW.md — stacked commits, git-native
 
 FPL uses a **stacked-commits** workflow (the Meta/Phabricator and Google model): a change is a

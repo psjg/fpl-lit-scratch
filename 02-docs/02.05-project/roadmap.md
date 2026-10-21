@@ -1,3 +1,9 @@
+---
+type: Roadmap
+title: "Roadmap"
+description: "The milestones, as direction only."
+---
+
 # 02.03 ROADMAP.md — milestones
 
 Direction only. Scope and ordering shift as `02-docs/02.04-explanation/design.md` fills in. Each milestone lands as

@@ -1,3 +1,9 @@
+---
+type: AgentDoc
+title: "The branch-name grammar"
+description: "Every branch name parses: who works, what kind of work, which stack, and where in it."
+---
+
 # BRANCHES.md — the branch-name grammar
 
 Every branch name in this repository parses. A name says who is working (a human, or which

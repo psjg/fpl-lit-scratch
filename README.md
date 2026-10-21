@@ -1,4 +1,5 @@
 ---
+type: Readme
 title: Readme
 marimo-version: 0.23.10
 width: full

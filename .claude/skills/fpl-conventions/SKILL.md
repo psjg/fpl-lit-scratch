@@ -1,4 +1,5 @@
 ---
+type: AgentDoc
 name: fpl-conventions
 description: The FPL repo's layout, commit convention, and stacked-commit workflow. Use before implementing an FPL feature, scaffolding a worktree, or making a commit in this repo.
 ---

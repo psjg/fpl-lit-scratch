@@ -1,3 +1,9 @@
+---
+type: AgentDoc
+title: "Jujutsu alongside git"
+description: "Optional: how to use jj for stacked commits in this repo without breaking the git gates."
+---
+
 # JJ.md — optional: Jujutsu for humans, alongside git
 
 [Jujutsu](https://jj-vcs.github.io/jj/) (`jj`) is a git-compatible VCS that suits stacked

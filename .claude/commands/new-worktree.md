@@ -1,4 +1,5 @@
 ---
+type: AgentDoc
 description: Create a new implementation worktree under worktrees/<name>/
 argument-hint: <name> [base-branch]
 ---

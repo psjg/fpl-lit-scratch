@@ -1,3 +1,9 @@
+---
+type: AgentDoc
+title: "The noslop gate"
+description: "What make check, make ready and make tools run, and how hard each judges."
+---
+
 # QUALITY.md — the noslop gate
 
 An implementation worktree is done when `make check` is green (AGENTS.md). This file says what

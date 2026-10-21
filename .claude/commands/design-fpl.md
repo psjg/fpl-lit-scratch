@@ -1,4 +1,5 @@
 ---
+type: AgentDoc
 description: Interview the maintainer to fill 02-docs/02.04-explanation/design.md (the language vision)
 ---
 

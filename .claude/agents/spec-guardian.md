@@ -1,4 +1,5 @@
 ---
+type: AgentDoc
 name: spec-guardian
 description: Read-only reviewer for code-vs-spec drift against the archived corpus under 03-fpl/OLD. Use after walker work, or when asked whether the implementation still matches the fixtures.
 ---

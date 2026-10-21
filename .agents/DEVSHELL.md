@@ -1,3 +1,9 @@
+---
+type: AgentDoc
+title: "The dev shell"
+description: "One pinned Nix dev shell for the harness and every implementation worktree."
+---
+
 # DEVSHELL.md — one environment for everyone
 
 `flake.nix` defines one [Nix](https://nixos.org) dev shell for the harness and for every

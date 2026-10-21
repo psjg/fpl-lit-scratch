@@ -1,3 +1,9 @@
+---
+type: AgentDoc
+title: "AGENTS.md"
+description: "The entry point for any agent working in this repo: layout, settled decisions, the one gate, workflow."
+---
+
 # AGENTS.md
 
 The entry point for any agent — Claude, Codex, Gemini, a human, whatever — working in this

@@ -1,4 +1,5 @@
 ---
+type: AgentDoc
 name: feature-impl
 description: Implements walker work until make check is green against the archived corpus, without touching specs. Prefer image notes under 03-fpl/ for new FPL source.
 tools: Read, Edit, Write, Grep, Glob, Bash

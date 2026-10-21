@@ -1,3 +1,9 @@
+---
+type: AgentDoc
+title: "CLAUDE.md"
+description: "Claude Code tooling under .claude/: commands, subagents, skill and hooks."
+---
+
 # CLAUDE.md
 
 **The authoritative guide for every agent — including Claude — is [`AGENTS.md`](AGENTS.md).**

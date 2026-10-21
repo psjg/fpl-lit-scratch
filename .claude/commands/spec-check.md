@@ -1,4 +1,5 @@
 ---
+type: AgentDoc
 description: Read-only drift check against the archived corpus under 03-fpl/OLD
 ---
 

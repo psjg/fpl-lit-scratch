@@ -1,3 +1,9 @@
+---
+type: AgentDoc
+title: "How the walker is laid out"
+description: "The walker's source tree, the FPL image, the archived conformance suite and the make check gate."
+---
+
 # CONVENTIONS.md — how the walker, the implementation, is laid out
 
 Canonical for every agent. The Claude `fpl-conventions` skill and the `.claude/commands/*`

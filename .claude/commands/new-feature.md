@@ -1,4 +1,5 @@
 ---
+type: AgentDoc
 description: Refuse — the features oracle under 03-fpl is archived; use image notes instead
 argument-hint: <name>
 ---

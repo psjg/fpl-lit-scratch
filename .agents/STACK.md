@@ -1,3 +1,9 @@
+---
+type: AgentDoc
+title: "The implementation stack"
+description: "The settled stack (Python, Lark, frozen dataclasses, a tree-walking interpreter) and why."
+---
+
 # STACK.md — the implementation stack, and why
 
 This decision is **settled**. It was reached with the maintainer after consulting two external

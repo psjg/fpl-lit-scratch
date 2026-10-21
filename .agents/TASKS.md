@@ -1,3 +1,9 @@
+---
+type: AgentDoc
+title: "The task graph"
+description: "Tasks, their order and who is on them, kept as Radicle collaborative objects in the repository."
+---
+
 # TASKS.md — the task graph lives in the repository
 
 Tasks, their order and who is on them are kept as [Radicle](https://radicle.xyz)
