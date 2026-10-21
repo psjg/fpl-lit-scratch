@@ -1040,9 +1040,9 @@ filters:
     - 02-docs/02.04-explanation/design.md
     - 02-docs/02.03-reference/spec.md
     - 02-docs/02.05-project/roadmap.md
-    - 02-docs/02.05-project/notes/issue-task-patch.md
-    - 02-docs/02.05-project/notes/sober.md
-    - 02-docs/02.05-project/notes/mediating-project.md
+    - 02-docs/02.05-project/notes/02.05.01-issue-task-patch.md
+    - 02-docs/02.05-project/notes/02.05.02-sober.md
+    - 02-docs/02.05-project/notes/02.05.03-mediating-project.md
     - 03-fpl/OLD/03.01-features/draft1/spec.md
     - 03-fpl/OLD/03.01-features/draft2/spec.md
     - 03-fpl/OLD/03.01-features/draft3/spec.md
@@ -1141,11 +1141,11 @@ website:
           - section: 02-docs/02.05-project/notes/README.md
             contents:
               - text: "2.4.1 Issue, task, patch"
-                href: 02-docs/02.05-project/notes/issue-task-patch.md
+                href: 02-docs/02.05-project/notes/02.05.01-issue-task-patch.md
               - text: "2.4.2 Plumbing, not prophecy"
-                href: 02-docs/02.05-project/notes/sober.md
+                href: 02-docs/02.05-project/notes/02.05.02-sober.md
               - text: "2.4.3 The project that mediates the language"
-                href: 02-docs/02.05-project/notes/mediating-project.md
+                href: 02-docs/02.05-project/notes/02.05.03-mediating-project.md
       - section: 03-fpl/README.md
         contents:
           - section: 03-fpl/OLD/03.01-features/README.md
@@ -1211,9 +1211,9 @@ book:
         - 02-docs/02.04-explanation/design.md
         - 02-docs/02.03-reference/spec.md
         - 02-docs/02.05-project/roadmap.md
-        - 02-docs/02.05-project/notes/issue-task-patch.md
-        - 02-docs/02.05-project/notes/sober.md
-        - 02-docs/02.05-project/notes/mediating-project.md
+        - 02-docs/02.05-project/notes/02.05.01-issue-task-patch.md
+        - 02-docs/02.05-project/notes/02.05.02-sober.md
+        - 02-docs/02.05-project/notes/02.05.03-mediating-project.md
     - part: "3.1 Features"
       chapters:
         - 03-fpl/OLD/03.01-features/draft1/spec.md
