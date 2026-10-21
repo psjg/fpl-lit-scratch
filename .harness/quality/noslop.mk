@@ -122,6 +122,10 @@ rootrun:
 	  echo "check: make run FILE=$(ROOT_EXAMPLE).fpl, run from the root, printed other than its .expected" >&2; \
 	  exit 1; }
 
+# deptry skips mutmut's copies and python/, the tangle output generated from the literate
+# sources (not hand-written code). A regex; the CLI flag overrides pyproject's extend_exclude.
+DEPTRY_EXCLUDE = mutants|(^|/)python/
+
 check: venv pristine config-fresh
 	@mkdir -p $(OUT)
 	$(BIN)/ruff check --config $(Q)/ruff.toml $(RUFF_ALL) fpl tests
@@ -136,11 +140,11 @@ check: venv pristine config-fresh
 	$(BIN)/python $(S)/crap --policy $(Q)/crap.toml
 	$(BIN)/coverage report --rcfile=$(Q)/coveragerc
 	$(BIN)/lint-imports --config $(Q)/importlinter.ini --no-cache
-	@! $(BIN)/deptry . --extend-exclude 'mutants' -v 2>&1 | grep -q '^Scanning 0 file' || { \
+	@! $(BIN)/deptry . --extend-exclude '$(DEPTRY_EXCLUDE)' -v 2>&1 | grep -q '^Scanning 0 file' || { \
 	  echo "check: deptry scanned 0 files: a VCS ignore file (.gitignore, .git/info/exclude) hides the sources" >&2; \
 	  echo "       from it, and deptry has no switch to look anyway; allow fpl/ and tests/ there" >&2; \
 	  exit 1; }
-	$(BIN)/deptry . --extend-exclude 'mutants'
+	$(BIN)/deptry . --extend-exclude '$(DEPTRY_EXCLUDE)'
 	$(BIN)/vulture fpl tests --min-confidence 60
 	$(BIN)/pylint --rcfile=/dev/null --persistent=n --score=n --disable=all --enable=duplicate-code \
 	  --min-similarity-lines=6 --ignore-imports=yes --ignore-signatures=yes fpl
