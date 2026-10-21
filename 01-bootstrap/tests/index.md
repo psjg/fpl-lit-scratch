@@ -14,6 +14,7 @@
 * [test_fuel](test_fuel.py) - test_fuel
 * [test_lex](test_lex.py) - test_lex
 * [test_lit_arrow](test_lit_arrow.py) - test_lit_arrow
+* [test_lit_cli](test_lit_cli.py) - test_lit_cli
 * [test_lit_codec](test_lit_codec.py) - test_lit_codec
 * [test_lit_fon](test_lit_fon.py) - test_lit_fon
 * [test_lit_entry](test_lit_entry.py) - test_lit_entry
