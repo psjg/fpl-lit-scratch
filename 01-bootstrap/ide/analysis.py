@@ -54,6 +54,21 @@ class Token:
     mods: int = 0
 
 
+def _rows(source: str) -> list[str]:
+    """
+    The source's lines the way lex.Lines counts them: by `\\n` only (a
+    form feed is a page separator, not a line break), without a `\\r`.
+    """
+    return [row.removesuffix("\r") for row in source.split("\n")]
+
+
+def utf16(row: str, col: int) -> int:
+    """
+    A code-point column as the UTF-16 units LSP positions count.
+    """
+    return len(row[:col].encode("utf-16-le")) // 2
+
+
 def diagnose(source: str) -> list[Diagnostic]:
     """
     The interpreter's refusal of this source as at most one diagnostic;
@@ -62,7 +77,7 @@ def diagnose(source: str) -> list[Diagnostic]:
     try:
         checked(source)
     except FplError as failure:
-        lines = source.splitlines() or [""]
+        lines = _rows(source)
         row = min(max(failure.span.line - 1, 0), len(lines) - 1)
         col = max(failure.span.col - 1, 0)
         run = WORD.match(lines[row], col)
@@ -124,7 +139,7 @@ def tokens(source: str) -> list[Token]:
         return []
     heads = _defined(program.lines)
     names = set(heads.values())
-    rows = source.splitlines()
+    rows = _rows(source)
     out: list[Token] = []
     for word in _words(program.lines):
         row, col = word.span.line - 1, word.span.col - 1
