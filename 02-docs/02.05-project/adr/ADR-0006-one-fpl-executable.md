@@ -1,7 +1,7 @@
 ---
 type: ADR
 title: "ADR-0006 One fpl executable with a subcommand per stage"
-description: "The shell route is `fpl source < f | fpl lex | fpl parse | ... | fpl render`, one executable whose subcommands are the stages; `fpl <file>` runs the whole chain in-process."
+description: "The shell route is `fpl source < f | fpl lex | fpl parse | ... | fpl render`, one executable whose subcommands are the stages; `fpl run <file>` runs the whole chain in-process, and bare `fpl` opens the interactive interface."
 tags:
   - adr
 status: stable
@@ -19,6 +19,7 @@ affects:
   - ../../../01-bootstrap/01.01-boundary/01.01.01-source.md
   - ../../../01-bootstrap/01.01-boundary/01.01.04-render.md
   - ../../../01-bootstrap/01.04-compose/01.04.02-run.md
+  - ../../../01-bootstrap/01.01-boundary/01.01.06-cli.md
   - ../../../01-bootstrap/python/fpl/__main__.py
   - ../../../01-bootstrap/pyproject.toml
 drivers:
@@ -29,7 +30,7 @@ options:
   - name: "One `fpl` executable, one subcommand per stage"
     chosen: true
     pros:
-      - "one thing to install; `fpl <stage>` is one filter, `fpl <file>` a whole run"
+      - "one thing to install; `fpl` is the interactive interface, `fpl <stage>` one filter, `fpl run <file>` a whole run"
       - "the dispatch can be derived from the stages"
     cons:
       - "needs a packaging entry point to exist as a command"
@@ -56,6 +57,7 @@ Affects: [01.01.03 Pipe](../../../01-bootstrap/01.01-boundary/01.01.03-pipe.md),
 [01.01.01 Source](../../../01-bootstrap/01.01-boundary/01.01.01-source.md),
 [01.01.04 Render](../../../01-bootstrap/01.01-boundary/01.01.04-render.md),
 [01.04.02 Run](../../../01-bootstrap/01.04-compose/01.04.02-run.md),
+[01.01.06 CLI](../../../01-bootstrap/01.01-boundary/01.01.06-cli.md),
 [python/fpl/\_\_main\_\_.py](../../../01-bootstrap/python/fpl/__main__.py),
 [pyproject.toml](../../../01-bootstrap/pyproject.toml).
 
@@ -72,26 +74,36 @@ matching output adapter turns a FON value back into text.
 
 ## Decision
 
-There is one `fpl` executable. `fpl <stage>` runs one stage as a filter; `fpl <file>` (and
-`fpl run <file>`) runs the whole chain in-process. The ingress is `fpl source`, the egress
-`fpl render`:
+There is one `fpl` executable. Bare `fpl`, with no arguments, starts the interactive
+interface: the existing REPL for now, with room for a full-screen interface later.
+`fpl <stage>` runs one stage as a filter; `fpl run <file>` runs the whole chain in-process.
+The ingress is `fpl source`, the egress `fpl render`:
 
     fpl source < foo.fpl | fpl lex | fpl parse | fpl desugar | fpl elaborate | fpl eval | fpl render
 
 ## Consequences
 
-- The tree has this shape. `01-bootstrap/python/fpl/__main__.py` is a Click group that
-  registers `source`, `lex`, `parse`, `desugar`, `elaborate`, `eval`, `render` and `run`, and
-  runs a bare file in-process. `fpl/__init__.py` is the library API.
-- Each stage package's `__main__.py` is a few lines, `from . import <stage>; cli(<stage>)`,
-  around the shared adapter in `python/fpl/pipe/__init__.py`, so `python -m fpl.lex` works as
-  well. It never re-implements the stage or starts another FPL tool.
-- `01-bootstrap/pyproject.toml` has no `[project.scripts]` entry, so packaging does not yet
-  install an `fpl` command; the route today is `python -m fpl <stage>`
+- The tree has this shape. `01-bootstrap/python/fpl/__main__.py` calls `dispatch` of
+  [01.01.06 CLI](../../../01-bootstrap/01.01-boundary/01.01.06-cli.md), a Click group with a
+  filter per stage (`source`, `lex`, `parse`, `desugar`, `elaborate`, `eval`, `render`), `run`,
+  and `graph` and `shell`, which show a composition. `fpl/__init__.py` is the library API and
+  does not import Click.
+- The command names are read off the registries: `PASSES` and `ENDS` of the pipe,
+  `COMPOSITIONS` of the run note. No list of stage names is written by hand.
+- Bare `fpl` runs the seed walker's REPL (`01-bootstrap/fpl/repl.py`) as a child process with
+  the seed alone on its path, since the seed and the tangled tree are both named `fpl`. The
+  REPL is not yet a literate page.
+- `fpl <file>` remains as short for `fpl run <file>`: it conflicts with no command, and a
+  command name wins over a file of the same name.
+- Each stage package's `__main__.py` is a few lines, `from . import <stage>`, then
+  `raise SystemExit(cli(<stage>))`, around the shared adapter in
+  `python/fpl/pipe/__init__.py`, so `python -m fpl.lex` works as well and exits with the
+  filter's status. It never re-implements the stage or starts another FPL tool.
+- `01-bootstrap/pyproject.toml` declares Click and the `fpl` script (`fpl.cli:entry`)
   ([TD-0010](../techdebt/TD-0010-click-undeclared.md)).
-- The command list is a hand-written tuple (`COMMANDS`), and the adapter dispatches on the
-  stage name in `_run`. Deriving both from a registry of `Pass` objects with input and output
-  types is a proposal, not part of this decision
-  ([02.05.06 Pipeline open questions](../notes/02.05.06-pipeline-open-questions.md)).
-- The adapter has no `--trace` and no choice of FON encoding; an error is one stderr line and
-  exit code 1.
+- The adapter has no `--trace` and no choice of FON encoding. A diagnostic crosses the pipe as
+  an `Error` document, and `fpl render` prints it as `fpl run` does
+  ([01.01.03 Pipe](../../../01-bootstrap/01.01-boundary/01.01.03-pipe.md)).
+
+Revised 2026-10-22 by the maintainer: bare `fpl` starts the interactive interface; the whole
+run is `fpl run <file>`. The consequences above describe the tree after that revision.
