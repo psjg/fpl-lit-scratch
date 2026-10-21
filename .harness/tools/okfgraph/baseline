@@ -91,4 +91,3 @@ CLAUDE.md: okf-untyped: frontmatter none
 README.md: okf-untyped: frontmatter ok
 learn/kata/hello-frames/prompt.md: okf-untyped: frontmatter none
 01-bootstrap/index.md: okf-index-frontmatter: frontmatter ok
-02-docs/02.04-explanation/inspiration/README.md: dangling: linksTo https://github.com/fpl-org/fpl/blob/main/try/index.html

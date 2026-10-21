@@ -14,7 +14,7 @@ are looking at, what we stole, what we have not built.
 Error tag catalog: [02.03.01 Errors](../../02.03-reference/02.03.01-errors.md). Site:
 [fpl-lit-scratch](https://psjg.github.io/fpl-lit-scratch/).
 
-Live scratch shell: [Playground](../../../try/index.html). Milestone tags on
+Live scratch shell: [Playground](https://psjg.github.io/fpl-lit-scratch/try/). Milestone tags on
 `psjg/fpl-lit-scratch`: `repl-buffer-part1` (pure FPL buffer), `repl-buffer-part2` (side
 gutter), `repl-buffer-part3` (Monaco Quokka-style inline), `repl-buffer-part4`
 (roundtrip `|-` / Tab-commit), `repl-buffer-part5` (Miller path-browser columns),
