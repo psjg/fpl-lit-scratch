@@ -23,7 +23,7 @@ CITERS = sorted(
     [
         *REPO.glob("*.md"),
         *REPO.glob(".agents/*.md"),
-        *REPO.glob("docs/**/*.md"),
+        *REPO.glob("02-docs/**/*.md"),
         *REPO.glob("01-bootstrap/*.md"),
         *HERE.glob("tests/*.py"),
         *HERE.glob("fpl/**/*.py"),
@@ -31,8 +31,10 @@ CITERS = sorted(
 )
 
 # A full path, `examples/<name>`, or `<name>:<line>`; a glob or a brace
-# never matches.
-PATH = re.compile(r"\b(?:fpl/)?features/[\w.-]+/examples/[\w.-]+\.fpl\b")
+# never matches. A path is taken whole, whatever leads to its
+# `features/` (`03-fpl/OLD/03.01-features/`, or a stale
+# `fpl/features/`), and is read from the repository root.
+PATH = re.compile(r"[\w./-]*\bfeatures/[\w.-]+/examples/[\w.-]+\.fpl\b")
 NAME = re.compile(
     r"(?:\bexamples/([\w.-]+\.fpl)\b|(?<![\w./-])([\w.-]+\.fpl):\d)"
 )
@@ -55,6 +57,12 @@ def test_a_renamed_program_dangles() -> None:
         name,
         name,
     ]
+
+
+def test_a_path_from_before_the_move_dangles() -> None:
+    name = "draft1.fpl"
+    stale = f"fpl/features/draft1/examples/{name}"
+    assert dangling(f"see {stale}") == [stale]
 
 
 def test_every_citation_names_a_program() -> None:
