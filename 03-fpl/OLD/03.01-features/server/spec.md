@@ -4,8 +4,6 @@ title: "server spec"
 description: "Archived maintainer spec: The counting file server."
 ---
 
-# server — spec
-
 Source: handoff/SHAR-syntax.org, "The counting file server"
 
 Why: every example in the syntax documents, in the name spelling (S32), tabs,

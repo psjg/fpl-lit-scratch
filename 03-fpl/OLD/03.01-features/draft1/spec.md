@@ -4,8 +4,6 @@ title: "draft1 spec"
 description: "Archived maintainer spec: Draft 1: the language in itself."
 ---
 
-# draft1 — spec
-
 Source: handoff/SHAR-syntax.org, "Draft 1 — the language in itself"; design doc, Draft 1
 
 Why: every example in the syntax documents, in the name spelling (S32), tabs,

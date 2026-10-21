@@ -4,8 +4,6 @@ title: "match spec"
 description: "Archived maintainer spec: Draft 4: pattern matching."
 ---
 
-# match — spec
-
 Source: handoff/SHAR-syntax.org, "Draft 4 — pattern matching"; design doc, Draft 4
 
 Why: every example in the syntax documents, in the name spelling (S32), tabs,
