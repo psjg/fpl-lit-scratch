@@ -61,25 +61,29 @@ MODULES = {
     "01.06-nagini/01.06.01-advance.md": "advance.py",
 }
 
-PACKAGES = ("lex", "parse", "desugar", "elaborate", "evaluate")
+PACKAGES = tuple(
+    dest.removesuffix("/__init__.py")
+    for page, dest in MODULES.items()
+    if page.startswith("01.02-pass/")
+)
+"""
+The pass packages, each given a stage main: every package a pass page
+tangles to.
+"""
 
-INIT = '''\
-"""The literate bootstrap, tangled from the Markdown pages."""
-
-import fpl.trivia
-from fpl.desugar import desugar
-from fpl.elaborate import elaborate
-from fpl.evaluate import evaluate
-from fpl.lex import lex
-from fpl.parse import parse
-from fpl.run import run_file
-
-__all__ = ["desugar", "elaborate", "evaluate", "lex", "parse",
-"run_file"]
-'''
+INIT = (
+    '"""The literate bootstrap, tangled from the Markdown pages."""\n\n'
+    "import fpl.trivia\n"
+    + "".join(f"from fpl.{name} import {name}\n" for name in sorted(PACKAGES))
+    + "from fpl.run import run_file\n\n"
+    + f"__all__ = {[*sorted(PACKAGES), 'run_file']!r}\n"
+)
+"""
+The package root: each pass package's pass, and `run_file`.
+"""
 
 MAIN = '''\
-"""`fpl <file>` runs in-process. `fpl <stage>` is one filter."""
+"""`fpl` opens the REPL. `fpl <stage>` is one filter."""
 
 import sys
 
