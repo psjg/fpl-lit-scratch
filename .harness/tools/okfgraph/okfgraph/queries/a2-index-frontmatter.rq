@@ -1,0 +1,7 @@
+# rule: okf-index-frontmatter
+# remedy: drop the frontmatter; only the root index.md may carry one, for okf_version (OKF §8)
+SELECT ?path ?detail WHERE {
+  ?n a okf:Reserved ; okf:path ?path ; okf:frontmatter ?state .
+  FILTER(STRENDS(?path, "/index.md") && ?state != "none")
+  BIND(CONCAT("frontmatter ", ?state) AS ?detail)
+} ORDER BY ?path

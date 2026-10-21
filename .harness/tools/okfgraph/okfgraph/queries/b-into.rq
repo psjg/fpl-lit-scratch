@@ -1,0 +1,7 @@
+# Every edge into one note, typed or untyped, with the type of its source.
+SELECT ?source ?sourceType ?edge WHERE {
+  ?t okf:path "01-bootstrap/01.02-pass/01.02.10-evaluate.md" .
+  ?s ?e ?t ; okf:path ?source .
+  OPTIONAL { ?s okf:type ?sourceType }
+  BIND(REPLACE(STR(?e), "^.*[#/]", "") AS ?edge)
+} ORDER BY ?edge ?source

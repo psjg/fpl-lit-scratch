@@ -1,0 +1,15 @@
+# Every ADR with its derived state and its typed edges. The state is not written down:
+# `rejected: true` makes it rejected, a `superseded-by` superseded, else its OKF `status`.
+SELECT ?adr ?state ?edge ?target WHERE {
+  ?a a cls:ADR ; okf:path ?adr .
+  OPTIONAL { ?a key:status ?status }
+  OPTIONAL { ?a key:rejected ?rejected }
+  OPTIONAL { ?a rel:superseded-by ?by }
+  BIND(IF(COALESCE(?rejected, false), "rejected", IF(BOUND(?by), "superseded", COALESCE(STR(?status), "stable"))) AS ?state)
+  OPTIONAL {
+    ?a ?e ?t . FILTER(STRSTARTS(STR(?e), STR(rel:)))
+    OPTIONAL { ?t okf:path ?p }
+    BIND(STRAFTER(STR(?e), "#") AS ?edge)
+    BIND(COALESCE(?p, STR(?t)) AS ?target)
+  }
+} ORDER BY ?adr ?edge ?target

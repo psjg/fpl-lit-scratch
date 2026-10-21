@@ -1,0 +1,3 @@
+# rule: wikilink
+# remedy: write a relative markdown link instead; OKF consumers do not follow [[wikilinks]]
+SELECT ?path ?detail WHERE { ?s okf:wikilink ?detail ; okf:path ?path } ORDER BY ?path ?detail

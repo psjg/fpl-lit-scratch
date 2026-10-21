@@ -1,0 +1,12 @@
+# Counts: nodes by kind, edges by family.
+SELECT ?what (COUNT(*) AS ?n) WHERE {
+  { ?x a okf:Document . BIND("node: document" AS ?what) }
+  UNION { ?x a okf:Document ; okf:type ?t . BIND("node: document with type" AS ?what) }
+  UNION { ?x a okf:File . BIND("node: linked non-md file" AS ?what) }
+  UNION { ?x a okf:Folder . BIND("node: linked folder" AS ?what) }
+  UNION { ?s okf:linksTo ?o . BIND("edge: linksTo (body)" AS ?what) }
+  UNION { ?s okf:embeds ?o . BIND("edge: embeds (body image)" AS ?what) }
+  UNION { ?s ?p ?o . FILTER(STRSTARTS(STR(?p), STR(rel:))) BIND("edge: typed (frontmatter)" AS ?what) }
+  UNION { ?s okf:linksToExternal ?o . BIND("link: external URL" AS ?what) }
+  UNION { ?s ?p ?o . BIND("triples" AS ?what) }
+} GROUP BY ?what ORDER BY ?what

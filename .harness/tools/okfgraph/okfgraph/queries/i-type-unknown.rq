@@ -1,0 +1,8 @@
+# rule: type-unknown
+# remedy: use a type the vocabulary declares, or declare it in okfgraph/context.jsonld and the README table
+SELECT ?path ?detail WHERE {
+  ?n okf:type ?type ; okf:path ?path ; a ?class .
+  FILTER(STRSTARTS(STR(?class), STR(cls:)))
+  FILTER NOT EXISTS { ?class a okf:Type }
+  BIND(CONCAT("type ", ?type) AS ?detail)
+} ORDER BY ?path

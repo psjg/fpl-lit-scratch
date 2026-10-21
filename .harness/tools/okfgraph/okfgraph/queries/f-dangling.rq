@@ -1,0 +1,14 @@
+# rule: dangling
+# remedy: point the link or id at a file of the bundle, or make it an absolute URL
+SELECT ?path ?detail WHERE {
+  {
+    ?s ?e ?t ; okf:path ?path .
+    FILTER(isIRI(?t) && ?e != rdf:type)
+    FILTER(STRSTARTS(STR(?t), STR(b:)) || STRSTARTS(STR(?t), "urn:okf:"))
+    FILTER NOT EXISTS { ?t okf:path ?p }
+    BIND(CONCAT(REPLACE(STR(?e), "^.*[#/]", ""), " ", STR(?t)) AS ?detail)
+  } UNION {
+    ?s okf:linksOutside ?out ; okf:path ?path .
+    BIND(CONCAT("linksOutside ", ?out) AS ?detail)
+  }
+} ORDER BY ?path ?detail

@@ -1,0 +1,6 @@
+# rule: frontmatter-error
+# remedy: fix the frontmatter so it reads as JSON-LD; a value under a key starting with `@` is JSON-LD syntax
+# A typed note whose frontmatter still failed to project: its edges and literals are lost.
+SELECT ?path ?detail WHERE {
+  ?n okf:type ?t ; okf:path ?path ; okf:frontmatterError ?detail .
+} ORDER BY ?path

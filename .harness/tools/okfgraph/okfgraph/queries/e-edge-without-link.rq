@@ -1,0 +1,11 @@
+# rule: edge-without-link
+# remedy: link the target in the body too, so the untyped OKF graph and GitHub can follow it
+# Frontmatter is the source of truth for a typed edge; the body link is its checked projection.
+SELECT ?path ?detail WHERE {
+  ?s ?e ?t ; okf:path ?path .
+  FILTER(STRSTARTS(STR(?e), STR(rel:)))
+  FILTER NOT EXISTS { ?s okf:linksTo ?t }
+  FILTER NOT EXISTS { ?s okf:linksToExternal ?url FILTER(?url = STR(?t)) }
+  OPTIONAL { ?t okf:path ?p }
+  BIND(CONCAT(STRAFTER(STR(?e), "#"), " ", COALESCE(?p, STR(?t))) AS ?detail)
+} ORDER BY ?path ?detail

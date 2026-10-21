@@ -1,0 +1,9 @@
+# rule: supersede-pair
+# remedy: write both halves: `supersedes` on the newer note and `superseded-by` on the older
+SELECT ?path ?detail WHERE {
+  { ?n rel:supersedes ?o . FILTER NOT EXISTS { ?o rel:superseded-by ?n }
+    ?o okf:path ?path . ?n okf:path ?other . BIND(CONCAT("no superseded-by ", ?other) AS ?detail) }
+  UNION
+  { ?o rel:superseded-by ?n . FILTER NOT EXISTS { ?n rel:supersedes ?o }
+    ?n okf:path ?path . ?o okf:path ?other . BIND(CONCAT("no supersedes ", ?other) AS ?detail) }
+} ORDER BY ?path ?detail

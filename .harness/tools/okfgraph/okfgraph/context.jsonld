@@ -1,0 +1,26 @@
+{
+  "@context": {
+    "@vocab": "https://fpl-org.github.io/okf/key#",
+    "rel": "https://fpl-org.github.io/okf/rel#",
+    "cls": "https://fpl-org.github.io/okf/type#",
+    "xsd": "http://www.w3.org/2001/XMLSchema#",
+
+    "supersedes":    { "@id": "rel:supersedes",    "@type": "@id" },
+    "superseded-by": { "@id": "rel:superseded-by", "@type": "@id" },
+    "related":       { "@id": "rel:related",       "@type": "@id" },
+    "affects":       { "@id": "rel:affects",       "@type": "@id" },
+
+    "ADR":         "cls:ADR",
+    "AgentDoc":    "cls:AgentDoc",
+    "Composition": "cls:Composition",
+    "Design":      "cls:Design",
+    "Kata":        "cls:Kata",
+    "Lab":         "cls:Lab",
+    "Note":        "cls:Note",
+    "Pass":        "cls:Pass",
+    "Readme":      "cls:Readme",
+    "Repr":        "cls:Repr",
+    "Roadmap":     "cls:Roadmap",
+    "Spec":        "cls:Spec"
+  }
+}

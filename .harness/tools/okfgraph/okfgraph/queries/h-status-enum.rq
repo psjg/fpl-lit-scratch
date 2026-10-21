@@ -1,0 +1,7 @@
+# rule: status-enum
+# remedy: set `status` to draft, stable or deprecated (OKF §5.4); an ADR says `rejected: true` or `superseded-by`
+SELECT ?path ?detail WHERE {
+  ?n key:status ?status ; okf:path ?path .
+  FILTER(STR(?status) NOT IN ("draft", "stable", "deprecated"))
+  BIND(CONCAT("status ", STR(?status)) AS ?detail)
+} ORDER BY ?path

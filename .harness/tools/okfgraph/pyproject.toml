@@ -1,0 +1,33 @@
+# .harness/tools/okfgraph — the repository as one OKF bundle, projected onto an RDF graph.
+#
+# A uv project of its own, so its dependencies never enter the language's environment;
+# judged by `make tools` (.agents/QUALITY.md). The root Makefile runs it as `make graph`
+# and `make okf-check`.
+
+[project]
+name = "fpl-okfgraph"
+version = "0"
+description = "Project the repository's OKF bundle onto RDF and check it with SPARQL"
+requires-python = ">=3.12,<3.13"
+dependencies = ["pyoxigraph==0.5.11", "markdown-it-py==4.2.0", "pyyaml==6.0.3"]
+
+[project.scripts]
+okfgraph = "okfgraph.__main__:main"
+
+[dependency-groups]
+# hypothesis-crosshair: the harness plugin registers a CrossHair profile, which current
+# Hypothesis refuses to register without the backend installed.
+dev = ["pytest", "hypothesis", "hypothesis-crosshair", "coverage", "mypy", "types-pyyaml"]
+
+[build-system]
+requires = ["uv_build>=0.11,<0.13"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "okfgraph"
+module-root = ""
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# The harness's plugin: the Hypothesis profiles (.harness/quality/noslop_pytest.py).
+addopts = ["-p", "noslop_pytest"]

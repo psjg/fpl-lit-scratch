@@ -1,0 +1,10 @@
+# rule: okf-untyped
+# remedy: give the note YAML frontmatter with a non-empty `type` (OKF §11 rules 1-2)
+# Every .md file but index.md and log.md is a concept document and carries a type.
+SELECT ?path ?detail WHERE {
+  ?n a okf:Document ; okf:path ?path ; okf:frontmatter ?state .
+  FILTER NOT EXISTS { ?n a okf:Reserved }
+  FILTER NOT EXISTS { ?n okf:type ?t }
+  OPTIONAL { ?n okf:frontmatterError|okf:typeError ?problem }
+  BIND(IF(BOUND(?problem), CONCAT("frontmatter ", ?state, ": ", ?problem), CONCAT("frontmatter ", ?state)) AS ?detail)
+} ORDER BY ?path
