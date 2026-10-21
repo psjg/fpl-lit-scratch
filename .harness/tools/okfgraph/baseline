@@ -1,6 +1,5 @@
 # The known OKF findings, tolerated while the migration runs; okf-check fails on any
 # other and on a line no gate produces any more. Delete a line once its note conforms.
-.harness/quality/README.md: okf-untyped: frontmatter ok
 01-bootstrap/01.01-boundary/README.md: okf-untyped: frontmatter ok
 01-bootstrap/01.02-pass/README.md: okf-untyped: frontmatter ok
 01-bootstrap/01.03-repr/README.md: okf-untyped: frontmatter ok
