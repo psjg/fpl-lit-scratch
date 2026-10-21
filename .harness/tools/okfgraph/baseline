@@ -92,5 +92,3 @@ README.md: okf-untyped: frontmatter ok
 learn/kata/hello-frames/prompt.md: okf-untyped: frontmatter none
 01-bootstrap/index.md: okf-index-frontmatter: frontmatter ok
 02-docs/02.04-explanation/inspiration/README.md: dangling: linksTo https://github.com/fpl-org/fpl/blob/main/try/index.html
-02-docs/02.05-project/adr/ADR-0000-template.md: dangling: linksTo https://github.com/fpl-org/fpl/blob/main/02-docs/02.05-project/adr/ADR-0003-%3Cslug%3E.md
-02-docs/02.05-project/adr/ADR-0000-template.md: status-enum: status proposed

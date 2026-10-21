@@ -4,12 +4,13 @@ title: "ADR-0000 <title>"
 description: "<one sentence: what was decided>"
 tags:
   - adr
-status: proposed  # proposed | accepted | rejected | deprecated | superseded
+status: draft     # OKF: draft | stable | deprecated; accepted = stable
+rejected: false   # true when the decision was considered and turned down
 date: YYYY-MM-DD
 deciders:
   - "<name>"
 supersedes: []     # e.g. [ADR-0003]
-superseded-by:     # e.g. ADR-0009
+superseded-by:     # e.g. ADR-0009; set, it makes this ADR superseded
 related: []        # other ADRs or notes, by id or relative path
 affects: []        # passes, notes, scripts the decision touches, by relative path
 drivers: []        # forces that decide it, one short phrase each
@@ -26,10 +27,12 @@ options:           # considered alternatives; exactly one has chosen: true
 
 # ADR-0000 <title>
 
-<!-- Every id in the frontmatter is also a relative link here, so the
-     untyped OKF graph and GitHub can follow it. The edge kind lives in prose. -->
+<!-- Every edge in the frontmatter is also a relative link here, so the untyped OKF
+     graph and GitHub can follow it; the edge kind lives in prose. `make okf-check` holds
+     the two together. For example:
+     Supersedes: [ADR-0003](ADR-0003-<slug>.md). Affects: [01.02.10 Evaluate](../../../01-bootstrap/01.02-pass/01.02.10-evaluate.md). -->
 
-Supersedes: [ADR-0003](ADR-0003-<slug>.md). Superseded by: none. Affects: [01.02.10 Evaluate](../../../01-bootstrap/01.02-pass/01.02.10-evaluate.md).
+Supersedes: none. Superseded by: none. Affects: none.
 
 ## Context
 
