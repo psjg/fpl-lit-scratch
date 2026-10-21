@@ -13,6 +13,7 @@
 * [test_fon](test_fon.py) - test_fon
 * [test_fuel](test_fuel.py) - test_fuel
 * [test_lex](test_lex.py) - test_lex
+* [test_lit_fon](test_lit_fon.py) - test_lit_fon
 * [test_lit_tangle](test_lit_tangle.py) - test_lit_tangle
 * [test_log](test_log.py) - test_log
 * [test_main](test_main.py) - test_main
