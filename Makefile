@@ -12,9 +12,12 @@
 #   make <lane>       fix quick check harden ready gates tools map venv pristine clean-noslop
 #   make run FILE=f   run the file f, a path from the root:    make run FILE=path/to/p.fpl
 #   make repl ARGS=a  the REPL, with its arguments a:          make repl ARGS='-e "1 + 2"'
+#   make graph        the repository as one OKF bundle, as Turtle: build/okf.ttl
+#   make okf-check    the OKF gates over that graph (.harness/tools/okfgraph/README.md)
+#   make okf-check-tg the same OKF rules, judged by Typed Graph's checker, pinned
 .DEFAULT_GOAL := check
 LANES := fix quick check harden ready gates tools map venv pristine clean-noslop
-.PHONY: $(LANES) run repl tangle-fpl
+.PHONY: $(LANES) run repl tangle-fpl graph okf-check okf-check-tg
 
 $(LANES):
 	@$(MAKE) --no-print-directory -C 01-bootstrap $@
@@ -41,3 +44,22 @@ run:
 repl:
 	$(VENV)
 	@$(FPLPY) -m fpl.repl $(ARGS)
+
+
+# okfgraph reads the bundle from the git index and runs in its own locked environment, the one
+# `make tools` judges it in, so its dependencies never enter the walker's .venv. A baseline,
+# while one exists, lists the findings the migration has not cleared yet.
+OKFG := $(CURDIR)/.harness/tools/okfgraph
+OKFGRAPH = UV_PROJECT_ENVIRONMENT=$(OKFG)/.venv uv run --quiet --frozen --project $(OKFG) okfgraph
+OKF_BASELINE := $(wildcard $(OKFG)/baseline)
+
+graph:
+	@$(OKFGRAPH) graph --root $(CURDIR) --out $(CURDIR)/build/okf.ttl
+
+okf-check:
+	@$(OKFGRAPH) check --root $(CURDIR) $(if $(OKF_BASELINE),--baseline $(OKF_BASELINE))
+
+# A second, independent judge of OKF §11. It reads the working tree, not the index, and skips
+# dot-folders, so run it on a clean checkout.
+okf-check-tg:
+	@npm_config_yes=true npx @typedgraph/cli@0.6.0 okf check $(CURDIR)

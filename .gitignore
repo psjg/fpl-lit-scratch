@@ -44,3 +44,6 @@ mutants/
 
 /.quarto/
 **/*.quarto_ipynb
+
+# What make graph writes: the OKF bundle as Turtle (.harness/tools/okfgraph)
+/build/
