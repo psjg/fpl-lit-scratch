@@ -44,8 +44,10 @@ def test_a_binder_in_a_body_reaches_the_lines_after_it_and_their_children() -> (
     name bound on a line of a body is read on the lines below it, and in
     the blocks under them.
     """
-    source = "f : x -- y\n\t→x\n\tx x +\ng : x -- q\n\t→x\n\t[ ] ,\n\t\tx 1 "
-    "+\n3 f\n2 g\n"
+    source = (
+        "f : x -- y\n\t→x\n\tx x +\ng : x -- q\n\t→x\n\t[ ] ,\n\t\tx 1 "
+        "+\n3 f\n2 g\n"
+    )
     assert run(source) == "6\n[ 2 | 1 + ]\n"
 
 

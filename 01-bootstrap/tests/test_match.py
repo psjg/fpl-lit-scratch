@@ -73,8 +73,10 @@ def test_a_relation_succeeds_on_a_row_and_fails_off_every_row() -> None:
     the match is one-way and deterministic; a row that matches succeeds
     and leaves nothing, none raises +fail.
     """
-    family = "family/\n\tparent : x y "
-    "--\n\t\tmatch\n\t\t\t#tom\t#bob\n\t\t\t#bob\t#ann\n"
+    family = (
+        "family/\n\tparent : x y "
+        "--\n\t\tmatch\n\t\t\t#tom\t#bob\n\t\t\t#bob\t#ann\n"
+    )
     assert run(f"{family}#bob #ann family/parent\n") == ""
     with pytest.raises(FplError) as failed:
         run(f"{family}#ann #bob family/parent\n")
@@ -294,8 +296,10 @@ def test_a_constructor_that_cannot_have_built_the_value_falls_through() -> (
     rect undoes one pair of a circle, not the second; sw's pair holds #t
     where a circle's holds #circle.
     """
-    kind = "sw : x -- y\n\t#t swap pair\nkind : s -- k\n\tmatch\n\t\t( rect w "
-    "h )\t#rect\n"
+    kind = (
+        "sw : x -- y\n\t#t swap pair\nkind : s -- k\n\tmatch\n\t\t( rect w "
+        "h )\t#rect\n"
+    )
     kind += "\t\t( sw x )\t#sw\n\t\t_\t#other\n"
     assert run(f"{SHAPES}{kind}3 circle kind\n") == "#other\n"
 
@@ -353,8 +357,10 @@ def test_guards_nest_and_a_guarded_pin_reads_its_name() -> None:
     twice = (
         "f : x -- y\n\tmatch\n\t\t( x ∈ nonzero ∈ nonzero )\tx\n\t\t_\t#zero\n"
     )
-    same = "g : a b -- c\n\tmatch\n\t\ty\t( $y ∈ nonzero "
-    ")\t#same\n\t\t_\t_\t#diff\n"
+    same = (
+        "g : a b -- c\n\tmatch\n\t\ty\t( $y ∈ nonzero "
+        ")\t#same\n\t\t_\t_\t#diff\n"
+    )
     runs = "3 f\n0 f\n2 | 2 g\n2 | 3 g\n0 | 0 g\n"
     assert (
         run(f"{nonzero}{twice}{same}{runs}")

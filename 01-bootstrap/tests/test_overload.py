@@ -594,8 +594,10 @@ def test_an_empty_group_is_refused(head: bool) -> None:
         run(source)
 
 
-SHAPES = "circle : r -- shape\n\t#circle swap pair\nrect : w h -- "
-"shape\n\t#rect swap pair pair\n"
+SHAPES = (
+    "circle : r -- shape\n\t#circle swap pair\nrect : w h -- "
+    "shape\n\t#rect swap pair pair\n"
+)
 AREA = "area : ( circle r ) -- n\n\tr dup times\n"
 
 
@@ -749,8 +751,10 @@ def test_clauses_of_one_arity_agree_on_slot_kinds(
         for i, k in enumerate(second)
     ]
     body = "\t" + "drop " * n + "1\n"
-    source = f"f : {' '.join(written)} -- y\n{body}f : {' '.join(typed)} -- "
-    "y\n{body}"
+    source = (
+        f"f : {' '.join(written)} -- y\n{body}f : {' '.join(typed)} -- "
+        f"y\n{body}"
+    )
     differ = [
         (j, a, b)
         for j, (a, b) in enumerate(zip(first, second, strict=True), 1)
@@ -980,8 +984,10 @@ def test_a_redefined_type_word_is_disjoint_from_nothing(
         "#int\n" if int_wins else "#text\n"
     )
     body = "\tdrop drop drop 1\n"
-    h = f"h : x: Int  y: Int  z -- o\n{body}h : x: Text  y  z: Int -- "
-    "o\n{body}"
+    h = (
+        f"h : x: Int  y: Int  z -- o\n{body}h : x: Text  y  z: Int -- "
+        f"o\n{body}"
+    )
     assert run(prelude + h) == ""
     if redefined:
         refusal = r"^ERROR: 3:1 ambiguous call to h: h/3/1 and h/3/2 both fit$"
@@ -1027,8 +1033,10 @@ def test_head_groups_dispatch_beside_other_clauses(
             pytest.fail(f"not a match: {dispatcher.code}")
 
 
-P3 = "g : x: Int  y -- z\n\tdrop drop #left\ng : x  y: Int -- z\n\tdrop drop "
-"#right\n"
+P3 = (
+    "g : x: Int  y -- z\n\tdrop drop #left\ng : x  y: Int -- z\n\tdrop drop "
+    "#right\n"
+)
 MEET = "g : x: Int  y: Int -- z\n\tdrop drop #both\n"
 
 

@@ -529,8 +529,10 @@ def test_the_loop_in_memory() -> None:
     head; commands list, show, rewind and toggle the canonical form; an
     unknown command is told and passed over.
     """
-    typed = "f : -- x\n\t2\n\nf\n:log\n:show\n:canonical\n1  2\n:rewind "
-    "0\nf\n:bogus\n:quit\n3\n"
+    typed = (
+        "f : -- x\n\t2\n\nf\n:log\n:show\n:canonical\n1  2\n:rewind "
+        "0\nf\n:bogus\n:quit\n3\n"
+    )
     code, out, err = called([], {}, typed)
     rows = out.splitlines()
     assert (code, err, rows[0]) == (0, "f\n^\n", "2")
