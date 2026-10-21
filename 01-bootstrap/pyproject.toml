@@ -24,6 +24,8 @@ known_first_party = ["fpl"]
 [tool.deptry.per_rule_ignores]
 # The tools come from the harness environment, not from this project's dependencies.
 DEP001 = ["hypothesis", "pytest"]
+# click is used by the tangled python/ tree, which the deptry scan excludes.
+DEP002 = ["click"]
 
 [tool.mutmut]
 source_paths = ["fpl/"]
