@@ -4,12 +4,23 @@ aliases.
 
 The Markdown is the source. This writes 01-bootstrap/python/fpl/, and a
 ``.qmd`` symlink beside every page that holds a Marimo cell.
+
+    python3 tangle.py             write python/fpl/, the aliases, bin/fpl
+    python3 tangle.py --out DIR   write the package to DIR/fpl, nothing else
+    python3 tangle.py --check     exit 1, naming each committed file that
+                                  differs from what the notes tangle to
+
+Neither ``--out`` nor ``--check`` writes into the repository, so a test
+may run them while another process reads python/.
 """
 
 from __future__ import annotations
 
+import argparse
 import re
 import shutil
+import sys
+import tempfile
 import textwrap
 from pathlib import Path
 
@@ -252,23 +263,59 @@ def aliases() -> None:
         link.symlink_to(path.name)
 
 
-def tangle() -> None:
+def build(out: Path) -> None:
     """
-    Write the package from the pages and the seed's support modules.
+    Write the package to ``out`` from the pages and the seed's support
+    modules. Whatever ``out`` held before is removed.
     """
-    if OUT.exists():
-        shutil.rmtree(OUT)
-    OUT.mkdir(parents=True)
+    if out.exists():
+        shutil.rmtree(out)
+    out.mkdir(parents=True)
     for name in SUPPORT:
-        shutil.copy(SEED / name, OUT / name)
+        shutil.copy(SEED / name, out / name)
     for page, dest in MODULES.items():
-        target = OUT / dest
+        target = out / dest
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(cell((ROOT / page).read_text()))
     for name in PACKAGES:
-        (OUT / name / "__main__.py").write_text(STAGE_MAIN.format(name=name))
-    (OUT / "__init__.py").write_text(INIT)
-    (OUT / "__main__.py").write_text(MAIN)
+        (out / name / "__main__.py").write_text(STAGE_MAIN.format(name=name))
+    (out / "__init__.py").write_text(INIT)
+    (out / "__main__.py").write_text(MAIN)
+
+
+def files(tree: Path) -> set[Path]:
+    """
+    Every file under ``tree``, relative to it; bytecode caches excluded.
+    """
+    return {
+        path.relative_to(tree)
+        for path in tree.rglob("*")
+        if path.is_file() and "__pycache__" not in path.parts
+    }
+
+
+def stale() -> list[Path]:
+    """
+    The files of python/fpl that differ from a fresh tangle, or that
+    one of them lacks, as paths relative to 01-bootstrap/.
+    """
+    with tempfile.TemporaryDirectory() as tmp:
+        fresh = Path(tmp) / "fpl"
+        build(fresh)
+        return [
+            OUT.relative_to(ROOT) / rel
+            for rel in sorted(files(fresh) | files(OUT))
+            if not (fresh / rel).is_file()
+            or not (OUT / rel).is_file()
+            or (fresh / rel).read_bytes() != (OUT / rel).read_bytes()
+        ]
+
+
+def tangle() -> None:
+    """
+    Write python/fpl, the Quarto aliases, and bin/fpl.
+    """
+    build(OUT)
     aliases()
     bin_dir = ROOT / "bin"
     bin_dir.mkdir(exist_ok=True)
@@ -283,5 +330,35 @@ def tangle() -> None:
     (bin_dir / "fpl").chmod(0o755)
 
 
+def main(argv: list[str]) -> int:
+    """
+    Tangle, tangle elsewhere, or check; the exit status says which way
+    a check went.
+    """
+    parser = argparse.ArgumentParser(description=__doc__.split("\n")[1])
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument("--out", type=Path, metavar="DIR")
+    mode.add_argument("--check", action="store_true")
+    args = parser.parse_args(argv)
+    if args.out is not None:
+        build(args.out / "fpl")
+        return 0
+    if not args.check:
+        tangle()
+        return 0
+    behind = stale()
+    for path in behind:
+        print(f"tangle: stale: {path}", file=sys.stderr)
+    if behind:
+        print(
+            "tangle: python/fpl is not what the notes tangle to; run"
+            " python3 tangle.py in 01-bootstrap/ and commit python/"
+            " with the notes",
+            file=sys.stderr,
+        )
+        return 1
+    return 0
+
+
 if __name__ == "__main__":
-    tangle()
+    sys.exit(main(sys.argv[1:]))
