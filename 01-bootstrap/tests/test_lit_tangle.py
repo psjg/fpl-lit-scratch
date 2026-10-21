@@ -76,3 +76,12 @@ def test_importing_fpl_leaves_click_out() -> None:
     """
     result = lit("import sys, fpl; print('click' in sys.modules)")
     assert (result.returncode, result.stdout) == (0, b"False\n")
+
+
+def test_the_codec_and_graph_notes_tangle_to_modules() -> None:
+    """
+    01.01.05-codec and 01.04.05-graph are registered, so fpl.codec and
+    fpl.graph import.
+    """
+    result = lit("import fpl.codec, fpl.graph")
+    assert result.returncode == 0, result.stderr
