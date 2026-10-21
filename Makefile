@@ -48,13 +48,17 @@ repl:
 
 # okfgraph reads the bundle from the git index and runs in its own locked environment, the one
 # `make tools` judges it in, so its dependencies never enter the walker's .venv. A baseline,
-# while one exists, lists the findings the migration has not cleared yet.
+# while one exists, lists findings a new rule tolerates until the notes meet it.
 OKFG := $(CURDIR)/.harness/tools/okfgraph
 OKFGRAPH = UV_PROJECT_ENVIRONMENT=$(OKFG)/.venv uv run --quiet --frozen --project $(OKFG) okfgraph
 OKF_BASELINE := $(wildcard $(OKFG)/baseline)
 
 graph:
 	@$(OKFGRAPH) graph --root $(CURDIR) --out $(CURDIR)/build/okf.ttl
+
+# The gate judges the bundle before the walker: a note without a type, or an edge into
+# nothing, fails `make check` as a type error does.
+check: okf-check
 
 okf-check:
 	@$(OKFGRAPH) check --root $(CURDIR) $(if $(OKF_BASELINE),--baseline $(OKF_BASELINE))
