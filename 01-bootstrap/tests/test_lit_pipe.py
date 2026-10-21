@@ -167,3 +167,23 @@ def test_a_diagnostic_crosses_the_pipe_as_data() -> None:
     assert said.stdout
     assert (shown.returncode, shown.stdout) == (1, said.stdout)
 
+
+def test_a_deeply_nested_program_crosses_every_codec() -> None:
+    """
+    Forty levels of nesting is far past the depth FON's reader allows by
+    default; the pipe reads deeper, so the chain still matches direct.
+    """
+    result = lit(
+        "from fpl.arrow import direct\n"
+        "from fpl.pipe import egress, ingress, run_filter\n"
+        "from fpl.print import render\n"
+        "from fpl.desugar import listing\n"
+        "from fpl.run import run_now\n"
+        "text = '[ ' * 40 + '1' + ' ]' * 40 + '\\n'\n"
+        "data = ingress(text)\n"
+        "for stage in run_now.stages:\n"
+        "    data = run_filter(stage, data)\n"
+        "want = render(listing(direct(run_now, text)))\n"
+        "assert egress(data) == want, egress(data)\n"
+    )
+    assert result.returncode == 0, result.stderr.decode()
