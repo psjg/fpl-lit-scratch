@@ -1,7 +1,8 @@
 """
 # 01.01.06 CLI
 
-`python -m fpl` lands here. A bare file runs in-process, the way the
+`python -m fpl` and the installed `fpl` script (`entry`, declared in
+`pyproject.toml`) land here. A bare file runs in-process, the way the
 seed walker runs it. A stage name runs that one stage across the pipe:
 [01.01.03-pipe](01.01.03-pipe.md) reads stdin and writes stdout.
 
@@ -62,5 +63,10 @@ def dispatch(argv: list[str]) -> int:
     return 0
 
 
-if __name__ == "__main__":
+def entry() -> None:
+    """The `fpl` console script: exit with the dispatch status."""
     sys.exit(dispatch(sys.argv[1:]))
+
+
+if __name__ == "__main__":
+    entry()
