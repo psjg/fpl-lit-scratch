@@ -4,8 +4,6 @@ title: "Roadmap"
 description: "The milestones, as direction only."
 ---
 
-# 02.03 ROADMAP.md — milestones
-
 Direction only. Scope and ordering shift as `02-docs/02.04-explanation/design.md` fills in. Each milestone lands as
 a stack of small commits (`.agents/WORKFLOW.md`) inside a worktree and is "done" only when
 `make check` is green (`.agents/CONVENTIONS.md`).
