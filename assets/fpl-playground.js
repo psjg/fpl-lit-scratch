@@ -29,7 +29,7 @@ demo/
 		inc : n -- n
 			1 +
 		twice : n -- n
-			dup *
+			dup +
 	greet : --
 		;;; say hi
 `;

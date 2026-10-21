@@ -16,11 +16,11 @@ test -f ".wasm/wheels/$wheel"
 rm -rf .site/marimo .site/try .site/learn
 (cd .wasm && uvx --from marimo marimo export html-wasm try.py -o ../.site/marimo --mode edit -f)
 
-(cd .wasm && python3 export_modules.py)
-
 mkdir -p .wasm/lite/pypi
 rm -f .wasm/lite/pypi/fpl-*.whl .wasm/lite/pypi/fpl_walker-*.whl
 cp ".wasm/wheels/$wheel" .wasm/lite/pypi/
+
+(cd .wasm && python3 export_modules.py)
 need_download=0
 for w in lark-*.whl icontract-*.whl comm-*.whl; do
   if ! compgen -G ".wasm/lite/pypi/$w" >/dev/null; then
