@@ -1,0 +1,1 @@
+{ "name": "tree-sitter-fpl", "version": "0.0.0", "main": "bindings/node", "tree-sitter": [{ "scope": "source.fpl", "file-types": ["fpl"], "highlights": "queries/highlights.scm" }] }
