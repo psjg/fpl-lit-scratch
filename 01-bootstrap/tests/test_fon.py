@@ -187,6 +187,7 @@ def test_a_cell_that_opens_with_other_than_a_digit_is_a_name(
     $ then a name character other than a digit is a name.
     """
     assert read("$" + cell) == Cell(cell)
+    assert write(Cell(cell)) == "$" + cell
 
 
 @given(ident, hashes)
@@ -208,6 +209,7 @@ def test_fon_ids(i: Multihash, h: Multihash) -> None:
     [
         (Tagged((Sym("Add"), Num(Decimal(1)), Num(Decimal(2)))), "1 2 Add/2"),
         (Tagged((Sym("Nil"),)), "Nil/0"),
+        (Tagged((Sym("X"),)), "X/0"),
         (Tagged((Sym("a/b"), Absent())), "_ a/b/1"),
         (Tagged((Sym("list"), Absent())), "#list _ tuple/2"),
         (Tagged((Sym("1"),)), "#1 tuple/1"),
@@ -226,6 +228,7 @@ def test_fon_ids(i: Multihash, h: Multihash) -> None:
         (Str("a\"b'c", raw=True), r"""'a"b\'c'"""),
         (Str("\n\t\r\x00é😀"), r'"\n\t\u{d}\u{0}\u{e9}\u{1f600}"'),
         (Str("{ [ ( ⟨"), r'"{ [ ( \u{27e8}"'),
+        (Str("\U0010ffff"), r'"\u{10ffff}"'),
         (Sym("a b"), '#"a b"'),
         (Sym(""), '#""'),
         (Sym("x"), "#x"),
@@ -249,6 +252,7 @@ def test_each_value_has_one_postfix_spelling(v: Value, spelled: str) -> None:
     [
         ("#a 1 #a 2 dict/2", "ERROR: 1:6 repeated key #a"),
         ("1 list/0 2 dict/1", "ERROR: 1:3 a dict key is a leaf"),
+        ("dict/0 1 dict/1", "ERROR: 1:1 a dict key is a leaf"),
         ("1 list/2", "ERROR: 1:3 list/2 takes 2 values, the stack holds 1"),
         ("#k dict/1", "ERROR: 1:4 dict/1 takes 2 values, the stack holds 1"),
         ("Add/1", "ERROR: 1:1 Add/1 takes 1 values, the stack holds 0"),
@@ -264,7 +268,7 @@ def test_each_value_has_one_postfix_spelling(v: Value, spelled: str) -> None:
         ('"\\', "ERROR: 1:2 malformed escape"),
         ('"a', 'ERROR: 1:1 " never closed'),
         ("1 'a", "ERROR: 1:3 ' never closed"),
-        ('"a"b', "ERROR: 1:4 a string ends its token"),
+        ('"a"X', "ERROR: 1:4 a string ends its token"),
         ('"é"', "ERROR: 1:2 U+00E9 refused in a string: escape it"),
         ('"a\nb"', "ERROR: 1:3 U+000A refused in a string: escape it"),
         ("#é", "ERROR: 1:2 U+00E9 refused: FON is printable ASCII"),
@@ -322,6 +326,24 @@ def test_a_refusal_names_its_offset() -> None:
         "ERROR: 2:3 } refused: FON is postfix, not braced",
         6,
     )
+
+
+@pytest.mark.parametrize(
+    ("document", "error"),
+    [
+        ("\n}", "ERROR: 2:1 }"),
+        ("_\n_\n}", "ERROR: 3:1 }"),
+        ("\n\n _ }", "ERROR: 3:4 }"),
+    ],
+)
+def test_a_refusal_counts_lines_from_the_start(
+    document: str, error: str
+) -> None:
+    """
+    The line is one more than the newlines before the offset, the
+    column counts from the last of them.
+    """
+    assert refusal(document).startswith(error + " refused")
 
 
 def test_nesting_is_bounded_at_the_constructor() -> None:
