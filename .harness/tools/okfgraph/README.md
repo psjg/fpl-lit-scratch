@@ -78,8 +78,11 @@ A query whose header holds `# rule:` and `# remedy:` is a gate; the others are r
 | `i-type-unknown` | `type-unknown` | `type` is not in the vocabulary |
 | `b-into`, `c-adr`, `z-stats` | report | edges into a note, ADR states and edges, counts |
 
-`okfgraph check --baseline FILE` tolerates the findings FILE lists and fails on any other; a
-listed finding no gate produces any more fails too, so a baseline can only shrink.
+`make check` runs `make okf-check` first, so every gate blocks. To bring in a new rule
+before the bundle meets it, `okfgraph check --baseline FILE` tolerates the findings FILE
+lists and fails on any other; a listed finding no gate produces any more fails too, so a
+baseline can only shrink (the migration to full conformance started from 94 findings and
+ended at none). `make okf-check` uses `.harness/tools/okfgraph/baseline` while it exists.
 [Typed Graph](https://www.npmjs.com/package/@typedgraph/cli)'s `okf check` (`make okf-check-tg`,
 pinned) is an independent second checker of the OKF rules; it does not read dot-folders.
 
