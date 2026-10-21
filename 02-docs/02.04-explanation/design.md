@@ -1,3 +1,9 @@
+---
+type: Design
+title: "The FPL vision"
+description: "The language vision and its why, drawn out with the maintainer; a template until then."
+---
+
 # DESIGN.md — the FPL vision
 
 > **Status: TEMPLATE.** This is drawn out with the maintainer in a dedicated interview

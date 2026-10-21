@@ -1,3 +1,9 @@
+---
+type: Spec
+title: "The FPL language specification"
+description: "The normative language specification: a skeleton that fills in as semantics settle."
+---
+
 # SPEC.md — the FPL language specification
 
 > **Status: SKELETON.** Sections fill in as semantics settle — promoted here from
