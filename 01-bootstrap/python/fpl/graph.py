@@ -3,7 +3,127 @@
 
 A composition of [passes](01.04.01-pass.md) can be read without running
 it: each pass is a node, and the representation one pass hands the next
-is an edge. Nothing is here yet.
+is an edge. A composition is a [PassCompose](01.04.01-pass.md) or a
+single pass; both are read the same way, a single pass as a composition
+of one.
+
+Two ports close the graph: `c.source` feeds the first pass what it
+reads, and `c.target` receives what the last one writes. An edge is
+typed by that representation (`Source`, `Tokens`, ...), so a pass from
+`Core` to `Core` is one node, never a self-loop. Nodes are told apart by
+position, because one pass may stand twice in a chain.
 
 The graph of a composition. Data only: nothing here runs a pass.
 """
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+
+from fpl.arrow import Pass, PassCompose
+
+ENTRY = "c.source"
+EXIT = "c.target"
+
+
+@dataclass(frozen=True)
+class Node:
+    """
+    A pass, or a port. `name` is shown; position in `Graph.nodes` is
+    identity.
+    """
+
+    name: str
+    port: bool = False
+
+
+@dataclass(frozen=True)
+class Edge:
+    """
+    From the node at index `source` to the one at index `target`,
+    carrying `repr`, the representation's name ("" when unknown).
+    """
+
+    source: int
+    target: int
+    repr: str
+
+
+@dataclass(frozen=True)
+class Graph:
+    """
+    Nodes in running order, `c.source` first and `c.target` last, and
+    the edges between neighbours.
+    """
+
+    nodes: tuple[Node, ...]
+    edges: tuple[Edge, ...]
+
+
+def _stages(
+    c: Pass[object, object] | PassCompose[object, object],
+) -> tuple[Pass[object, object], ...]:
+    """
+    The passes of a composition, a lone pass as a tuple of one.
+    """
+    return c.stages if isinstance(c, PassCompose) else (c,)
+
+
+def graph_of(c: Pass[object, object] | PassCompose[object, object]) -> Graph:
+    """
+    The graph of a Pass or PassCompose: a node per stage between the two
+    ports, an edge per hand-over, typed by the representation handed
+    over. Nothing runs.
+    """
+    stages = _stages(c)
+    nodes = (
+        Node(ENTRY, True),
+        *(Node(stage.name) for stage in stages),
+        Node(EXIT, True),
+    )
+    reprs = (stages[0].source, *(stage.target for stage in stages))
+    edges = tuple(Edge(i, i + 1, name) for i, name in enumerate(reprs))
+    return Graph(nodes, edges)
+
+
+def explain(c: Pass[object, object] | PassCompose[object, object]) -> str:
+    """
+    The chain in one line: `Source -> lex -> Tokens -> ...`, the
+    representations between the pass names; an unknown one prints `?`.
+    """
+    stages = _stages(c)
+    parts = [stages[0].source or "?"]
+    for stage in stages:
+        parts += [stage.name, stage.target or "?"]
+    return " -> ".join(parts)
+
+
+def dot(c: Pass[object, object] | PassCompose[object, object]) -> str:
+    """
+    The graph as Graphviz source: ports as ellipses, passes as boxes,
+    edges labelled with their representation.
+    """
+    g = graph_of(c)
+    lines = ["digraph composition {", "  rankdir=LR;"]
+    for i, node in enumerate(g.nodes):
+        shape = "ellipse" if node.port else "box"
+        lines.append(f'  n{i} [label="{node.name}", shape={shape}];')
+    for e in g.edges:
+        lines.append(f'  n{e.source} -> n{e.target} [label="{e.repr}"];')
+    return "\n".join(lines + ["}"])
+
+
+def mermaid(c: Pass[object, object] | PassCompose[object, object]) -> str:
+    """
+    The graph as a Mermaid `flowchart LR`, edges labelled with their
+    representation.
+    """
+    g = graph_of(c)
+    lines = ["flowchart LR"]
+    for i, node in enumerate(g.nodes):
+        opened, closed = ("([", "])") if node.port else ("[", "]")
+        lines.append(f'  n{i}{opened}"{node.name}"{closed}')
+    for e in g.edges:
+        label = f"|{e.repr}|" if e.repr else ""
+        lines.append(f"  n{e.source} -->{label} n{e.target}")
+    return "\n".join(lines)
