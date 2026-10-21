@@ -27,12 +27,14 @@
 .DEFAULT_GOAL := check
 .PHONY: fix quick check harden ready gates tools map venv ruff-limits config-fresh pristine clean-noslop rootrun
 
-# The root is where this file's directory sits one level down. It is read before anything
-# else is included, so it is this file's, wherever make runs and whatever includes it.
-ROOT     := $(abspath $(dir $(lastword $(MAKEFILE_LIST)))..)
-Q        := $(ROOT)/quality
-S        := $(ROOT)/scripts
-VENV     := $(ROOT)/.venv
+# H is the harness, .harness/, two levels up from this file's quality/ directory (it is where the
+# one .venv lives); ROOT is the repo root, its parent. Both are read before anything else is
+# included, so they are this file's, wherever make runs and whatever includes it.
+H        := $(abspath $(dir $(lastword $(MAKEFILE_LIST)))..)
+ROOT     := $(abspath $(H)/..)
+Q        := $(H)/quality
+S        := $(H)/scripts
+VENV     := $(H)/.venv
 BIN      := $(VENV)/bin
 # What the lanes leave behind, in the directory they run in (the root's .gitignore covers it).
 OUT      := .noslop
@@ -84,7 +86,7 @@ quick: venv
 # uncommitted change to any of them stops it. Commit such a change first, with [policy].
 # The project's own are named from the root, as the directory these lanes run in.
 WALKER := $(notdir $(CURDIR))
-POLICY := quality scripts Makefile $(addprefix $(WALKER)/,Makefile pyproject.toml mutants.allow)
+POLICY := .harness/quality .harness/scripts Makefile $(addprefix $(WALKER)/,Makefile pyproject.toml mutants.allow)
 pristine:
 	@dirty="$$(git -C $(ROOT) status --porcelain --untracked-files=all -- $(POLICY))" || { \
 	  echo "pristine: git could not read the policy files' state, so the gate does not run;" >&2; \
@@ -183,11 +185,11 @@ gates: venv config-fresh
 # Each tool syncs its own locked environment into <tool>/.venv, so its dependencies never
 # enter the language's. The package a tool ships is named after its directory. escapes is
 # handed the package and the tests, never the tool's root, which holds the .venv.
-TOOLS := $(patsubst %/pyproject.toml,%,$(wildcard $(ROOT)/.harness/tools/*/pyproject.toml))
+TOOLS := $(patsubst %/pyproject.toml,%,$(wildcard $(H)/tools/*/pyproject.toml))
 
 tools: venv
-	$(BIN)/ruff check --config $(Q)/ruff.toml $(ROOT)/tools
-	$(BIN)/ruff format --config $(Q)/ruff.toml --check $(ROOT)/tools
+	$(BIN)/ruff check --config $(Q)/ruff.toml $(H)/tools
+	$(BIN)/ruff format --config $(Q)/ruff.toml --check $(H)/tools
 	@set -ex; for t in $(TOOLS); do \
 	  p=$$(basename $$t); \
 	  UV_PROJECT_ENVIRONMENT=$$t/.venv uv sync --project $$t --frozen --all-extras \
