@@ -1,9 +1,9 @@
 """
-# Elaborate
+# 01.02.06 Elaborate
 
-[01.02.05 desugar](01.02.05-desugar.md) feeds this. [01.02.07
-lower](01.02.07-lower.md) is what reifies the core, and the walker has
-not split that out yet.
+[01.02.05-desugar](01.02.05-desugar.md) feeds this.
+[01.02.07-lower](01.02.07-lower.md) is what reifies the core, and the
+walker has not split that out yet.
 
 Elaboration over the core AST: each word's effect inferred from its body
 and checked against its effect line, before any line runs.

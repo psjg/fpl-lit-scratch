@@ -1,9 +1,9 @@
 """
-# Desugar
+# 01.02.05 Desugar
 
-Today this is `Syntax → Core`. [01.02.03 resolve](01.02.03-resolve.md),
-[01.02.04 expand](01.02.04-expand.md), and [01.02.07
-lower](01.02.07-lower.md) are the arrows it stands in for.
+Today this is `Syntax → Core`. [01.02.03-resolve](01.02.03-resolve.md),
+[01.02.04-expand](01.02.04-expand.md), and
+[01.02.07-lower](01.02.07-lower.md) are the arrows it stands in for.
 
 Surface AST to core AST, and core back to surface for the printer. All
 sugar is erased here.

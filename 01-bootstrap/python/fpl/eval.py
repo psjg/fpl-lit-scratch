@@ -6,7 +6,7 @@ run, and `step` runs one node of it. Over the core AST only.
 from collections import deque
 from collections.abc import Callable, Iterator, Mapping
 from contextvars import ContextVar
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from decimal import Decimal
 from functools import partial
 from typing import assert_never
@@ -67,7 +67,10 @@ class State:
 
 
 def evaluate(
-    statements: tuple[Statement, ...], fuel: int | None = None
+    statements: tuple[Statement, ...],
+    fuel: int | None = None,
+    *,
+    spent: list[int | None] | None = None,
 ) -> tuple[tuple[Value, ...], ...]:
     """
     The stack each run line leaves, every line on a fresh stack and
@@ -77,7 +80,8 @@ def evaluate(
     shadows an earlier one, for every line; word/history pushes the ones
     it shadows, oldest first, each as a quotation, word/doc the
     docstring of the one in force and word/effect its effect line as a
-    list of strings, +fail last when it may fail.
+    list of strings, +fail last when it may fail. When `spent` is given,
+    each run line appends the steps it took, in order, even on failure.
     """
     budget(fuel)
     logged: dict[str, list[Define]] = {}
@@ -92,7 +96,9 @@ def evaluate(
         words[f"{word}/doc"] = (Push(log[-1].doc),)
         words[f"{word}/effect"] = (Push(effect_line(log[-1])),)
     return tuple(
-        metered(s, words, fuel) for s in statements if isinstance(s, Run)
+        metered(s, words, fuel, spent)
+        for s in statements
+        if isinstance(s, Run)
     )
 
 
@@ -109,11 +115,24 @@ def budget(fuel: int | None) -> None:
 class Meter:
     """
     The steps a run line may still take, None for no bound, and the line
-    charged for them.
+    charged for them. `budget` is the bound at the start; spent steps
+    are `budget - left` when there is a bound.
     """
 
     left: int | None
     span: Span
+    budget: int | None = field(init=False)
+
+    def __post_init__(self) -> None:
+        self.budget = self.left
+
+    def spent(self) -> int | None:
+        """
+        Steps taken under this meter, or None when there is no bound.
+        """
+        if self.budget is None or self.left is None:
+            return None
+        return self.budget - self.left
 
     def spend(self) -> None:
         """
@@ -129,18 +148,27 @@ FUEL: ContextVar[Meter] = ContextVar("fuel")
 UNMETERED = Meter(None, Span(1, 1))
 
 
-def metered(run: Run, words: Words, fuel: int | None) -> tuple[Value, ...]:
+def metered(
+    run: Run,
+    words: Words,
+    fuel: int | None,
+    spent: list[int | None] | None = None,
+) -> tuple[Value, ...]:
     """
     The stack the run line leaves, its steps and those of every run
     nested in it charged to one meter. A recursion deeper than the
-    walker's own stack is an error at the line.
+    walker's own stack is an error at the line. When `spent` is given,
+    the steps taken are appended even if the run then fails.
     """
-    token = FUEL.set(Meter(fuel, run.span))
+    meter = Meter(fuel, run.span)
+    token = FUEL.set(meter)
     try:
         return final(State((), run.code, words))
     except RecursionError:
         raise FplError(run.span, "recursion too deep") from None
     finally:
+        if spent is not None:
+            spent.append(meter.spent())
         FUEL.reset(token)
 
 

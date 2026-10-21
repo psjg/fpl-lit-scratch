@@ -1,9 +1,9 @@
 """
-# Parse
+# 01.02.02 Parse
 
 Islands inside strings are new source, so those still go through the
-lexer Lark. The program itself is the token stream from [01.02.01
-lex](01.02.01-lex.md).
+lexer Lark. The program itself is the token stream from
+[01.02.01-lex](01.02.01-lex.md).
 
 Source text to the surface AST: pre-lex, the tab indenter, LALR over
 fpl/grammar.lark, then the affix pass on every token. No semantics live
