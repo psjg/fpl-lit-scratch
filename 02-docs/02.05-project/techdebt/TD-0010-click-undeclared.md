@@ -3,13 +3,13 @@ type: Note
 title: The fpl CLI imports Click, but the package does not declare it
 description: "`01-bootstrap/python/fpl/__main__.py` imports click; `01-bootstrap/pyproject.toml` declares only lark and icontract, so `fpl.__main__` fails to import in the package's own environment."
 tags: [bootstrap, packaging]
-status: draft
+status: deprecated
 date: 2026-10-21
 found-in: [01-bootstrap/python/fpl/__main__.py, 01-bootstrap/pyproject.toml, flake.nix]
 related:
   - ../adr/ADR-0006-one-fpl-executable.md
   - ../adr/ADR-0007-cli-libraries-welcome.md
-closed-by:
+closed-by: aa99b0c
 ---
 
 The CLI of [ADR-0006](../adr/ADR-0006-one-fpl-executable.md) uses a library as
@@ -41,3 +41,9 @@ marker and no code (`.agents/QUALITY.md`).
 From the repository root, run a script that puts `01-bootstrap/python` on `sys.path` and
 imports `fpl.__main__`, under `nix develop -c uv run --project 01-bootstrap python -I`.
 Run on 2026-10-21.
+
+## Closed
+
+Closed by aa99b0c, which implements [ADR-0006](../adr/ADR-0006-one-fpl-executable.md).
+`01-bootstrap/pyproject.toml` declares Click and `[project.scripts] fpl = "fpl.cli:entry"`;
+`tests/test_lit_entry.py` checks both (9904b1b).

@@ -3,13 +3,13 @@ type: Note
 title: The shell filters after parse send rendered source text, not FON of the representation
 description: "`fpl parse`, `fpl desugar` and `fpl elaborate` write the program rendered back to source as a FON string, and every later filter re-lexes and re-parses it, so no representation after Tokens crosses the pipe."
 tags: [bootstrap, fon, pipe]
-status: draft
+status: deprecated
 date: 2026-10-21
 found-in: [01-bootstrap/python/fpl/pipe/__init__.py, 01-bootstrap/01.01-boundary/01.01.03-pipe.md]
 related:
   - ../adr/ADR-0002-fon-is-the-stage-protocol.md
   - ../adr/ADR-0004-native-abts-fon-at-boundaries.md
-closed-by:
+closed-by: df857db
 ---
 
 Contradicts [ADR-0002](../adr/ADR-0002-fon-is-the-stage-protocol.md) (a filter writes
@@ -54,3 +54,12 @@ From the repository root, in `nix develop`, with `01-bootstrap/python` on `sys.p
 `uv run --project 01-bootstrap python`: call `fpl.pipe._run` with `"source"` on `b"1 2 +\n"`,
 then `"lex"`, `"parse"`, `"desugar"` and `"eval"` on each previous output, and print each.
 Run on 2026-10-21; the output is the one shown above.
+
+## Closed
+
+Closed by df857db, which implements
+[ADR-0002](../adr/ADR-0002-fon-is-the-stage-protocol.md). Every filter now reads and writes
+FON of its own representation through the codecs in `01.01.05-codec.md`; `_run`, its
+stage-name switch and the render/re-lex/re-parse round trip are gone, and errors cross the
+pipe as Error documents. `prove.py` and `tests/test_lit_equivalence.py` hold the shell route
+against the direct one, and fail if a filter lexes or parses again (d02b8af).

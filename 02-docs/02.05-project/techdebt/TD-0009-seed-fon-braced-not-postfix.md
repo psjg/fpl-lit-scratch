@@ -3,12 +3,12 @@ type: Note
 title: The seed FON is braced, not the postfix stream FON is decided to be
 description: "FON is decided to be an ASCII postfix subset of FPL, decoded left to right on a stack; the seed FON is a braced data profile read by a Lark LALR grammar, and no page says which of the two is normative."
 tags: [bootstrap, fon]
-status: draft
+status: deprecated
 date: 2026-10-21
 found-in: [01-bootstrap/01.01-boundary/01.01.02-fon.md, 01-bootstrap/python/fpl/fon/__init__.py]
 related:
   - ../adr/ADR-0003-fon-is-an-fpl-subset.md
-closed-by:
+closed-by: 712338c
 ---
 
 Contradicts [ADR-0003](../adr/ADR-0003-fon-is-an-fpl-subset.md): FON is a subset of FPL and
@@ -37,3 +37,9 @@ it. Which one is the maintainer's call; until then new codecs
 
 Run `fpl source` and then `fpl lex` on any file and read the output; or read the grammar in
 `01-bootstrap/01.01-boundary/01.01.02-fon.md`.
+
+## Closed
+
+Closed by 712338c, which implements [ADR-0003](../adr/ADR-0003-fon-is-an-fpl-subset.md). FON
+is postfix, normatively: `01.01.02-fon.md` is the grammar (d00162c), the seed and literate
+readers decode left to right on a stack, and both refuse braces and the old brackets.
