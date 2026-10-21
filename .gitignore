@@ -47,3 +47,6 @@ mutants/
 
 # What make graph writes: the OKF bundle as Turtle (.harness/tools/okfgraph)
 /build/
+
+# Entangled's hash database: per checkout, never committed (.harness/scripts/lit)
+.entangled/
