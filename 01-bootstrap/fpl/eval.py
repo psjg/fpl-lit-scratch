@@ -6,7 +6,7 @@ run, and `step` runs one node of it. Over the core AST only.
 from collections import deque
 from collections.abc import Callable, Iterator, Mapping
 from contextvars import ContextVar
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from decimal import Decimal
 from functools import partial
 from typing import assert_never
@@ -121,11 +121,10 @@ class Meter:
 
     left: int | None
     span: Span
-    budget: int | None = None
+    budget: int | None = field(init=False)
 
     def __post_init__(self) -> None:
-        if self.budget is None:
-            self.budget = self.left
+        self.budget = self.left
 
     def spent(self) -> int | None:
         """
