@@ -35,6 +35,8 @@ PAGE = Path(__file__).with_name("static") / "tokview.html"
 COUNT_URL = "https://api.anthropic.com/v1/messages/count_tokens"
 MODEL = "claude-opus-5-5"
 ERROR = 500  # bytes of an upstream failure passed on to the page
+# Where a checkout keeps its example programs, from its root.
+CORPUS = Path("03-fpl/OLD/03.01-features")
 BODY = (
     1 << 22
 )  # bytes of a request body; the page sends one source file, never this much
@@ -129,11 +131,7 @@ def find_root(start: Path) -> Path | None:
     03-fpl/OLD/03.01-features/.
     """
     return next(
-        (
-            d
-            for d in (start, *start.parents)
-            if (d / "fpl" / "features").is_dir()
-        ),
+        (d for d in (start, *start.parents) if (d / CORPUS).is_dir()),
         None,
     )
 
@@ -153,9 +151,7 @@ class App:
         """The example programs under the root, by
         "<feature>/<file stem>".
         """
-        paths = sorted(
-            self.root.glob("03-fpl/OLD/03.01-features/*/examples/*.fpl")
-        )
+        paths = sorted(self.root.glob(f"{CORPUS.as_posix()}/*/examples/*.fpl"))
         return {
             f"{p.parent.parent.name}/{p.stem}": p.read_text().rstrip("\n")
             for p in paths
