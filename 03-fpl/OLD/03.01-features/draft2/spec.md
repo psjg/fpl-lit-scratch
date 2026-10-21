@@ -1,3 +1,9 @@
+---
+type: Spec
+title: "draft2 spec"
+description: "Archived maintainer spec: Draft 2: examples."
+---
+
 # draft2 — spec
 
 Source: handoff/SHAR-syntax.org, "Draft 2 — examples"; design doc, Draft 2

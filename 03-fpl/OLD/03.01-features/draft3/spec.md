@@ -1,3 +1,9 @@
+---
+type: Spec
+title: "draft3 spec"
+description: "Archived maintainer spec: Draft 3: paths and directories."
+---
+
 # draft3 — spec
 
 Source: handoff/SHAR-syntax.org, "Draft 3 — paths and directories"; design doc, Draft 3

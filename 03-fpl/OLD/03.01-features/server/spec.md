@@ -1,3 +1,9 @@
+---
+type: Spec
+title: "server spec"
+description: "Archived maintainer spec: The counting file server."
+---
+
 # server — spec
 
 Source: handoff/SHAR-syntax.org, "The counting file server"

@@ -1,3 +1,9 @@
+---
+type: Spec
+title: "sketch spec"
+description: "Archived maintainer spec: The planted-tree sketches."
+---
+
 # sketch — spec
 
 Source: handoff/SHAR-syntax.org, "The planted-tree sketches"

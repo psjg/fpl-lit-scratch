@@ -1,3 +1,9 @@
+---
+type: Spec
+title: "match spec"
+description: "Archived maintainer spec: Draft 4: pattern matching."
+---
+
 # match — spec
 
 Source: handoff/SHAR-syntax.org, "Draft 4 — pattern matching"; design doc, Draft 4
