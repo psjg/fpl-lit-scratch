@@ -11,6 +11,7 @@ are looking at, what we stole, what we have not built.
 | 02.04.01 | [Playgrounds](02.04.01-playgrounds.md) — Monaco, Miller nav, docking, scroll-host vision, MOTD |
 | 02.04.02 | [Turnstiles](02.04.02-turnstiles.md) — ASCII ⊢ inventory |
 | 02.04.03 | [Judgments](02.04.03-judgments.md) — equateable oordelen, Clipper, diagnostics |
+| 02.04.04 | [Debugging](02.04.04-debugging.md) — time travel, steppers, restarts, accessible stepping |
 
 Error tag catalog: [02.03.01 Errors](../../02.03-reference/02.03.01-errors.md). Site:
 [fpl-lit-scratch](https://psjg.github.io/fpl-lit-scratch/).
@@ -34,6 +35,8 @@ plan), `kept` (true in the tree), `dropped` (we no longer mean it — say why in
 | 02.04.03 | [judgments](02.04.03-judgments.md) | Locus `^` + Elm tip + Clipper speaker | deferred |
 | 02.04.03 | [judgments](02.04.03-judgments.md) | Deadline `@ <n>` on the `\|-` judgment line | deferred |
 | 02.04.03 | [judgments](02.04.03-judgments.md) | Restarts / supervision as a north-star | open |
+| 02.04.04 | [debugging](02.04.04-debugging.md) | Reduction stepper on `/try` (prototype) | kept |
+| 02.04.04 | [debugging](02.04.04-debugging.md) | One trace format for every stage; reverse/branch; DAP adapter | open |
 | 02.04.01 | [playgrounds](02.04.01-playgrounds.md) | Path-browser buffer columns (navigate + Focus) | kept |
 | 02.04.01 | [playgrounds](02.04.01-playgrounds.md) | Dockable Paths/Edit/Term on `/try` | kept |
 | 02.04.01 | [playgrounds](02.04.01-playgrounds.md) | Scroll host + dock guest (locked ZUI arc) | open |
