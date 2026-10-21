@@ -59,8 +59,13 @@ quarto render
 mv "$tmp/marimo" .site/marimo
 mv "$tmp/werkbank" .site/werkbank
 
-rm -rf .site/try .site/learn
+rm -rf .site/try .site/ide .site/learn
 cp -R assets/try .site/try
+cp -R assets/try .site/ide  # the IDE alias of the playground page
+# Telemetry is off unless a Sentry DSN is given at build time; none is committed.
+if [ -n "${FPL_SENTRY_DSN:-}" ]; then
+  for d in try ide; do printf 'window.FPL_CONFIG = { sentryDsn: "%s" };\n' "$FPL_SENTRY_DSN" > ".site/$d/fpl-config.js"; done
+fi
 cp -R learn .site/learn
 
 echo "Open .site/ with: python3 -m http.server --directory .site"

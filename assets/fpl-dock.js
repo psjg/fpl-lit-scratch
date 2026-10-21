@@ -8,9 +8,9 @@ const DOCKVIEW_VER = "8.6.0";
 // dockview's main.esm.mjs is `export * from "dockview-core"` (bare specifier — breaks
 // in the browser). Import the self-contained dockview-core ESM; CSS stays on `dockview`.
 const DOCKVIEW_ESM = `https://cdn.jsdelivr.net/npm/dockview-core@${DOCKVIEW_VER}/dist/package/main.esm.mjs`;
-const STORAGE_KEY = "fpl-try-dock-v2";
-const PANEL_IDS = /** @type {const} */ (["paths", "edit", "term"]);
-const TITLES = { paths: "Paths", edit: "Edit", term: "Term" };
+const STORAGE_KEY = "fpl-try-dock-v3";
+const PANEL_IDS = /** @type {const} */ (["paths", "edit", "term", "trace"]);
+const TITLES = { paths: "Paths", edit: "Edit", term: "Term", trace: "Trace" };
 /** Floor so Paths cannot be crushed empty (~12rem). */
 const PATHS_MIN_W = 192;
 /** Default Paths width when side-docked (~2 columns); user may drag wider/narrower. */
@@ -217,6 +217,13 @@ export async function initDock(opts = {}) {
         component: "term",
         title: TITLES.term,
         position: { referencePanel: "edit", direction: "right" },
+      });
+      dock.addPanel({
+        id: "trace",
+        component: "trace",
+        title: TITLES.trace,
+        initialHeight: 240,
+        position: { direction: "below" },
       });
     } finally {
       applying = false;

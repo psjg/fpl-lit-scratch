@@ -769,3 +769,15 @@ html.fpl-dock-ready .dv-resize-container {
     min-height: 100%;
   }
 }
+
+/* Trace panel (fpl-flame.js) */
+.fpl-flame-bar { display: flex; gap: 0.75rem; align-items: center; padding: 0.35rem 0.6rem; font-size: 0.8rem; }
+.fpl-flame-info { flex: 1; opacity: 0.85; }
+.fpl-flame-svg { padding: 0 0.6rem 0.6rem; overflow: auto; }
+.fpl-flame { width: 100%; height: 9rem; display: block; background: rgba(127, 127, 127, 0.08); border-radius: 4px; }
+.fpl-flame-pass rect { fill: #4a9eff; }
+.fpl-flame-run rect { fill: #3fb68b; }
+.fpl-flame-call rect { fill: #e8a33d; }
+.fpl-flame-fuelline { stroke: #d96ba0; stroke-width: 1.5; vector-effect: non-scaling-stroke; }
+.fpl-flame g:hover rect { stroke: currentColor; stroke-width: 1; vector-effect: non-scaling-stroke; }
+.fpl-flame-lanes { font-size: 0.7rem; opacity: 0.6; padding-top: 0.25rem; }

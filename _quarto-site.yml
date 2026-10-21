@@ -8,6 +8,9 @@ project:
     - assets/fpl-playground.js
     - assets/fpl-playground.css
     - assets/fpl-dock.js
+    - assets/fpl-telemetry.js
+    - assets/fpl-trace.js
+    - assets/fpl-flame.js
   render:
     - index.qmd
     - 01-bootstrap/README.md

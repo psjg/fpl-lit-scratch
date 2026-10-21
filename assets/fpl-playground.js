@@ -6,6 +6,9 @@
  */
 import { runFpl, checkExpected, learnBase } from "./fpl-runtime.js";
 import { initDock } from "./fpl-dock.js";
+import { initTelemetry } from "./fpl-telemetry.js";
+import { runTraced, openInPerfetto } from "./fpl-trace.js";
+import { createFlamePanel } from "./fpl-flame.js";
 
 const RESULT_PREFIX = "|- ";
 const TRAILING_NOTE = /[\t ]*(?:;|⍝)[ \t]*(.*)$/u;
@@ -763,6 +766,31 @@ async function bootPlayground() {
     else clearNavDeco();
     scheduleLive();
   };
+
+  initTelemetry();
+  const traceBtn = $("fpl-trace");
+  let lastTraceJson = null;
+  const flameHost = $("fpl-trace-panel");
+  const flame = flameHost
+    ? createFlamePanel(flameHost, {
+        onPerfetto: () => lastTraceJson && openInPerfetto(lastTraceJson, "FPL run"),
+      })
+    : null;
+  if (traceBtn) {
+    traceBtn.addEventListener("click", async () => {
+      traceBtn.disabled = true;
+      try {
+        const { out: text, json, events } = await runTraced(getSrc());
+        lastTraceJson = json;
+        setOut(out, text, true);
+        flame?.render(events, JSON.parse(json).otherData?.failure ?? null);
+      } catch (err) {
+        setOut(out, String(err), false);
+      } finally {
+        traceBtn.disabled = false;
+      }
+    });
+  }
 
   const runOnce = async (btn, { share = false } = {}) => {
     if (btn) btn.disabled = true;

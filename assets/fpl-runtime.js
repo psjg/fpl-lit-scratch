@@ -3,6 +3,8 @@
  * Wheel URLs are resolved from this module's location (assets/ → ../werkbank/pypi/).
  */
 
+import { span } from "./fpl-telemetry.js";
+
 const PYODIDE_URL = "https://cdn.jsdelivr.net/pyodide/v314.0.6/full/pyodide.mjs";
 
 const WHEELS = [
@@ -91,7 +93,9 @@ else:
 export async function runFpl(src) {
   const pyodide = await ensurePyodide();
   pyodide.globals.set("_fpl_buf", src);
-  return runSource('print(fpl.run.default.src(_fpl_buf), end="")');
+  return span("fpl.run", "fpl", () =>
+    runSource('print(fpl.run.default.src(_fpl_buf), end="")'),
+  );
 }
 
 /** Normalize trailing newlines for kata checks. */

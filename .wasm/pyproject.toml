@@ -17,3 +17,6 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["fpl"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"fpl_trace.py" = "fpl_trace.py"
