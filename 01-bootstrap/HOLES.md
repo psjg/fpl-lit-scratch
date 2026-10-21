@@ -1,3 +1,9 @@
+---
+type: Note
+title: "Holes"
+description: "Where the documents are silent: what depends on it, the default in force, who closes it and how."
+---
+
 # HOLES.md
 
 Where the documents are silent: what depends on it, the default in force, who closes it and how.

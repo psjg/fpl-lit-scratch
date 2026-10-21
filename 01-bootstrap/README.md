@@ -1,4 +1,5 @@
 ---
+type: Readme
 title: 1 Bootstrap
 ---
 

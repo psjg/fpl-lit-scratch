@@ -1,4 +1,5 @@
 ---
+type: Readme
 title: Archived features suite
 ---
 

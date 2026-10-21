@@ -1,3 +1,9 @@
+---
+type: Readme
+title: "Site"
+description: "The Astro project that renders the walker's notes."
+---
+
 # Site
 
 This is the Astro project. It reads the Markdown above it and emits HTML. It does not run Marimo cells and it does not use MDX.

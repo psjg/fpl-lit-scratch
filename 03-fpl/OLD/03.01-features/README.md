@@ -1,4 +1,5 @@
 ---
+type: Readme
 title: 3.1 Features
 ---
 
