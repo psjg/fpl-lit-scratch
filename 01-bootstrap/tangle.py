@@ -53,9 +53,11 @@ MODULES = {
     "01.01-boundary/01.01.03-pipe.md": "pipe/__init__.py",
     "01.01-boundary/01.01.01-source.md": "source.py",
     "01.01-boundary/01.01.04-render.md": "render.py",
+    "01.01-boundary/01.01.05-codec.md": "codec.py",
     "01.01-boundary/01.01.06-cli.md": "cli.py",
     "01.04-compose/01.04.01-pass.md": "arrow.py",
     "01.04-compose/01.04.02-run.md": "run.py",
+    "01.04-compose/01.04.05-graph.md": "graph.py",
     "01.06-nagini/01.06.01-advance.md": "advance.py",
 }
 
