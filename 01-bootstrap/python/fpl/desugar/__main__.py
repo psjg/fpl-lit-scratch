@@ -2,4 +2,4 @@ from fpl.pipe import cli
 
 from . import desugar
 
-cli(desugar)
+raise SystemExit(cli(desugar))

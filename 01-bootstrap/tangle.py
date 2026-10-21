@@ -94,7 +94,7 @@ from fpl.pipe import cli
 
 from . import {name}
 
-cli({name})
+raise SystemExit(cli({name}))
 """
 
 
