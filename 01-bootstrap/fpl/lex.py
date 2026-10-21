@@ -1,3 +1,4 @@
+# Tangled from 01.02-pass/01.02.01-lex.md: edit that page.
 """
 The pre-lexer: what the grammar cannot count, counted before Lark sees
 the text.
@@ -23,32 +24,12 @@ from fpl.errors import FplError, Span
 PAIRS = {"“": "”", "「": "」", "⟦": "⟧"}
 BRACKETS = {"[": "]", "(": ")", "⟨": "⟩", "{": "}"}
 CLOSERS = {close: opener for opener, close in (PAIRS | BRACKETS).items()}
-PLACEHOLDER = "¶"
 SPECIAL = re.compile(r"[“「⟦”」⟧;⍝]")
+PLACEHOLDER = "¶"
 LINE_COMMENT = re.compile(r"(;+|⍝)[^\n]*")
 MODS = "\u00b4`\u00a8\u02dc\u207c\u02d9"
 SHAPE = re.compile(rf"(->|→|\$|#|&|\.\./|\.\.)?([^{MODS}]*?)([{MODS}]*)")
 NUMBER = re.compile(r"-?(\d+(\.\d+)?|∞|π)")
-
-
-class Lines:
-    """
-    Offsets into a source as the 1-based line and column an editor
-    shows.
-    """
-
-    def __init__(self, source: str) -> None:
-        self.starts = [0] + [
-            n + 1 for n, char in enumerate(source) if char == "\n"
-        ]
-
-    def span(self, offset: int) -> Span:
-        """
-        The line and column of a source offset; the end is just past the
-        last line.
-        """
-        line = bisect_right(self.starts, offset)
-        return Span(line, offset - self.starts[line - 1] + 1)
 
 
 @dataclass(frozen=True)
@@ -78,17 +59,24 @@ class Prelexed:
     stash: dict[int, Stashed]
 
 
-def counted(text: str, at: int, close: str, end: int) -> int | None:
+class Lines:
     """
-    The offset just past the closer that balances the opener at `at`, or
-    None if none does before `end`. Only the opener's own pair is
-    counted.
+    Offsets into a source as the 1-based line and column an editor
+    shows.
     """
-    opener, depth, j = text[at], 1, at + 1
-    while j < end and depth:
-        depth += (text[j] == opener) - (text[j] == close)
-        j += 1
-    return None if depth else j
+
+    def __init__(self, source: str) -> None:
+        self.starts = [0] + [
+            n + 1 for n, char in enumerate(source) if char == "\n"
+        ]
+
+    def span(self, offset: int) -> Span:
+        """
+        The line and column of a source offset; the end is just past the
+        last line.
+        """
+        line = bisect_right(self.starts, offset)
+        return Span(line, offset - self.starts[line - 1] + 1)
 
 
 class _Code:
@@ -121,49 +109,27 @@ class _Code:
         return True
 
 
-def _pair(source: str, at: int, end: int, code: _Code) -> int:
+class _RefusalError(Exception):
     """
-    Write the string or comment opening at `at`; return the offset after
-    its closer.
+    A strictness refusal at a code offset, before it is placed in the
+    source.
     """
-    opener = source[at]
-    after = counted(source, at, PAIRS[opener], end)
-    if after is None:
-        raise FplError(Lines(source).span(at), f"{opener} never closed")
-    if opener == "⟦":
-        if code.at_line_start():
-            return (
-                len(source[after:end])
-                - len(source[after:end].lstrip(" "))
-                + after
-            )
-        code.put(" ", at)
-        return after
-    if code.chars and code.chars[-1] not in " \t\n":
-        code.put(" ", at)
-    line = source.rfind("\n", 0, at) + 1
-    depth = len(source[line:at]) - len(source[line:at].lstrip("\t"))
-    code.stash[len(code.chars)] = Stashed(
-        "str" if opener == "“" else "raw", at + 1, after - 1, depth
-    )
-    code.put(PLACEHOLDER + " ", at, verbatim=False)
-    return after
+
+    def __init__(self, offset: int, message: str) -> None:
+        super().__init__(message)
+        self.offset = offset
+        self.message = message
 
 
-def _special(source: str, at: int, end: int, code: _Code) -> int:
+def prelex(source: str, start: int = 0, end: int | None = None) -> Prelexed:
     """
-    Write what starts with a special character at `at`; return where the
-    next write starts.
+    Pre-lex source[start:end] (all of it by default) to code the grammar
+    reads, ending in a newline. Refuses a pair never closed, a closer
+    with no opener, and loose indentation.
     """
-    char = source[at]
-    if char in PAIRS:
-        return _pair(source, at, end, code)
-    if char in CLOSERS:
-        raise FplError(Lines(source).span(at), f"{char} closes nothing")
-    newline = source.find("\n", at, end)
-    after = end if newline < 0 else newline
-    code.put(source[at:after], at)
-    return after
+    lexed = pairs(source, start, end)
+    strict(source, lexed.code, lexed.origin)
+    return lexed
 
 
 def pairs(
@@ -189,27 +155,105 @@ def pairs(
     return Prelexed("".join(code.chars), (*code.origin, stop), code.stash)
 
 
-def prelex(source: str, start: int = 0, end: int | None = None) -> Prelexed:
+def _special(source: str, at: int, end: int, code: _Code) -> int:
     """
-    Pre-lex source[start:end] (all of it by default) to code the grammar
-    reads, ending in a newline. Refuses a pair never closed, a closer
-    with no opener, and loose indentation.
+    Write what starts with a special character at `at`; return where the
+    next write starts.
     """
-    lexed = pairs(source, start, end)
-    strict(source, lexed.code, lexed.origin)
-    return lexed
+    char = source[at]
+    if char in PAIRS:
+        return _pair(source, at, end, code)
+    if char in CLOSERS:
+        raise FplError(Lines(source).span(at), f"{char} closes nothing")
+    newline = source.find("\n", at, end)
+    after = end if newline < 0 else newline
+    code.put(source[at:after], at)
+    return after
 
 
-class _RefusalError(Exception):
+def counted(text: str, at: int, close: str, end: int) -> int | None:
     """
-    A strictness refusal at a code offset, before it is placed in the
-    source.
+    The offset just past the closer that balances the opener at `at`, or
+    None if none does before `end`. Only the opener's own pair is
+    counted.
     """
+    opener, depth, j = text[at], 1, at + 1
+    while j < end and depth:
+        depth += (text[j] == opener) - (text[j] == close)
+        j += 1
+    return None if depth else j
 
-    def __init__(self, offset: int, message: str) -> None:
-        super().__init__(message)
-        self.offset = offset
-        self.message = message
+
+def _pair(source: str, at: int, end: int, code: _Code) -> int:
+    """
+    Write the string or comment opening at `at`; return the offset after
+    its closer.
+    """
+    opener = source[at]
+    after = counted(source, at, PAIRS[opener], end)
+    if after is None:
+        raise FplError(Lines(source).span(at), f"{opener} never closed")
+    if opener == "⟦":
+        # ⟨Drop a block comment⟩
+        if code.at_line_start():
+            return (
+                len(source[after:end])
+                - len(source[after:end].lstrip(" "))
+                + after
+            )
+        code.put(" ", at)
+        return after
+    # ⟨Stash a string⟩
+    if code.chars and code.chars[-1] not in " \t\n":
+        code.put(" ", at)
+    line = source.rfind("\n", 0, at) + 1
+    depth = len(source[line:at]) - len(source[line:at].lstrip("\t"))
+    code.stash[len(code.chars)] = Stashed(
+        "str" if opener == "“" else "raw", at + 1, after - 1, depth
+    )
+    code.put(PLACEHOLDER + " ", at, verbatim=False)
+    return after
+
+
+def strict(source: str, code: str, origin: tuple[int, ...]) -> None:
+    """
+    Hold the code to strict indentation, reporting a refusal at its
+    place in the source.
+    """
+    lines = Lines(source)
+    try:
+        _lines(code, lambda offset: lines.span(origin[offset]).line)
+    except _RefusalError as refusal:
+        raise FplError(
+            lines.span(origin[refusal.offset]), refusal.message
+        ) from None
+
+
+def _lines(code: str, line_of: Callable[[int], int]) -> None:
+    """
+    Refuse leading spaces outside brackets, and a dedent below the line
+    of a bracket still open; the dedent is reported at the dedenting
+    line and names the opener's line.
+    """
+    open_: list[tuple[str, int, int]] = []
+    base = 0
+    for line in code.split("\n"):
+        depth = len(line) - len(line.lstrip("\t"))
+        # ⟨Refuse a space where a tab belongs⟩
+        if not open_ and line[depth : depth + 1] == " ":
+            raise _RefusalError(base + depth, "indentation must be tabs")
+        # ⟨Refuse a dedent below an open bracket⟩
+        if open_ and line.strip() and depth < open_[-1][2]:
+            opener, opened, _ = open_[-1]
+            message = (
+                f"dedent below line {line_of(opened)}, "
+                f"but its {opener} is still open"
+            )
+            raise _RefusalError(base + depth, message)
+        _brackets(line, base, depth, open_)
+        base += len(line) + 1
+    if open_:
+        raise _RefusalError(open_[-1][1], f"{open_[-1][0]} never closed")
 
 
 def _brackets(
@@ -232,45 +276,6 @@ def _brackets(
             )
         elif char in CLOSERS:
             open_.pop()
-
-
-def _lines(code: str, line_of: Callable[[int], int]) -> None:
-    """
-    Refuse leading spaces outside brackets, and a dedent below the line
-    of a bracket still open; the dedent is reported at the dedenting
-    line and names the opener's line.
-    """
-    open_: list[tuple[str, int, int]] = []
-    base = 0
-    for line in code.split("\n"):
-        depth = len(line) - len(line.lstrip("\t"))
-        if not open_ and line[depth : depth + 1] == " ":
-            raise _RefusalError(base + depth, "indentation must be tabs")
-        if open_ and line.strip() and depth < open_[-1][2]:
-            opener, opened, _ = open_[-1]
-            message = (
-                f"dedent below line {line_of(opened)}, "
-                f"but its {opener} is still open"
-            )
-            raise _RefusalError(base + depth, message)
-        _brackets(line, base, depth, open_)
-        base += len(line) + 1
-    if open_:
-        raise _RefusalError(open_[-1][1], f"{open_[-1][0]} never closed")
-
-
-def strict(source: str, code: str, origin: tuple[int, ...]) -> None:
-    """
-    Hold the code to strict indentation, reporting a refusal at its
-    place in the source.
-    """
-    lines = Lines(source)
-    try:
-        _lines(code, lambda offset: lines.span(origin[offset]).line)
-    except _RefusalError as refusal:
-        raise FplError(
-            lines.span(origin[refusal.offset]), refusal.message
-        ) from None
 
 
 def shape(token: str) -> tuple[str, Kind, tuple[str, ...], str] | None:
