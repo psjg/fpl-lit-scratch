@@ -96,6 +96,7 @@ decides that the Python/Lark walker runs the passes first.
   bytecode) is compatible with this decision and not yet designed.
 - A typed staging model (one `Transform<A, B, Stage, Effects>` of which function, macro,
   operative, elaborator, optimiser pass, partial evaluator and code generator are variants)
-  is the proposed shape. It is not ratified.
+  is the proposed shape. It is not ratified
+  ([02.05.06 Pipeline open questions](../notes/02.05.06-pipeline-open-questions.md)).
 - The composition `>>` must stay visible as structure for a program to inspect or extend a
   pipeline; see [ADR-0012](ADR-0012-pipeline-is-a-computation-graph.md).

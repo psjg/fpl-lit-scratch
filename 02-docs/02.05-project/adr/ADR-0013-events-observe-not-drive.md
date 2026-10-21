@@ -72,6 +72,7 @@ name; ordering comes from the graph and from explicit effects.
 - There is no compiler event stream and no scheduler in the tree. The REPL session
   (`01-bootstrap/fpl/session.py`) derives its state from an append-only log of hashed events
   (`01-bootstrap/fpl/log.py`), but those events are an input or a rewind, not compiler work.
-- The event vocabulary above is a proposal; it is not ratified.
+- The event vocabulary above is a proposal; it is not ratified
+  ([02.05.06 Pipeline open questions](../notes/02.05.06-pipeline-open-questions.md)).
 - Draft because it rests on [ADR-0012](ADR-0012-pipeline-is-a-computation-graph.md), which is
   a draft.

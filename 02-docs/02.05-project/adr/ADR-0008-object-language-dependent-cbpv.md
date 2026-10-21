@@ -88,4 +88,5 @@ elaborated term into the core.
   should say dependent CBPV.
 - Which normalisation is needed for definitional equality, and which is optional
   whole-program work, is not yet said: `01.02.08-normalize.md` and `01.02.09-optimize.md`
-  are separate signature pages.
+  are separate signature pages. That and the typing of `evaluate : Core × Env -> Value` are
+  open in [02.05.06 Pipeline open questions](../notes/02.05.06-pipeline-open-questions.md).

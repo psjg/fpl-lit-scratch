@@ -91,6 +91,7 @@ There is one `fpl` executable. `fpl <stage>` runs one stage as a filter; `fpl <f
   ([TD-0010](../techdebt/TD-0010-click-undeclared.md)).
 - The command list is a hand-written tuple (`COMMANDS`), and the adapter dispatches on the
   stage name in `_run`. Deriving both from a registry of `Pass` objects with input and output
-  types is a proposal, not part of this decision.
+  types is a proposal, not part of this decision
+  ([02.05.06 Pipeline open questions](../notes/02.05.06-pipeline-open-questions.md)).
 - The adapter has no `--trace` and no choice of FON encoding; an error is one stderr line and
   exit code 1.

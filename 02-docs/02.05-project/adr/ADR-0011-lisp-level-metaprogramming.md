@@ -89,4 +89,5 @@ and an environment, not an escape from the type and effect system.
 - Binding identity in the representation (ABTs, [ADR-0003](ADR-0003-fon-is-an-fpl-subset.md))
   is what lets transformations be hygienic without guessing names.
 - Open: node identity, effect and dependency discovery, and how dynamic staging avoids
-  dependencies nobody can see.
+  dependencies nobody can see
+  ([02.05.06 Pipeline open questions](../notes/02.05.06-pipeline-open-questions.md)).

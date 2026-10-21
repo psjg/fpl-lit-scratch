@@ -108,4 +108,5 @@ an executor only picks one. The meaning of a program does not depend on the exec
 - Executors can be tested against each other: a pass run natively must equal the same pass
   run across FON, and a linear pipeline run directly must equal it run through the shell.
 - How far this goes (executor taxonomy, task and artifact identity, scheduling order of the
-  work) is proposed but not ratified.
+  work) is proposed but not ratified; the proposals and their order are in
+  [02.05.06 Pipeline open questions](../notes/02.05.06-pipeline-open-questions.md).
