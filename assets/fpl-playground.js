@@ -6,6 +6,7 @@
  */
 import { runFpl, checkExpected, learnBase } from "./fpl-runtime.js";
 import { initDock } from "./fpl-dock.js";
+import { registerFpl } from "./fpl-language.js";
 
 const RESULT_PREFIX = "|- ";
 const TRAILING_NOTE = /[\t ]*(?:;|⍝)[ \t]*(.*)$/u;
@@ -430,10 +431,33 @@ async function bootPlayground() {
   const initial =
     fromHash != null && fromHash !== "" ? fromHash : DEFAULT_SRC;
 
+  // Tokens come from fpl-language.js, generated from grammar.lark and lex.py
+  // (01-bootstrap/ide/gen_highlight.py); the theme only gives them colours.
+  registerFpl(monaco);
+  monaco.editor.defineTheme("fpl-dark", {
+    base: "vs-dark",
+    inherit: true,
+    colors: {},
+    rules: [
+      { token: "comment.doc", foreground: "7ec699", fontStyle: "italic" },
+      { token: "comment.section", foreground: "7ec699", fontStyle: "bold" },
+      { token: "comment.file", foreground: "7ec699", fontStyle: "bold" },
+      { token: "comment", foreground: "6a737d", fontStyle: "italic" },
+      { token: "string", foreground: "ce9178" },
+      { token: "string.raw", foreground: "d7ba7d" },
+      { token: "number", foreground: "b5cea8" },
+      { token: "keyword.sigil", foreground: "c586c0" },
+      { token: "operator.modifier", foreground: "dcdcaa" },
+      { token: "type.path", foreground: "4ec9b0" },
+      { token: "delimiter.bar", foreground: "569cd6", fontStyle: "bold" },
+      { token: "delimiter.island", foreground: "d7ba7d" },
+    ],
+  });
+
   const editor = monaco.editor.create(host, {
     value: initial,
-    language: "plaintext",
-    theme: "vs-dark",
+    language: "fpl",
+    theme: "fpl-dark",
     fontSize: 14,
     fontFamily: "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
     lineNumbers: "on",

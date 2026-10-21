@@ -6,6 +6,7 @@ project:
     - assets/fpl-live.css
     - assets/fpl-runtime.js
     - assets/fpl-playground.js
+    - assets/fpl-language.js
     - assets/fpl-playground.css
     - assets/fpl-dock.js
   render:
