@@ -42,9 +42,9 @@ book:
         - 02-docs/02.04-explanation/design.md
         - 02-docs/02.03-reference/spec.md
         - 02-docs/02.05-project/roadmap.md
-        - 02-docs/02.05-project/notes/issue-task-patch.md
-        - 02-docs/02.05-project/notes/sober.md
-        - 02-docs/02.05-project/notes/mediating-project.md
+        - 02-docs/02.05-project/notes/02.05.01-issue-task-patch.md
+        - 02-docs/02.05-project/notes/02.05.02-sober.md
+        - 02-docs/02.05-project/notes/02.05.03-mediating-project.md
     - part: "3.1 Features"
       chapters:
         - 03-fpl/OLD/03.01-features/draft1/spec.md

@@ -93,11 +93,11 @@ FPL
 │   ├── <a href="02-docs/02.03-reference/spec.md">02.02-spec.md</a>
 │   ├── <a href="02-docs/02.05-project/roadmap.md">02.03-roadmap.md</a>
 │   └── <a href="02-docs/02.05-project/notes/">02.05-notes/</a>
-│       ├── <a href="02-docs/02.05-project/notes/issue-task-patch.md">02.05.01-issue-task-patch.md</a>
-│       ├── <a href="02-docs/02.05-project/notes/sober.md">02.05.02-sober.md</a>
-│       ├── <a href="02-docs/02.05-project/notes/mediating-project.md">02.05.03-mediating-project.md</a>
-│       ├── <a href="02-docs/02.05-project/notes/obsidian-okf-cob-bridge.md">02.05.04-obsidian-okf-cob-bridge.md</a>
-│       └── <a href="02-docs/02.05-project/notes/repl-phrase-costs.md">02.05.05-repl-phrase-costs.md</a>
+│       ├── <a href="02-docs/02.05-project/notes/02.05.01-issue-task-patch.md">02.05.01-issue-task-patch.md</a>
+│       ├── <a href="02-docs/02.05-project/notes/02.05.02-sober.md">02.05.02-sober.md</a>
+│       ├── <a href="02-docs/02.05-project/notes/02.05.03-mediating-project.md">02.05.03-mediating-project.md</a>
+│       ├── <a href="02-docs/02.05-project/notes/02.05.04-obsidian-okf-cob-bridge.md">02.05.04-obsidian-okf-cob-bridge.md</a>
+│       └── <a href="02-docs/02.05-project/notes/02.05.05-repl-phrase-costs.md">02.05.05-repl-phrase-costs.md</a>
 ├── <a href="03-fpl/">03-fpl/</a>          # FPL's own tree
 │   └── <a href="03-fpl/OLD/03.01-features/">03.01-features/</a> # the executable spec: what FPL must do (spec.md + examples)
 ├── <a href=".harness/quality/">.harness/quality/</a>      # the bar every change must clear

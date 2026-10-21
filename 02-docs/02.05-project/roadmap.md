@@ -16,7 +16,7 @@ language work. They are listed so the roadmap does not read as though the lexer 
    there from the first commit. Built with milestone 0's skeleton, which is its first subject.
 3. **Prototyping**, which is where milestone 0 begins.
 
-`02-docs/02.05-project/notes/sober.md` applies to both harness phases: a harness change earns its
+`02-docs/02.05-project/notes/02.05.02-sober.md` applies to both harness phases: a harness change earns its
 place by making a reviewed, landed change cheaper, and there are no language changes yet for
 either of them to make cheaper. That is a thing to watch, not a rule against them.
 

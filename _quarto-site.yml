@@ -24,9 +24,9 @@ project:
     - 02-docs/02.03-reference/README.md
     - 02-docs/02.04-explanation/README.md
     - 02-docs/02.04-explanation/inspiration/README.md
-    - 02-docs/02.04-explanation/inspiration/playgrounds.md
-    - 02-docs/02.04-explanation/inspiration/turnstiles.md
-    - 02-docs/02.04-explanation/inspiration/judgments.md
+    - 02-docs/02.04-explanation/inspiration/02.04.01-playgrounds.md
+    - 02-docs/02.04-explanation/inspiration/02.04.02-turnstiles.md
+    - 02-docs/02.04-explanation/inspiration/02.04.03-judgments.md
     - 02-docs/02.05-project/README.md
     - 02-docs/02.05-project/notes/README.md
     - 02-docs/02.05-project/adr/README.md
@@ -62,13 +62,13 @@ project:
     - 01-bootstrap/01.06-nagini/01.06.01-advance.qmd
     - 02-docs/02.04-explanation/design.md
     - 02-docs/02.03-reference/spec.md
-    - 02-docs/02.03-reference/errors.md
+    - 02-docs/02.03-reference/02.03.01-errors.md
     - 02-docs/02.05-project/roadmap.md
-    - 02-docs/02.05-project/notes/obsidian-okf-cob-bridge.md
-    - 02-docs/02.05-project/notes/issue-task-patch.md
-    - 02-docs/02.05-project/notes/sober.md
-    - 02-docs/02.05-project/notes/mediating-project.md
-    - 02-docs/02.05-project/notes/repl-phrase-costs.md
+    - 02-docs/02.05-project/notes/02.05.04-obsidian-okf-cob-bridge.md
+    - 02-docs/02.05-project/notes/02.05.01-issue-task-patch.md
+    - 02-docs/02.05-project/notes/02.05.02-sober.md
+    - 02-docs/02.05-project/notes/02.05.03-mediating-project.md
+    - 02-docs/02.05-project/notes/02.05.05-repl-phrase-costs.md
     - 03-fpl/OLD/03.01-features/draft1/spec.md
     - 03-fpl/OLD/03.01-features/draft2/spec.md
     - 03-fpl/OLD/03.01-features/draft3/spec.md
@@ -170,7 +170,7 @@ website:
           - section: 02-docs/02.03-reference/README.md
             contents:
               - text: Errors and diagnostics
-                href: 02-docs/02.03-reference/errors.md
+                href: 02-docs/02.03-reference/02.03.01-errors.md
               - text: Spec
                 href: 02-docs/02.03-reference/spec.md
           - section: 02-docs/02.04-explanation/README.md
@@ -180,11 +180,11 @@ website:
               - section: 02-docs/02.04-explanation/inspiration/README.md
                 contents:
                   - text: Playgrounds and live programming
-                    href: 02-docs/02.04-explanation/inspiration/playgrounds.md
+                    href: 02-docs/02.04-explanation/inspiration/02.04.01-playgrounds.md
                   - text: Turnstile notation
-                    href: 02-docs/02.04-explanation/inspiration/turnstiles.md
+                    href: 02-docs/02.04-explanation/inspiration/02.04.02-turnstiles.md
                   - text: Evaluation judgments
-                    href: 02-docs/02.04-explanation/inspiration/judgments.md
+                    href: 02-docs/02.04-explanation/inspiration/02.04.03-judgments.md
           - section: 02-docs/02.05-project/README.md
             contents:
               - text: Roadmap
@@ -192,15 +192,15 @@ website:
               - section: 02-docs/02.05-project/notes/README.md
                 contents:
                   - text: Issue, task, patch
-                    href: 02-docs/02.05-project/notes/issue-task-patch.md
+                    href: 02-docs/02.05-project/notes/02.05.01-issue-task-patch.md
                   - text: Plumbing, not prophecy
-                    href: 02-docs/02.05-project/notes/sober.md
+                    href: 02-docs/02.05-project/notes/02.05.02-sober.md
                   - text: The project that mediates the language
-                    href: 02-docs/02.05-project/notes/mediating-project.md
+                    href: 02-docs/02.05-project/notes/02.05.03-mediating-project.md
                   - text: Obsidian, OKF, COB bridge
-                    href: 02-docs/02.05-project/notes/obsidian-okf-cob-bridge.md
+                    href: 02-docs/02.05-project/notes/02.05.04-obsidian-okf-cob-bridge.md
                   - text: REPL phrase costs
-                    href: 02-docs/02.05-project/notes/repl-phrase-costs.md
+                    href: 02-docs/02.05-project/notes/02.05.05-repl-phrase-costs.md
               - section: 02-docs/02.05-project/adr/README.md
       - section: 03-fpl/README.md
         contents:
