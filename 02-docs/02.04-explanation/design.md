@@ -53,7 +53,7 @@ TBD
 ### Which accelerator, and can they be one mechanism
 
 The stated working principle is that the project should accelerate itself
-(`02-docs/02.05-project/notes/mediating-project.md`). Three candidate accelerators are on the table.
+(`02-docs/02.05-project/notes/02.05.03-mediating-project.md`). Three candidate accelerators are on the table.
 Each is real, each has a cost, and every one of those costs lands on the same principle.
 
 **Liveness.** A live image shortens the loop between changing something and seeing it to
