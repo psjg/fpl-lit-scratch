@@ -52,15 +52,16 @@ options:
 
 # ADR-0004 Native ABTs within an address space, FON only across a boundary
 
-Supersedes: none. Superseded by: none.
-Related: [ADR-0001 Pipeable filters](ADR-0001-passes-are-pipeable-filters.md),
-[ADR-0002 FON is the stage protocol](ADR-0002-fon-is-the-stage-protocol.md),
-[ADR-0003 FON is an FPL subset](ADR-0003-fon-is-an-fpl-subset.md),
-[ADR-0005 fonify and defonify](ADR-0005-fonify-defonify.md).
-Affects: [01.01.03 Pipe](../../../01-bootstrap/01.01-boundary/01.01.03-pipe.md),
-[01.04.02 Run](../../../01-bootstrap/01.04-compose/01.04.02-run.md),
-[01.04.01 Pass](../../../01-bootstrap/01.04-compose/01.04.01-pass.md),
-[01-bootstrap index](../../../01-bootstrap/index.md).
+- supersedes:: none
+- superseded-by:: none
+- related:: [ADR-0001 Pipeable filters](ADR-0001-passes-are-pipeable-filters.md)
+- related:: [ADR-0002 FON is the stage protocol](ADR-0002-fon-is-the-stage-protocol.md)
+- related:: [ADR-0003 FON is an FPL subset](ADR-0003-fon-is-an-fpl-subset.md)
+- related:: [ADR-0005 fonify and defonify](ADR-0005-fonify-defonify.md)
+- affects:: [01.01.03 Pipe](../../../01-bootstrap/01.01-boundary/01.01.03-pipe.md)
+- affects:: [01.04.02 Run](../../../01-bootstrap/01.04-compose/01.04.02-run.md)
+- affects:: [01.04.01 Pass](../../../01-bootstrap/01.04-compose/01.04.01-pass.md)
+- affects:: [01-bootstrap index](../../../01-bootstrap/index.md)
 
 ## Context
 

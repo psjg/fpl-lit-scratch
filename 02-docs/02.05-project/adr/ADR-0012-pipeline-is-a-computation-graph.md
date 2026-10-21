@@ -59,16 +59,17 @@ options:
 
 # ADR-0012 The pipeline is an inspectable computation graph that several executors run
 
-Supersedes: none. Superseded by: none.
-Related: [ADR-0001 Pipeable filters](ADR-0001-passes-are-pipeable-filters.md),
-[ADR-0004 Native ABTs, FON at boundaries](ADR-0004-native-abts-fon-at-boundaries.md),
-[ADR-0010 First-class staging](ADR-0010-first-class-staging.md),
-[ADR-0013 Events observe, they do not drive](ADR-0013-events-observe-not-drive.md).
-Affects: [python/fpl/arrow.py](../../../01-bootstrap/python/fpl/arrow.py),
-[01.04.01 Pass](../../../01-bootstrap/01.04-compose/01.04.01-pass.md),
-[01.04.02 Run](../../../01-bootstrap/01.04-compose/01.04.02-run.md),
-[01.04.03 Inspect](../../../01-bootstrap/01.04-compose/01.04.03-inspect.md),
-[01.01.03 Pipe](../../../01-bootstrap/01.01-boundary/01.01.03-pipe.md).
+- supersedes:: none
+- superseded-by:: none
+- related:: [ADR-0001 Pipeable filters](ADR-0001-passes-are-pipeable-filters.md)
+- related:: [ADR-0004 Native ABTs, FON at boundaries](ADR-0004-native-abts-fon-at-boundaries.md)
+- related:: [ADR-0010 First-class staging](ADR-0010-first-class-staging.md)
+- related:: [ADR-0013 Events observe, they do not drive](ADR-0013-events-observe-not-drive.md)
+- affects:: [python/fpl/arrow.py](../../../01-bootstrap/python/fpl/arrow.py)
+- affects:: [01.04.01 Pass](../../../01-bootstrap/01.04-compose/01.04.01-pass.md)
+- affects:: [01.04.02 Run](../../../01-bootstrap/01.04-compose/01.04.02-run.md)
+- affects:: [01.04.03 Inspect](../../../01-bootstrap/01.04-compose/01.04.03-inspect.md)
+- affects:: [01.01.03 Pipe](../../../01-bootstrap/01.01-boundary/01.01.03-pipe.md)
 
 ## Context
 

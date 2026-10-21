@@ -41,11 +41,12 @@ options:
 
 # ADR-0007 The CLI may use third-party libraries
 
-Supersedes: none. Superseded by: none.
-Related: [ADR-0006 One fpl executable](ADR-0006-one-fpl-executable.md).
-Affects: [python/fpl/\_\_main\_\_.py](../../../01-bootstrap/python/fpl/__main__.py),
-[pyproject.toml](../../../01-bootstrap/pyproject.toml),
-[flake.nix](../../../flake.nix).
+- supersedes:: none
+- superseded-by:: none
+- related:: [ADR-0006 One fpl executable](ADR-0006-one-fpl-executable.md)
+- affects:: [python/fpl/\_\_main\_\_.py](../../../01-bootstrap/python/fpl/__main__.py)
+- affects:: [pyproject.toml](../../../01-bootstrap/pyproject.toml)
+- affects:: [flake.nix](../../../flake.nix)
 
 ## Context
 

@@ -52,15 +52,16 @@ options:
 
 # ADR-0010 Staging is first-class: the compiler is an FPL library
 
-Supersedes: none. Superseded by: none.
-Related: [ADR-0001 Pipeable filters](ADR-0001-passes-are-pipeable-filters.md),
-[ADR-0008 Dependent CBPV](ADR-0008-object-language-dependent-cbpv.md),
-[ADR-0011 Lisp-level metaprogramming](ADR-0011-lisp-level-metaprogramming.md),
-[ADR-0012 The pipeline is a computation graph](ADR-0012-pipeline-is-a-computation-graph.md).
-Affects: [Design](../../../02-docs/02.04-explanation/design.md),
-[01.04.01 Pass](../../../01-bootstrap/01.04-compose/01.04.01-pass.md),
-[01.04.04 Build](../../../01-bootstrap/01.04-compose/01.04.04-build.md),
-[python/fpl/arrow.py](../../../01-bootstrap/python/fpl/arrow.py).
+- supersedes:: none
+- superseded-by:: none
+- related:: [ADR-0001 Pipeable filters](ADR-0001-passes-are-pipeable-filters.md)
+- related:: [ADR-0008 Dependent CBPV](ADR-0008-object-language-dependent-cbpv.md)
+- related:: [ADR-0011 Lisp-level metaprogramming](ADR-0011-lisp-level-metaprogramming.md)
+- related:: [ADR-0012 The pipeline is a computation graph](ADR-0012-pipeline-is-a-computation-graph.md)
+- affects:: [Design](../../../02-docs/02.04-explanation/design.md)
+- affects:: [01.04.01 Pass](../../../01-bootstrap/01.04-compose/01.04.01-pass.md)
+- affects:: [01.04.04 Build](../../../01-bootstrap/01.04-compose/01.04.04-build.md)
+- affects:: [python/fpl/arrow.py](../../../01-bootstrap/python/fpl/arrow.py)
 
 ## Context
 

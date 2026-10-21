@@ -27,12 +27,18 @@ options:           # considered alternatives; exactly one has chosen: true
 
 # ADR-0000 <title>
 
-<!-- Every edge in the frontmatter is also a relative link here, so the untyped OKF
-     graph and GitHub can follow it; the edge kind lives in prose. `make okf-check` holds
-     the two together. For example:
-     Supersedes: [ADR-0003](ADR-0003-<slug>.md). Affects: [01.02.10 Evaluate](../../../01-bootstrap/01.02-pass/01.02.10-evaluate.md). -->
+<!-- Each frontmatter edge is also a line here, `key:: [text](path)`: a relative link
+     GitHub renders and follows, typed by its key for okfgraph (Dataview's field syntax).
+     `make okf-check` holds the two together (.harness/tools/okfgraph/README.md). A key with
+     several targets takes one line per target. Replace `none` with the links, e.g.:
+- supersedes:: [ADR-0003](ADR-0003-<slug>.md)
+- affects:: [01.02.10 Evaluate](../../../01-bootstrap/01.02-pass/01.02.10-evaluate.md)
+-->
 
-Supersedes: none. Superseded by: none. Affects: none.
+- supersedes:: none
+- superseded-by:: none
+- related:: none
+- affects:: none
 
 ## Context
 

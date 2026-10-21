@@ -49,15 +49,16 @@ options:
 
 # ADR-0006 One fpl executable with a subcommand per stage
 
-Supersedes: none. Superseded by: none.
-Related: [ADR-0001 Pipeable filters](ADR-0001-passes-are-pipeable-filters.md),
-[ADR-0007 CLI libraries welcome](ADR-0007-cli-libraries-welcome.md).
-Affects: [01.01.03 Pipe](../../../01-bootstrap/01.01-boundary/01.01.03-pipe.md),
-[01.01.01 Source](../../../01-bootstrap/01.01-boundary/01.01.01-source.md),
-[01.01.04 Render](../../../01-bootstrap/01.01-boundary/01.01.04-render.md),
-[01.04.02 Run](../../../01-bootstrap/01.04-compose/01.04.02-run.md),
-[python/fpl/\_\_main\_\_.py](../../../01-bootstrap/python/fpl/__main__.py),
-[pyproject.toml](../../../01-bootstrap/pyproject.toml).
+- supersedes:: none
+- superseded-by:: none
+- related:: [ADR-0001 Pipeable filters](ADR-0001-passes-are-pipeable-filters.md)
+- related:: [ADR-0007 CLI libraries welcome](ADR-0007-cli-libraries-welcome.md)
+- affects:: [01.01.03 Pipe](../../../01-bootstrap/01.01-boundary/01.01.03-pipe.md)
+- affects:: [01.01.01 Source](../../../01-bootstrap/01.01-boundary/01.01.01-source.md)
+- affects:: [01.01.04 Render](../../../01-bootstrap/01.01-boundary/01.01.04-render.md)
+- affects:: [01.04.02 Run](../../../01-bootstrap/01.04-compose/01.04.02-run.md)
+- affects:: [python/fpl/\_\_main\_\_.py](../../../01-bootstrap/python/fpl/__main__.py)
+- affects:: [pyproject.toml](../../../01-bootstrap/pyproject.toml)
 
 ## Context
 

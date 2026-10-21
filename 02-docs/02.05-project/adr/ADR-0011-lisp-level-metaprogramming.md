@@ -48,12 +48,13 @@ options:
 
 # ADR-0011 FPL aims to match or surpass Lisp in metaprogramming
 
-Supersedes: none. Superseded by: none.
-Related: [ADR-0008 Dependent CBPV](ADR-0008-object-language-dependent-cbpv.md),
-[ADR-0010 First-class staging](ADR-0010-first-class-staging.md).
-Affects: [Design](../../../02-docs/02.04-explanation/design.md),
-[01.02.04 Expand](../../../01-bootstrap/01.02-pass/01.02.04-expand.md),
-[draft2 operatives example](../../../03-fpl/OLD/03.01-features/draft2/examples/03-operatives-thunks.fpl).
+- supersedes:: none
+- superseded-by:: none
+- related:: [ADR-0008 Dependent CBPV](ADR-0008-object-language-dependent-cbpv.md)
+- related:: [ADR-0010 First-class staging](ADR-0010-first-class-staging.md)
+- affects:: [Design](../../../02-docs/02.04-explanation/design.md)
+- affects:: [01.02.04 Expand](../../../01-bootstrap/01.02-pass/01.02.04-expand.md)
+- affects:: [draft2 operatives example](../../../03-fpl/OLD/03.01-features/draft2/examples/03-operatives-thunks.fpl)
 
 ## Context
 

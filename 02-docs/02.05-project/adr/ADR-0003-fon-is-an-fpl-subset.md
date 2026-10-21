@@ -48,13 +48,14 @@ options:
 
 # ADR-0003 FON is an FPL subset that materialises native ABTs
 
-Supersedes: none. Superseded by: none.
-Related: [ADR-0002 FON is the stage protocol](ADR-0002-fon-is-the-stage-protocol.md),
-[ADR-0004 Native ABTs, FON at boundaries](ADR-0004-native-abts-fon-at-boundaries.md),
-[ADR-0010 First-class staging](ADR-0010-first-class-staging.md).
-Affects: [01.01.02 FON](../../../01-bootstrap/01.01-boundary/01.01.02-fon.md),
-[01-bootstrap index](../../../01-bootstrap/index.md),
-[README](../../../README.md).
+- supersedes:: none
+- superseded-by:: none
+- related:: [ADR-0002 FON is the stage protocol](ADR-0002-fon-is-the-stage-protocol.md)
+- related:: [ADR-0004 Native ABTs, FON at boundaries](ADR-0004-native-abts-fon-at-boundaries.md)
+- related:: [ADR-0010 First-class staging](ADR-0010-first-class-staging.md)
+- affects:: [01.01.02 FON](../../../01-bootstrap/01.01-boundary/01.01.02-fon.md)
+- affects:: [01-bootstrap index](../../../01-bootstrap/index.md)
+- affects:: [README](../../../README.md)
 
 ## Context
 
