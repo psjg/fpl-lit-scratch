@@ -633,6 +633,13 @@ def _timer(*marks: float) -> Callable[[], float]:
     return now
 
 
+def _unbound(_binding: str) -> None:
+    """
+    readline's `parse_and_bind`, made to bind nothing: the loop's tab
+    binding stays out of the test process's own readline.
+    """
+
+
 def test_phrase_bar_and_result_line_are_ascii() -> None:
     """
     TTY chrome is printable ASCII: `;;!` bars and `|- value : ...`.
@@ -704,7 +711,7 @@ def test_the_loop_prints_hello_bye_and_state_id(
         return line
 
     monkeypatch.setattr(builtins, "input", typed)
-    monkeypatch.setattr(readline, "parse_and_bind", lambda _s: None)
+    monkeypatch.setattr(readline, "parse_and_bind", _unbound)
     out, err = StringIO(), StringIO()
     assert (
         main(
@@ -749,7 +756,7 @@ def test_the_loop_byes_on_quit(
         return line
 
     monkeypatch.setattr(builtins, "input", typed)
-    monkeypatch.setattr(readline, "parse_and_bind", lambda _s: None)
+    monkeypatch.setattr(readline, "parse_and_bind", _unbound)
     out = StringIO()
     assert (
         main(
