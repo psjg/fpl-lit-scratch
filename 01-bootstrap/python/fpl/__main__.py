@@ -1,4 +1,4 @@
-"""`fpl <file>` runs in-process. `fpl <stage>` is one filter."""
+"""`fpl` opens the REPL. `fpl <stage>` is one filter."""
 
 import sys
 

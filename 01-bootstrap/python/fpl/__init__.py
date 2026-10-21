@@ -8,5 +8,4 @@ from fpl.lex import lex
 from fpl.parse import parse
 from fpl.run import run_file
 
-__all__ = ["desugar", "elaborate", "evaluate", "lex", "parse",
-"run_file"]
+__all__ = ['desugar', 'elaborate', 'evaluate', 'lex', 'parse', 'run_file']
