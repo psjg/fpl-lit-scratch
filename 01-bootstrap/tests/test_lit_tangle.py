@@ -6,7 +6,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from lit import TANGLE, TIMEOUT, fpl
+from lit import TANGLE, TIMEOUT, fpl, lit
 
 
 def tangle(*args: str) -> subprocess.CompletedProcess[str]:
@@ -55,3 +55,24 @@ def test_a_stage_reads_what_source_wrote() -> None:
     assert lexed.stdout
     rendered = fpl("render", stdin=source.stdout)
     assert (rendered.returncode, rendered.stdout) == (0, text)
+
+
+def test_help_names_run_and_every_stage() -> None:
+    """
+    The command line lives in fpl.cli now; `fpl --help` still lists run
+    and the seven stages.
+    """
+    result = fpl("--help")
+    assert result.returncode == 0, result.stderr
+    listed = result.stdout.decode().split("Commands:")[1].split()
+    stages = ("desugar", "elaborate", "eval", "lex", "parse", "render")
+    assert set(stages) | {"run", "source"} <= set(listed)
+
+
+def test_importing_fpl_leaves_click_out() -> None:
+    """
+    The website imports fpl in Pyodide, where click is absent; only the
+    command line may import it.
+    """
+    result = lit("import sys, fpl; print('click' in sys.modules)")
+    assert (result.returncode, result.stdout) == (0, b"False\n")
