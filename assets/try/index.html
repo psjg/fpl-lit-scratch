@@ -140,8 +140,25 @@
       >
         <div class="fpl-pane-bar">
           <span class="fpl-pane-label">Term</span>
+          <div class="fpl-pane-actions">
+            <button
+              type="button"
+              id="fpl-step-open"
+              class="fpl-btn"
+              aria-controls="fpl-step"
+              title="Record the run and step through it"
+            >
+              Step
+            </button>
+          </div>
         </div>
         <pre id="fpl-out" class="fpl-term" aria-live="polite"></pre>
+        <section
+          id="fpl-step"
+          class="fpl-step"
+          aria-label="Reduction stepper"
+          hidden
+        ></section>
       </section>
       <section
         data-dock="trace"

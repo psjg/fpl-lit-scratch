@@ -11,6 +11,8 @@ project:
     - assets/fpl-telemetry.js
     - assets/fpl-trace.js
     - assets/fpl-flame.js
+    - assets/fpl-stepper.js
+    - assets/fpl_trace.py
   render:
     - index.qmd
     - 01-bootstrap/README.md
