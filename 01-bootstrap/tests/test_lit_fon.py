@@ -52,19 +52,20 @@ def test_the_tangled_reader_refuses_braced_fon() -> None:
 def test_the_stages_speak_postfix_ascii() -> None:
     """
     `fpl source | fpl lex` writes one line of printable ASCII with no
-    brace outside a string, a dict last; `fpl lex` refuses braced input.
+    brace outside a string, each a document tagged with its
+    representation; `fpl lex` refuses braced input.
     """
     source = fpl("source", stdin=b"1 2 +\n")
-    assert source.stdout == b"'1 2 +\\n'\n"
+    assert source.stdout == b'"1 2 +\\n" Source/1\n'
     lexed = fpl("lex", stdin=source.stdout)
     assert lexed.returncode == 0, lexed.stderr
     document = lexed.stdout.decode()
     assert re.fullmatch(r"[ -~]+\n", document)
     assert not set(STRINGS.sub("", document)) & set(BRACKETS)
-    assert document.startswith("'source' '1 2 +\\n' 'code' ")
-    assert document.endswith(" dict/5\n")
+    assert document.startswith('"1 2 +\\n" "1 2 +\\n\\n" ')
+    assert document.endswith(" Tokens/1\n")
     braced = fpl("lex", stdin="「1 2 +\n」\n".encode())
     assert (braced.returncode, braced.stderr.decode()) == (
         1,
-        "ERROR: 1:1 「 refused: FON is postfix, not braced\n",
+        "not FON: 「 refused: FON is postfix, not braced\n",
     )
