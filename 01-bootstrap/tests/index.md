@@ -16,6 +16,7 @@
 * [test_lit_arrow](test_lit_arrow.py) - test_lit_arrow
 * [test_lit_codec](test_lit_codec.py) - test_lit_codec
 * [test_lit_fon](test_lit_fon.py) - test_lit_fon
+* [test_lit_entry](test_lit_entry.py) - test_lit_entry
 * [test_lit_tangle](test_lit_tangle.py) - test_lit_tangle
 * [test_log](test_log.py) - test_log
 * [test_main](test_main.py) - test_main
