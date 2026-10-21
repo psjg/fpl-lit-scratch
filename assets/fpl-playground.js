@@ -4,8 +4,14 @@
  * dockable Paths/Edit/Term via fpl-dock.js (progressive enhancement).
  * Katas: textarea.
  */
-import { runFpl, checkExpected, learnBase } from "./fpl-runtime.js";
+import { runFpl, traceFpl, checkExpected, learnBase } from "./fpl-runtime.js";
+import { mountStepper } from "./fpl-stepper.js";
 import { initDock } from "./fpl-dock.js";
+import { initTelemetry } from "./fpl-telemetry.js";
+import { runTraced, openInPerfetto } from "./fpl-trace.js";
+import { createFlamePanel } from "./fpl-flame.js";
+import { registerFpl } from "./fpl-language.js";
+import { registerService } from "./fpl-service.js";
 
 const RESULT_PREFIX = "|- ";
 const TRAILING_NOTE = /[\t ]*(?:;|⍝)[ \t]*(.*)$/u;
@@ -23,7 +29,7 @@ demo/
 		inc : n -- n
 			1 +
 		twice : n -- n
-			dup *
+			dup +
 	greet : --
 		;;; say hi
 `;
@@ -348,6 +354,20 @@ function indentBody(body, tabs) {
 }
 
 /**
+ * @param {OutlineNode | null | undefined} a
+ * @param {OutlineNode | null | undefined} b
+ */
+function sameOutlineNode(a, b) {
+  return (
+    a != null &&
+    b != null &&
+    a.name === b.name &&
+    a.kind === b.kind &&
+    a.start === b.start
+  );
+}
+
+/**
  * @param {HTMLElement} host
  * @param {OutlineNode} root
  * @param {OutlineNode[]} path
@@ -357,16 +377,19 @@ function renderMiller(host, root, path, onPick) {
   host.replaceChildren();
   /** @type {OutlineNode[][]} */
   const columns = [root.children];
-  // Only open a following column when the selection is a non-empty dir.
-  // Leaf / empty dir: no "No children" dead column.
-  for (const node of path) {
+  // Commit-by-depth: open children only for path nodes we have moved past
+  // (path continues). Tip sits in the rightmost column among its siblings.
+  for (let i = 0; i < path.length - 1; i++) {
+    const node = path[i];
     if (node.kind === "dir" && node.children.length > 0) {
       columns.push(node.children);
     }
   }
+  const last = columns.length - 1;
   columns.forEach((items, col) => {
     const colEl = document.createElement("div");
-    colEl.className = "fpl-miller-col";
+    colEl.className =
+      "fpl-miller-col" + (col === last ? " fpl-miller-col-active" : "");
     colEl.setAttribute("role", "listbox");
     colEl.setAttribute("aria-label", `Column ${col + 1}`);
     for (const item of items) {
@@ -376,7 +399,7 @@ function renderMiller(host, root, path, onPick) {
       btn.textContent = item.name;
       btn.title = item.name;
       btn.setAttribute("role", "option");
-      if (path[col] === item) btn.classList.add("selected");
+      if (sameOutlineNode(path[col], item)) btn.classList.add("selected");
       btn.addEventListener("click", (ev) => onPick(col, item, ev));
       btn.addEventListener("dblclick", (ev) => {
         ev.preventDefault();
@@ -413,10 +436,41 @@ async function bootPlayground() {
   const initial =
     fromHash != null && fromHash !== "" ? fromHash : DEFAULT_SRC;
 
+  // Tokens come from fpl-language.js, generated from grammar.lark and lex.py
+  // (01-bootstrap/ide/gen_highlight.py); the theme only gives them colours.
+  registerFpl(monaco);
+  registerService(monaco);
+  monaco.editor.defineTheme("fpl-dark", {
+    base: "vs-dark",
+    inherit: true,
+    semanticHighlighting: true,
+    colors: {},
+    rules: [
+      { token: "comment.doc", foreground: "7ec699", fontStyle: "italic" },
+      { token: "comment.section", foreground: "7ec699", fontStyle: "bold" },
+      { token: "comment.file", foreground: "7ec699", fontStyle: "bold" },
+      { token: "comment", foreground: "6a737d", fontStyle: "italic" },
+      { token: "string", foreground: "ce9178" },
+      { token: "string.raw", foreground: "d7ba7d" },
+      { token: "number", foreground: "b5cea8" },
+      { token: "keyword.sigil", foreground: "c586c0" },
+      { token: "operator.modifier", foreground: "dcdcaa" },
+      { token: "type.path", foreground: "4ec9b0" },
+      { token: "delimiter.bar", foreground: "569cd6", fontStyle: "bold" },
+      { token: "delimiter.island", foreground: "d7ba7d" },
+      // semantic tokens (fpl-semantic.js): binder vs use
+      { token: "function", foreground: "dcdcaa" },
+      { token: "function.declaration", foreground: "ffd866", fontStyle: "bold" },
+      { token: "parameter", foreground: "9cdcfe", fontStyle: "italic" },
+      { token: "parameter.declaration", foreground: "9cdcfe", fontStyle: "bold italic" },
+    ],
+  });
+
   const editor = monaco.editor.create(host, {
     value: initial,
-    language: "plaintext",
-    theme: "vs-dark",
+    language: "fpl",
+    theme: "fpl-dark",
+    "semanticHighlighting.enabled": true,
     fontSize: 14,
     fontFamily: "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
     lineNumbers: "on",
@@ -479,7 +533,7 @@ async function bootPlayground() {
       ? "Focused · Miller retargets scope · Escape exits"
       : mode === "examples"
         ? "Examples library next — switch back to Buffer paths"
-        : "Arrows navigate · → Edit at leaf · ← from col 1 back · Enter/Focus for scope body";
+        : "↑↓ pick · → commit deeper · ← up · Enter/Focus scope · → Edit at leaf";
   };
 
   const clearNavDeco = () => {
@@ -610,8 +664,13 @@ async function bootPlayground() {
     renderMiller(miller, outline, path, (col, node, ev) => {
       path = path.slice(0, col);
       path.push(node);
+      // Clicking a dir commits into its children (blue pick in the new column).
+      if (node.kind === "dir" && node.children.length > 0) {
+        path.push(node.children[0]);
+      }
       paintMiller();
-      navigateTo(node);
+      const tip = selected();
+      if (tip) navigateTo(tip);
       if (ev.type === "dblclick") enterFocus();
     });
     setFocusChrome();
@@ -741,6 +800,31 @@ async function bootPlayground() {
     else clearNavDeco();
     scheduleLive();
   };
+
+  initTelemetry();
+  const traceBtn = $("fpl-trace");
+  let lastTraceJson = null;
+  const flameHost = $("fpl-trace-panel");
+  const flame = flameHost
+    ? createFlamePanel(flameHost, {
+        onPerfetto: () => lastTraceJson && openInPerfetto(lastTraceJson, "FPL run"),
+      })
+    : null;
+  if (traceBtn) {
+    traceBtn.addEventListener("click", async () => {
+      traceBtn.disabled = true;
+      try {
+        const { out: text, json, events } = await runTraced(getSrc());
+        lastTraceJson = json;
+        setOut(out, text, true);
+        flame?.render(events, JSON.parse(json).otherData?.failure ?? null);
+      } catch (err) {
+        setOut(out, String(err), false);
+      } finally {
+        traceBtn.disabled = false;
+      }
+    });
+  }
 
   const runOnce = async (btn, { share = false } = {}) => {
     if (btn) btn.disabled = true;
@@ -882,6 +966,35 @@ async function bootPlayground() {
   });
 
   runBtn.addEventListener("click", () => runOnce(runBtn, { share: true }));
+
+  // Reduction stepper: record the run once, then move over it with the keyboard.
+  const stepPanel = document.getElementById("fpl-step");
+  const stepBtn = /** @type {HTMLButtonElement | null} */ (document.getElementById("fpl-step-open"));
+  if (stepPanel && stepBtn) {
+    let stepDeco = /** @type {string[]} */ ([]);
+    const stepper = mountStepper(stepPanel, {
+      onFrame: (f) => {
+        stepDeco = editor.deltaDecorations(
+          stepDeco,
+          f ? [{ range: new monaco.Range(f.line, 1, f.line, 1),
+                 options: { isWholeLine: true, className: "fpl-step-line" } }] : [],
+        );
+        if (f) editor.revealLineInCenterIfOutsideViewport(f.line);
+      },
+    });
+    stepBtn.addEventListener("click", async () => {
+      stepBtn.disabled = true;
+      stepPanel.hidden = false;
+      try {
+        stepper.load(await traceFpl(getSrc()));
+        stepper.focus();
+      } catch (err) {
+        stepper.load({ error: String(err) });
+      } finally {
+        stepBtn.disabled = false;
+      }
+    });
+  }
   clearBtn.addEventListener("click", () => {
     window.clearTimeout(timer);
     gen += 1;
@@ -1057,7 +1170,8 @@ async function bootKata() {
   ]);
 
   promptEl.innerHTML = '<pre class="fpl-prompt-md"></pre>';
-  promptEl.querySelector("pre").textContent = promptMd;
+  // The prompt is an OKF note: its frontmatter is for the bundle, not the reader.
+  promptEl.querySelector("pre").textContent = promptMd.replace(/^---\n[\s\S]*?\n---\n+/, "");
 
   let starterSrc = starter;
   editor.value = starterSrc;

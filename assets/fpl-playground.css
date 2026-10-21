@@ -198,6 +198,13 @@ html.fpl-dock-ready .dv-tab.dv-active-tab {
   background: #1e1e1e;
 }
 
+/* Accent ring on the focused dock group (Paths / Edit / Term). */
+html.fpl-dock-ready .dv-groupview.dv-active-group {
+  outline: 1px solid #0e639c;
+  outline-offset: -1px;
+  box-shadow: inset 0 0 0 1px rgba(14, 99, 156, 0.45);
+}
+
 html.fpl-dock-ready .dv-separator-border,
 html.fpl-dock-ready .dv-resize-container {
   background: #111;
@@ -269,6 +276,10 @@ html.fpl-dock-ready .dv-resize-container {
   overflow-y: auto;
   border-right: 1px solid #333;
   padding: 0.2rem 0;
+}
+
+.fpl-miller-col-active {
+  background: #252526;
 }
 
 .fpl-miller-item {
@@ -758,3 +769,28 @@ html.fpl-dock-ready .dv-resize-container {
     min-height: 100%;
   }
 }
+
+/* Trace panel (fpl-flame.js) */
+.fpl-flame-bar { display: flex; gap: 0.75rem; align-items: center; padding: 0.35rem 0.6rem; font-size: 0.8rem; }
+.fpl-flame-info { flex: 1; opacity: 0.85; }
+.fpl-flame-svg { padding: 0 0.6rem 0.6rem; overflow: auto; }
+.fpl-flame { width: 100%; height: 9rem; display: block; background: rgba(127, 127, 127, 0.08); border-radius: 4px; }
+.fpl-flame-pass rect { fill: #4a9eff; }
+.fpl-flame-run rect { fill: #3fb68b; }
+.fpl-flame-call rect { fill: #e8a33d; }
+.fpl-flame-fuelline { stroke: #d96ba0; stroke-width: 1.5; vector-effect: non-scaling-stroke; }
+.fpl-flame g:hover rect { stroke: currentColor; stroke-width: 1; vector-effect: non-scaling-stroke; }
+.fpl-flame-lanes { font-size: 0.7rem; opacity: 0.6; padding-top: 0.25rem; }
+/* Reduction stepper (assets/fpl-stepper.js) */
+.fpl-step { padding: 0.5rem 0.75rem; border-top: 1px solid #333; font-size: 0.9rem; overflow: auto; }
+.fpl-step-bar, .fpl-step-pos { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; margin-bottom: 0.4rem; }
+.fpl-step-pos input[type="range"] { flex: 1 1 12rem; }
+.fpl-step select { background: #2a2a2a; color: inherit; border: 1px solid #555; border-radius: 4px; padding: 0.15rem 0.3rem; }
+.fpl-step :focus-visible { outline: 2px solid #4da3ff; outline-offset: 2px; }
+.fpl-step-info { margin: 0.25rem 0; font-family: ui-monospace, Menlo, monospace; }
+.fpl-step-status { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.fpl-step-list { margin: 0; padding-left: 2.2rem; max-height: 14rem; overflow: auto; font-family: ui-monospace, Menlo, monospace; }
+.fpl-step-list li { cursor: pointer; padding: 0.05rem 0.25rem; }
+.fpl-step-list li[aria-current="step"] { background: #264f78; outline: 1px solid #4da3ff; }
+.fpl-step-node { color: #9cdcfe; }
+.fpl-step-line { background: rgba(77, 163, 255, 0.22); }

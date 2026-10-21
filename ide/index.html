@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>FPL Playground</title>
+    <link rel="stylesheet" href="../assets/fpl-live.css" />
+    <link rel="stylesheet" href="../assets/fpl-playground.css" />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs/editor/editor.main.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/dockview@8.6.0/dist/styles/dockview.css"
+    />
+  </head>
+  <body data-fpl-page="playground" class="fpl-try fpl-try-app">
+    <header class="fpl-try-header">
+      <a class="fpl-try-brand" href="../index.html">FPL</a>
+      <span class="fpl-try-title">Playground</span>
+      <nav class="fpl-try-nav">
+        <a class="active" href="index.html">Playground</a>
+        <a href="kata.html">Katas</a>
+        <a href="../werkbank/index.html">JupyterLite</a>
+        <a href="../marimo/index.html">Marimo</a>
+      </nav>
+      <div class="fpl-dock-actions" id="fpl-dock-actions" hidden>
+        <button type="button" id="fpl-dock-paths" class="fpl-btn" title="Show Paths panel">
+          Paths
+        </button>
+        <button
+          type="button"
+          id="fpl-dock-reset"
+          class="fpl-btn"
+          title="Restore default Paths / Edit | Term layout"
+        >
+          Reset layout
+        </button>
+      </div>
+    </header>
+    <!--
+      Curlable shell: Paths / Edit / Term markup is real HTML.
+      With JS, fpl-dock.js moves these sections into dockview panels.
+      Without JS (or if dockview fails), CSS keeps the static stack.
+    -->
+    <div id="fpl-dock" class="fpl-dock">
+      <section
+        data-dock="paths"
+        class="fpl-dock-section fpl-dock-paths"
+        aria-label="Paths"
+      >
+        <div class="fpl-browser-modes" role="tablist" aria-label="Browser mode">
+          <button
+            type="button"
+            class="fpl-browser-mode active"
+            role="tab"
+            aria-selected="true"
+            data-mode="paths"
+            id="fpl-mode-paths"
+          >
+            Buffer paths
+          </button>
+          <button
+            type="button"
+            class="fpl-browser-mode"
+            role="tab"
+            aria-selected="false"
+            data-mode="examples"
+            id="fpl-mode-examples"
+          >
+            Examples
+          </button>
+          <div class="fpl-browser-actions">
+            <button type="button" id="fpl-focus" class="fpl-btn" disabled>
+              Focus
+            </button>
+            <button type="button" id="fpl-unfocus" class="fpl-btn" hidden>
+              Exit focus
+            </button>
+            <button
+              type="button"
+              id="fpl-browser-toggle"
+              class="fpl-btn"
+              aria-expanded="true"
+              aria-controls="fpl-miller"
+              title="Hide or show the path columns (no-JS / dock fallback)"
+            >
+              Hide columns
+            </button>
+          </div>
+        </div>
+        <div
+          id="fpl-miller"
+          class="fpl-miller"
+          role="navigation"
+          aria-label="Path browser columns"
+        ></div>
+        <p id="fpl-miller-hint" class="fpl-miller-hint">
+          Click to jump · double-click or Focus for scope body · outline is a
+          buffer heuristic
+        </p>
+      </section>
+      <section
+        data-dock="edit"
+        class="fpl-dock-section fpl-pane fpl-pane-edit"
+        aria-label="Editor"
+      >
+        <div class="fpl-pane-bar">
+          <span class="fpl-pane-label">Edit</span>
+          <div class="fpl-pane-actions">
+            <button type="button" id="fpl-clear" class="fpl-btn">Clear</button>
+            <button type="button" id="fpl-reset" class="fpl-btn">Reset</button>
+            <button type="button" id="fpl-accept" class="fpl-btn">
+              Accept results
+            </button>
+            <button type="button" id="fpl-trace" class="fpl-btn" title="Run and open the trace in Perfetto">
+              Trace
+            </button>
+            <button type="button" id="fpl-run" class="fpl-btn primary">
+              Run
+            </button>
+          </div>
+        </div>
+        <div
+          id="fpl-editor"
+          class="fpl-monaco"
+          aria-label="FPL playground editor"
+        ></div>
+        <p class="fpl-pane-hint">
+          Ghost <code>|-</code> results · Tab (or Accept) commits
+          <code>; |- …</code> · ⌘/Ctrl+Enter to run · share via
+          <code>#c=</code>
+        </p>
+      </section>
+      <section
+        data-dock="term"
+        class="fpl-dock-section fpl-pane fpl-pane-term"
+        aria-label="Output"
+      >
+        <div class="fpl-pane-bar">
+          <span class="fpl-pane-label">Term</span>
+          <div class="fpl-pane-actions">
+            <button
+              type="button"
+              id="fpl-step-open"
+              class="fpl-btn"
+              aria-controls="fpl-step"
+              title="Record the run and step through it"
+            >
+              Step
+            </button>
+          </div>
+        </div>
+        <pre id="fpl-out" class="fpl-term" aria-live="polite"></pre>
+        <section
+          id="fpl-step"
+          class="fpl-step"
+          aria-label="Reduction stepper"
+          hidden
+        ></section>
+      </section>
+      <section
+        data-dock="trace"
+        class="fpl-dock-section fpl-pane fpl-pane-trace"
+        aria-label="Trace"
+      >
+        <div class="fpl-pane-bar">
+          <span class="fpl-pane-label">Trace</span>
+        </div>
+        <div id="fpl-trace-panel"></div>
+      </section>
+    </div>
+    <script src="fpl-config.js"></script>
+    <script type="module" src="../assets/fpl-playground.js"></script>
+  </body>
+</html>

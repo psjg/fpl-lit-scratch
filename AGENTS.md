@@ -1,3 +1,9 @@
+---
+type: AgentDoc
+title: "AGENTS.md"
+description: "The entry point for any agent working in this repo: layout, settled decisions, the one gate, workflow."
+---
+
 # AGENTS.md
 
 The entry point for any agent — Claude, Codex, Gemini, a human, whatever — working in this
@@ -15,7 +21,7 @@ The language *vision* is deliberately unwritten. It gets drawn out in a dedicate
 file has real content, do not invent language semantics.
 
 Keep talk about the vision sober, and the harness small:
-`02-docs/02.05-project/notes/sober.md`.
+`02-docs/02.05-project/notes/02.05.02-sober.md`.
 
 ## Repository layout
 

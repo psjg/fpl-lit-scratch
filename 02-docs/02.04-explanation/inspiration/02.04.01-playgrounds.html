@@ -1,0 +1,1465 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.9.38">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="description" content="Inspiration note, 2026-10-18.">
+
+<title>02.04.01 Playgrounds and live programming – FPL</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+</style>
+
+
+<script src="../../../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../../../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../../../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../../../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../../../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../../../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../../../">
+<link href="../../../02-docs/02.04-explanation/inspiration/02.04.02-turnstiles.html" rel="next">
+<link href="../../../02-docs/02.04-explanation/inspiration/README.html" rel="prev">
+<script src="../../../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../../../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../../../site_libs/quarto-html/popper.min.js"></script>
+<script src="../../../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../../../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../../../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../../../site_libs/quarto-html/quarto-syntax-highlighting-15634bcf2e68342d4ad2dfa704d543f6.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../../../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../../../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../../../site_libs/bootstrap/bootstrap-bda65858d638fb4c085804bc14c4d351.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "sidebar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "start",
+  "type": "textbox",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+
+
+<link rel="stylesheet" href="../../../assets/fpl-live.css">
+</head>
+
+<body class="nav-sidebar floating quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../../../02-docs/README.html">2 Docs</a></li><li class="breadcrumb-item"><a href="../../../02-docs/02.04-explanation/README.html">2.4 Explanation</a></li><li class="breadcrumb-item"><a href="../../../02-docs/02.04-explanation/inspiration/README.html">Inspiration</a></li><li class="breadcrumb-item"><a href="../../../02-docs/02.04-explanation/inspiration/02.04.01-playgrounds.html">Playgrounds and live programming</a></li></ol></nav>
+        <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+        </a>
+      <button type="button" class="btn quarto-search-button" aria-label="Search" onclick="window.quartoOpenSearch();">
+        <i class="bi bi-search"></i>
+      </button>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <div class="pt-lg-2 mt-2 text-left sidebar-header">
+    <div class="sidebar-title mb-0 py-0">
+      <a href="../../../">FPL</a> 
+    </div>
+      </div>
+        <div class="mt-2 flex-shrink-0 align-items-center">
+        <div class="sidebar-search">
+        <div id="quarto-search" class="" title="Search"></div>
+        </div>
+        </div>
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../../try/index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Playground</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../../try/kata.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Katas</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../../werkbank/index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">JupyterLite</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../../marimo/index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Marimo</span></a>
+  </div>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a href="../../../01-bootstrap/README.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">1 Bootstrap</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a href="../../../01-bootstrap/01.01-boundary/README.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">1.1 Boundary</span></a>
+          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="false" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth2 ">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../../01-bootstrap/01.01-boundary/01.01.01-source.qmd" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">1.1.1 Source</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../../01-bootstrap/01.01-boundary/01.01.02-fon.qmd" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">1.1.2 FON</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../../01-bootstrap/01.01-boundary/01.01.03-pipe.qmd" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">1.1.3 Pipe</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../../01-bootstrap/01.01-boundary/01.01.04-render.qmd" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">1.1.4 Render</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+          <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a href="../../../01-bootstrap/01.02-pass/README.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">1.2 Pass</span></a>
+          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="false" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-3" class="collapse list-unstyled sidebar-section depth2 ">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../../01-bootstrap/01.02-pass/01.02.01-lex.qmd" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">1.2.1 Lex</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../../01-bootstrap/01.02-pass/01.02.02-parse.qmd" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">1.2.2 Parse</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../../01-bootstrap/01.02-pass/01.02.03-resolve.qmd" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">1.2.3 Resolve</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../../01-bootstrap/01.02-pass/01.02.04-expand.qmd" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">1.2.4 Expand</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../../01-bootstrap/01.02-pass/01.02.05-desugar.qmd" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">1.2.5 Desugar</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../../01-bootstrap/01.02-pass/01.02.06-elaborate.qmd" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">1.2.6 Elaborate</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../../01-bootstrap/01.02-pass/01.02.07-lower.qmd" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">1.2.7 Lower</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../../01-bootstrap/01.02-pass/01.02.08-normalize.qmd" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">1.2.8 Normalize</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../../01-bootstrap/01.02-pass/01.02.09-optimize.qmd" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">1.2.9 Optimize</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../../01-bootstrap/01.02-pass/01.02.10-evaluate.qmd" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">1.2.10 Evaluate</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../../01-bootstrap/01.02-pass/01.02.11-codegen.qmd" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">1.2.11 Codegen</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+          <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a href="../../../01-bootstrap/01.03-repr/README.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">1.3 Repr</span></a>
+          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="false" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-4" class="collapse list-unstyled sidebar-section depth2 ">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../../01-bootstrap/01.03-repr/01.03.01-source.qmd" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">1.3.1 Source</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../../01-bootstrap/01.03-repr/01.03.02-tokens.qmd" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">1.3.2 Tokens</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../../01-bootstrap/01.03-repr/01.03.03-syntax.qmd" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">1.3.3 Syntax</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../../01-bootstrap/01.03-repr/01.03.04-resolved.qmd" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">1.3.4 Resolved</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../../01-bootstrap/01.03-repr/01.03.05-expanded.qmd" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">1.3.5 Expanded</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../../01-bootstrap/01.03-repr/01.03.06-elaborated.qmd" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">1.3.6 Elaborated</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../../01-bootstrap/01.03-repr/01.03.07-core.qmd" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">1.3.7 Core</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+          <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a href="../../../01-bootstrap/01.04-compose/README.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">1.4 Compose</span></a>
+          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-5" role="navigation" aria-expanded="false" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-5" class="collapse list-unstyled sidebar-section depth2 ">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../../01-bootstrap/01.04-compose/01.04.01-pass.qmd" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">1.4.1 Pass</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../../01-bootstrap/01.04-compose/01.04.02-run.qmd" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">1.4.2 Run</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../../01-bootstrap/01.04-compose/01.04.03-inspect.qmd" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">1.4.3 Inspect</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../../01-bootstrap/01.04-compose/01.04.04-build.qmd" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">1.4.4 Build</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+          <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a href="../../../01-bootstrap/01.05-labs/README.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">1.5 Labs</span></a>
+          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-6" role="navigation" aria-expanded="false" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-6" class="collapse list-unstyled sidebar-section depth2 ">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../../01-bootstrap/01.05-labs/01.05.01-pipeline.qmd" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">1.5.1 Pipeline</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+          <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a href="../../../01-bootstrap/01.06-nagini/README.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">1.6 Nagini</span></a>
+          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-7" role="navigation" aria-expanded="false" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-7" class="collapse list-unstyled sidebar-section depth2 ">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../../01-bootstrap/01.06-nagini/01.06.01-advance.qmd" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">1.6.1 Advance</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a href="../../../02-docs/README.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">2 Docs</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-8" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-8" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a href="../../../02-docs/02.01-tutorial/README.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">2.1 Tutorial</span></a>
+          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-9" role="navigation" aria-expanded="false" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-9" class="collapse list-unstyled sidebar-section depth2 ">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../../02-docs/02.01-tutorial/walkthrough.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Walkthrough: first frames</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+          <li class="sidebar-item sidebar-item-section">
+      <span class="sidebar-item-text sidebar-link text-start">
+ <span class="menu-text">2.2 How-to</span></span>
+  </li>
+          <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a href="../../../02-docs/02.03-reference/README.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">2.3 Reference</span></a>
+          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-11" role="navigation" aria-expanded="false" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-11" class="collapse list-unstyled sidebar-section depth2 ">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../../02-docs/02.03-reference/02.03.01-errors.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Errors and diagnostics</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../../02-docs/02.03-reference/spec.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Spec</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+          <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a href="../../../02-docs/02.04-explanation/README.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">2.4 Explanation</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-12" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-12" class="collapse list-unstyled sidebar-section depth2 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../../02-docs/02.04-explanation/design.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Design</span></a>
+  </div>
+</li>
+          <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a href="../../../02-docs/02.04-explanation/inspiration/README.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Inspiration</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-13" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-13" class="collapse list-unstyled sidebar-section depth3 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../../02-docs/02.04-explanation/inspiration/02.04.01-playgrounds.html" class="sidebar-item-text sidebar-link active">
+ <span class="menu-text">Playgrounds and live programming</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../../02-docs/02.04-explanation/inspiration/02.04.02-turnstiles.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Turnstile notation</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../../02-docs/02.04-explanation/inspiration/02.04.03-judgments.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Evaluation judgments</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+      </ul>
+  </li>
+          <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a href="../../../02-docs/02.05-project/README.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">2.5 Project</span></a>
+          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-14" role="navigation" aria-expanded="false" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-14" class="collapse list-unstyled sidebar-section depth2 ">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../../02-docs/02.05-project/roadmap.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Roadmap</span></a>
+  </div>
+</li>
+          <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a href="../../../02-docs/02.05-project/notes/README.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Project notes</span></a>
+          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-15" role="navigation" aria-expanded="false" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-15" class="collapse list-unstyled sidebar-section depth3 ">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../../02-docs/02.05-project/notes/02.05.01-issue-task-patch.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Issue, task, patch</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../../02-docs/02.05-project/notes/02.05.02-sober.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Plumbing, not prophecy</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../../02-docs/02.05-project/notes/02.05.03-mediating-project.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">The project that mediates the language</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../../02-docs/02.05-project/notes/02.05.04-obsidian-okf-cob-bridge.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Obsidian, OKF, COB bridge</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../../02-docs/02.05-project/notes/02.05.05-repl-phrase-costs.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">REPL phrase costs</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+          <li class="sidebar-item sidebar-item-section">
+      <span class="sidebar-item-text sidebar-link text-start">
+ <span class="menu-text">ADRs</span></span>
+  </li>
+      </ul>
+  </li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a href="../../../03-fpl/README.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">3 FPL</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-17" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-17" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a href="../../../03-fpl/OLD/03.01-features/README.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">3.1 Features</span></a>
+          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-18" role="navigation" aria-expanded="false" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-18" class="collapse list-unstyled sidebar-section depth2 ">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../../03-fpl/OLD/03.01-features/draft1/spec.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">draft1 spec</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../../03-fpl/OLD/03.01-features/draft2/spec.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">draft2 spec</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../../03-fpl/OLD/03.01-features/draft3/spec.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">draft3 spec</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../../03-fpl/OLD/03.01-features/match/spec.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">match spec</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../../03-fpl/OLD/03.01-features/server/spec.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">server spec</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../../03-fpl/OLD/03.01-features/sketch/spec.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">sketch spec</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+      </ul>
+  </li>
+    </ul>
+    </div>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul class="collapse">
+  <li><a href="#taxonomy" id="toc-taxonomy" class="nav-link active" data-scroll-target="#taxonomy">Taxonomy</a></li>
+  <li><a href="#core-lineage" id="toc-core-lineage" class="nav-link" data-scroll-target="#core-lineage">Core lineage</a></li>
+  <li><a href="#cousins-we-already-brushed-in-the-scratch-ui" id="toc-cousins-we-already-brushed-in-the-scratch-ui" class="nav-link" data-scroll-target="#cousins-we-already-brushed-in-the-scratch-ui">Cousins we already brushed in the scratch UI</a></li>
+  <li><a href="#editor-substrate" id="toc-editor-substrate" class="nav-link" data-scroll-target="#editor-substrate">Editor substrate</a></li>
+  <li><a href="#navigation-miller-vs-explorer-vs-tabs" id="toc-navigation-miller-vs-explorer-vs-tabs" class="nav-link" data-scroll-target="#navigation-miller-vs-explorer-vs-tabs">Navigation: Miller vs explorer vs tabs</a></li>
+  <li><a href="#splash-motd-local-tty-chrome" id="toc-splash-motd-local-tty-chrome" class="nav-link" data-scroll-target="#splash-motd-local-tty-chrome">Splash / MOTD (local TTY chrome)</a></li>
+  <li><a href="#where-fpl-try-sits-today" id="toc-where-fpl-try-sits-today" class="nav-link" data-scroll-target="#where-fpl-try-sits-today">Where FPL <code>/try</code> sits today</a></li>
+  <li><a href="#long-arc" id="toc-long-arc" class="nav-link" data-scroll-target="#long-arc">Long arc</a></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../../../02-docs/README.html">2 Docs</a></li><li class="breadcrumb-item"><a href="../../../02-docs/02.04-explanation/README.html">2.4 Explanation</a></li><li class="breadcrumb-item"><a href="../../../02-docs/02.04-explanation/inspiration/README.html">Inspiration</a></li><li class="breadcrumb-item"><a href="../../../02-docs/02.04-explanation/inspiration/02.04.01-playgrounds.html">Playgrounds and live programming</a></li></ol></nav>
+<div class="quarto-title">
+<h1 class="title">02.04.01 Playgrounds and live programming</h1>
+</div>
+
+<div>
+  <div class="description">
+    Inspiration note, 2026-10-18.
+  </div>
+</div>
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<p>A map of systems that shape how we think about <code>/try</code>, katas, and literate walkthroughs. Axes first, brands second. This note does not invent FPL language semantics; it only situates the shell.</p>
+<section id="taxonomy" class="level2">
+<h2 class="anchored" data-anchor-id="taxonomy">Taxonomy</h2>
+<p>Three questions for every entry:</p>
+<ol type="1">
+<li><strong>Where does the result live?</strong> In-buffer ghost text (Quokka), a side column (Swift Playground), a separate Term, or the world/image itself (Smalltalk, many Bret Victor demos).</li>
+<li><strong>What runs?</strong> Whole buffer, per expression, or a continuous live world.</li>
+<li><strong>What is the document?</strong> Scratch pad, graded kata, literate essay, or a living image.</li>
+</ol>
+</section>
+<section id="core-lineage" class="level2">
+<h2 class="anchored" data-anchor-id="core-lineage">Core lineage</h2>
+<section id="bret-victor" class="level3">
+<h3 class="anchored" data-anchor-id="bret-victor">Bret Victor</h3>
+<p>Talks and essays (<em>Inventing on Principle</em>, <em>Learnable Programming</em>): make the runtime visible; scrub inputs; kill the “edit → compile → pray” loop as a design ethic, not as a single app.</p>
+<ul>
+<li>Steal: results tied to the thing you are looking at; time/input as something you can drag.</li>
+<li>Not yet: scrubbing, timeline, or a real data→picture probe in FPL.</li>
+</ul>
+</section>
+<section id="smalltalk" class="level3">
+<h3 class="anchored" data-anchor-id="smalltalk">Smalltalk</h3>
+<p>The environment <em>is</em> the program: image, inspectors, live objects you can poke.</p>
+<ul>
+<li>Steal: inspect state instead of guessing; the tool and the language grow together.</li>
+<li>Steal (browser): <strong>path-browser</strong> — Finder-like columns over <code>/</code>-scoped modules (Unix / Plan 9 path scopes), body of the selected scope below — System Browser shape without classes. Longer argument (explorer vs tabs vs Miller): <a href="#navigation-miller-vs-explorer-vs-tabs">Navigation</a> below.</li>
+<li>Now (MVP on <code>/try</code>, <code>repl-buffer-part5</code>): Miller columns above Edit | Term over buffer <code>name/</code> scopes. Click navigates in the full buffer; sticky Focus (or double-click) shows only that scope’s body with the body selected (edits splice back; <code>#c=</code> stays the full source; Miller retargets while Focus stays on). Outline is a client-side indent heuristic, not a second desugar. <strong>Examples</strong> mode tab is stubbed (kata library next). Still not: an image, object inspectors, or a hot world between edits.</li>
+<li>Cousin (structure, not yet ours): Interlisp-D <strong>DEdit</strong> / later SEdit — modeless structure editor on a selected expression. Our Focus+selection is the UI contract (“the selection <em>is</em> the scope”); real structure ops and an AST outline are north-star.</li>
+</ul>
+</section>
+<section id="glamorous-toolkit" class="level3">
+<h3 class="anchored" data-anchor-id="glamorous-toolkit">Glamorous Toolkit</h3>
+<p>Moldable development: custom inspectors and views for the object in front of you (Pharo lineage).</p>
+<ul>
+<li>Steal: the tool reshapes itself around the value.</li>
+<li>Not yet: moldable inspectors over walker IR / stack.</li>
+</ul>
+</section>
+<section id="light-table" class="level3">
+<h3 class="anchored" data-anchor-id="light-table">Light Table</h3>
+<p>Chris Granger’s IDE research vehicle after the Kickstarter: instant eval, “no hidden state,” related code and values in context.</p>
+<ul>
+<li>Steal: evaluate in place; surface what the program is doing now.</li>
+<li>Not yet: a real inspector over walker IR/stack; Light Table itself is not our editor.</li>
+</ul>
+</section>
+<section id="eve" class="level3">
+<h3 class="anchored" data-anchor-id="eve">Eve</h3>
+<p>Follow-on from the Light Table team (<code>witheve.com</code>): literate document with code embedded in prose; relational / reactive under the hood. Project inactive; the essays still matter.</p>
+<ul>
+<li>Steal: document = program (closest cousin to Quarto walkthrough + live FPL blocks).</li>
+<li>Not yet: Eve’s language or its grid/block IDE; we are not reimplementing Eve.</li>
+</ul>
+</section>
+<section id="quokka.js" class="level3">
+<h3 class="anchored" data-anchor-id="quokka.js">Quokka.js</h3>
+<p>Live JS/TS scratchpad in the editor: <strong>grayed-out values on the same line</strong> as decorations, plus probe comments (<code>//?</code>, etc.). Values are not a separate source column and are not editable as code.</p>
+<ul>
+<li>Steal: type → see; probes when you want a specific value.</li>
+<li>Now: Monaco after-text ghosts with <code>|-</code>; Tab commits into <code>; |- …</code> notes (<code>repl-buffer-part4</code>). Still no <code>//?</code>-style probes.</li>
+</ul>
+</section>
+<section id="swift-playgrounds-xcode-playground" class="level3">
+<h3 class="anchored" data-anchor-id="swift-playgrounds-xcode-playground">Swift Playgrounds / Xcode playground</h3>
+<p>Results in a <strong>column beside the code</strong>, often with richer value previews than a raw stdout string.</p>
+<ul>
+<li>Steal: side-by-side “this line → that value.”</li>
+<li>Not yet: Swift’s value widgets, timeline, or live views. Our gutter is a thin cousin (stdout lines paired 1:1 with source lines).</li>
+</ul>
+</section>
+</section>
+<section id="cousins-we-already-brushed-in-the-scratch-ui" class="level2">
+<h2 class="anchored" data-anchor-id="cousins-we-already-brushed-in-the-scratch-ui">Cousins we already brushed in the scratch UI</h2>
+<ul>
+<li><strong>Tour of Go</strong> — lesson left, editor + run right; walkthrough shape.</li>
+<li><strong>TryAPL / J wasm playground</strong> — full-bleed Edit | Term (or Term | Edit).</li>
+<li><strong>Codecademy</strong> — Learn | Edit | Term, edge to edge.</li>
+<li><strong>CodePen</strong> — editors + preview, full width.</li>
+<li><strong>LeetCode / Exercism</strong> — graded: prompt vs editor; Exercism puts commentary on the right.</li>
+<li><strong>Observable</strong> — reactive notebooks; code and view woven.</li>
+<li><strong>JupyterLite / Marimo</strong> — labs we already ship under <code>werkbank/</code> and <code>marimo/</code>; not the learn/try shell.</li>
+</ul>
+</section>
+<section id="editor-substrate" class="level2">
+<h2 class="anchored" data-anchor-id="editor-substrate">Editor substrate</h2>
+<ul>
+<li><strong>VS Code in the browser</strong> (<code>vscode.dev</code>, code-server): full workbench. Possible to embed; heavy for <code>/try</code>.</li>
+<li><strong>Monaco</strong>: the editor core of VS Code (the CodePen / LeetCode path) — highlighting, decorations, no workbench.</li>
+</ul>
+<p>When the <code>&lt;textarea&gt;</code> is too thin, prefer <strong>Monaco</strong>, not a full VS Code embed. Quokka-style ghost text is much easier with Monaco decorations than with a textarea plus a side gutter.</p>
+<p>Current state: playground uses <strong>Monaco</strong> with Quokka-style <code>|-</code> ghosts; Tab / Accept commits <code>; |- …</code> notes (<code>repl-buffer-part4</code>); Miller <strong>path-browser</strong> columns over buffer paths (<code>repl-buffer-part5</code>); <strong>dockable</strong> Paths / Edit / Term (<code>repl-buffer-part6</code>). Katas still use a <code>&lt;textarea&gt;</code>. The Swift-cousin side gutter from part 2 is retired on <code>/try/</code>.</p>
+<section id="docking" class="level3">
+<h3 class="anchored" data-anchor-id="docking">Docking</h3>
+<p>RemedyBG / VS-ish panels on <code>/try</code> only — <strong>client-only</strong> progressive enhancement on the static Pages host. <code>curl …/try/</code> still returns real Paths / Edit / Term markup (<code>data-dock</code> sections); docking moves those nodes into <a href="https://dockview.dev">dockview</a> panels when the bundle loads. No app-shell SPA, no client router: Playground / Katas / docs stay separate documents.</p>
+<p>Default layout: Paths on top (collapsible / closable), Edit | Term below. Drag title bars to split, reorder, and tab-stack. Layout persists in <code>localStorage</code> (<code>fpl-try-dock-v1</code>); <strong>Reset layout</strong> restores the default. Closing Paths replaces the old Hide columns escape; header <strong>Paths</strong> reopens the panel.</p>
+<p>Out of scope for this host (future dock <em>components</em> once the shell exists): floating OS windows, kata-page docking, Light Table / inspector panes, project-file Miller, yazi previews.</p>
+</section>
+<section id="scroll-host-locked-zui" class="level3">
+<h3 class="anchored" data-anchor-id="scroll-host-locked-zui">Scroll host / locked ZUI</h3>
+<p>Docking is the <strong>guest</strong> inside one workspace. Above it sits a longer-arc <strong>host</strong>: a scrollable space of workspaces/tiles. Two cousins name the shape without being requirements:</p>
+<ul>
+<li><strong>1D strip</strong> — <a href="https://github.com/YaLTeR/niri">niri</a> / PaperWM scrollable-tiling: columns on an infinite horizontal strip; new tiles extend the strip instead of squeezing the viewport. Glamorous Toolkit’s <strong>Pager</strong> / TreePager is the in-image cousin: inspect → pane to the right → scroll the trail (tool trail, not a window manager).</li>
+<li><strong>Locked gridded ZUI</strong> — later: a 2D sheet of tiles at fixed scale (or discrete zoom steps), not free Pad++ pan/zoom theater. “ZUI feel” by moving the viewport over a grid, not by continuous camera freedom.</li>
+</ul>
+<p>Layering: curlable HTML shell → (enhance) scroll host → dock guest in the focused tile; fail closed to today’s static dock / CSS grid. Playground / Katas / docs stay <strong>separate documents</strong> — no client router, no empty <code>#root</code> SPA. Host and dock are progressive layout behavior; the first bytes must still read as hypertext (HTMX hypermedia doctrine).</p>
+<p>Part6 is the dock guest in a single tile (live). A <strong>2D pseudo-ZUI scroller</strong> (integer camera, edge-peek, trackpad tile-move — browser pan stand-in, not real <code>scaleE</code> ZUI) was tried on <code>try-tiles</code> and parked — tag <code>repl-buffer-2d-pseudo-zui-failed</code>. That parks the scroller, not tiles-as-such: a focused tile hosting the dock (and a <strong>1D niri-style strip</strong>) stay open.</p>
+<p>Turnstile ASCII inventory (notation only): <a href="02.04.02-turnstiles.html">02.04.02-turnstiles.md</a>.</p>
+</section>
+</section>
+<section id="navigation-miller-vs-explorer-vs-tabs" class="level2">
+<h2 class="anchored" data-anchor-id="navigation-miller-vs-explorer-vs-tabs">Navigation: Miller vs explorer vs tabs</h2>
+<p>The playaround question is the same as every large IDE: <strong>where am I in a large space?</strong> Two common scales both fail.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Pattern</th>
+<th>Strength</th>
+<th>Breaks when</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Project <strong>explorer</strong> / folder tree (Cursor left bar)</td>
+<td>Whole checkout visible</td>
+<td>Depth × width × noise; scroll-hell</td>
+</tr>
+<tr class="even">
+<td><strong>Horizontal tabs</strong></td>
+<td>“What do I have open?”</td>
+<td>Tab spam; no hierarchy</td>
+</tr>
+<tr class="odd">
+<td>Vertical / tree-tabs</td>
+<td>Open set + a bit of structure</td>
+<td>Often a second tree beside the explorer</td>
+</tr>
+<tr class="even">
+<td><strong>dired</strong></td>
+<td>List + actions in the buffer</td>
+<td>One directory at a time; no path columns</td>
+</tr>
+<tr class="odd">
+<td><strong>Miller columns</strong> (Finder / NeXT; Mark Miller)</td>
+<td>Path = columns; focus on <em>here</em></td>
+<td>Weak for fifty unrelated open files with no path</td>
+</tr>
+</tbody>
+</table>
+<p>Miller is a candidate to replace <strong>both</strong> explorer and tabs for a path-shaped world: navigate <code>demo/ → math/ → inc</code>, not the whole disk tree; the “open set” is the selected path plus the body below (Focus = one scope), not twenty tab strips. That is closer to a Smalltalk System Browser / path-browser than to “IDE with files + tabs.”</p>
+<p><strong>Lived cousins</strong> (not requirements for <code>/try</code>): terminal file managers — <strong>yazi</strong> (column + preview), <strong>vifm</strong> / <strong>mc</strong> (dual-pane), <strong>broot</strong> (tree + fuzzy). Dired was strong for <em>action in a directory</em>; Miller is stronger for <em>depth without tree spam</em>.</p>
+<p><strong>FPL fit:</strong> <code>/</code>-scoped modules, body under the columns, no class browser. The shell wants path structure the language already speaks.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Layer</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Buffer-path Miller on <code>/try</code> (indent heuristic, navigate + Focus)</td>
+<td><strong>now</strong> (<code>repl-buffer-part5</code>)</td>
+</tr>
+<tr class="even">
+<td>Dockable Paths / Edit / Term on <code>/try</code> (dockview; curlable shell; Reset layout)</td>
+<td><strong>now</strong> (<code>repl-buffer-part6</code>)</td>
+</tr>
+<tr class="odd">
+<td>Paths beside Edit = <strong>fixed width</strong>; Miller scrolls horizontally (tip kept in view)</td>
+<td><strong>now</strong> (<code>repl-buffer-miller-scroll</code>)</td>
+</tr>
+<tr class="even">
+<td>Miller commit-by-depth (↑↓ pick · → dive; blue on tip in active column)</td>
+<td><strong>taste</strong> (<code>miller-commit</code>)</td>
+</tr>
+<tr class="odd">
+<td>Active dock panel accent ring</td>
+<td><strong>taste</strong> (<code>miller-commit</code>)</td>
+</tr>
+<tr class="even">
+<td>No empty child column after a leaf / empty dir (no “No children” gutter)</td>
+<td><strong>now</strong></td>
+</tr>
+<tr class="odd">
+<td>Close / reopen Paths (replaces Hide columns when dock enhances)</td>
+<td><strong>now</strong>; static fallback still has Hide columns</td>
+</tr>
+<tr class="even">
+<td>Miller arrow-key nav (↑↓ siblings, → into / Focus, ← up; gated out of Monaco)</td>
+<td><strong>now</strong></td>
+</tr>
+<tr class="odd">
+<td>Miller ↔︎ Edit focus (→ at leaf → Monaco; ← at column 1 → Paths)</td>
+<td><strong>now</strong></td>
+</tr>
+<tr class="even">
+<td>Sticky scope-Focus (miller retargets body; Escape exits)</td>
+<td><strong>now</strong> (chose over escape-only taste)</td>
+</tr>
+<tr class="odd">
+<td>Selection persists in Focus (whole body; no nav-range wash)</td>
+<td><strong>now</strong></td>
+</tr>
+<tr class="even">
+<td>Structure ops on selection (DEdit-style; not text-only)</td>
+<td><strong>vision</strong></td>
+</tr>
+<tr class="odd">
+<td>Reopen Edit / Term without full Reset</td>
+<td><strong>open</strong> (dock UX)</td>
+</tr>
+<tr class="even">
+<td>Examples mode = kata / library columns</td>
+<td><strong>open</strong> (stub today)</td>
+</tr>
+<tr class="odd">
+<td>Miller as primary playaround nav (mental model vs explorer + tabs)</td>
+<td><strong>vision</strong></td>
+</tr>
+<tr class="even">
+<td>Scroll host (1D strip of workspaces; niri / GT Pager cousins)</td>
+<td><strong>vision</strong></td>
+</tr>
+<tr class="odd">
+<td>Locked gridded ZUI (2D sheet of tiles)</td>
+<td><strong>allude</strong> — longer arc under the scroll host</td>
+</tr>
+<tr class="even">
+<td>Workspace / project-file Miller (real paths, not only buffer <code>name/</code>)</td>
+<td><strong>vision</strong> — separate feat plan</td>
+</tr>
+<tr class="odd">
+<td>Inspector / Light Table panels as further dock components</td>
+<td><strong>open</strong> (dock guest exists; panes not yet)</td>
+</tr>
+<tr class="even">
+<td>yazi-parity (previews, richer chrome)</td>
+<td><strong>allude</strong> only — not a promise to clone yazi</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Escape hatch:</strong> close or minimize Paths (or Hide columns when JS/dock fails) → Edit | Term fills the height (Tour of Go / early <code>/try</code>) when the browser is in the way.</p>
+</section>
+<section id="splash-motd-local-tty-chrome" class="level2">
+<h2 class="anchored" data-anchor-id="splash-motd-local-tty-chrome">Splash / MOTD (local TTY chrome)</h2>
+<p><strong>Offline for now</strong> — local <code>make repl</code> only; not part of the published site face.</p>
+<p>At startup a session picks one ASCII <strong>assistant</strong> (Clipper, rare smoke/jonko variants, meatdog, or none) and prints face + hello line; the same face says <strong>bye</strong> on <code>:quit</code> / clean EOF. Minecraft-style one-liners (grue, white house, Dunnet, Chuck, Mayor, …) sit in each assistant’s hello/bye pools. Not language keywords; not a MUD.</p>
+<p>Diagnostic Clipper sketches: <a href="02.04.03-judgments.html">judgments</a>. Error tags: <a href="../../02.03-reference/02.03.01-errors.html">02.03.01</a>.</p>
+</section>
+<section id="where-fpl-try-sits-today" class="level2">
+<h2 class="anchored" data-anchor-id="where-fpl-try-sits-today">Where FPL <code>/try</code> sits today</h2>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Milestone</th>
+<th>Tag</th>
+<th>What it is</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Pure buffer</td>
+<td><code>repl-buffer-part1</code></td>
+<td>Edit holds FPL only; the site wraps <code>fpl.run.default.src</code></td>
+</tr>
+<tr class="even">
+<td>Live side results</td>
+<td><code>repl-buffer-part2</code></td>
+<td>Debounced run + side gutter (Swift-cousin); superseded on playground</td>
+</tr>
+<tr class="odd">
+<td>Instant inline</td>
+<td><code>repl-buffer-part3</code></td>
+<td>Monaco + grayed end-of-line decorations (Quokka-cousin)</td>
+</tr>
+<tr class="even">
+<td>Roundtrip transcript</td>
+<td><code>repl-buffer-part4</code></td>
+<td>Ghost <code>|-</code>; Tab commits <code>; |- …</code>; TTY utop transcript (<code>|- value : ...</code>, <code>;;!</code> bars)</td>
+</tr>
+<tr class="odd">
+<td>Path-browser columns</td>
+<td><code>repl-buffer-part5</code></td>
+<td>Miller strip above Edit; buffer <code>name/</code> outline; navigate + Focus; Examples tab stub</td>
+</tr>
+<tr class="even">
+<td>Dockable panels</td>
+<td><code>repl-buffer-part6</code></td>
+<td>Paths / Edit / Term via dockview; curlable <code>data-dock</code> shell; persist + Reset layout</td>
+</tr>
+</tbody>
+</table>
+<p>Also true right now:</p>
+<ul>
+<li><strong>Term</strong> is still the full dump and the error surface (raw walker stdout, no <code>|-</code> prefix).</li>
+<li>Pairing is <strong>1:1</strong> of non-empty stdout lines with non-blank, non-<code>;;;</code> source lines. Matching committed <code>; |-</code> notes suppress the ghost; mismatch shows a ghost to refresh. If counts differ, decorations clear and Term carries the truth.</li>
+<li>There is <strong>no walker inspector API</strong> feeding the UI.</li>
+<li>Homepage <code>{.python .live}</code> fences stay <strong>Python drivers</strong> for the literate walker story; only playground, katas, and <code>data-kata</code> fences are pure FPL.</li>
+</ul>
+</section>
+<section id="long-arc" class="level2">
+<h2 class="anchored" data-anchor-id="long-arc">Long arc</h2>
+<p>Order of ambition after the pure buffer. Not a delivery promise — implementation stays in separate plans; this note only names cousins and sequence.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Part</th>
+<th>Name</th>
+<th>Cousin</th>
+<th>Intent</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>1</td>
+<td>Pure FPL buffer</td>
+<td>—</td>
+<td>Done (<code>repl-buffer-part1</code>)</td>
+</tr>
+<tr class="even">
+<td>2</td>
+<td>Live side results</td>
+<td>Swift-cousin gutter</td>
+<td>Done (<code>repl-buffer-part2</code>); playground moved on</td>
+</tr>
+<tr class="odd">
+<td>3</td>
+<td>Instant inline / probes</td>
+<td>Quokka</td>
+<td>Done on playground (<code>repl-buffer-part3</code>): Monaco after-text; no <code>//?</code> probes yet</td>
+</tr>
+<tr class="even">
+<td>4</td>
+<td>Roundtrip transcript</td>
+<td>Quokka commit + utop</td>
+<td>Done (<code>repl-buffer-part4</code>): Tab → <code>; |- …</code>; TTY promptless <code>|- value : ...</code> + ASCII <code>;;!</code> phrase bars</td>
+</tr>
+<tr class="odd">
+<td>4b</td>
+<td>Path-browser</td>
+<td>Smalltalk / Finder</td>
+<td>Done MVP (<code>repl-buffer-part5</code>): Miller columns; navigate + Focus; Examples stub</td>
+</tr>
+<tr class="even">
+<td>4c</td>
+<td>Dockable panels</td>
+<td>RemedyBG / VS</td>
+<td>Done MVP (<code>repl-buffer-part6</code>): Paths / Edit / Term dock; curlable shell</td>
+</tr>
+<tr class="odd">
+<td>5</td>
+<td>No hidden state</td>
+<td>Light Table</td>
+<td>Inspector over stack / walker IR (future dock components)</td>
+</tr>
+<tr class="even">
+<td>6</td>
+<td>Document = program</td>
+<td>Eve</td>
+<td>Walkthrough/essay as the primary live buffer</td>
+</tr>
+<tr class="odd">
+<td>7</td>
+<td>Scrub / time</td>
+<td>Bret Victor</td>
+<td>Parameter scrub; needs cheap deterministic re-run</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Glamorous Toolkit</strong> (incl.&nbsp;Pager trail), <strong>scroll host / locked ZUI</strong>, and <strong>Miller-as-shell-nav</strong> (explorer + tab spam replaced by path columns + body) stay north-stars beside this table — not numbered delivery parts. Parts 5–7 remain Light Table / Eve / Bret Victor. Path-browser Examples mode (kata library columns) is still open; see <a href="#navigation-miller-vs-explorer-vs-tabs">Navigation</a> and <a href="#scroll-host--locked-zui">Scroll host / locked ZUI</a>.</p>
+
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp("https:\/\/psjg\.github\.io\/fpl-lit-scratch");
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+<nav class="page-navigation">
+  <div class="nav-page nav-page-previous">
+      <a href="../../../02-docs/02.04-explanation/inspiration/README.html" class="pagination-link" aria-label="Inspiration">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text">Inspiration</span>
+      </a>          
+  </div>
+  <div class="nav-page nav-page-next">
+      <a href="../../../02-docs/02.04-explanation/inspiration/02.04.02-turnstiles.html" class="pagination-link" aria-label="Turnstile notation">
+        <span class="nav-page-text">Turnstile notation</span> <i class="bi bi-arrow-right-short"></i>
+      </a>
+  </div>
+</nav>
+</div> <!-- /content -->
+
+
+
+
+</body></html>
