@@ -1079,7 +1079,8 @@ async function bootKata() {
   ]);
 
   promptEl.innerHTML = '<pre class="fpl-prompt-md"></pre>';
-  promptEl.querySelector("pre").textContent = promptMd;
+  // The prompt is an OKF note: its frontmatter is for the bundle, not the reader.
+  promptEl.querySelector("pre").textContent = promptMd.replace(/^---\n[\s\S]*?\n---\n+/, "");
 
   let starterSrc = starter;
   editor.value = starterSrc;
