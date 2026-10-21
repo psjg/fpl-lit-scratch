@@ -11,3 +11,5 @@ GitHub shows this file for the folder. FON is the wire. It is not a compiler sta
 - [01.01.02-fon](01.01.02-fon.md) is the inert codec.
 - [01.01.03-pipe](01.01.03-pipe.md) is `defonify`, then the stage, then `fonify`.
 - [01.01.04-render](01.01.04-render.md) turns the last FON value back into text.
+- [01.01.05-codec](01.01.05-codec.md) is one codec per representation: a value crosses the pipe as itself.
+- [01.01.06-cli](01.01.06-cli.md) is the `fpl` command, its commands read off the registries.
