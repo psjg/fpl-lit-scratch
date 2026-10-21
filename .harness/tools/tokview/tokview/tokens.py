@@ -1,5 +1,5 @@
-"""Tokenizers behind one interface: the ids of a text, and the bytes each
-id stands for.
+"""Tokenizers behind one interface: the ids of a text, and the bytes
+each id stands for.
 
 tiktoken's o200k_base and cl100k_base are always there. Qwen2.5-Coder
 and DeepSeek-V3 are read from their Hugging Face tokenizer.json, only
@@ -25,7 +25,9 @@ import tiktoken
 
 HF = {"qwen": "Qwen/Qwen2.5-Coder-7B", "deepseek": "deepseek-ai/DeepSeek-V3"}
 TIMEOUT = 60.0  # seconds a download may stay silent before it is given up
-DEADLINE = 300.0  # seconds a download may run in all, however steadily its bytes come
+DEADLINE = (
+    300.0  # seconds a download may run in all, however steadily its bytes come
+)
 LIMIT = 64 << 20  # bytes of a tokenizer.json; the real ones are under 8 MiB
 CHUNK = 1 << 16  # bytes read, at most, before the deadline is checked again
 CUT = 0.05  # seconds between a late download's socket shutdowns
@@ -68,7 +70,9 @@ def _byte_chars() -> dict[int, str]:
     """
     kept = [*range(33, 127), *range(161, 173), *range(174, 256)]
     moved = [b for b in range(256) if b not in kept]
-    return {b: chr(b) for b in kept} | {b: chr(256 + k) for k, b in enumerate(moved)}
+    return {b: chr(b) for b in kept} | {
+        b: chr(256 + k) for k, b in enumerate(moved)
+    }
 
 
 U2B = {char: byte for byte, char in _byte_chars().items()}
@@ -85,9 +89,14 @@ def bytes_of(token: str) -> bytes:
 
 
 def openai(name: str) -> Tk:
-    """A tiktoken encoding; special-token text is encoded as ordinary text."""
+    """A tiktoken encoding; special-token text is encoded as ordinary
+    text.
+    """
     enc = tiktoken.get_encoding(name)
-    return Tk(lambda text: enc.encode(text, disallowed_special=()), enc.decode_single_token_bytes)
+    return Tk(
+        lambda text: enc.encode(text, disallowed_special=()),
+        enc.decode_single_token_bytes,
+    )
 
 
 def cache_dir() -> Path:
@@ -95,7 +104,10 @@ def cache_dir() -> Path:
     Where fetched tokenizer files live: $XDG_CACHE_HOME/fpl-tokview,
     else ~/.cache's.
     """
-    return Path(os.environ.get("XDG_CACHE_HOME") or Path.home() / ".cache") / "fpl-tokview"
+    return (
+        Path(os.environ.get("XDG_CACHE_HOME") or Path.home() / ".cache")
+        / "fpl-tokview"
+    )
 
 
 class Cutter(urllib.request.HTTPSHandler, urllib.request.HTTPHandler):
@@ -119,7 +131,9 @@ class Cutter(urllib.request.HTTPSHandler, urllib.request.HTTPHandler):
     ) -> http.client.HTTPResponse:
         """urllib's own, with each connection it makes kept."""
 
-        def kept(*args: object, **kwargs: object) -> http.client.HTTPConnection:
+        def kept(
+            *args: object, **kwargs: object
+        ) -> http.client.HTTPConnection:
             conn = http_class(*args, **kwargs)
             self.conns.append(conn)
             return conn
@@ -127,11 +141,11 @@ class Cutter(urllib.request.HTTPSHandler, urllib.request.HTTPHandler):
         return super().do_open(kept, req, **kw)
 
     def cut(self) -> None:
-        """Shuts every socket still open, so a read blocked on it returns
-        at once. The plain socket's shutdown, under TLS too: SSLSocket's
-        drops its TLS state first, which a read in flight would trip
-        over. Each socket is read once: the fetch thread may set
-        conn.sock to None between a check and a use.
+        """Shuts every socket still open, so a read blocked on it
+        returns at once. The plain socket's shutdown, under TLS too:
+        SSLSocket's drops its TLS state first, which a read in flight
+        would trip over. Each socket is read once: the fetch thread may
+        set conn.sock to None between a check and a use.
         """
         for conn in list(self.conns):
             sock = conn.sock
@@ -178,7 +192,9 @@ def fetch(
     threading.Thread(target=watch, daemon=True).start()
     try:
         with (
-            urllib.request.build_opener(cutter).open(url, timeout=timeout) as response,
+            urllib.request.build_opener(cutter).open(
+                url, timeout=timeout
+            ) as response,
             part.open("wb") as out,
         ):
             size = 0
@@ -204,7 +220,7 @@ def hugging_face(repo: str, get: Callable[[str, Path], None] = fetch) -> Tk:
     """The byte-level BPE of a Hugging Face repository's tokenizer.json,
     fetched by `get` on first use.
     """
-    from tokenizers import Tokenizer  # noqa: PLC0415 -- the hf extra is optional
+    from tokenizers import Tokenizer  # noqa: PLC0415 -- optional extra
 
     path = cache_dir() / repo.replace("/", "_") / "tokenizer.json"
     if not path.exists():
@@ -226,7 +242,9 @@ def registry() -> dict[str, Callable[[], Tk]]:
     }
     if importlib.util.find_spec("tokenizers") is None:
         return names
-    return names | {name: partial(hugging_face, repo) for name, repo in HF.items()}
+    return names | {
+        name: partial(hugging_face, repo) for name, repo in HF.items()
+    }
 
 
 @dataclass
@@ -250,7 +268,9 @@ class Tokenizers:
         ValueError.
         """
         if name not in self.loaders:
-            raise ValueError(f"unknown tokenizer {name!r}; known: {', '.join(self.loaders)}")
+            raise ValueError(
+                f"unknown tokenizer {name!r}; known: {', '.join(self.loaders)}"
+            )
         with self.lock:
             if name not in self.loaded:
                 self.loaded[name] = self.loaders[name]()

@@ -1,4 +1,6 @@
-"""tokview.tokens: the tokens tile the text's bytes, under every tokenizer."""
+"""tokview.tokens: the tokens tile the text's bytes, under every
+tokenizer.
+"""
 
 import json
 import sys
@@ -16,7 +18,16 @@ import pytest
 from hypothesis import given
 from hypothesis import strategies as st
 from tokview import tokens
-from tokview.tokens import U2B, Tk, Tokenizers, bytes_of, cache_dir, fetch, hugging_face, registry
+from tokview.tokens import (
+    U2B,
+    Tk,
+    Tokenizers,
+    bytes_of,
+    cache_dir,
+    fetch,
+    hugging_face,
+    registry,
+)
 
 LOADED = Tokenizers()
 SPECIAL = "<| |>"  # a space is outside the byte-level alphabet
@@ -154,11 +165,16 @@ def test_concurrent_first_uses_load_once() -> None:
     lock = Watched()
     loaded = Tokenizers({"t": held}, lock=lock)
     got: list[Tk] = []
-    first, second = (threading.Thread(target=lambda: got.append(loaded.get("t"))) for _ in "12")
+    first, second = (
+        threading.Thread(target=lambda: got.append(loaded.get("t")))
+        for _ in "12"
+    )
     first.start()
     assert entered.wait(5)
     second.start()
-    assert lock.contended.wait(5)  # the second caller is at the lock while the load holds it
+    assert lock.contended.wait(
+        5
+    )  # the second caller is at the lock while the load holds it
     assert got == []
     release.set()
     first.join()
@@ -167,14 +183,18 @@ def test_concurrent_first_uses_load_once() -> None:
     assert got == [tk, tk]
 
 
-def test_the_hugging_face_entries_need_tokenizers(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_the_hugging_face_entries_need_tokenizers(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     pytest.importorskip("tokenizers")
     assert set(registry()) == {"o200k", "cl100k", "qwen", "deepseek"}
     monkeypatch.setitem(sys.modules, "tokenizers", None)
     assert set(registry()) == {"o200k", "cl100k"}
 
 
-def test_the_cache_follows_xdg(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def test_the_cache_follows_xdg(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path))
     assert cache_dir() == tmp_path / "fpl-tokview"
     monkeypatch.delenv("XDG_CACHE_HOME")
@@ -191,10 +211,12 @@ def test_fetch_writes_the_body_whole(tmp_path: Path) -> None:
 
 
 @contextmanager
-def serving(answer: Callable[[BaseHTTPRequestHandler, threading.Event], None]) -> Generator[str]:
-    """The URL of a local server that answers each GET with answer, for the
-    length of the block; answer is handed an event set when the block
-    ends, to stop waiting on.
+def serving(
+    answer: Callable[[BaseHTTPRequestHandler, threading.Event], None],
+) -> Generator[str]:
+    """The URL of a local server that answers each GET with answer, for
+    the length of the block; answer is handed an event set when the
+    block ends, to stop waiting on.
     """
     done = threading.Event()
 
@@ -204,7 +226,9 @@ def serving(answer: Callable[[BaseHTTPRequestHandler, threading.Event], None]) -
             """Quiet."""
 
         def do_GET(self) -> None:
-            with suppress(OSError):  # the client gave up first, as the tests want it to
+            with suppress(
+                OSError
+            ):  # the client gave up first, as the tests want it to
                 answer(self, done)
 
     httpd = ThreadingHTTPServer(("127.0.0.1", 0), Answer)
@@ -239,7 +263,9 @@ def trickling(handler: BaseHTTPRequestHandler, done: threading.Event) -> None:
             return
 
 
-def dripping(head: bytes) -> Callable[[BaseHTTPRequestHandler, threading.Event], None]:
+def dripping(
+    head: bytes,
+) -> Callable[[BaseHTTPRequestHandler, threading.Event], None]:
     """Sends head a byte every 20 ms, and nothing after it."""
 
     def answer(handler: BaseHTTPRequestHandler, done: threading.Event) -> None:
@@ -277,12 +303,18 @@ def test_fetch_gives_up_on_a_server_that_trickles(tmp_path: Path) -> None:
 
 @pytest.mark.parametrize(
     "head",
-    # Cut anywhere, the first is no status line at all (its code is zero however long)
-    # and the second a whole one, its headers ended early.
-    [b"HTTP/1.0 0".ljust(100, b"0"), b"HTTP/1.0 200 OK\r\nX-Slow: ".ljust(100, b"a")],
+    # Cut anywhere, the first is no status line at all (its code is
+    # zero however long) and the second a whole one, its headers ended
+    # early.
+    [
+        b"HTTP/1.0 0".ljust(100, b"0"),
+        b"HTTP/1.0 200 OK\r\nX-Slow: ".ljust(100, b"a"),
+    ],
     ids=["status line", "headers"],
 )
-def test_fetch_gives_up_on_a_server_that_trickles_its_head(tmp_path: Path, head: bytes) -> None:
+def test_fetch_gives_up_on_a_server_that_trickles_its_head(
+    tmp_path: Path, head: bytes
+) -> None:
     with serving(dripping(head)) as url:
         start = time.monotonic()
         with pytest.raises(TimeoutError, match=r"longer than 0\.3 s"):
@@ -303,7 +335,10 @@ def test_fetch_refuses_a_body_over_the_limit(tmp_path: Path) -> None:
 
 def test_a_cut_after_the_head_leaves_the_body_alone() -> None:
     cutter = tokens.Cutter()
-    with serving(eleven) as url, urllib.request.build_opener(cutter).open(url) as response:
+    with (
+        serving(eleven) as url,
+        urllib.request.build_opener(cutter).open(url) as response,
+    ):
         cutter.cut()
         assert response.read() == b"x" * 11
     assert len(cutter.conns) == 1
@@ -311,7 +346,9 @@ def test_a_cut_after_the_head_leaves_the_body_alone() -> None:
 
 def test_the_fetch_bounds_clear_the_real_files() -> None:
     assert 0 < tokens.TIMEOUT <= tokens.DEADLINE < 3600
-    assert tokens.LIMIT >= 32 << 20  # DeepSeek-V3's tokenizer.json is under 8 MiB
+    assert (
+        tokens.LIMIT >= 32 << 20
+    )  # DeepSeek-V3's tokenizer.json is under 8 MiB
 
 
 @pytest.fixture
@@ -330,16 +367,26 @@ def hf(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Tk:
 
     tk = hugging_face("org/tiny", get)
     hugging_face("org/tiny", get)
-    assert urls == ["https://huggingface.co/org/tiny/resolve/main/tokenizer.json"]
+    assert urls == [
+        "https://huggingface.co/org/tiny/resolve/main/tokenizer.json"
+    ]
     return tk
 
 
 def test_hugging_face_tiles_the_bytes(hf: Tk) -> None:
-    for text in ["sq : x -- y\t; the square", "naïve π \u2250 \u2228 😀", SPECIAL + " x", ""]:
+    for text in [
+        "sq : x -- y\t; the square",
+        "naïve π \u2250 \u2228 😀",
+        SPECIAL + " x",
+        "",
+    ]:
         tiles(hf, text)
     assert SPECIAL.encode() in hf.pieces(SPECIAL)
     assert b"dup" in hf.pieces("\tdup times")
 
 
 def test_the_registry_names_its_repositories() -> None:
-    assert tokens.HF == {"qwen": "Qwen/Qwen2.5-Coder-7B", "deepseek": "deepseek-ai/DeepSeek-V3"}
+    assert tokens.HF == {
+        "qwen": "Qwen/Qwen2.5-Coder-7B",
+        "deepseek": "deepseek-ai/DeepSeek-V3",
+    }

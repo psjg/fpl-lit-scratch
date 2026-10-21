@@ -18,18 +18,36 @@ from tokview.wrap import (
 WORD = st.text(alphabet="abcxyz.,()→7", min_size=1, max_size=12)
 TEXT = st.lists(WORD, min_size=1, max_size=30).map(" ".join)
 INDENT = st.integers(0, 3).map(lambda n: "\t" * n)
-CODE = st.tuples(INDENT, st.text(alphabet="abc :[]-+", min_size=1, max_size=60)).map("".join)
+CODE = st.tuples(
+    INDENT, st.text(alphabet="abc :[]-+", min_size=1, max_size=60)
+).map("".join)
 MARK = st.sampled_from([";;", ";;;", ";;;;"])
 WIDTH = st.integers(20, 160)
 PROSE = st.lists(
-    st.sampled_from(["The", "note", "ends.", "Then", "e.g.", "a", "list", "—", "1.", "2.", "x;"]),
+    st.sampled_from(
+        [
+            "The",
+            "note",
+            "ends.",
+            "Then",
+            "e.g.",
+            "a",
+            "list",
+            "—",
+            "1.",
+            "2.",
+            "x;",
+        ]
+    ),
     min_size=1,
     max_size=25,
 ).map(" ".join)
 
 
 def said(line: str) -> str:
-    """The comment text of a folded line: what follows its first `; `."""
+    """The comment text of a folded line: what follows its first
+    `; `.
+    """
     return line.split("; ", 1)[1]
 
 
@@ -39,7 +57,9 @@ def visible(text: str) -> str:
 
 
 @given(CODE, TEXT, WIDTH)
-def test_a_folded_note_fits_unless_one_word_cannot(code: str, note: str, width: int) -> None:
+def test_a_folded_note_fits_unless_one_word_cannot(
+    code: str, note: str, width: int
+) -> None:
     lines, over = fold_line(f"{code}\t; {note}", width)
     assert over == (cols(code) > width)
     for line in lines:
@@ -47,7 +67,9 @@ def test_a_folded_note_fits_unless_one_word_cannot(code: str, note: str, width: 
 
 
 @given(CODE, TEXT, WIDTH)
-def test_a_folded_note_keeps_its_words(code: str, note: str, width: int) -> None:
+def test_a_folded_note_keeps_its_words(
+    code: str, note: str, width: int
+) -> None:
     lines, _ = fold_line(f"{code}\t; {note}", width)
     assert lines[0].startswith(f"{code}\t; ")
     assert " ".join(said(line) for line in lines) == note
@@ -69,15 +91,23 @@ def test_code_is_never_folded(code: str, width: int) -> None:
     assert fold_line(code, width) == ([code], cols(code) > width)
 
 
-@given(st.lists(st.one_of(CODE, CODE.map(lambda c: c + "\t; note")), min_size=1), WIDTH)
-def test_folded_counts_the_code_lines_over(lines: list[str], width: int) -> None:
+@given(
+    st.lists(st.one_of(CODE, CODE.map(lambda c: c + "\t; note")), min_size=1),
+    WIDTH,
+)
+def test_folded_counts_the_code_lines_over(
+    lines: list[str], width: int
+) -> None:
     text, over = folded("\n".join(lines), width)
     assert over == sum(cols(line.split("\t; ")[0]) > width for line in lines)
     assert text.count("\n") >= len(lines) - 1
 
 
 def test_a_note_that_fits_is_left_alone() -> None:
-    assert fold_line("dup times\t; the square", 80) == (["dup times\t; the square"], False)
+    assert fold_line("dup times\t; the square", 80) == (
+        ["dup times\t; the square"],
+        False,
+    )
 
 
 def test_a_comment_that_fits_is_left_alone() -> None:
@@ -103,7 +133,9 @@ def test_ventilated_notes_keep_their_text(code: str, note: str) -> None:
 
 
 @given(INDENT, MARK, PROSE)
-def test_ventilated_comments_keep_their_text(indent: str, mark: str, body: str) -> None:
+def test_ventilated_comments_keep_their_text(
+    indent: str, mark: str, body: str
+) -> None:
     lines = ventilated(f"{indent}{mark} {body}").split("\n")
     assert all(line.startswith(f"{indent}{mark} ") for line in lines)
     assert visible("".join(said(line) for line in lines)) == visible(body)
@@ -126,7 +158,9 @@ def test_a_list_number_never_stands_alone_before_its_item(note: str) -> None:
 
 
 def test_sentences_cut_at_ends_and_clauses() -> None:
-    assert sentences("The sum of a strand. An empty strand gives 0; nothing is refused.") == [
+    assert sentences(
+        "The sum of a strand. An empty strand gives 0; nothing is refused."
+    ) == [
         "The sum of a strand.",
         "An empty strand gives 0;",
         "nothing is refused.",
@@ -134,7 +168,10 @@ def test_sentences_cut_at_ends_and_clauses() -> None:
 
 
 def test_a_list_number_goes_with_its_item() -> None:
-    assert sentences("Two steps. — 1. Parse it.") == ["Two steps.", "— 1. Parse it."]
+    assert sentences("Two steps. — 1. Parse it.") == [
+        "Two steps.",
+        "— 1. Parse it.",
+    ]
     assert sentences("Two steps. — 1.") == ["Two steps.", "— 1."]
 
 

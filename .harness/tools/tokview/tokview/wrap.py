@@ -14,11 +14,15 @@ TAB = 4  # columns per tab; elastic tabstops make the true width unknowable
 NOTE = "\t; "
 COMMENT = re.compile(r"(\t*)(;{2,4}) (.*)$")
 LIST_NUMBER = re.compile(r"\W*\d+\.\s*")
-CLAUSE = re.compile(r"(?<=;) (?=[A-Za-z(\[→∨])")  # noqa: RUF001 -- FPL's or sign may open a clause
-# pysbd ships neither stubs nor py.typed. Imported by name it is typed Any, where a static import
-# would need a waiver from each checker, and mypy refuses the reason that .harness/scripts/escapes
-# requires after its ignore comment.
-SEGMENTER = importlib.import_module("pysbd").Segmenter(language="en", clean=False)
+# FPL's or sign may open a clause.
+CLAUSE = re.compile(r"(?<=;) (?=[A-Za-z(\[→∨])")  # noqa: RUF001 -- or sign
+# pysbd ships neither stubs nor py.typed. Imported by name it is typed
+# Any, where a static import would need a waiver from each checker, and
+# mypy refuses the reason that .harness/scripts/escapes requires after
+# its ignore comment.
+SEGMENTER = importlib.import_module("pysbd").Segmenter(
+    language="en", clean=False
+)
 
 
 def cols(line: str) -> int:
@@ -49,8 +53,8 @@ def wrap(words: list[str], width: int, prefix: int) -> list[str]:
 
 
 def fold_line(line: str, width: int) -> tuple[list[str], bool]:
-    """The line folded to width, and whether its code alone is wider than
-    that. A comment line that fits is left as written, its spacing
+    """The line folded to width, and whether its code alone is wider
+    than that. A comment line that fits is left as written, its spacing
     included.
     """
     if m := COMMENT.match(line):
@@ -66,8 +70,14 @@ def fold_line(line: str, width: int) -> tuple[list[str], bool]:
         return [line], False
     indent = indentation(code)
     parts = wrap(note.split(" "), width, cols(code) + TAB + 2)
-    rest = wrap(" ".join(parts[1:]).split(" "), width, len(indent) * TAB + 2) if parts[1:] else []
-    return [f"{code}{NOTE}{parts[0]}"] + [f"{indent}; {p}" for p in rest], cols(code) > width
+    rest = (
+        wrap(" ".join(parts[1:]).split(" "), width, len(indent) * TAB + 2)
+        if parts[1:]
+        else []
+    )
+    return [f"{code}{NOTE}{parts[0]}"] + [
+        f"{indent}; {p}" for p in rest
+    ], cols(code) > width
 
 
 def folded(text: str, width: int) -> tuple[str, int]:
@@ -85,8 +95,8 @@ def folded(text: str, width: int) -> tuple[str, int]:
 
 
 def sentences(note: str) -> list[str]:
-    """The note cut at sentence ends, then at `; ` between clauses. A list
-    number standing alone (`— 1.`) is kept with the item after it.
+    """The note cut at sentence ends, then at `; ` between clauses. A
+    list number standing alone (`— 1.`) is kept with the item after it.
     """
     parts: list[str] = []
     pending = ""
@@ -112,7 +122,9 @@ def ventilated(text: str) -> str:
     for line in text.split("\n"):
         if m := COMMENT.match(line):
             indent, mark, body = m.groups()
-            out.extend(f"{indent}{mark} {s}" for s in sentences(body) or [body])
+            out.extend(
+                f"{indent}{mark} {s}" for s in sentences(body) or [body]
+            )
         elif NOTE in line:
             code, note = line.split(NOTE, 1)
             first, *rest = sentences(note) or [note]
