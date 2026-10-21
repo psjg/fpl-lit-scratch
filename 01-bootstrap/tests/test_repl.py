@@ -301,7 +301,7 @@ def test_a_session() -> None:
         assert called(
             [*SESSION, "--at", events[0].ident.raw().hex(), "--show"], env
         )[1] == ("f : -- x\n\t2\n")
-        assert b"who operator" in (work / "s.fon").read_bytes()
+        assert b"#who #operator" in (work / "s.fon").read_bytes()
 
 
 def test_an_input_that_fails() -> None:
@@ -315,7 +315,7 @@ def test_an_input_that_fails() -> None:
         )
         assert (code, out) == (1, "ERROR: 1:3 [ never closed\n")
         assert err.splitlines()[-1].startswith("HEAD 1 $")
-        assert "who agent" in (Path("s.fon")).read_text()
+        assert "#who #agent" in (Path("s.fon")).read_text()
         code, out, _ = called([*SESSION, "--fuel", "0", "-e", "1"], env)
         assert (code, out) == (1, "ERROR: 1:1 out of fuel\n")
 

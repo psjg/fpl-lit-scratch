@@ -1,49 +1,85 @@
 """
-FON data: the inert, braced data profile of FPL, read within bounds and
-written canonically.
+FON, FPL Object Notation: the inert, postfix, ASCII subset of FPL that
+writes a value out and reads it back, within bounds and canonically.
 
-The reader never evaluates, resolves or constructs typed objects: a bare
-name or #name is a symbol, $name or $<code>:<n> a reference by identity,
-&<multihash> a reference by content (fpl/multihash.py, the hex alias
-read too), [ ] opaque code, ( ) a tagged tuple, { } a dict with literal
-keys, a number an exact decimal and _ absence. Whitespace separates
-tokens only, in any amount; there are no comments, blocks or islands.
-Strings are counted by the code grammar's pre-lexer. Depth, token length
-and input size are parameters.
+A document is a stream of tokens between whitespace, read left to right
+on a stack. A literal pushes its value: an exact decimal, a float as
+C99 hex or inf, -inf, nan, -nan, _ for absence, true and false, #name a
+symbol, $name or $<code>:<n> a reference by identity, &<multihash> a
+reference by content (fpl/multihash.py, the hex alias read too), "text"
+and 'raw text'. A constructor pops what it builds from and pushes the
+result: n values then list/n a list, code/n opaque code, tuple/n a
+tagged tuple, 2n values then dict/n a dict of n keys and values in
+turn, and k values then Name/k the tagged tuple headed by #Name, so
+1 2 Add/2 is ( Add 1 2 ). One value left on the stack is the document's
+value; none or several are a List of them.
+
+The reader never evaluates, resolves or constructs typed objects, and
+accepts each value in one spelling only, the one `write` gives; only
+the amount of whitespace between tokens is free. It refuses every brace
+and bracket, the braced FON's included, and every character outside
+printable ASCII but in a string's escapes. Depth, token length and
+input size are parameters.
 """
 
-import contextlib
 import math
 import re
 import struct
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from dataclasses import dataclass
 from decimal import Decimal
-from functools import cache
 from typing import assert_never
 
-from lark import Lark, Token, Tree, UnexpectedInput
-
 from fpl.errors import FplError, Span
-from fpl.lex import Lines, Prelexed, pairs
 from fpl.multihash import Multihash, spelling
 
-GRAMMAR = r"""
-start: value*
-?value: TOKEN | list | dict | tuple | code
-list:  "⟨" value* "⟩"
-dict:  "{" (TOKEN value)* "}"
-tuple: "(" value* ")"
-code:  "[" value* "]"
-TOKEN: /[^\s\[\]()“”「」⟦⟧⟨⟩{}|⍝]+/
-%ignore /\s+/
-"""
-STRINGS = re.compile(r"[“「⟦”」⟧]")
-OPENERS = {"[": "]", "(": ")", "⟨": "⟩", "{": "}"}
+SPACE = re.compile(r"[ \t\r\n]*")
+WORD = re.compile(r"[^ \t\r\n]*")
+NAME = re.compile(r"[!#-&*-Z\\^-z|~]+")
+STRANGER = re.compile(r"[^!#-&*-Z\\^-z|~]")
+PLAIN = {'"': r" !#-\[\]-~", "'": r" -&(-\[\]-~"}
+LITERAL = {quote: re.compile(f"[{chars}]*") for quote, chars in PLAIN.items()}
+ESCAPED = {quote: re.compile(f"[^{chars}]") for quote, chars in PLAIN.items()}
+SHORT = {"\\": "\\", "n": "\n", "t": "\t", '"': '"', "'": "'"}
+ESCAPES = {char: "\\" + letter for letter, char in SHORT.items()}
+CODEPOINT = re.compile(r"\\u\{([0-9a-f]{1,6})\}")
+BRACKETS = "{}()[]⟨⟩“”「」⟦⟧"
 NUMBER = re.compile(r"-?(0|[1-9][0-9]*)(\.[0-9]+)?")
 NUMERIC = re.compile(r"-?(0x|[0-9])")
 HEXFLT = re.compile(r"-?0x(0|1)(\.[0-9a-f]*[1-9a-f])?p-?(0|[1-9][0-9]*)")
-TOKEN = re.compile(r"[^\s\[\]()“”「」⟦⟧⟨⟩{}|⍝¶]+")
+ARITY = re.compile(r"0|[1-9][0-9]*")
+CONTAINERS = ("list", "code", "tuple", "dict")
+
+
+class FonError(FplError):
+    """
+    A document refused: the reason, at the line and column of the
+    character it starts at, and that character's offset in the text.
+    """
+
+    def __init__(self, text: str, offset: int, message: str) -> None:
+        line = text.count("\n", 0, offset) + 1
+        super().__init__(
+            Span(line, offset - text.rfind("\n", 0, offset)), message
+        )
+        self.offset = offset
+
+
+def _quoted(text: str, quote: str) -> str:
+    r"""
+    text between quotes: printable ASCII as itself, but for the quote
+    and the backslash, which are escaped, as are newline (\n) and tab
+    (\t); every other character is \u{<hex>}, lowercase hex without
+    leading zeros.
+    """
+    return (
+        quote
+        + ESCAPED[quote].sub(
+            lambda found: ESCAPES.get(found[0], f"\\u{{{ord(found[0]):x}}}"),
+            text,
+        )
+        + quote
+    )
 
 
 @dataclass(frozen=True)
@@ -115,18 +151,18 @@ class Flt:
 
     def written(self) -> str:
         """
-        Canonical FON: nan, -nan, ∞, -∞, [-]0x0p0, or [-]0x1[.hex]p<exp>
-        with trailing zero hex digits dropped. A subnormal is normalised
-        like every other nonzero float, its exponent below -1022: the
-        smallest is 0x1p-1074, not float.hex's 0x0.0000000000001p-1022,
-        so that each float has one spelling.
+        Canonical FON: nan, -nan, inf, -inf, [-]0x0p0, or
+        [-]0x1[.hex]p<exp> with trailing zero hex digits dropped. A
+        subnormal is normalised like every other nonzero float, its
+        exponent below -1022: the smallest is 0x1p-1074, not float.hex's
+        0x0.0000000000001p-1022, so that each float has one spelling.
         """
         x = self.value
         sign = "-" if math.copysign(1, x) < 0 else ""
         if math.isnan(x):
             return sign + "nan"
         if math.isinf(x):
-            return sign + "∞"
+            return sign + "inf"
         if x == 0:
             return sign + "0x0p0"
         fraction, biased = (
@@ -147,16 +183,18 @@ class Flt:
 @dataclass(frozen=True)
 class Sym:
     """
-    A symbol: a bare name, or #name; not resolved.
+    A symbol, any text; not resolved.
     """
 
     name: str
 
     def written(self) -> str:
         """
-        Canonical FON.
+        Canonical FON: #name when the name is a run of name characters,
+        else #"name".
         """
-        return self.name
+        bare = NAME.fullmatch(self.name)
+        return "#" + (self.name if bare else _quoted(self.name, '"'))
 
 
 @dataclass(frozen=True)
@@ -170,13 +208,14 @@ class Cell:
 
     def written(self) -> str:
         """
-        Canonical FON.
+        Canonical FON: $ then the hash's decimal spelling, or the name,
+        quoted when it is not a run of name characters or opens with a
+        digit, as a hash does.
         """
-        return "$" + (
-            self.name.spelled()
-            if isinstance(self.name, Multihash)
-            else self.name
-        )
+        if isinstance(self.name, Multihash):
+            return "$" + self.name.spelled()
+        bare = NAME.fullmatch(self.name) and self.name[0] not in "0123456789"
+        return "$" + (self.name if bare else _quoted(self.name, '"'))
 
 
 @dataclass(frozen=True)
@@ -198,7 +237,7 @@ class Hash:
 @dataclass(frozen=True)
 class Str:
     """
-    “…” text, interpolation kept as text, or 「…」 raw text.
+    "…" text, interpolation kept as text, or '…' raw text.
     """
 
     text: str
@@ -208,43 +247,48 @@ class Str:
         """
         Canonical FON.
         """
-        return f"「{self.text}」" if self.raw else f"“{self.text}”"
+        return _quoted(self.text, "'" if self.raw else '"')
 
 
 @dataclass(frozen=True)
 class List:
     """
-    ⟨ … ⟩ values.
+    n values then list/n.
     """
 
     items: tuple["Value", ...]
 
     def written(self) -> str:
         """
-        Canonical FON; the empty list is ⟨⟩.
+        Canonical FON; the empty list is list/0.
         """
-        return f"⟨ {_spaced(self.items)} ⟩" if self.items else "⟨⟩"
+        return _built(self.items, f"list/{len(self.items)}")
 
 
 @dataclass(frozen=True)
 class Tagged:
     """
-    ( … ): a tagged tuple; its head is data, never called.
+    A tagged tuple; its head is data, never called.
     """
 
     items: tuple["Value", ...]
 
     def written(self) -> str:
         """
-        Canonical FON.
+        Canonical FON: the fields then Name/k when the head is a symbol
+        a tag can spell, else every item then tuple/n.
         """
-        return f"( {_spaced(self.items)} )" if self.items else "( )"
+        head = self.items[0] if self.items else None
+        if isinstance(head, Sym) and _tag(head.name):
+            fields = self.items[1:]
+            return _built(fields, f"{head.name}/{len(fields)}")
+        return _built(self.items, f"tuple/{len(self.items)}")
 
 
 @dataclass(frozen=True)
 class Code:
     """
-    [ … ]: code, opaque to the reader.
+    n values then code/n: code, opaque to the reader.
     """
 
     items: tuple["Value", ...]
@@ -253,7 +297,7 @@ class Code:
         """
         Canonical FON.
         """
-        return f"[ {_spaced(self.items)} ]" if self.items else "[ ]"
+        return _built(self.items, f"code/{len(self.items)}")
 
 
 type Leaf = Absent | Bool | Num | Flt | Sym | Cell | Hash | Str
@@ -262,7 +306,8 @@ type Leaf = Absent | Bool | Num | Flt | Sym | Cell | Hash | Str
 @dataclass(frozen=True)
 class Dict:
     """
-    { key value … }: keys literal and distinct, in the order written.
+    Keys and values in turn, then dict/n: keys literal and distinct, in
+    the order written.
     """
 
     entries: tuple[tuple[Leaf, "Value"], ...]
@@ -271,42 +316,69 @@ class Dict:
         """
         Canonical FON.
         """
-        body = " ".join(
-            f"{key.written()} {value.written()}" for key, value in self.entries
-        )
-        return f"{{ {body} }}" if self.entries else "{ }"
+        flat = tuple(item for entry in self.entries for item in entry)
+        return _built(flat, f"dict/{len(self.entries)}")
 
 
 type Value = Leaf | List | Tagged | Code | Dict
 type Json = bool | int | float | str | list["Json"] | dict[str, "Json"] | None
-SEQUENCES: dict[str, Callable[[tuple[Value, ...]], Value]] = {
-    "list": List,
-    "tuple": Tagged,
-    "code": Code,
-}
 
 CONSTANTS: dict[str, Leaf] = {
     "_": Absent(),
     "true": Bool(True),
     "false": Bool(False),
-    "∞": Flt.of(math.inf),
-    "-∞": Flt.of(-math.inf),
+    "inf": Flt.of(math.inf),
+    "-inf": Flt.of(-math.inf),
     "nan": Flt.of(math.nan),
     "-nan": Flt.of(-math.nan),
 }
 
 
-def _spaced(values: tuple[Value, ...]) -> str:
+def _built(values: tuple[Value, ...], constructor: str) -> str:
     """
-    Values separated by one space.
+    The values, then the constructor that pops them, between single
+    spaces.
     """
-    return " ".join(value.written() for value in values)
+    return " ".join([*(value.written() for value in values), constructor])
 
 
 class _RefusedError(Exception):
     """
-    A token the profile refuses, before it is placed in the source.
+    A token the profile refuses, before it is placed in the text.
     """
+
+
+@dataclass(frozen=True)
+class Make:
+    """
+    A constructor token, name/arity: list, code, tuple or dict, else a
+    tag naming its tuple's head.
+    """
+
+    name: str
+    arity: int
+
+    def width(self) -> int:
+        """
+        How many values it pops: two per entry for a dict.
+        """
+        return 2 * self.arity if self.name == "dict" else self.arity
+
+    def build(self, items: tuple[Value, ...]) -> Value:
+        """
+        What it makes of the values it popped; a dict is made apart,
+        where its keys can be placed. A tuple whose head a tag spells is
+        refused: Name/k is its one spelling.
+        """
+        if self.name == "list":
+            return List(items)
+        if self.name == "code":
+            return Code(items)
+        if self.name != "tuple":
+            return Tagged((Sym(self.name), *items))
+        if items and isinstance(items[0], Sym) and _tag(items[0].name):
+            raise _RefusedError(f"non-canonical spelling tuple/{self.arity}")
+        return Tagged(items)
 
 
 def _hash(text: str) -> Hash:
@@ -328,8 +400,10 @@ def _cell(text: str) -> Cell:
     if text[0] not in "0123456789":
         return Cell(text)
     if ":" in text:
-        with contextlib.suppress(ValueError):
+        try:
             return Cell(spelling(text, inline=False))
+        except ValueError:
+            pass
     raise _RefusedError(f"malformed identity ${text}")
 
 
@@ -353,10 +427,11 @@ def _hexflt(token: str) -> Flt:
 SIGILS: dict[str, Callable[[str], Leaf]] = {"$": _cell, "&": _hash, "#": Sym}
 
 
-def leaf(token: str) -> Leaf:
+def word(token: str) -> Leaf | Make:
     """
-    The value one token spells; a number or hash out of canonical form
-    is refused.
+    What a token of name characters spells: a literal, or a constructor
+    name/arity. A number or hash out of canonical form is refused, and
+    so is a word that is neither.
     """
     constant = CONSTANTS.get(token)
     if constant is not None:
@@ -368,108 +443,207 @@ def leaf(token: str) -> Leaf:
     if NUMERIC.match(token):
         raise _RefusedError(f"non-canonical number {token}")
     sigil = SIGILS.get(token[0]) if len(token) > 1 else None
-    return Sym(token) if sigil is None else sigil(token[1:])
+    return _constructor(token) if sigil is None else sigil(token[1:])
 
 
-@cache
-def parser() -> Lark:
+def _constructor(token: str) -> Make:
     """
-    The LALR parser of the braced profile.
+    name/arity, the arity a decimal without leading zeros; any other
+    word is unknown.
     """
-    return Lark(GRAMMAR, parser="lalr")
+    name, slash, arity = token.rpartition("/")
+    if not (slash and name and ARITY.fullmatch(arity)):
+        raise _RefusedError(f"unknown word {token}")
+    return Make(name, int(arity))
 
 
-class _Build:
+def _tag(name: str) -> bool:
     """
-    Values from Lark's tree, every refusal placed in the source.
+    Whether name/k reads back as a tag headed by #name, so that the
+    tuple is written that way.
     """
+    if name in CONTAINERS or not NAME.fullmatch(name):
+        return False
+    try:
+        return word(name + "/0") == Make(name, 0)
+    except _RefusedError:
+        return False
 
-    def __init__(self, text: str, lexed: Prelexed, max_token: int) -> None:
-        self.text, self.lexed, self.max_token = text, lexed, max_token
 
-    def at(self, offset: int) -> Span:
-        """
-        The source position of a code offset.
-        """
-        return Lines(self.text).span(self.lexed.origin[offset])
+def _refusal(char: str) -> str:
+    """
+    Why a character may not stand in a word.
+    """
+    if char in BRACKETS:
+        return f"{char} refused: FON is postfix, not braced"
+    if char in "\"'":
+        return f"{char} refused inside a word"
+    return f"U+{ord(char):04X} refused: FON is printable ASCII"
 
-    def leaf(self, token: Token) -> Leaf:
-        """
-        A token's value: a stashed string, or what the token spells.
-        """
-        start = token.start_pos or 0
-        stashed = self.lexed.stash.get(start)
-        if stashed is not None:
-            return Str(
-                self.text[stashed.start : stashed.end], stashed.kind == "raw"
+
+def _word(text: str, start: int, end: int, max_token: int) -> Leaf | Make:
+    """
+    The word text[start:end], refused in place: a character no word
+    holds, a word longer than max_token, or one `word` refuses.
+    """
+    token = text[start:end]
+    stranger = STRANGER.search(token)
+    if stranger is not None:
+        raise FonError(text, start + stranger.start(), _refusal(stranger[0]))
+    if len(token) > max_token:
+        raise FonError(text, start, "token too long")
+    try:
+        return word(token)
+    except _RefusedError as refusal:
+        raise FonError(text, start, str(refusal)) from None
+
+
+def _escape(text: str, at: int) -> tuple[str, int]:
+    r"""
+    The character the escape at text[at] stands for, and the offset past
+    it: \\ \n \t \" \' or \u{<hex>} up to 10ffff; whether it was the
+    canonical one is judged with the whole string.
+    """
+    short = SHORT.get(text[at + 1 : at + 2])
+    if short is not None:
+        return short, at + 2
+    found = CODEPOINT.match(text, at)
+    if found is None or int(found[1], 16) > 0x10FFFF:
+        raise FonError(text, at, "malformed escape")
+    return chr(int(found[1], 16)), found.end()
+
+
+def _body(text: str, start: int, quote: str) -> tuple[str, int]:
+    """
+    The text of the string whose quote is at start, and the offset past
+    its closing quote. A character outside printable ASCII must be
+    escaped.
+    """
+    parts: list[str] = []
+    at = start + 1
+    while True:
+        end = _past(LITERAL[quote], text, at)
+        parts.append(text[at:end])
+        at = end
+        if at == len(text):
+            raise FonError(text, start, f"{quote} never closed")
+        if text[at] == quote:
+            return "".join(parts), at + 1
+        if text[at] != "\\":
+            raise FonError(
+                text,
+                at,
+                f"U+{ord(text[at]):04X} refused in a string: escape it",
             )
-        if len(token) > self.max_token:
-            raise FplError(self.at(start), "token too long")
-        try:
-            return leaf(str(token))
-        except _RefusedError as refusal:
-            raise FplError(self.at(start), str(refusal)) from None
-
-    def value(self, node: Tree[Token] | Token) -> Value:
-        """
-        A value from a token or an enclosure.
-        """
-        if isinstance(node, Token):
-            return self.leaf(node)
-        if node.data == "dict":
-            return self.dict(node.children)
-        items = tuple(self.value(child) for child in node.children)
-        return SEQUENCES[str(node.data)](items)
-
-    def dict(self, children: list[Tree[Token] | Token]) -> Dict:
-        """
-        Keys and values in turn; a key given twice is refused where it
-        repeats.
-        """
-        entries: dict[Leaf, Value] = {}
-        for key_token, node in zip(children[::2], children[1::2], strict=True):
-            assert isinstance(key_token, Token)
-            key = self.leaf(key_token)
-            if key in entries:
-                raise FplError(
-                    self.at(key_token.start_pos or 0),
-                    f"repeated key {key.written()}",
-                )
-            entries[key] = self.value(node)
-        return Dict(tuple(entries.items()))
+        char, at = _escape(text, at)
+        parts.append(char)
 
 
-def _depth(text: str, lexed: Prelexed, max_depth: int) -> None:
+def _string(text: str, start: int) -> tuple[Leaf, int]:
     """
-    Refuse an enclosure opened deeper than max_depth, or one never
-    closed, by a linear scan of the code; a closer out of turn is left
-    to the grammar.
+    The string token at start, "text", 'raw', #"symbol" or $"name", and
+    the offset past it. Whitespace must follow it, and it must be
+    spelled as `write` spells its value.
     """
-    open_: list[int] = []
-    for offset, char in enumerate(lexed.code):
-        if char in OPENERS:
-            open_.append(offset)
-        elif open_ and char == OPENERS[lexed.code[open_[-1]]]:
-            open_.pop()
-        if len(open_) > max_depth:
-            raise FplError(
-                Lines(text).span(lexed.origin[offset]), "nesting too deep"
-            )
-    if open_:
-        char = lexed.code[open_[-1]]
-        raise FplError(
-            Lines(text).span(lexed.origin[open_[-1]]), f"{char} never closed"
-        )
-
-
-def _placed(lines: Lines, lexed: Prelexed, offset: int | None) -> Span:
-    """
-    The source position of Lark's failure; an unknown or end position is
-    the text's end.
-    """
-    return lines.span(
-        lexed.origin[offset if offset is not None and offset >= 0 else -1]
+    sigil = text[start] if text[start] in "#$" else ""
+    quote = text[start + len(sigil)]
+    body, end = _body(text, start + len(sigil), quote)
+    value: Leaf = (
+        Sym(body)
+        if sigil == "#"
+        else Cell(body)
+        if sigil
+        else Str(body, quote == "'")
     )
+    if end < len(text) and text[end] not in " \t\r\n":
+        raise FonError(text, end, "a string ends its token")
+    if value.written() != text[start:end]:
+        raise FonError(text, start, "non-canonical spelling")
+    return value, end
+
+
+def _past(pattern: re.Pattern[str], text: str, at: int) -> int:
+    """
+    The offset past the run of `pattern`, starred, that starts at `at`.
+    """
+    run = pattern.match(text, at)
+    assert run is not None
+    return run.end()
+
+
+def _tokens(text: str, max_token: int) -> Iterator[tuple[int, Leaf | Make]]:
+    """
+    Each token's offset and what it spells, left to right.
+    """
+    at = _past(SPACE, text, 0)
+    while at < len(text):
+        item: Leaf | Make
+        if text[at] in "\"'" or text[at : at + 2] in ('#"', '$"'):
+            item, end = _string(text, at)
+        else:
+            end = _past(WORD, text, at)
+            item = _word(text, at, end, max_token)
+        yield at, item
+        at = _past(SPACE, text, end)
+
+
+@dataclass(frozen=True)
+class _Held:
+    """
+    A value on the reader's stack, the offset of the token that pushed
+    it, and how deeply constructors nest in it.
+    """
+
+    value: Value
+    offset: int
+    depth: int
+
+
+def _dict(text: str, held: list[_Held]) -> Dict:
+    """
+    Keys and values in turn; a key that is not a leaf, or one given
+    twice, is refused where it was pushed.
+    """
+    entries: dict[Leaf, Value] = {}
+    for key, value in zip(held[::2], held[1::2], strict=True):
+        if isinstance(key.value, List | Tagged | Code | Dict):
+            raise FonError(text, key.offset, "a dict key is a leaf")
+        if key.value in entries:
+            raise FonError(
+                text, key.offset, f"repeated key {key.value.written()}"
+            )
+        entries[key.value] = value.value
+    return Dict(tuple(entries.items()))
+
+
+def _made(
+    text: str, stack: list[_Held], offset: int, make: Make, max_depth: int
+) -> _Held:
+    """
+    What the constructor at offset makes of the values it pops off the
+    stack: too few values, or a result nested deeper than max_depth, is
+    refused at the constructor.
+    """
+    width = make.width()
+    if width > len(stack):
+        raise FonError(
+            text,
+            offset,
+            f"{make.name}/{make.arity} takes {width} values,"
+            f" the stack holds {len(stack)}",
+        )
+    taken = stack[len(stack) - width :]
+    del stack[len(stack) - width :]
+    depth = 1 + max((held.depth for held in taken), default=0)
+    if depth > max_depth:
+        raise FonError(text, offset, "nesting too deep")
+    if make.name == "dict":
+        return _Held(_dict(text, taken), offset, depth)
+    try:
+        value = make.build(tuple(held.value for held in taken))
+    except _RefusedError as refusal:
+        raise FonError(text, offset, str(refusal)) from None
+    return _Held(value, offset, depth)
 
 
 def read(
@@ -480,31 +654,27 @@ def read(
 ) -> Value:
     """
     The value a FON document spells: one value is itself, several or
-    none a List of them. Linear and total: every refusal is an FplError
-    inside the text, bounds included.
+    none a List of them. Linear and total: every refusal is a FonError
+    inside the text, bounds included. A string's length is bounded by
+    max_size alone.
     """
-    lines = Lines(text)
     if len(text) > max_size:
-        raise FplError(lines.span(max_size), "input too large")
-    lexed = pairs(text, special=STRINGS)
-    _depth(text, lexed, max_depth)
-    try:
-        tree = parser().parse(lexed.code)  # pyright: ignore[reportUnknownMemberType] -- lark types its text argument loosely
-    except UnexpectedInput as failure:
-        raise FplError(
-            _placed(lines, lexed, failure.pos_in_stream), "unexpected input"
-        ) from None
-    values = tuple(
-        _Build(text, lexed, max_token).value(child) for child in tree.children
-    )
+        raise FonError(text, max_size, "input too large")
+    stack: list[_Held] = []
+    for offset, item in _tokens(text, max_token):
+        stack.append(
+            _made(text, stack, offset, item, max_depth)
+            if isinstance(item, Make)
+            else _Held(item, offset, 0)
+        )
+    values = tuple(held.value for held in stack)
     return values[0] if len(values) == 1 else List(values)
 
 
 def write(value: Value) -> str:
     """
-    Canonical FON for a value, the text `read` gives it back from. A
-    text holding an unbalanced “ or 「, or a symbol spelling another
-    kind, has no FON spelling (HOLES.md: fon-unwritable).
+    Canonical FON for a value, the text `read` gives it back from: one
+    line of printable ASCII, every value spellable.
     """
     return value.written()
 
@@ -512,8 +682,8 @@ def write(value: Value) -> str:
 def embed(json: Json) -> Value:
     """
     A JSON value as FON: null is absence, a number an exact decimal, an
-    object a Dict keyed by symbols where the key reads back as one, else
-    by text.
+    object a Dict keyed by symbols where the key is a run of name
+    characters, else by text.
     """
     match json:
         case list():
@@ -545,20 +715,7 @@ def _scalar(json: bool | float | str | None) -> Leaf:
 
 def _key(name: str) -> Leaf:
     """
-    A JSON key as a symbol when it spells one, else as text.
+    A JSON key as a symbol when it is a run of name characters, else as
+    text.
     """
-    return (
-        Sym(name)
-        if TOKEN.fullmatch(name) and _spells(name) == Sym(name)
-        else Str(name)
-    )
-
-
-def _spells(token: str) -> Leaf | None:
-    """
-    What a token reads as, or None when refused.
-    """
-    try:
-        return leaf(token)
-    except _RefusedError:
-        return None
+    return Sym(name) if NAME.fullmatch(name) else Str(name)
