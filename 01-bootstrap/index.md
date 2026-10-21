@@ -1,7 +1,3 @@
----
-okf_version: "0.2"
----
-
 # FPL bootstrap
 
 The walker as a composition of passes. Inside one process the values are ABTs. FON is only the wire.

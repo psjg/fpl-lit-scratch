@@ -299,9 +299,6 @@ def indexes() -> None:
         + listing("boundary", ["source", "fon", "pipe", "render"])
     )
     (ROOT / "index.md").write_text(
-        "---\n"
-        'okf_version: "0.2"\n'
-        "---\n\n"
         "# FPL bootstrap\n\n"
         'The walker as a composition of passes. Inside one process the values'
         'are ABTs.'
