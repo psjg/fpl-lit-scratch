@@ -769,3 +769,17 @@ html.fpl-dock-ready .dv-resize-container {
     min-height: 100%;
   }
 }
+
+/* Reduction stepper (assets/fpl-stepper.js) */
+.fpl-step { padding: 0.5rem 0.75rem; border-top: 1px solid #333; font-size: 0.9rem; overflow: auto; }
+.fpl-step-bar, .fpl-step-pos { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; margin-bottom: 0.4rem; }
+.fpl-step-pos input[type="range"] { flex: 1 1 12rem; }
+.fpl-step select { background: #2a2a2a; color: inherit; border: 1px solid #555; border-radius: 4px; padding: 0.15rem 0.3rem; }
+.fpl-step :focus-visible { outline: 2px solid #4da3ff; outline-offset: 2px; }
+.fpl-step-info { margin: 0.25rem 0; font-family: ui-monospace, Menlo, monospace; }
+.fpl-step-status { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.fpl-step-list { margin: 0; padding-left: 2.2rem; max-height: 14rem; overflow: auto; font-family: ui-monospace, Menlo, monospace; }
+.fpl-step-list li { cursor: pointer; padding: 0.05rem 0.25rem; }
+.fpl-step-list li[aria-current="step"] { background: #264f78; outline: 1px solid #4da3ff; }
+.fpl-step-node { color: #9cdcfe; }
+.fpl-step-line { background: rgba(77, 163, 255, 0.22); }

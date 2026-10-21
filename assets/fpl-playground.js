@@ -4,7 +4,8 @@
  * dockable Paths/Edit/Term via fpl-dock.js (progressive enhancement).
  * Katas: textarea.
  */
-import { runFpl, checkExpected, learnBase } from "./fpl-runtime.js";
+import { runFpl, traceFpl, checkExpected, learnBase } from "./fpl-runtime.js";
+import { mountStepper } from "./fpl-stepper.js";
 import { initDock } from "./fpl-dock.js";
 
 const RESULT_PREFIX = "|- ";
@@ -904,6 +905,35 @@ async function bootPlayground() {
   });
 
   runBtn.addEventListener("click", () => runOnce(runBtn, { share: true }));
+
+  // Reduction stepper: record the run once, then move over it with the keyboard.
+  const stepPanel = document.getElementById("fpl-step");
+  const stepBtn = /** @type {HTMLButtonElement | null} */ (document.getElementById("fpl-step-open"));
+  if (stepPanel && stepBtn) {
+    let stepDeco = /** @type {string[]} */ ([]);
+    const stepper = mountStepper(stepPanel, {
+      onFrame: (f) => {
+        stepDeco = editor.deltaDecorations(
+          stepDeco,
+          f ? [{ range: new monaco.Range(f.line, 1, f.line, 1),
+                 options: { isWholeLine: true, className: "fpl-step-line" } }] : [],
+        );
+        if (f) editor.revealLineInCenterIfOutsideViewport(f.line);
+      },
+    });
+    stepBtn.addEventListener("click", async () => {
+      stepBtn.disabled = true;
+      stepPanel.hidden = false;
+      try {
+        stepper.load(await traceFpl(getSrc()));
+        stepper.focus();
+      } catch (err) {
+        stepper.load({ error: String(err) });
+      } finally {
+        stepBtn.disabled = false;
+      }
+    });
+  }
   clearBtn.addEventListener("click", () => {
     window.clearTimeout(timer);
     gen += 1;
