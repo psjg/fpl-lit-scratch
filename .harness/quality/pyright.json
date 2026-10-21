@@ -3,7 +3,7 @@
 {
   "include": ["../../01-bootstrap/fpl", "../../01-bootstrap/tests"],
   "pythonVersion": "3.12",
-  "venvPath": "../..",
+  "venvPath": "..",
   "venv": ".venv",
   "typeCheckingMode": "strict",
   // mypy's waiver is '# type: ignore[code]'; it must not also silence pyright on that line.
