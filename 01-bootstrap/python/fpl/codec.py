@@ -234,7 +234,10 @@ FON reader's default bound of 64 stops a program about ten levels deep.
 A document is read with `DEPTH`, a bound past anything the writer can
 produce in one interpreter: Python's recursion gives out in `write` near
 fifty source levels, and the in-process chain near ninety, long before
-the reader would refuse.
+the reader would refuse. Its words get the same care: the longest
+numeral the language admits, `DIGITS` digits, a sign and a point, is one
+FON word, so `TOKEN` allows exactly that and the reader's default of
+4096 would refuse a legal negative.
 
 The representation names are the ones `Pass` carries as its source and
 target: `Source` (text), `Tokens`, `Syntax` (the surface `Program`),
@@ -273,6 +276,12 @@ DEPTH = 1024
 The deepest nesting a document may have.
 """
 
+TOKEN = ast_core.DIGITS + 2
+"""
+The longest word a document may have: a numeral of `DIGITS` digits and
+its sign and point.
+"""
+
 
 def _document(data: bytes) -> tuple[str, Value]:
     """
@@ -280,7 +289,7 @@ def _document(data: bytes) -> tuple[str, Value]:
     does not read included, is refused with a ValueError.
     """
     try:
-        value = read(data.decode(), max_depth=DEPTH)
+        value = read(data.decode(), max_depth=DEPTH, max_token=TOKEN)
     except FplError as error:
         raise ValueError(f"not FON: {error.message}") from None
     match value:

@@ -251,6 +251,25 @@ print(json.dumps([sorted(CODECS), read_repr(tokens), message]))
     ]
 
 
+def test_a_numeral_at_the_digit_limit_round_trips_with_its_sign() -> None:
+    """
+    The longest numeral the language admits, minus sign included, is a
+    longer FON word than the reader's default allows; the document
+    reader accepts it.
+    """
+    code = """
+from fpl.desugar import desugar
+from fpl.lex import lex
+from fpl.parse import parse
+out = []
+for sign in ("", "-"):
+    core = desugar(parse(lex(sign + "9" * 4096 + "\\n")))
+    out.append(CORE.defonify(CORE.fonify(core)) == core)
+print(json.dumps(out))
+"""
+    assert json.loads(child(code)) == [True, True]
+
+
 def test_the_codec_imports_only_data() -> None:
     """
     FON only materialises data: the codec imports the value modules and
