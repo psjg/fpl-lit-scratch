@@ -187,3 +187,14 @@ def test_a_deeply_nested_program_crosses_every_codec() -> None:
         "assert egress(data) == want, egress(data)\n"
     )
     assert result.returncode == 0, result.stderr.decode()
+
+
+def test_a_document_of_an_unknown_representation_is_refused() -> None:
+    """
+    `fpl render` given a representation nobody defines says so on stderr
+    and exits 1, with no traceback.
+    """
+    got = fpl("render", stdin=b"1 Unknown/1\n")
+    assert (got.returncode, got.stdout) == (1, b"")
+    assert b"Unknown" in got.stderr
+    assert b"Traceback" not in got.stderr

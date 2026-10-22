@@ -111,6 +111,8 @@ def _egress(data: bytes) -> tuple[str, int]:
     egress's text and the exit status it stands for.
     """
     name = read_repr(data)
+    if name not in CODECS:
+        raise ValueError(f"unknown representation {name}")
     value: Any = CODECS[name].defonify(data)
     match name:
         case "Source":
