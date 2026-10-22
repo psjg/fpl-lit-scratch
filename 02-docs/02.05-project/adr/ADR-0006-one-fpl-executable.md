@@ -1,7 +1,7 @@
 ---
 type: ADR
 title: "ADR-0006 One fpl executable with a subcommand per stage"
-description: "The shell route is `fpl source < f | fpl lex | fpl parse | ... | fpl render`, one executable whose subcommands are the stages; `fpl run <file>` runs the whole chain in-process, and bare `fpl` opens the interactive interface."
+description: "The shell route is `fpl source < f | fpl lex | fpl parse | ... | fpl render`, one executable whose subcommands are the stages; `fpl run <file>` runs the whole chain in-process, and `fpl repl`, or bare `fpl`, opens the interactive interface."
 tags:
   - adr
 status: stable
@@ -74,8 +74,9 @@ matching output adapter turns a FON value back into text.
 
 ## Decision
 
-There is one `fpl` executable. Bare `fpl`, with no arguments, starts the interactive
-interface: the existing REPL for now, with room for a full-screen interface later.
+There is one `fpl` executable. `fpl repl` starts the interactive interface, and bare `fpl`,
+with no arguments, is an alias of it: the existing REPL for now, with room for a
+full-screen interface later.
 `fpl <stage>` runs one stage as a filter; `fpl run <file>` runs the whole chain in-process.
 The ingress is `fpl source`, the egress `fpl render`:
 
@@ -86,11 +87,11 @@ The ingress is `fpl source`, the egress `fpl render`:
 - The tree has this shape. `01-bootstrap/python/fpl/__main__.py` calls `dispatch` of
   [01.01.06 CLI](../../../01-bootstrap/01.01-boundary/01.01.06-cli.md), a Click group with a
   filter per stage (`source`, `lex`, `parse`, `desugar`, `elaborate`, `eval`, `render`), `run`,
-  and `graph` and `shell`, which show a composition. `fpl/__init__.py` is the library API and
+  `repl`, and `graph` and `shell`, which show a composition. `fpl/__init__.py` is the library API and
   does not import Click.
 - The command names are read off the registries: `PASSES` and `ENDS` of the pipe,
   `COMPOSITIONS` of the run note. No list of stage names is written by hand.
-- Bare `fpl` runs the seed walker's REPL (`01-bootstrap/fpl/repl.py`) as a child process with
+- `fpl repl` and bare `fpl` run the seed walker's REPL (`01-bootstrap/fpl/repl.py`) as a child process with
   the seed alone on its path, since the seed and the tangled tree are both named `fpl`. The
   REPL is not yet a literate page.
 - `fpl <file>` remains as short for `fpl run <file>`: it conflicts with no command, and a
@@ -105,5 +106,5 @@ The ingress is `fpl source`, the egress `fpl render`:
   an `Error` document, and `fpl render` prints it as `fpl run` does
   ([01.01.03 Pipe](../../../01-bootstrap/01.01-boundary/01.01.03-pipe.md)).
 
-Revised 2026-10-22 by the maintainer: bare `fpl` starts the interactive interface; the whole
-run is `fpl run <file>`. The consequences above describe the tree after that revision.
+Revised 2026-10-22 by the maintainer: `fpl repl` starts the interactive interface, bare
+`fpl` is an alias of it; the whole run is `fpl run <file>`. The consequences above describe the tree after that revision.
