@@ -270,6 +270,28 @@ print(json.dumps(out))
     assert json.loads(child(code)) == [True, True]
 
 
+def test_a_payload_of_the_wrong_kind_is_refused() -> None:
+    """
+    A document that names the right representation over a payload of
+    another kind is a ValueError at the boundary, not a TypeError in
+    the stage that reads it.
+    """
+    code = """
+out = []
+for codec in (SOURCE, TOKENS, ERROR):
+    try:
+        codec.defonify(b"1 " + codec.repr.encode() + b"/1\\n")
+    except ValueError as refusal:
+        out.append(str(refusal))
+print(json.dumps(out))
+"""
+    assert json.loads(child(code)) == [
+        "Source document holds int",
+        "Tokens document holds int",
+        "Error document holds int",
+    ]
+
+
 def test_the_codec_imports_only_data() -> None:
     """
     FON only materialises data: the codec imports the value modules and

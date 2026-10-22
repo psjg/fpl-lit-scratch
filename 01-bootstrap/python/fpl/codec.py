@@ -253,6 +253,7 @@ class Codec[A]:
     """
 
     repr: str
+    kind: type
 
     def fonify(self, value: A) -> bytes:
         """
@@ -263,12 +264,17 @@ class Codec[A]:
 
     def defonify(self, data: bytes) -> A:
         """
-        bytes → A; a document of another representation is refused.
+        bytes → A; a document of another representation, or one whose
+        payload is not of this representation's kind, is refused.
         """
         got, payload = _document(data)
         if got != self.repr:
             raise ValueError(f"expected {self.repr}, got {got}")
-        return cast(A, from_fon(payload))
+        value = from_fon(payload)
+        if not isinstance(value, self.kind):
+            kind = type(value).__name__
+            raise ValueError(f"{self.repr} document holds {kind}")
+        return cast(A, value)
 
 
 DEPTH = 1024
@@ -306,12 +312,12 @@ def read_repr(data: bytes) -> str:
     return _document(data)[0]
 
 
-SOURCE = Codec[str]("Source")
-TOKENS = Codec[Tokens]("Tokens")
-SYNTAX = Codec[ast_surface.Program]("Syntax")
-CORE = Codec[tuple[ast_core.Statement, ...]]("Core")
-STACKS = Codec[tuple[tuple[ast_core.Value, ...], ...]]("Stacks")
-ERROR = Codec[FplError]("Error")
+SOURCE = Codec[str]("Source", str)
+TOKENS = Codec[Tokens]("Tokens", Tokens)
+SYNTAX = Codec[ast_surface.Program]("Syntax", ast_surface.Program)
+CORE = Codec[tuple[ast_core.Statement, ...]]("Core", tuple)
+STACKS = Codec[tuple[tuple[ast_core.Value, ...], ...]]("Stacks", tuple)
+ERROR = Codec[FplError]("Error", FplError)
 CODECS: dict[str, Codec[object]] = {
     codec.repr: cast(Codec[object], codec)
     for codec in (SOURCE, TOKENS, SYNTAX, CORE, STACKS, ERROR)
