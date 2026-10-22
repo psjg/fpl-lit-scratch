@@ -542,13 +542,16 @@ def word(token: str) -> Leaf | Make:
 
 def _constructor(token: str) -> Make:
     """
-    name/arity, the arity a decimal without leading zeros; any other
-    word is unknown.
+    name/arity, the arity a decimal without leading zeros that Python can
+    convert; any other word is unknown.
     """
     name, slash, arity = token.rpartition("/")
     if not (slash and name and ARITY.fullmatch(arity)):
         raise _RefusedError(f"unknown word {token}")
-    return Make(name, int(arity))
+    try:
+        return Make(name, int(arity))
+    except ValueError:
+        raise _RefusedError(f"arity too large {token[:32]}...") from None
 
 
 def _tag(name: str) -> bool:

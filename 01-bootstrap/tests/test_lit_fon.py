@@ -69,3 +69,20 @@ def test_the_stages_speak_postfix_ascii() -> None:
         1,
         "not FON: 「 refused: FON is postfix, not braced\n",
     )
+
+
+def test_an_arity_too_long_to_convert_is_a_fon_error() -> None:
+    """
+    With the word bound raised past Python's integer-conversion limit,
+    a constructor of 4301 digits is refused in place as a FonError, not
+    leaked as the ValueError of `int`.
+    """
+    code = (
+        "from fpl.fon import FonError, read\n"
+        "try:\n"
+        "    read('list/' + '9' * 4301, max_token=5000)\n"
+        "except FonError as error:\n"
+        "    print(type(error).__name__)\n"
+    )
+    result = lit(code)
+    assert (result.returncode, result.stdout) == (0, b"FonError\n")
