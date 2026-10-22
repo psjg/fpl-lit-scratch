@@ -163,9 +163,14 @@ The filters that are not passes, by name.
 def cli(stage: Stage | str) -> int:
     """
     Run one stage on stdin, a Pass or its name, and write stdout.
+
+    A name is looked up among the ends and the registered passes; a Pass
+    runs as itself.
     """
-    name = stage if isinstance(stage, str) else stage.name
-    run = ENDS.get(name) or partial(_filter, PASSES[name])
+    if isinstance(stage, str):
+        run = ENDS.get(stage) or partial(_filter, PASSES[stage])
+    else:
+        run = partial(_filter, stage)
     try:
         out, status = run(sys.stdin.buffer.read())
     except ValueError as error:

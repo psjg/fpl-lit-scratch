@@ -189,6 +189,23 @@ def test_a_deeply_nested_program_crosses_every_codec() -> None:
     assert result.returncode == 0, result.stderr.decode()
 
 
+def test_a_pass_that_is_handed_to_cli_is_the_one_that_runs() -> None:
+    """
+    `cli` takes a Pass or its name; a Pass, registered or not, runs as
+    itself, and one named like a registered pass does not become it.
+    """
+    code = (
+        "from fpl.arrow import Pass\n"
+        "from fpl.pipe import cli\n"
+        "shout = Pass('lex', str.upper, 'Source', 'Source')\n"
+        "raise SystemExit(cli(shout))\n"
+    )
+    document = fpl("source", stdin=b"abc\n").stdout
+    got = lit(code, stdin=document)
+    assert got.returncode == 0, got.stderr
+    assert got.stdout == fpl("source", stdin=b"ABC\n").stdout
+
+
 def test_a_document_of_an_unknown_representation_is_refused() -> None:
     """
     `fpl render` given a representation nobody defines says so on stderr
