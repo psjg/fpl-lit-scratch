@@ -12,3 +12,4 @@
 * [Scratchpad design notes](02.05.09-scratchpad-design-notes.md) - Design decisions, open questions and rationale extracted from the shared working log of the design sessions, 2026-09-27 to 2026-10-03.
 * [Discussion design notes](02.05.10-discussion-design-notes.md) - Design questions settled between the markup, syntax, substrate, version-control, harness and backend work, paraphrased from the shared message room.
 * [Substrate liabilities](02.05.11-substrate-liabilities.md) - The register of open liabilities of the substrate design (unverified claims, inferences, unrun sketches, inconsistencies, process, open decisions), the ladder under the first decision, and the sketches of planted theories. As of 2026-09-27, partly updated to 2026-09-29.
+* [02.05.13 Playground tracing](02.05.13-playground-tracing.md) - Perfetto traces and optional Sentry spans

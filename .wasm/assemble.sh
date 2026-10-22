@@ -16,11 +16,11 @@ test -f ".wasm/wheels/$wheel"
 rm -rf .site/marimo .site/try .site/learn
 (cd .wasm && uvx --from marimo marimo export html-wasm try.py -o ../.site/marimo --mode edit -f)
 
-(cd .wasm && python3 export_modules.py)
-
 mkdir -p .wasm/lite/pypi
 rm -f .wasm/lite/pypi/fpl-*.whl .wasm/lite/pypi/fpl_walker-*.whl
 cp ".wasm/wheels/$wheel" .wasm/lite/pypi/
+
+(cd .wasm && python3 export_modules.py)
 need_download=0
 for w in lark-*.whl icontract-*.whl comm-*.whl; do
   if ! compgen -G ".wasm/lite/pypi/$w" >/dev/null; then
@@ -58,9 +58,16 @@ quarto render
 
 mv "$tmp/marimo" .site/marimo
 mv "$tmp/werkbank" .site/werkbank
+# The playground's language service (assets/fpl-service.js) unpacks this beside the wheels.
+python3 01-bootstrap/ide/pack_analysis.py .site/werkbank/pypi/fpl-bootstrap.zip
 
-rm -rf .site/try .site/learn
+rm -rf .site/try .site/ide .site/learn
 cp -R assets/try .site/try
+cp -R assets/try .site/ide  # the IDE alias of the playground page
+# Telemetry is off unless a Sentry DSN is given at build time; none is committed.
+if [ -n "${FPL_SENTRY_DSN:-}" ]; then
+  for d in try ide; do printf 'window.FPL_CONFIG = { sentryDsn: "%s" };\n' "$FPL_SENTRY_DSN" > ".site/$d/fpl-config.js"; done
+fi
 cp -R learn .site/learn
 
 echo "Open .site/ with: python3 -m http.server --directory .site"

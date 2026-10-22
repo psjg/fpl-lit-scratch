@@ -1,0 +1,280 @@
+====================
+frames and bar
+====================
+1 | 1 2 3 +
+
+---
+
+(source_file
+  (line
+    (frames
+      (frame
+        (cell
+          (word)))
+      (frame
+        (cell
+          (word)
+          (word)
+          (word)
+          (word))))))
+
+====================
+cells by tab
+====================
+a	b c	d
+
+---
+
+(source_file
+  (line
+    (frames
+      (frame
+        (cell
+          (word))
+        (cell
+          (word)
+          (word))
+        (cell
+          (word))))))
+
+====================
+enclosures
+====================
+[ a ( b ) ⟨ c ⟩ { d } ]
+
+---
+
+(source_file
+  (line
+    (frames
+      (frame
+        (cell
+          (quotation
+            (frames
+              (frame
+                (cell
+                  (word)
+                  (prefix
+                    (frames
+                      (frame
+                        (cell
+                          (word)))))
+                  (group
+                    (frames
+                      (frame
+                        (cell
+                          (word)))))
+                  (dict
+                    (frames
+                      (frame
+                        (cell
+                          (word))))))))))))))
+
+====================
+newline in a bracket
+====================
+[ a
+	b ]
+c
+
+---
+
+(source_file
+  (line
+    (frames
+      (frame
+        (cell
+          (quotation
+            (frames
+              (frame
+                (cell
+                  (word)
+                  (word)))))))))
+  (line
+    (frames
+      (frame
+        (cell
+          (word))))))
+
+====================
+block
+====================
+f : x -- y
+	x x
+		deep
+g
+
+---
+
+(source_file
+  (line
+    (frames
+      (frame
+        (cell
+          (word)
+          (word)
+          (word)
+          (word)
+          (word))))
+    (block
+      (line
+        (frames
+          (frame
+            (cell
+              (word)
+              (word))))
+        (block
+          (line
+            (frames
+              (frame
+                (cell
+                  (word)))))))))
+  (line
+    (frames
+      (frame
+        (cell
+          (word))))))
+
+====================
+two tabs one level
+====================
+a
+		b
+		c
+
+---
+
+(source_file
+  (line
+    (frames
+      (frame
+        (cell
+          (word))))
+    (block
+      (line
+        (frames
+          (frame
+            (cell
+              (word)))))
+      (line
+        (frames
+          (frame
+            (cell
+              (word))))))))
+
+====================
+strings
+====================
+“a “b” c” 「raw」 x
+
+---
+
+(source_file
+  (line
+    (frames
+      (frame
+        (cell
+          (string)
+          (raw_string)
+          (word))))))
+
+====================
+block comment alone
+====================
+a
+	⟦ c ⟧
+b
+
+---
+
+(source_file
+  (line
+    (frames
+      (frame
+        (cell
+          (word)))))
+  (line
+    (frames
+      (frame
+        (cell
+          (word))))))
+
+====================
+notes
+====================
+a ; one
+; two
+b
+
+---
+
+(source_file
+  (line
+    (frames
+      (frame
+        (cell
+          (word))))
+    (note))
+  (line
+    (frames
+      (frame
+        (cell
+          (word))))))
+
+====================
+doc comment
+====================
+;; doc
+f : -- 
+
+---
+
+(source_file
+  (line
+    (doc))
+  (line
+    (frames
+      (frame
+        (cell
+          (word)
+          (word)
+          (word))))))
+
+====================
+empty enclosure
+====================
+[]
+()
+
+---
+
+(source_file
+  (line
+    (frames
+      (frame
+        (cell
+          (quotation)))))
+  (line
+    (frames
+      (frame
+        (cell
+          (prefix))))))
+
+====================
+words
+====================
+5 5´ ->x ../p/q a/b $y
+
+---
+
+(source_file
+  (line
+    (frames
+      (frame
+        (cell
+          (word)
+          (word)
+          (word)
+          (word)
+          (word)
+          (word))))))

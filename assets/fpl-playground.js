@@ -4,8 +4,14 @@
  * dockable Paths/Edit/Term via fpl-dock.js (progressive enhancement).
  * Katas: textarea.
  */
-import { runFpl, checkExpected, learnBase } from "./fpl-runtime.js";
+import { runFpl, traceFpl, checkExpected, learnBase } from "./fpl-runtime.js";
+import { mountStepper } from "./fpl-stepper.js";
 import { initDock } from "./fpl-dock.js";
+import { initTelemetry } from "./fpl-telemetry.js";
+import { runTraced, openInPerfetto } from "./fpl-trace.js";
+import { createFlamePanel } from "./fpl-flame.js";
+import { registerFpl } from "./fpl-language.js";
+import { registerService } from "./fpl-service.js";
 
 const RESULT_PREFIX = "|- ";
 const TRAILING_NOTE = /[\t ]*(?:;|⍝)[ \t]*(.*)$/u;
@@ -23,7 +29,7 @@ demo/
 		inc : n -- n
 			1 +
 		twice : n -- n
-			dup *
+			dup +
 	greet : --
 		;;; say hi
 `;
@@ -430,10 +436,41 @@ async function bootPlayground() {
   const initial =
     fromHash != null && fromHash !== "" ? fromHash : DEFAULT_SRC;
 
+  // Tokens come from fpl-language.js, generated from grammar.lark and lex.py
+  // (01-bootstrap/ide/gen_highlight.py); the theme only gives them colours.
+  registerFpl(monaco);
+  registerService(monaco);
+  monaco.editor.defineTheme("fpl-dark", {
+    base: "vs-dark",
+    inherit: true,
+    semanticHighlighting: true,
+    colors: {},
+    rules: [
+      { token: "comment.doc", foreground: "7ec699", fontStyle: "italic" },
+      { token: "comment.section", foreground: "7ec699", fontStyle: "bold" },
+      { token: "comment.file", foreground: "7ec699", fontStyle: "bold" },
+      { token: "comment", foreground: "6a737d", fontStyle: "italic" },
+      { token: "string", foreground: "ce9178" },
+      { token: "string.raw", foreground: "d7ba7d" },
+      { token: "number", foreground: "b5cea8" },
+      { token: "keyword.sigil", foreground: "c586c0" },
+      { token: "operator.modifier", foreground: "dcdcaa" },
+      { token: "type.path", foreground: "4ec9b0" },
+      { token: "delimiter.bar", foreground: "569cd6", fontStyle: "bold" },
+      { token: "delimiter.island", foreground: "d7ba7d" },
+      // semantic tokens (fpl-semantic.js): binder vs use
+      { token: "function", foreground: "dcdcaa" },
+      { token: "function.declaration", foreground: "ffd866", fontStyle: "bold" },
+      { token: "parameter", foreground: "9cdcfe", fontStyle: "italic" },
+      { token: "parameter.declaration", foreground: "9cdcfe", fontStyle: "bold italic" },
+    ],
+  });
+
   const editor = monaco.editor.create(host, {
     value: initial,
-    language: "plaintext",
-    theme: "vs-dark",
+    language: "fpl",
+    theme: "fpl-dark",
+    "semanticHighlighting.enabled": true,
     fontSize: 14,
     fontFamily: "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
     lineNumbers: "on",
@@ -764,6 +801,31 @@ async function bootPlayground() {
     scheduleLive();
   };
 
+  initTelemetry();
+  const traceBtn = $("fpl-trace");
+  let lastTraceJson = null;
+  const flameHost = $("fpl-trace-panel");
+  const flame = flameHost
+    ? createFlamePanel(flameHost, {
+        onPerfetto: () => lastTraceJson && openInPerfetto(lastTraceJson, "FPL run"),
+      })
+    : null;
+  if (traceBtn) {
+    traceBtn.addEventListener("click", async () => {
+      traceBtn.disabled = true;
+      try {
+        const { out: text, json, events } = await runTraced(getSrc());
+        lastTraceJson = json;
+        setOut(out, text, true);
+        flame?.render(events, JSON.parse(json).otherData?.failure ?? null);
+      } catch (err) {
+        setOut(out, String(err), false);
+      } finally {
+        traceBtn.disabled = false;
+      }
+    });
+  }
+
   const runOnce = async (btn, { share = false } = {}) => {
     if (btn) btn.disabled = true;
     out.textContent = "Loading…";
@@ -904,6 +966,35 @@ async function bootPlayground() {
   });
 
   runBtn.addEventListener("click", () => runOnce(runBtn, { share: true }));
+
+  // Reduction stepper: record the run once, then move over it with the keyboard.
+  const stepPanel = document.getElementById("fpl-step");
+  const stepBtn = /** @type {HTMLButtonElement | null} */ (document.getElementById("fpl-step-open"));
+  if (stepPanel && stepBtn) {
+    let stepDeco = /** @type {string[]} */ ([]);
+    const stepper = mountStepper(stepPanel, {
+      onFrame: (f) => {
+        stepDeco = editor.deltaDecorations(
+          stepDeco,
+          f ? [{ range: new monaco.Range(f.line, 1, f.line, 1),
+                 options: { isWholeLine: true, className: "fpl-step-line" } }] : [],
+        );
+        if (f) editor.revealLineInCenterIfOutsideViewport(f.line);
+      },
+    });
+    stepBtn.addEventListener("click", async () => {
+      stepBtn.disabled = true;
+      stepPanel.hidden = false;
+      try {
+        stepper.load(await traceFpl(getSrc()));
+        stepper.focus();
+      } catch (err) {
+        stepper.load({ error: String(err) });
+      } finally {
+        stepBtn.disabled = false;
+      }
+    });
+  }
   clearBtn.addEventListener("click", () => {
     window.clearTimeout(timer);
     gen += 1;

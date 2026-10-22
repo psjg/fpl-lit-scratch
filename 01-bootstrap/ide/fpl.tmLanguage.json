@@ -1,0 +1,116 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "FPL",
+  "scopeName": "source.fpl",
+  "patterns": [
+    {
+      "include": "#code"
+    }
+  ],
+  "repository": {
+    "code": {
+      "patterns": [
+        {
+          "match": ";;;;[^\\n]*",
+          "name": "comment.line.file.fpl"
+        },
+        {
+          "match": ";;;[^\\n]*",
+          "name": "comment.line.section.fpl"
+        },
+        {
+          "match": ";;[^\\n]*",
+          "name": "comment.line.doc.fpl"
+        },
+        {
+          "match": "(?:;|⍝)[^\\n]*",
+          "name": "comment.line.note.fpl"
+        },
+        {
+          "include": "#block"
+        },
+        {
+          "include": "#str"
+        },
+        {
+          "include": "#raw"
+        },
+        {
+          "match": "\\|",
+          "name": "punctuation.separator.bar.fpl"
+        },
+        {
+          "match": "[\\[\\]()⟨⟩{}]",
+          "name": "punctuation.section.fpl"
+        },
+        {
+          "match": "(?<![^\\s\\[\\]()“”「」⟦⟧⟨⟩{}|⍝;\\s])(?:->|→|\\$|#|&|\\.\\./|\\.\\.)?-?(\\d+(\\.\\d+)?|∞|π)[´`¨˜⁼˙]*(?![^\\s\\[\\]()“”「」⟦⟧⟨⟩{}|⍝;\\s])",
+          "name": "constant.numeric.fpl"
+        },
+        {
+          "match": "(?<![^\\s\\[\\]()“”「」⟦⟧⟨⟩{}|⍝;\\s])(->|→|\\$|#|&|\\.\\./|\\.\\.)([^\\s\\[\\]()“”「」⟦⟧⟨⟩{}|⍝;\\s]*)",
+          "captures": {
+            "1": {
+              "name": "keyword.operator.sigil.fpl"
+            },
+            "2": {
+              "name": "variable.other.fpl"
+            }
+          }
+        },
+        {
+          "match": "(?<![^\\s\\[\\]()“”「」⟦⟧⟨⟩{}|⍝;\\s])[´`¨˜⁼˙]+(?![^\\s\\[\\]()“”「」⟦⟧⟨⟩{}|⍝;\\s])",
+          "name": "keyword.operator.modifier.fpl"
+        },
+        {
+          "match": "(?<![^\\s\\[\\]()“”「」⟦⟧⟨⟩{}|⍝;\\s])[^\\s\\[\\]()“”「」⟦⟧⟨⟩{}|⍝;\\s]*/[^\\s\\[\\]()“”「」⟦⟧⟨⟩{}|⍝;\\s]*",
+          "name": "entity.name.type.path.fpl"
+        },
+        {
+          "match": "(?<![^\\s\\[\\]()“”「」⟦⟧⟨⟩{}|⍝;\\s])[^\\s\\[\\]()“”「」⟦⟧⟨⟩{}|⍝;\\s]+",
+          "name": "variable.other.fpl"
+        }
+      ]
+    },
+    "str": {
+      "name": "string.quoted.fpl",
+      "begin": "“",
+      "end": "”",
+      "patterns": [
+        {
+          "include": "#str"
+        },
+        {
+          "begin": "⟨",
+          "end": "⟩",
+          "name": "meta.island.fpl",
+          "patterns": [
+            {
+              "include": "$self"
+            }
+          ]
+        }
+      ]
+    },
+    "raw": {
+      "name": "string.quoted.raw.fpl",
+      "begin": "「",
+      "end": "」",
+      "patterns": [
+        {
+          "include": "#raw"
+        }
+      ]
+    },
+    "block": {
+      "name": "comment.block.fpl",
+      "begin": "⟦",
+      "end": "⟧",
+      "patterns": [
+        {
+          "include": "#block"
+        }
+      ]
+    }
+  }
+}

@@ -114,6 +114,9 @@
             <button type="button" id="fpl-accept" class="fpl-btn">
               Accept results
             </button>
+            <button type="button" id="fpl-trace" class="fpl-btn" title="Run and open the trace in Perfetto">
+              Trace
+            </button>
             <button type="button" id="fpl-run" class="fpl-btn primary">
               Run
             </button>
@@ -137,10 +140,38 @@
       >
         <div class="fpl-pane-bar">
           <span class="fpl-pane-label">Term</span>
+          <div class="fpl-pane-actions">
+            <button
+              type="button"
+              id="fpl-step-open"
+              class="fpl-btn"
+              aria-controls="fpl-step"
+              title="Record the run and step through it"
+            >
+              Step
+            </button>
+          </div>
         </div>
         <pre id="fpl-out" class="fpl-term" aria-live="polite"></pre>
+        <section
+          id="fpl-step"
+          class="fpl-step"
+          aria-label="Reduction stepper"
+          hidden
+        ></section>
+      </section>
+      <section
+        data-dock="trace"
+        class="fpl-dock-section fpl-pane fpl-pane-trace"
+        aria-label="Trace"
+      >
+        <div class="fpl-pane-bar">
+          <span class="fpl-pane-label">Trace</span>
+        </div>
+        <div id="fpl-trace-panel"></div>
       </section>
     </div>
+    <script src="fpl-config.js"></script>
     <script type="module" src="../assets/fpl-playground.js"></script>
   </body>
 </html>

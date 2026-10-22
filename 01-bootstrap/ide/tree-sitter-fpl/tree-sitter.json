@@ -1,0 +1,2 @@
+{ "grammars": [{ "name": "fpl", "camelcase": "Fpl", "scope": "source.fpl", "path": ".", "file-types": ["fpl"], "highlights": "queries/highlights.scm" }],
+  "metadata": { "version": "0.0.0", "license": "MIT", "description": "FPL (prototype)" } }

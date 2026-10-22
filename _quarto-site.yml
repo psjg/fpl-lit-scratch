@@ -6,8 +6,15 @@ project:
     - assets/fpl-live.css
     - assets/fpl-runtime.js
     - assets/fpl-playground.js
+    - assets/fpl-language.js
+    - assets/fpl-service.js
     - assets/fpl-playground.css
     - assets/fpl-dock.js
+    - assets/fpl-telemetry.js
+    - assets/fpl-trace.js
+    - assets/fpl-flame.js
+    - assets/fpl-stepper.js
+    - assets/fpl_trace.py
   render:
     - index.qmd
     - 01-bootstrap/README.md
