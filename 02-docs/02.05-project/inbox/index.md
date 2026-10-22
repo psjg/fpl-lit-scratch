@@ -1,0 +1,47 @@
+# Inbox
+
+Tick a box when you have answered; comment under the line.
+
+- [ ] [DI-0001 Realtime deadlines beside fuel](DI-0001-realtime-deadlines-beside-fuel.md) — a wall-clock deadline as a second, monotone-decreasing counter beside fuel
+- [x] [DI-0002 Bounded by default, plus usage accounting](DI-0002-bounded-by-default-usage-accounting.md) — finite default fuel and deadline, an explicit UNBOUNDED sentinel, and per-evaluation usage reports
+- [x] [DI-0003 `( )` is a prefix reader macro and nothing more, FON included](DI-0003-paren-is-a-prefix-reader-macro.md) — canonical FON expands the macro and never emits `( )`
+- [x] [DI-0004 A bare postfix line evaluates](DI-0004-bare-postfix-line-evaluates.md) — `2 3 +` must give 5
+- [ ] [DI-0005 Dead-code awareness early, and `match` as a partition](DI-0005-dead-code-awareness-match-as-partition.md) — unreachable rows should be noticed early; is `match` ordered trial or a partition?
+- [x] [DI-0006 A truly disjoint match as a word of its own](DI-0006-truly-disjoint-match-own-word.md) — opt-in disjointness check with an exempt wildcard row, superseded by `piecewise`
+- [x] [DI-0007 Overlap as an effect, settled by the e-graph](DI-0007-overlap-as-effect-settled-by-egraph.md) — overlapping rows carry a choice effect; the e-graph discharges it where rows provably agree
+- [x] [DI-0008 `piecewise` and Mercury's determinism semantics](DI-0008-piecewise-and-mercury-determinism.md) — correctness by construction by default; pull Mercury determinism into FPL; `piecewise` for the disjoint form
+- [ ] [DI-0009 piecewise as the default for top-level overloading](DI-0009-piecewise-top-level-overloading.md) — must overload clauses be disjoint, or does "most specific wins" stay as a tracked loosening
+- [ ] [DI-0010 A NegNat type, Int as Nat union NegNat](DI-0010-negnat-and-int-as-union.md) — a negative-natural sort so Int could be built as a union
+- [ ] [DI-0011 A tuple type](DI-0011-tuple-type-in-heads.md) — would be the first compound type a head accepts
+- [ ] [DI-0012 Keyword call syntax for arity](DI-0012-keyword-call-syntax-for-arity.md) — narrowing the greedy largest-arity law for stack calls
+- [x] [DI-0013 Strict readers: one value, one spelling](DI-0013-strict-readers-one-value-one-spelling.md) — the writer emits one canonical form; the reader refuses every other spelling
+- [ ] [DI-0014 Bottom type naming: abort, never, bottom glyph](DI-0014-bottom-type-naming.md) — a name for the bottom type; `!` is taken (force)
+- [x] [DI-0015 A second diagnostic: a dead row that shapes the type](DI-0015-second-diagnostic-dead-row-shapes-type.md) — a dead row can still influence the inferred type, which deserves its own diagnostic
+- [ ] [DI-0016 The conformance suite inside the FPL image](DI-0016-conformance-suite-inside-fpl-image.md) — features/ as the oracle any implementation passes; where does it live in FPL's own namespace
+- [ ] [DI-0017 The caesura symbol](DI-0017-caesura-symbol.md) — `|` versus `\` versus a double bar
+- [ ] [DI-0018 A binary word over one strand acts as scan, reduce or map](DI-0018-binary-word-over-strand-acts-as-fold.md) — `1 2 3 4 | +` should behave like a fold
+- [ ] [DI-0019 Error reporting in the style of Rust and nushell](DI-0019-error-reporting-rust-nushell-style.md) — human-grade diagnostics
+- [ ] [DI-0020 Flow, less typing, in the REPL](DI-0020-repl-flow-less-typing.md) — the REPL should minimise typing
+- [x] [DI-0021 The `$45600:<decimal digest>` spelling](DI-0021-digest-spelling-for-bpe.md) — deliberate digest spelling, friendly to BPE
+- [ ] [DI-0022 REPL transcripts must round-trip](DI-0022-repl-transcripts-round-trip.md) — copy from the REPL, paste back, and it is a program
+- [x] [DI-0023 REPL results as checked claims, not comments](DI-0023-repl-results-as-judgement-claims.md) — a result is a claim (`|= 5`) that re-running checks; start with the ASCII spellings
+- [x] [DI-0024 One `fpl` tool, like `go`](DI-0024-one-fpl-tool-like-go.md) — convention over configuration; one tool with subcommands
+- [ ] [DI-0025 Rebase noise and patch identity (the v0 idea)](DI-0025-relocation-chains-patch-identity.md) — git hashes the parent into identity; patch-based identity removes the rebase noise
+- [x] [DI-0026 Native ABTs in an address space, FON at a serialisation boundary](DI-0026-passes-native-abts-fon-at-boundaries.md) — compose in-process without text; materialise to FON over a pipe
+- [x] [DI-0027 The compiler addressable from the language (a nanopass library)](DI-0027-compiler-addressable-nanopass-library.md) — first-class staging: the compiler is an FPL library of typed passes
+- [x] [DI-0028 Hold as much state as long as possible; strip in a release build](DI-0028-keep-state-strip-at-release.md) — information-monotone passes with stable identities; stripping only at release
+- [x] [DI-0029 The object language of FPL is dependent CBPV](DI-0029-object-language-dependent-cbpv.md) — Core splits into Core.Value and Core.Comp later
+- [x] [DI-0030 fonify and defonify](DI-0030-fonify-defonify-names.md) — names for the boundary operation
+- [x] [DI-0031 Shell UX: `fpl lex | fpl parse | fpl eval`](DI-0031-pipeline-shell-ux.md) — one executable, subcommands generated from the pass registry
+- [ ] [DI-0032 Lossless FON of Syntax, and seed FON versus wire FON](DI-0032-lossless-fon-milestone.md) — next milestone: defonify(fpl source | fpl lex | fpl parse) == parse(lex(source)) at every boundary
+- [ ] [DI-0033 The speed of the feedback loop sets the learning speed](DI-0033-feedback-loop-speed-principle.md) — a principle for developing FPL and for developing in FPL
+- [ ] [DI-0034 Pure REPL, streamable PTY REPL, TUI: side by side?](DI-0034-repl-frontends-side-by-side.md) — one session kernel behind a message protocol, several frontends
+- [ ] [DI-0035 Errors as readable data, and a log of unknown words](DI-0035-errors-as-data-repr-unknown-word-log.md) — errors printable in a homoiconic form the REPL can read back; unknown words as design signal
+- [ ] [DI-0036 An option that allows fuel over-consumption but logs it](DI-0036-over-consumption-option-logs-overrun.md) — allow the overrun, log where, what, when, how and why
+- [x] [DI-0037 REPL introspection as words, not `:` commands](DI-0037-repl-commands-as-words.md) — everything about the program is a word or path with data on the stack
+- [x] [DI-0038 PRs 141 and 148 rejected on mechanism](DI-0038-rejected-dispatch-for-words-and-help.md) — a `:`-prefixed command dispatch is a hard no for the redo
+- [x] [DI-0039 `:` is the one judgement sign, "is of"](DI-0039-colon-is-the-judgement-sign.md) — `name : ins -- outs`, `x : Int`, `ys : sorted`, in ASCII, through the whole language
+- [ ] [DI-0040 Instant eval, Shift-Enter and indented results (a BQN pad as model)](DI-0040-bqnpad-instant-eval-model.md) — live eval while typing, Shift-Enter commits a line, results shown under the input as the round-trippable transcript
+- [ ] [DI-0041 Turnstiles: the literate draft and the 10-08 decision disagree](DI-0041-turnstile-literate-vs-decision-disagree.md) — which turnstile prints a REPL value: `|-` or `|=`?
+- [ ] [DI-0042 Study the literate draft and merge it back](DI-0042-merge-literate-draft-back.md) — harvest the literate layer without the harness move
+- [ ] [DI-0043 Carry every open item into the next design note](DI-0043-post-mortem-and-design-note-carry.md) — the standing rule behind this inbox
