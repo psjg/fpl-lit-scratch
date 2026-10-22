@@ -11,6 +11,7 @@ below also show that its poison check catches a filter that re-parses,
 and pin the depth the shell route falls short of `direct` by.
 """
 
+import json
 import sys
 
 import pytest
@@ -88,17 +89,30 @@ def test_the_poison_catches_a_filter_that_parses_again() -> None:
     assert result.returncode == 0, result.stderr.decode()
 
 
+@pytest.fixture(scope="module")
+def depths() -> tuple[int, int]:
+    """
+    How deep `direct` and the shell route carry a program. Measuring
+    must work: a failure here is an error, never the known limit.
+    """
+    result = lit(
+        LOAD + "import json\nprint(json.dumps(prove.depths(False)))\n"
+    )
+    assert result.returncode == 0, result.stderr.decode()
+    direct, shell = json.loads(result.stdout)
+    return direct, shell
+
+
 @pytest.mark.xfail(
     strict=True,
     reason="measured: direct carries 88 levels of nesting, the shell route "
     "about 53: the Syntax codec writer recurses (not fixed here)",
 )
-def test_the_shell_route_carries_what_direct_carries() -> None:
+def test_the_shell_route_carries_what_direct_carries(
+    depths: tuple[int, int],
+) -> None:
     """
     However deeply a program nests, the pipe runs it if direct does.
     """
-    result = lit(
-        LOAD + "direct, shell = prove.depths(False)\n"
-        "assert direct == shell, (direct, shell)\n"
-    )
-    assert result.returncode == 0, result.stderr.decode()
+    direct, shell = depths
+    assert direct == shell, (direct, shell)
