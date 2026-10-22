@@ -51,6 +51,17 @@ except ValueError:
 else:
     raise AssertionError("an empty composition was built")
 
+for direct_build in (
+    lambda: PassCompose(()),
+    lambda: PassCompose((parse, lex)),
+):
+    try:
+        direct_build()
+    except (ValueError, TypeError):
+        pass
+    else:
+        raise AssertionError("the constructor took an invalid stage chain")
+
 upper = Pass("upper", str.upper)
 strip = Pass("strip", str.strip)
 assert (upper.source, upper.target) == ("", "")
