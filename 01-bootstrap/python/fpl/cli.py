@@ -72,7 +72,7 @@ def repl() -> int:
 def main(ctx: click.Context) -> None:
     """Open the REPL, run a file, or run one pass across a pipe."""
     if ctx.invoked_subcommand is None:
-        ctx.exit(repl())
+        sys.exit(repl())
 
 
 @main.command("run")

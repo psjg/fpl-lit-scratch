@@ -105,6 +105,18 @@ def test_bare_fpl_opens_the_repl() -> None:
     assert opened.stdout == b"[ 1 2 + ]\n"
 
 
+def test_the_status_of_the_repl_is_the_status_of_fpl() -> None:
+    """
+    A REPL that ends with status 2 ends bare `fpl` with 2.
+    """
+    code = (
+        "import fpl.cli as cli\n"
+        "cli.repl = lambda: 2\n"
+        "print(cli.dispatch([]))\n"
+    )
+    assert out(code) == "2\n"
+
+
 def test_a_stage_main_exits_with_the_filter_status() -> None:
     """
     `python -m fpl.lex` handed no FON fails: exit 1, a stderr line.
