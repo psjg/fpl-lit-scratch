@@ -11,3 +11,6 @@
 - [TD-0008-pass-composition-opaque-closure.md](TD-0008-pass-composition-opaque-closure.md): `Pass.__rshift__` erases a chain's structure into a closure.
 - [TD-0009-seed-fon-braced-not-postfix.md](TD-0009-seed-fon-braced-not-postfix.md): the seed FON is braced, not the postfix stream FON is decided to be.
 - [TD-0010-click-undeclared.md](TD-0010-click-undeclared.md): the `fpl` CLI imports Click, but `01-bootstrap/pyproject.toml` does not declare it.
+- [TD-0011-substrate-citations-unaudited.md](TD-0011-substrate-citations-unaudited.md): Roughly sixty references behind the substrate design were verified by source for five of them; the rest carry a measured base rate of one wrong year or venue in ten.
+- [TD-0012-atlas-pinned-agda-untested.md](TD-0012-atlas-pinned-agda-untested.md): The cubical Agda atlas typechecked only under Agda 2.6.3 and cubical 0.5; the flake pins Agda 2.8 and cubical 0.9, and the check verb under Nix never ran.
+- [TD-0013-decisions-table-glyph-spelling.md](TD-0013-decisions-table-glyph-spelling.md): The substrate decisions table and register use APL glyph examples while the grammar and section 8 use canonical name spellings, so examples do not match the canon.
