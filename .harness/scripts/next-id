@@ -1,0 +1,36 @@
+#!/usr/bin/env python3
+"""
+Print the next free number of a numbered series, so branches stop colliding.
+
+    next-id adr|td|di|note [dir]
+
+`dir` is the tree to scan (default: the repository root). The series are
+ADR-NNNN, TD-NNNN and DI-NNNN files (any depth) and 02.05.NN-* notes. The
+answer is one past the highest number on disk, ready to paste into a file name.
+"""
+import re
+import sys
+from pathlib import Path
+
+SERIES = {
+    "adr": (r"^ADR-(\d{4})-", "ADR-{:04d}"),
+    "td": (r"^TD-(\d{4})-", "TD-{:04d}"),
+    "di": (r"^DI-(\d{4})-", "DI-{:04d}"),
+    "note": (r"^02\.05\.(\d{2})-", "02.05.{:02d}"),
+}
+
+
+def next_id(kind: str, root: Path) -> str:
+    rx, fmt = SERIES[kind]
+    seen = [
+        int(m.group(1))
+        for p in root.rglob("*.md")
+        if ".git" not in p.parts and (m := re.match(rx, p.name))
+    ]
+    return fmt.format(max(seen, default=0) + 1)
+
+
+if __name__ == "__main__":
+    if len(sys.argv) not in (2, 3) or sys.argv[1] not in SERIES:
+        sys.exit(f"usage: next-id {'|'.join(SERIES)} [dir]")
+    print(next_id(sys.argv[1], Path(sys.argv[2] if len(sys.argv) == 3 else ".")))
