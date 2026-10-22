@@ -43,6 +43,7 @@ def test_help_lists_every_command() -> None:
         "lex",
         "parse",
         "render",
+        "repl",
         "run",
         "shell",
         "source",
@@ -105,16 +106,27 @@ def test_bare_fpl_opens_the_repl() -> None:
     assert opened.stdout == b"[ 1 2 + ]\n"
 
 
+def test_repl_is_a_command_and_bare_fpl_is_its_alias() -> None:
+    """
+    `fpl repl` opens the same REPL as bare `fpl`, and `--help` says so.
+    """
+    named = fpl("repl", stdin=b"1 2 +\n")
+    bare = fpl(stdin=b"1 2 +\n")
+    assert named.returncode == bare.returncode == 0, named.stderr.decode()
+    assert named.stdout == bare.stdout == b"[ 1 2 + ]\n"
+    assert b"repl" in fpl("--help").stdout
+
+
 def test_the_status_of_the_repl_is_the_status_of_fpl() -> None:
     """
-    A REPL that ends with status 2 ends bare `fpl` with 2.
+    A REPL that ends with status 2 ends `fpl` and `fpl repl` with 2.
     """
     code = (
         "import fpl.cli as cli\n"
         "cli.repl = lambda: 2\n"
-        "print(cli.dispatch([]))\n"
+        "print(cli.dispatch([]), cli.dispatch(['repl']))\n"
     )
-    assert out(code) == "2\n"
+    assert out(code) == "2 2\n"
 
 
 def test_a_stage_main_exits_with_the_filter_status() -> None:

@@ -7,10 +7,11 @@
 The commands are read off the registries, so a new pass or composition
 needs no line here.
 
-`fpl` alone opens the interactive interface. For now that is the seed
-walker's REPL, `python -m fpl.repl` run from [the seed](../fpl/repl.py)
-in a child process: the tangled tree has no REPL of its own yet, and the
-seed cannot be imported beside it, since both packages are named `fpl`.
+`fpl repl` opens the interactive interface, and `fpl` alone is short for
+it. For now that is the seed walker's REPL, `python -m fpl.repl` run
+from [the seed](../fpl/repl.py) in a child process: the tangled tree has
+no REPL of its own yet, and the seed cannot be imported beside it, since
+both packages are named `fpl`.
 
 `fpl <stage>` is one filter across the pipe of
 [01.01.03-pipe](01.01.03-pipe.md): a pass of `PASSES`, or one of the two
@@ -27,7 +28,7 @@ that runs it. The compositions are `COMPOSITIONS` of
 Click stays in this module: `import fpl` does not reach it, so the
 website, which has no Click, still imports the library.
 
-`fpl` opens the REPL. `fpl <stage>` is one filter.
+`fpl repl`, or `fpl`, opens the REPL. `fpl <stage>` is one filter.
 """
 
 import os
@@ -72,7 +73,13 @@ def repl() -> int:
 def main(ctx: click.Context) -> None:
     """Open the REPL, run a file, or run one pass across a pipe."""
     if ctx.invoked_subcommand is None:
-        sys.exit(repl())
+        ctx.invoke(repl_command)
+
+
+@main.command("repl")
+def repl_command() -> None:
+    """Open the REPL. Bare `fpl` does the same."""
+    sys.exit(repl())
 
 
 @main.command("run")
