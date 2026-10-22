@@ -16,6 +16,13 @@ frontmatter keys    JSON-LD over ``context.jsonld``: a term typed
                     quoted markdown link ``"[x](y.md)"``; a key whose
                     value is such a link is an edge, typed by the key
 body links          ``okf:linksTo``, untyped, as OKF §6.1 has it
+typed body links    ``body:<key>`` besides ``okf:linksTo``, for a link
+                    that is the value of an inline field
+                    (``key:: [x](y.md)``, ``[key:: [x](y.md)]``) or
+                    whose title is a key (``[x](y.md "key")``), when
+                    the context declares ``key`` an edge; any other
+                    key is ``okf:undeclaredField`` or
+                    ``okf:undeclaredTitle``, a literal for a report
 body images         ``okf:embeds``
 ``[[wikilinks]]``   ``okf:wikilink "name"``: a literal, since OKF does
                     not follow them; reported, never resolved
@@ -36,19 +43,22 @@ import datetime as dt
 import json
 import posixpath
 import re
-from collections.abc import Mapping
-from dataclasses import dataclass
+from collections.abc import Mapping, Sequence
+from dataclasses import dataclass, field, replace
+from itertools import groupby
 from typing import cast
 from urllib.parse import quote, unquote
 
 import pyoxigraph as ox
 import yaml
 from markdown_it import MarkdownIt
+from markdown_it.token import Token
 
 OKF = "https://fpl-org.github.io/okf#"
 CLS = "https://fpl-org.github.io/okf/type#"
 KEY = "https://fpl-org.github.io/okf/key#"
 REL = "https://fpl-org.github.io/okf/rel#"
+BODY = "https://fpl-org.github.io/okf/body#"
 PREFIXES = {
     "rdf": "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
     "xsd": "http://www.w3.org/2001/XMLSchema#",
@@ -56,6 +66,7 @@ PREFIXES = {
     "cls": CLS,
     "key": KEY,
     "rel": REL,
+    "body": BODY,
 }
 RESERVED = frozenset({"index.md", "log.md"})  # OKF §3.1: not concepts
 SCHEME = re.compile(r"^[A-Za-z][A-Za-z0-9+.-]*:")  # http:, mailto:, urn:
@@ -65,7 +76,12 @@ MDLINK = re.compile(
 WIKILINK = re.compile(r"\[\[([^\[\]|#]+)(?:#[^\]|]*)?(?:\|[^\]]*)?\]\]")
 ADR_ID = re.compile(r"^([A-Za-z]+-\d+)-")  # ADR-0003-slug -> ADR-0003
 FENCE_END = re.compile(r"^(---|\.\.\.)\s*$", re.M)
-MD = MarkdownIt("commonmark").enable("table")
+FIELD_KEY = r"[A-Za-z][\w-]*(?:[ \t]+[\w-]+)*"  # Dataview: words, dashes
+LINE_FIELD = re.compile(rf"^\s*({FIELD_KEY})::")  # key:: at a line's start
+BRACKET = re.compile(rf"\[\s*({FIELD_KEY})::|\]")  # [key:: opens, ] closes
+# text_join off: an escaped \[ stays a token apart and opens no field.
+BREAKS = ("softbreak", "hardbreak")
+MD = MarkdownIt("commonmark").enable("table").disable("text_join")
 RDF_TYPE = ox.NamedNode(PREFIXES["rdf"] + "type")
 
 type Ids = Mapping[str, str | None]
@@ -83,6 +99,20 @@ class Split:
     front: dict[str, object]
     body: str
     error: str = ""
+
+
+@dataclass(frozen=True, slots=True)
+class Link:
+    """One body link or image, and the relation the body writes for it.
+
+    ``field`` is the key of the inline field the link is a value of,
+    ``title`` the link's title; both as written, ``""`` when absent.
+    """
+
+    kind: str
+    href: str
+    field: str = ""
+    title: str = ""
 
 
 @dataclass(frozen=True, slots=True)
@@ -216,23 +246,87 @@ def target(value: object, src: str, b: Bundle) -> str | None:
     return b.base + quote(hit) if hit else "urn:okf:id:" + quote(text)
 
 
-def links(body: str) -> tuple[list[tuple[str, str]], list[str]]:
-    """The links and images of a body as ``(kind, href)``; wikilinks.
+def links(body: str) -> tuple[list[Link], list[str]]:
+    """The links and images of a body; its wikilinks.
 
     A real CommonMark parser, not a regex: a link inside a code span or
     fence is no edge, and a reference-style link resolves.
     """
-    found: list[tuple[str, str]] = []
+    found: list[Link] = []
     wikis: list[str] = []
     for tok in MD.parse(body):
-        for child in tok.children or []:
-            if child.type == "link_open":
-                found.append(("linksTo", str(child.attrGet("href") or "")))
-            elif child.type == "image":
-                found.append(("embeds", str(child.attrGet("src") or "")))
-            elif child.type == "text":
-                wikis += WIKILINK.findall(child.content)
+        if tok.children:
+            found += Fields().read(tok.children)
+            wikis += wikilinks(tok.children)
     return found, wikis
+
+
+def wikilinks(children: Sequence[Token]) -> list[str]:
+    """The wikilinks of one inline run: in each stretch of text."""
+    runs = groupby(children, lambda c: c.type in ("text", "text_special"))
+    texts = ("".join(c.content for c in run) for ok, run in runs if ok)
+    return [w for t in texts for w in WIKILINK.findall(t)]
+
+
+@dataclass(slots=True)
+class Fields:
+    """The links of one inline run, with the field each is a value of.
+
+    The run is read line by line (a soft or hard break ends a line,
+    but not one inside a link label, which a wrapped label holds).
+    ``key::`` in the text that opens a line makes every link after it
+    on that line a value of ``key``. ``[key::`` in plain text opens a
+    bracketed field, the next plain ``]`` closes it, and the links in
+    between are its values; a bracket the line never closes gives its
+    links no key of its own. Link labels and escapes are not plain
+    text, so ``\\[`` and ``\\]`` open and close nothing.
+    """
+
+    found: list[Link] = field(default_factory=list[Link])
+    held: list[Link] = field(default_factory=list[Link])  # bracket values
+    key: str = ""  # the line's field
+    bracket: str = ""  # the open bracket's field
+    label: bool = False  # inside a link's label
+    start: bool = True  # at a line's first token
+
+    def read(self, children: Sequence[Token]) -> list[Link]:
+        """Feed every token, then end the last line."""
+        for c in children:
+            self.feed(c)
+            self.start = c.type in BREAKS and not self.label
+        self.close("")
+        return self.found
+
+    def feed(self, c: Token) -> None:
+        """Take one token: a line break, plain text, a link or image."""
+        if c.type in BREAKS and not self.label:
+            self.close("")
+            self.key = self.bracket = ""
+        elif c.type == "text" and not self.label:
+            self.text(c.content)
+        elif c.type in ("link_open", "link_close"):
+            self.label = c.type == "link_open"
+            if self.label:
+                href, title = c.attrGet("href"), c.attrGet("title")
+                ln = Link(
+                    "linksTo", str(href or ""), self.key, str(title or "")
+                )
+                (self.held if self.bracket else self.found).append(ln)
+        elif c.type == "image":
+            self.found.append(Link("embeds", str(c.attrGet("src") or "")))
+
+    def text(self, content: str) -> None:
+        """Plain text: a line's ``key::``, a bracket opened, closed."""
+        if self.start and (m := LINE_FIELD.match(content)):
+            self.key = m.group(1)
+        for m in BRACKET.finditer(content):
+            self.close(self.bracket if m.group(1) is None else "")
+            self.bracket = m.group(1) or ""
+
+    def close(self, key: str) -> None:
+        """Release the held bracket values, typed by ``key`` if any."""
+        self.found += [replace(x, field=key) if key else x for x in self.held]
+        self.held.clear()
 
 
 def ids_of(notes: Mapping[str, Split]) -> dict[str, str | None]:
@@ -302,17 +396,18 @@ def front_quads(
 
 
 def body_quads(
-    s: ox.NamedNode, path: str, body: str, base: str
+    s: ox.NamedNode, path: str, body: str, b: Bundle
 ) -> list[ox.Quad]:
-    """The quads of a body: its links, images and wikilinks."""
+    """The quads of a body: links, typed links, images, wikilinks."""
     q: list[ox.Quad] = []
     found, wikis = links(body)
-    for kind, raw in found:
-        href = raw.strip()
+    for link in found:
+        href = link.href.strip()
         if not href or href.startswith("#"):
             continue
         if SCHEME.match(href):
             q.append(ox.Quad(s, okf("linksToExternal"), ox.Literal(href)))
+            q += typed(s, link, iri, b.ctx) if (iri := absolute(href)) else []
             continue
         dest = resolve(href, path)
         if dest is None:
@@ -320,9 +415,43 @@ def body_quads(
         if outside(dest):
             q.append(ox.Quad(s, okf("linksOutside"), ox.Literal(dest)))
         else:
-            q.append(ox.Quad(s, okf(kind), node(base, dest)))
+            o = node(b.base, dest)
+            q += [ox.Quad(s, okf(link.kind), o), *typed(s, link, o, b.ctx)]
     wiki = okf("wikilink")
     return q + [ox.Quad(s, wiki, ox.Literal(w.strip())) for w in wikis]
+
+
+def absolute(href: str) -> ox.NamedNode | None:
+    """An external href as an IRI; ``None`` for one that is no IRI.
+
+    markdown-it percent-encodes a destination, yet not into a valid
+    IRI every time (``http://[::1``); such a link stays a literal.
+    """
+    try:
+        return ox.NamedNode(href)
+    except ValueError:
+        return None
+
+
+def typed(
+    s: ox.NamedNode, link: Link, o: ox.NamedNode, ctx: Context
+) -> list[ox.Quad]:
+    """The typed edges a body link's field and title give it.
+
+    A key is normalised as Dataview does (trimmed, lower case, inner
+    whitespace a ``-``), which is the spelling of the frontmatter key
+    the context declares. A key the context does not declare an edge
+    is kept as a literal ``key -> href`` for the report, never typed.
+    """
+    q: list[ox.Quad] = []
+    for form, raw in (("Field", link.field), ("Title", link.title)):
+        key = "-".join(raw.split()).lower()
+        if key in ctx.edges:
+            q.append(ox.Quad(s, ox.NamedNode(BODY + quote(key, safe="")), o))
+        elif key:
+            note = ox.Literal(f"{raw.strip()} -> {link.href}")
+            q.append(ox.Quad(s, okf("undeclared" + form), note))
+    return q
 
 
 def note_quads(path: str, sp: Split, b: Bundle) -> list[ox.Quad]:
@@ -339,4 +468,4 @@ def note_quads(path: str, sp: Split, b: Bundle) -> list[ox.Quad]:
         err = ox.Literal(sp.error)
         q.append(ox.Quad(s, okf("frontmatterError"), err))
     q += front_quads(s, path, sp.front, b)
-    return q + body_quads(s, path, sp.body, b.base)
+    return q + body_quads(s, path, sp.body, b)

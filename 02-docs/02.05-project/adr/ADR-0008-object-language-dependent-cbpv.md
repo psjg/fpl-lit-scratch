@@ -50,15 +50,16 @@ options:
 
 # ADR-0008 FPL's object language is dependent call-by-push-value
 
-Supersedes: none. Superseded by: none.
-Related: [ADR-0010 First-class staging](ADR-0010-first-class-staging.md),
-[ADR-0011 Lisp-level metaprogramming](ADR-0011-lisp-level-metaprogramming.md).
-Affects: [01.03.07 Core](../../../01-bootstrap/01.03-repr/01.03.07-core.md),
-[01.03.06 Elaborated](../../../01-bootstrap/01.03-repr/01.03.06-elaborated.md),
-[01.02.06 Elaborate](../../../01-bootstrap/01.02-pass/01.02.06-elaborate.md),
-[01.02.07 Lower](../../../01-bootstrap/01.02-pass/01.02.07-lower.md),
-[01.02.08 Normalize](../../../01-bootstrap/01.02-pass/01.02.08-normalize.md),
-[README](../../../README.md).
+- supersedes:: none
+- superseded-by:: none
+- related:: [ADR-0010 First-class staging](ADR-0010-first-class-staging.md)
+- related:: [ADR-0011 Lisp-level metaprogramming](ADR-0011-lisp-level-metaprogramming.md)
+- affects:: [01.03.07 Core](../../../01-bootstrap/01.03-repr/01.03.07-core.md)
+- affects:: [01.03.06 Elaborated](../../../01-bootstrap/01.03-repr/01.03.06-elaborated.md)
+- affects:: [01.02.06 Elaborate](../../../01-bootstrap/01.02-pass/01.02.06-elaborate.md)
+- affects:: [01.02.07 Lower](../../../01-bootstrap/01.02-pass/01.02.07-lower.md)
+- affects:: [01.02.08 Normalize](../../../01-bootstrap/01.02-pass/01.02.08-normalize.md)
+- affects:: [README](../../../README.md)
 
 ## Context
 

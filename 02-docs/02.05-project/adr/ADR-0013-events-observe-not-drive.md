@@ -44,10 +44,11 @@ options:
 
 # ADR-0013 Events observe the compiler; they do not carry its dependencies
 
-Supersedes: none. Superseded by: none.
-Related: [ADR-0012 The pipeline is a computation graph](ADR-0012-pipeline-is-a-computation-graph.md).
-Affects: [fpl/session.py](../../../01-bootstrap/fpl/session.py),
-[fpl/log.py](../../../01-bootstrap/fpl/log.py).
+- supersedes:: none
+- superseded-by:: none
+- related:: [ADR-0012 The pipeline is a computation graph](ADR-0012-pipeline-is-a-computation-graph.md)
+- affects:: [fpl/session.py](../../../01-bootstrap/fpl/session.py)
+- affects:: [fpl/log.py](../../../01-bootstrap/fpl/log.py)
 
 ## Context
 

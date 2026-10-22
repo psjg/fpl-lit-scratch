@@ -1,0 +1,12 @@
+# rule: edge-disagree
+# remedy: give the typed body link the frontmatter's key for that target, or change the frontmatter
+# A typed body link names a target the frontmatter also names, but under another key.
+SELECT ?path ?detail WHERE {
+  ?s ?be ?t ; okf:path ?path .
+  FILTER(STRSTARTS(STR(?be), STR(body:)))
+  BIND(IRI(CONCAT(STR(rel:), STRAFTER(STR(?be), "#"))) AS ?same)
+  FILTER NOT EXISTS { ?s ?same ?t }
+  ?s ?fe ?t . FILTER(STRSTARTS(STR(?fe), STR(rel:)))
+  OPTIONAL { ?t okf:path ?p }
+  BIND(CONCAT("body ", STRAFTER(STR(?be), "#"), ", frontmatter ", STRAFTER(STR(?fe), "#"), " ", COALESCE(?p, STR(?t))) AS ?detail)
+} ORDER BY ?path ?detail

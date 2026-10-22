@@ -50,14 +50,15 @@ options:
 
 # ADR-0002 FON is the protocol between stages
 
-Supersedes: none. Superseded by: none.
-Related: [ADR-0001 Pipeable filters](ADR-0001-passes-are-pipeable-filters.md),
-[ADR-0003 FON is an FPL subset](ADR-0003-fon-is-an-fpl-subset.md),
-[ADR-0004 Native ABTs, FON at boundaries](ADR-0004-native-abts-fon-at-boundaries.md).
-Affects: [01.01.02 FON](../../../01-bootstrap/01.01-boundary/01.01.02-fon.md),
-[01.01.03 Pipe](../../../01-bootstrap/01.01-boundary/01.01.03-pipe.md),
-[01.01.01 Source](../../../01-bootstrap/01.01-boundary/01.01.01-source.md),
-[01.01.04 Render](../../../01-bootstrap/01.01-boundary/01.01.04-render.md).
+- supersedes:: none
+- superseded-by:: none
+- related:: [ADR-0001 Pipeable filters](ADR-0001-passes-are-pipeable-filters.md)
+- related:: [ADR-0003 FON is an FPL subset](ADR-0003-fon-is-an-fpl-subset.md)
+- related:: [ADR-0004 Native ABTs, FON at boundaries](ADR-0004-native-abts-fon-at-boundaries.md)
+- affects:: [01.01.02 FON](../../../01-bootstrap/01.01-boundary/01.01.02-fon.md)
+- affects:: [01.01.03 Pipe](../../../01-bootstrap/01.01-boundary/01.01.03-pipe.md)
+- affects:: [01.01.01 Source](../../../01-bootstrap/01.01-boundary/01.01.01-source.md)
+- affects:: [01.01.04 Render](../../../01-bootstrap/01.01-boundary/01.01.04-render.md)
 
 ## Context
 

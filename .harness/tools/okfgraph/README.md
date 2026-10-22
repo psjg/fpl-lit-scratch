@@ -19,7 +19,8 @@ queried with SPARQL and checked by a gate, with no Obsidian plugin and no wikili
 OKF links are untyped (§6.1: the kind of an edge lives in the prose around it). The typed
 edges live in frontmatter, which is their source of truth; each one is also written as a
 relative link in the body, the projection that GitHub, Obsidian and any OKF reader can follow.
-A gate checks that the two agree.
+A body link can carry the edge's type itself, in one of two forms; gates check that the
+frontmatter and the body agree.
 
 - **Frontmatter** is read as JSON-LD over [context.jsonld](okfgraph/context.jsonld). A key the
   context types `"@type": "@id"` (`supersedes`, `superseded-by`, `related`, `affects`) is an
@@ -28,13 +29,35 @@ A gate checks that the two agree.
   from the bundle root) or a quoted link `"[x](y.md)"`.
 - **Body links** are parsed with a CommonMark parser (markdown-it-py), so a link in a code
   span is no edge, and become untyped `okf:linksTo` edges; images become `okf:embeds`.
+- **Typed body links** are body links that say which edge they are. A typed body link is
+  still a body link (`okf:linksTo`, or `okf:linksToExternal` for a URL), and also a `body:<key>` edge (`…/okf/body#`) when the context
+  declares `key` an edge; the two forms:
+
+  | Form | Written | Read by |
+  | --- | --- | --- |
+  | inline field | `- supersedes:: [ADR-0003](ADR-0003-jets.md)`, a line or list item, several links allowed; or bracketed in prose, `[affects:: [Lower](lower.md)]` | okfgraph; it is Dataview's `key::` field syntax, which Breadcrumbs builds edges from (not checked here: whether either types a markdown-link value) |
+  | link title | `[ADR-0003](ADR-0003-jets.md "supersedes")` | only okfgraph |
+
+  The pinned Typed Graph CLI (0.6.0) reads neither form: its bundle holds no `key::` parser,
+  so `make okf-check-tg` sees a typed body link as a plain link, which is all it needs.
+  Both render as plain markdown: on GitHub or any CommonMark reader the field form is a line
+  of text with a link in it, the title form a link with a tooltip. Write form 1: the key is
+  visible in the rendered page and other tools can read it. Form 2 is invisible in the render, so
+  a reader cannot see the edge's kind; it is read for prose that cannot hold a field line.
+  A key is normalised as Dataview does (trimmed, lower case, inner spaces a `-`), which is
+  the spelling of the frontmatter key. A field or title the context does not declare (`std::`,
+  a title that is prose, `"see the old design"`) types nothing; report `l-body-undeclared`
+  lists them. A field in a code span or fence is no field, an escaped `\[` opens no bracket,
+  and a field value that is no link (`supersedes:: none`) is no edge. Not read as a field: a
+  bold key (`**key**::`), a key not starting with an ASCII letter, a line break between `::`
+  and the link; the link then stays an untyped body link.
 - **The walk** is the git index: tracked and staged files. An untracked scratch file is not
   bundle; a new note is, once `git add` sees it.
 - **Node IRIs** are the bundle path under a base, by default the repository's page on the
   forge (`https://github.com/fpl-org/fpl/blob/main/`, prefix `b:` in queries), so a node
   opens in a browser. The vocabulary lives under
   `https://fpl-org.github.io/okf#` (`okf:`), with `…/okf/type#` for types, `…/okf/key#` for
-  literal keys and `…/okf/rel#` for edges. Both namespaces are proposals until the maintainer
+  literal keys, `…/okf/rel#` for frontmatter edges and `…/okf/body#` for typed body links. Both namespaces are proposals until the maintainer
   confirms them.
 
 The [code](okfgraph/README.md) is a functional core (`project.py`: one note in, its quads out)
@@ -59,7 +82,8 @@ set of terms `context.jsonld` maps to `cls:<Name>`; the gate `type-unknown` refu
 
 An ADR keeps OKF's `status` (`draft`, `stable`, `deprecated`). Its decision state is derived,
 not written: `rejected: true` makes it rejected, a `superseded-by` superseded, else its
-`status` stands (report `c-adr`).
+`status` stands (report `c-adr`). `c-adr` and `supersede-pair` read an edge from the
+frontmatter or a typed body link alike.
 
 ## Gates and reports
 
@@ -71,12 +95,14 @@ A query whose header holds `# rule:` and `# remedy:` is a gate; the others are r
 | `a2-index-frontmatter` | `okf-index-frontmatter` | an `index.md` below the root has frontmatter |
 | `a3-frontmatter-error` | `frontmatter-error` | a typed note's frontmatter fails to read as JSON-LD |
 | `d-supersede-pair` | `supersede-pair` | `supersedes` is not answered by `superseded-by`, or back |
-| `e-edge-without-link` | `edge-without-link` | a frontmatter edge has no body link to the same target |
+| `e-edge-without-link` | `edge-without-link` | a frontmatter edge has no body link to the same target (typed or plain) |
 | `f-dangling` | `dangling` | an edge or link names no file of the bundle, or climbs out of it |
+| `j-edge-disagree` | `edge-disagree` | a typed body link names a target the frontmatter names under another key |
+| `k-body-dangling` | `body-dangling` | a typed body link names no file of the bundle (`f-dangling` then stays quiet on that target) |
 | `g-wikilink` | `wikilink` | a body holds a `[[wikilink]]` |
 | `h-status-enum` | `status-enum` | `status` is not `draft`, `stable` or `deprecated` |
 | `i-type-unknown` | `type-unknown` | `type` is not in the vocabulary |
-| `b-into`, `c-adr`, `z-stats` | report | edges into a note, ADR states and edges, counts |
+| `b-into`, `c-adr`, `l-body-undeclared`, `z-stats` | report | edges into a note, ADR states and edges, undeclared body relations, counts |
 
 `make check` runs `make okf-check` first, so every gate blocks. To bring in a new rule
 before the bundle meets it, `okfgraph check --baseline FILE` tolerates the findings FILE

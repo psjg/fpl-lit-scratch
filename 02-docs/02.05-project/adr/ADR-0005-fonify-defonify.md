@@ -49,10 +49,11 @@ options:
 
 # ADR-0005 The boundary operation is fonify, its inverse defonify
 
-Supersedes: none. Superseded by: none.
-Related: [ADR-0004 Native ABTs, FON at boundaries](ADR-0004-native-abts-fon-at-boundaries.md).
-Affects: [01.01.03 Pipe](../../../01-bootstrap/01.01-boundary/01.01.03-pipe.md),
-[01.01 Boundary](../../../01-bootstrap/01.01-boundary/README.md).
+- supersedes:: none
+- superseded-by:: none
+- related:: [ADR-0004 Native ABTs, FON at boundaries](ADR-0004-native-abts-fon-at-boundaries.md)
+- affects:: [01.01.03 Pipe](../../../01-bootstrap/01.01-boundary/01.01.03-pipe.md)
+- affects:: [01.01 Boundary](../../../01-bootstrap/01.01-boundary/README.md)
 
 ## Context
 

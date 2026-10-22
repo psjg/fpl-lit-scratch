@@ -46,12 +46,13 @@ options:
 
 # ADR-0009 Keep information as long as possible; strip only in an optimising release build
 
-Supersedes: none. Superseded by: none.
-Related: [ADR-0004 Native ABTs, FON at boundaries](ADR-0004-native-abts-fon-at-boundaries.md).
-Affects: [01.04.04 Build](../../../01-bootstrap/01.04-compose/01.04.04-build.md),
-[01.02.09 Optimize](../../../01-bootstrap/01.02-pass/01.02.09-optimize.md),
-[01.02.11 Codegen](../../../01-bootstrap/01.02-pass/01.02.11-codegen.md),
-[01.03.07 Core](../../../01-bootstrap/01.03-repr/01.03.07-core.md).
+- supersedes:: none
+- superseded-by:: none
+- related:: [ADR-0004 Native ABTs, FON at boundaries](ADR-0004-native-abts-fon-at-boundaries.md)
+- affects:: [01.04.04 Build](../../../01-bootstrap/01.04-compose/01.04.04-build.md)
+- affects:: [01.02.09 Optimize](../../../01-bootstrap/01.02-pass/01.02.09-optimize.md)
+- affects:: [01.02.11 Codegen](../../../01-bootstrap/01.02-pass/01.02.11-codegen.md)
+- affects:: [01.03.07 Core](../../../01-bootstrap/01.03-repr/01.03.07-core.md)
 
 ## Context
 

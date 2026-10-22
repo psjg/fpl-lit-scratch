@@ -11,4 +11,7 @@
 * [g-wikilink](g-wikilink.rq) - gate: no wikilinks
 * [h-status-enum](h-status-enum.rq) - gate: status is draft, stable or deprecated
 * [i-type-unknown](i-type-unknown.rq) - gate: the type is in the vocabulary
+* [j-edge-disagree](j-edge-disagree.rq) - gate: a typed body link agrees with the frontmatter
+* [k-body-dangling](k-body-dangling.rq) - gate: no typed body link into nothing
+* [l-body-undeclared](l-body-undeclared.rq) - report: body relations the context does not declare
 * [z-stats](z-stats.rq) - report: counts

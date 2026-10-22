@@ -53,15 +53,16 @@ options:
 
 # ADR-0001 Every pass also runs alone as a pipeable filter
 
-Supersedes: none. Superseded by: none.
-Related: [ADR-0002 FON is the stage protocol](ADR-0002-fon-is-the-stage-protocol.md),
-[ADR-0004 Native ABTs, FON at boundaries](ADR-0004-native-abts-fon-at-boundaries.md),
-[ADR-0006 One fpl executable](ADR-0006-one-fpl-executable.md),
-[ADR-0012 The pipeline is a computation graph](ADR-0012-pipeline-is-a-computation-graph.md).
-Affects: [01.04.01 Pass](../../../01-bootstrap/01.04-compose/01.04.01-pass.md),
-[01.01.03 Pipe](../../../01-bootstrap/01.01-boundary/01.01.03-pipe.md),
-[01.02 Passes](../../../01-bootstrap/01.02-pass/README.md),
-[01.05.01 Pipeline lab](../../../01-bootstrap/01.05-labs/01.05.01-pipeline.md).
+- supersedes:: none
+- superseded-by:: none
+- related:: [ADR-0002 FON is the stage protocol](ADR-0002-fon-is-the-stage-protocol.md)
+- related:: [ADR-0004 Native ABTs, FON at boundaries](ADR-0004-native-abts-fon-at-boundaries.md)
+- related:: [ADR-0006 One fpl executable](ADR-0006-one-fpl-executable.md)
+- related:: [ADR-0012 The pipeline is a computation graph](ADR-0012-pipeline-is-a-computation-graph.md)
+- affects:: [01.04.01 Pass](../../../01-bootstrap/01.04-compose/01.04.01-pass.md)
+- affects:: [01.01.03 Pipe](../../../01-bootstrap/01.01-boundary/01.01.03-pipe.md)
+- affects:: [01.02 Passes](../../../01-bootstrap/01.02-pass/README.md)
+- affects:: [01.05.01 Pipeline lab](../../../01-bootstrap/01.05-labs/01.05.01-pipeline.md)
 
 ## Context
 
