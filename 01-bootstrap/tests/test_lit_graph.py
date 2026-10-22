@@ -98,3 +98,24 @@ def test_a_nested_composition_is_the_same_graph() -> None:
         "print(a == b)\n"
     )
     assert out(code) == "True\n"
+
+
+def test_labels_are_escaped_for_dot_and_mermaid() -> None:
+    """
+    A pass or representation name with a quote, a backslash or a pipe
+    must not end the label that holds it.
+    """
+    code = (
+        "from fpl.arrow import Pass\n"
+        "from fpl.graph import dot, mermaid\n"
+        "p = Pass('a\"b\\\\c', str, 'B|C', 'D\"E')\n"
+        "print(dot(p))\n"
+        "print(mermaid(p))\n"
+    )
+    text = out(code)
+    assert 'label="a\\"b\\\\c"' in text
+    assert 'label="B|C"' in text
+    assert 'label="D\\"E"' in text
+    assert '["a#quot;b\\c"]' in text
+    assert "-->|B#124;C|" in text
+    assert "-->|D#quot;E|" in text
