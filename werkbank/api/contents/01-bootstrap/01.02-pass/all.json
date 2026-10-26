@@ -38,7 +38,7 @@
       "mimetype": null,
       "name": "01.02.10-evaluate.ipynb",
       "path": "01-bootstrap/01.02-pass/01.02.10-evaluate.ipynb",
-      "size": 36231,
+      "size": 36267,
       "type": "notebook",
       "writable": true
     },
@@ -80,7 +80,7 @@
       "mimetype": null,
       "name": "01.02.02-parse.ipynb",
       "path": "01-bootstrap/01.02-pass/01.02.02-parse.ipynb",
-      "size": 24189,
+      "size": 24187,
       "type": "notebook",
       "writable": true
     },
@@ -94,7 +94,7 @@
       "mimetype": null,
       "name": "01.02.05-desugar.ipynb",
       "path": "01-bootstrap/01.02-pass/01.02.05-desugar.ipynb",
-      "size": 77878,
+      "size": 77914,
       "type": "notebook",
       "writable": true
     },
@@ -122,7 +122,7 @@
       "mimetype": null,
       "name": "01.02.06-elaborate.ipynb",
       "path": "01-bootstrap/01.02-pass/01.02.06-elaborate.ipynb",
-      "size": 29736,
+      "size": 29770,
       "type": "notebook",
       "writable": true
     },
@@ -150,7 +150,7 @@
       "mimetype": null,
       "name": "01.02.01-lex.ipynb",
       "path": "01-bootstrap/01.02-pass/01.02.01-lex.ipynb",
-      "size": 16691,
+      "size": 16729,
       "type": "notebook",
       "writable": true
     }

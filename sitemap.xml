@@ -2,154 +2,266 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://psjg.github.io/fpl-lit-scratch/03-fpl/OLD/03.01-features/sketch/spec.html</loc>
-    <lastmod>2026-10-21T22:26:36.937Z</lastmod>
+    <lastmod>2026-10-22T08:34:52.477Z</lastmod>
   </url>
   <url>
     <loc>https://psjg.github.io/fpl-lit-scratch/03-fpl/OLD/03.01-features/match/spec.html</loc>
-    <lastmod>2026-10-21T22:26:36.929Z</lastmod>
+    <lastmod>2026-10-22T08:34:52.476Z</lastmod>
   </url>
   <url>
     <loc>https://psjg.github.io/fpl-lit-scratch/03-fpl/OLD/03.01-features/draft2/spec.html</loc>
-    <lastmod>2026-10-21T22:26:36.921Z</lastmod>
+    <lastmod>2026-10-22T08:34:52.474Z</lastmod>
   </url>
   <url>
     <loc>https://psjg.github.io/fpl-lit-scratch/02-docs/02.05-project/notes/02.05.05-repl-phrase-costs.html</loc>
-    <lastmod>2026-10-21T22:26:36.860Z</lastmod>
+    <lastmod>2026-10-22T08:34:52.466Z</lastmod>
   </url>
   <url>
     <loc>https://psjg.github.io/fpl-lit-scratch/02-docs/02.05-project/notes/02.05.02-sober.html</loc>
-    <lastmod>2026-10-21T22:26:36.857Z</lastmod>
+    <lastmod>2026-10-22T08:34:52.460Z</lastmod>
   </url>
   <url>
     <loc>https://psjg.github.io/fpl-lit-scratch/02-docs/02.05-project/notes/02.05.04-obsidian-okf-cob-bridge.html</loc>
-    <lastmod>2026-10-21T22:26:36.859Z</lastmod>
+    <lastmod>2026-10-22T08:34:52.461Z</lastmod>
   </url>
   <url>
     <loc>https://psjg.github.io/fpl-lit-scratch/02-docs/02.03-reference/02.03.01-errors.html</loc>
-    <lastmod>2026-10-21T22:26:36.835Z</lastmod>
+    <lastmod>2026-10-22T08:34:52.449Z</lastmod>
   </url>
   <url>
     <loc>https://psjg.github.io/fpl-lit-scratch/02-docs/02.04-explanation/design.html</loc>
-    <lastmod>2026-10-21T22:26:36.838Z</lastmod>
+    <lastmod>2026-10-22T08:34:52.451Z</lastmod>
+  </url>
+  <url>
+    <loc>https://psjg.github.io/fpl-lit-scratch/01-bootstrap/01.05-labs/01.05.01-pipeline.html</loc>
+    <lastmod>2026-10-22T08:34:44.079Z</lastmod>
+  </url>
+  <url>
+    <loc>https://psjg.github.io/fpl-lit-scratch/01-bootstrap/01.04-compose/01.04.03-inspect.html</loc>
+    <lastmod>2026-10-22T08:34:44.076Z</lastmod>
+  </url>
+  <url>
+    <loc>https://psjg.github.io/fpl-lit-scratch/01-bootstrap/01.04-compose/01.04.01-pass.html</loc>
+    <lastmod>2026-10-22T08:34:53.004Z</lastmod>
+  </url>
+  <url>
+    <loc>https://psjg.github.io/fpl-lit-scratch/01-bootstrap/01.03-repr/01.03.06-elaborated.html</loc>
+    <lastmod>2026-10-22T08:34:44.073Z</lastmod>
+  </url>
+  <url>
+    <loc>https://psjg.github.io/fpl-lit-scratch/01-bootstrap/01.03-repr/01.03.04-resolved.html</loc>
+    <lastmod>2026-10-22T08:34:44.072Z</lastmod>
+  </url>
+  <url>
+    <loc>https://psjg.github.io/fpl-lit-scratch/01-bootstrap/01.03-repr/01.03.02-tokens.html</loc>
+    <lastmod>2026-10-22T08:34:44.071Z</lastmod>
+  </url>
+  <url>
+    <loc>https://psjg.github.io/fpl-lit-scratch/01-bootstrap/01.02-pass/01.02.11-codegen.html</loc>
+    <lastmod>2026-10-22T08:34:44.069Z</lastmod>
+  </url>
+  <url>
+    <loc>https://psjg.github.io/fpl-lit-scratch/01-bootstrap/01.02-pass/01.02.09-optimize.html</loc>
+    <lastmod>2026-10-22T08:34:44.068Z</lastmod>
+  </url>
+  <url>
+    <loc>https://psjg.github.io/fpl-lit-scratch/01-bootstrap/01.02-pass/01.02.07-lower.html</loc>
+    <lastmod>2026-10-22T08:34:44.067Z</lastmod>
+  </url>
+  <url>
+    <loc>https://psjg.github.io/fpl-lit-scratch/01-bootstrap/01.02-pass/01.02.05-desugar.html</loc>
+    <lastmod>2026-10-22T08:34:52.730Z</lastmod>
+  </url>
+  <url>
+    <loc>https://psjg.github.io/fpl-lit-scratch/01-bootstrap/01.02-pass/01.02.03-resolve.html</loc>
+    <lastmod>2026-10-22T08:34:44.064Z</lastmod>
+  </url>
+  <url>
+    <loc>https://psjg.github.io/fpl-lit-scratch/01-bootstrap/01.02-pass/01.02.01-lex.html</loc>
+    <lastmod>2026-10-22T08:39:31.905Z</lastmod>
+  </url>
+  <url>
+    <loc>https://psjg.github.io/fpl-lit-scratch/01-bootstrap/01.01-boundary/01.01.03-pipe.html</loc>
+    <lastmod>2026-10-22T08:34:53.003Z</lastmod>
+  </url>
+  <url>
+    <loc>https://psjg.github.io/fpl-lit-scratch/01-bootstrap/01.01-boundary/01.01.01-source.html</loc>
+    <lastmod>2026-10-22T08:34:44.051Z</lastmod>
   </url>
   <url>
     <loc>https://psjg.github.io/fpl-lit-scratch/03-fpl/README.html</loc>
-    <lastmod>2026-10-21T22:26:36.938Z</lastmod>
+    <lastmod>2026-10-22T08:34:52.477Z</lastmod>
   </url>
   <url>
     <loc>https://psjg.github.io/fpl-lit-scratch/02-docs/02.05-project/notes/README.html</loc>
-    <lastmod>2026-10-21T22:26:36.863Z</lastmod>
+    <lastmod>2026-10-22T08:35:41.873Z</lastmod>
   </url>
   <url>
     <loc>https://psjg.github.io/fpl-lit-scratch/02-docs/02.04-explanation/inspiration/02.04.03-judgments.html</loc>
-    <lastmod>2026-10-21T22:26:36.840Z</lastmod>
+    <lastmod>2026-10-22T08:34:52.453Z</lastmod>
   </url>
   <url>
     <loc>https://psjg.github.io/fpl-lit-scratch/02-docs/02.04-explanation/inspiration/02.04.01-playgrounds.html</loc>
-    <lastmod>2026-10-21T22:26:36.839Z</lastmod>
+    <lastmod>2026-10-22T08:34:52.452Z</lastmod>
   </url>
   <url>
     <loc>https://psjg.github.io/fpl-lit-scratch/02-docs/02.04-explanation/README.html</loc>
-    <lastmod>2026-10-21T22:26:36.837Z</lastmod>
+    <lastmod>2026-10-22T08:35:05.059Z</lastmod>
   </url>
   <url>
     <loc>https://psjg.github.io/fpl-lit-scratch/02-docs/02.02-how-to/README.html</loc>
-    <lastmod>2026-10-21T22:26:36.834Z</lastmod>
+    <lastmod>2026-10-22T08:34:52.449Z</lastmod>
   </url>
   <url>
     <loc>https://psjg.github.io/fpl-lit-scratch/02-docs/02.01-tutorial/README.html</loc>
-    <lastmod>2026-10-21T22:26:36.831Z</lastmod>
+    <lastmod>2026-10-22T08:34:52.449Z</lastmod>
   </url>
   <url>
     <loc>https://psjg.github.io/fpl-lit-scratch/01-bootstrap/01.06-nagini/README.html</loc>
-    <lastmod>2026-10-21T22:26:36.710Z</lastmod>
+    <lastmod>2026-10-22T08:34:52.443Z</lastmod>
   </url>
   <url>
     <loc>https://psjg.github.io/fpl-lit-scratch/01-bootstrap/01.04-compose/README.html</loc>
-    <lastmod>2026-10-21T22:26:36.706Z</lastmod>
+    <lastmod>2026-10-22T08:34:52.733Z</lastmod>
   </url>
   <url>
     <loc>https://psjg.github.io/fpl-lit-scratch/01-bootstrap/01.02-pass/README.html</loc>
-    <lastmod>2026-10-21T22:26:36.694Z</lastmod>
+    <lastmod>2026-10-22T08:34:52.442Z</lastmod>
   </url>
   <url>
     <loc>https://psjg.github.io/fpl-lit-scratch/01-bootstrap/README.html</loc>
-    <lastmod>2026-10-21T22:26:36.712Z</lastmod>
+    <lastmod>2026-10-22T08:34:52.444Z</lastmod>
   </url>
   <url>
     <loc>https://psjg.github.io/fpl-lit-scratch/index.html</loc>
-    <lastmod>2026-10-21T22:40:50.936Z</lastmod>
+    <lastmod>2026-10-26T09:18:23.862Z</lastmod>
   </url>
   <url>
     <loc>https://psjg.github.io/fpl-lit-scratch/01-bootstrap/01.01-boundary/README.html</loc>
-    <lastmod>2026-10-21T22:26:36.688Z</lastmod>
+    <lastmod>2026-10-22T08:34:52.727Z</lastmod>
   </url>
   <url>
     <loc>https://psjg.github.io/fpl-lit-scratch/01-bootstrap/01.03-repr/README.html</loc>
-    <lastmod>2026-10-21T22:26:36.702Z</lastmod>
+    <lastmod>2026-10-22T08:34:52.442Z</lastmod>
   </url>
   <url>
     <loc>https://psjg.github.io/fpl-lit-scratch/01-bootstrap/01.05-labs/README.html</loc>
-    <lastmod>2026-10-21T22:26:36.707Z</lastmod>
+    <lastmod>2026-10-22T08:34:52.443Z</lastmod>
   </url>
   <url>
     <loc>https://psjg.github.io/fpl-lit-scratch/02-docs/README.html</loc>
-    <lastmod>2026-10-21T22:26:36.896Z</lastmod>
+    <lastmod>2026-10-22T08:34:52.472Z</lastmod>
   </url>
   <url>
     <loc>https://psjg.github.io/fpl-lit-scratch/02-docs/02.01-tutorial/walkthrough.html</loc>
-    <lastmod>2026-10-21T22:26:36.834Z</lastmod>
+    <lastmod>2026-10-22T08:34:44.180Z</lastmod>
   </url>
   <url>
     <loc>https://psjg.github.io/fpl-lit-scratch/02-docs/02.03-reference/README.html</loc>
-    <lastmod>2026-10-21T22:26:36.835Z</lastmod>
+    <lastmod>2026-10-22T08:35:05.048Z</lastmod>
   </url>
   <url>
     <loc>https://psjg.github.io/fpl-lit-scratch/02-docs/02.04-explanation/inspiration/README.html</loc>
-    <lastmod>2026-10-21T22:28:12.809Z</lastmod>
+    <lastmod>2026-10-22T08:36:14.185Z</lastmod>
   </url>
   <url>
     <loc>https://psjg.github.io/fpl-lit-scratch/02-docs/02.04-explanation/inspiration/02.04.02-turnstiles.html</loc>
-    <lastmod>2026-10-21T22:26:36.840Z</lastmod>
+    <lastmod>2026-10-22T08:34:52.452Z</lastmod>
   </url>
   <url>
     <loc>https://psjg.github.io/fpl-lit-scratch/02-docs/02.05-project/README.html</loc>
-    <lastmod>2026-10-21T22:26:36.841Z</lastmod>
+    <lastmod>2026-10-22T08:34:52.454Z</lastmod>
   </url>
   <url>
     <loc>https://psjg.github.io/fpl-lit-scratch/02-docs/02.05-project/adr/README.html</loc>
-    <lastmod>2026-10-21T22:26:36.849Z</lastmod>
+    <lastmod>2026-10-22T08:34:53.215Z</lastmod>
   </url>
   <url>
     <loc>https://psjg.github.io/fpl-lit-scratch/03-fpl/OLD/03.01-features/README.html</loc>
-    <lastmod>2026-10-21T22:26:36.902Z</lastmod>
+    <lastmod>2026-10-22T08:34:52.472Z</lastmod>
+  </url>
+  <url>
+    <loc>https://psjg.github.io/fpl-lit-scratch/01-bootstrap/01.01-boundary/01.01.02-fon.html</loc>
+    <lastmod>2026-10-22T08:34:53.003Z</lastmod>
+  </url>
+  <url>
+    <loc>https://psjg.github.io/fpl-lit-scratch/01-bootstrap/01.01-boundary/01.01.04-render.html</loc>
+    <lastmod>2026-10-22T08:34:44.054Z</lastmod>
+  </url>
+  <url>
+    <loc>https://psjg.github.io/fpl-lit-scratch/01-bootstrap/01.02-pass/01.02.02-parse.html</loc>
+    <lastmod>2026-10-22T08:34:52.729Z</lastmod>
+  </url>
+  <url>
+    <loc>https://psjg.github.io/fpl-lit-scratch/01-bootstrap/01.02-pass/01.02.04-expand.html</loc>
+    <lastmod>2026-10-22T08:34:44.065Z</lastmod>
+  </url>
+  <url>
+    <loc>https://psjg.github.io/fpl-lit-scratch/01-bootstrap/01.02-pass/01.02.06-elaborate.html</loc>
+    <lastmod>2026-10-22T08:34:52.731Z</lastmod>
+  </url>
+  <url>
+    <loc>https://psjg.github.io/fpl-lit-scratch/01-bootstrap/01.02-pass/01.02.08-normalize.html</loc>
+    <lastmod>2026-10-22T08:34:44.067Z</lastmod>
+  </url>
+  <url>
+    <loc>https://psjg.github.io/fpl-lit-scratch/01-bootstrap/01.02-pass/01.02.10-evaluate.html</loc>
+    <lastmod>2026-10-22T08:34:52.731Z</lastmod>
+  </url>
+  <url>
+    <loc>https://psjg.github.io/fpl-lit-scratch/01-bootstrap/01.03-repr/01.03.01-source.html</loc>
+    <lastmod>2026-10-22T08:34:44.071Z</lastmod>
+  </url>
+  <url>
+    <loc>https://psjg.github.io/fpl-lit-scratch/01-bootstrap/01.03-repr/01.03.03-syntax.html</loc>
+    <lastmod>2026-10-22T08:34:44.071Z</lastmod>
+  </url>
+  <url>
+    <loc>https://psjg.github.io/fpl-lit-scratch/01-bootstrap/01.03-repr/01.03.05-expanded.html</loc>
+    <lastmod>2026-10-22T08:34:44.072Z</lastmod>
+  </url>
+  <url>
+    <loc>https://psjg.github.io/fpl-lit-scratch/01-bootstrap/01.03-repr/01.03.07-core.html</loc>
+    <lastmod>2026-10-22T08:34:44.074Z</lastmod>
+  </url>
+  <url>
+    <loc>https://psjg.github.io/fpl-lit-scratch/01-bootstrap/01.04-compose/01.04.02-run.html</loc>
+    <lastmod>2026-10-22T08:34:52.732Z</lastmod>
+  </url>
+  <url>
+    <loc>https://psjg.github.io/fpl-lit-scratch/01-bootstrap/01.04-compose/01.04.04-build.html</loc>
+    <lastmod>2026-10-22T08:34:44.076Z</lastmod>
+  </url>
+  <url>
+    <loc>https://psjg.github.io/fpl-lit-scratch/01-bootstrap/01.06-nagini/01.06.01-advance.html</loc>
+    <lastmod>2026-10-22T08:34:44.084Z</lastmod>
   </url>
   <url>
     <loc>https://psjg.github.io/fpl-lit-scratch/02-docs/02.03-reference/spec.html</loc>
-    <lastmod>2026-10-21T22:26:36.837Z</lastmod>
+    <lastmod>2026-10-22T08:34:52.451Z</lastmod>
   </url>
   <url>
     <loc>https://psjg.github.io/fpl-lit-scratch/02-docs/02.05-project/roadmap.html</loc>
-    <lastmod>2026-10-21T22:26:36.864Z</lastmod>
+    <lastmod>2026-10-22T08:34:52.467Z</lastmod>
   </url>
   <url>
     <loc>https://psjg.github.io/fpl-lit-scratch/02-docs/02.05-project/notes/02.05.01-issue-task-patch.html</loc>
-    <lastmod>2026-10-21T22:26:36.856Z</lastmod>
+    <lastmod>2026-10-22T08:34:52.460Z</lastmod>
   </url>
   <url>
     <loc>https://psjg.github.io/fpl-lit-scratch/02-docs/02.05-project/notes/02.05.03-mediating-project.html</loc>
-    <lastmod>2026-10-21T22:26:36.859Z</lastmod>
+    <lastmod>2026-10-22T08:34:52.461Z</lastmod>
   </url>
   <url>
     <loc>https://psjg.github.io/fpl-lit-scratch/03-fpl/OLD/03.01-features/draft1/spec.html</loc>
-    <lastmod>2026-10-21T22:26:36.910Z</lastmod>
+    <lastmod>2026-10-22T08:34:52.474Z</lastmod>
   </url>
   <url>
     <loc>https://psjg.github.io/fpl-lit-scratch/03-fpl/OLD/03.01-features/draft3/spec.html</loc>
-    <lastmod>2026-10-21T22:26:36.924Z</lastmod>
+    <lastmod>2026-10-22T08:34:52.475Z</lastmod>
   </url>
   <url>
     <loc>https://psjg.github.io/fpl-lit-scratch/03-fpl/OLD/03.01-features/server/spec.html</loc>
-    <lastmod>2026-10-21T22:26:36.931Z</lastmod>
+    <lastmod>2026-10-22T08:34:52.477Z</lastmod>
   </url>
 </urlset>

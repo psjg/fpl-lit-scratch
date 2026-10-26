@@ -24,7 +24,7 @@
       "mimetype": null,
       "name": "01.04.01-pass.ipynb",
       "path": "01-bootstrap/01.04-compose/01.04.01-pass.ipynb",
-      "size": 2860,
+      "size": 8450,
       "type": "notebook",
       "writable": true
     },
@@ -50,9 +50,23 @@
       "hash_algorithm": null,
       "last_modified": "1980-01-01T00:00:00Z",
       "mimetype": null,
+      "name": "01.04.05-graph.ipynb",
+      "path": "01-bootstrap/01.04-compose/01.04.05-graph.ipynb",
+      "size": 8019,
+      "type": "notebook",
+      "writable": true
+    },
+    {
+      "content": null,
+      "created": "1980-01-01T00:00:00Z",
+      "format": null,
+      "hash": null,
+      "hash_algorithm": null,
+      "last_modified": "1980-01-01T00:00:00Z",
+      "mimetype": null,
       "name": "01.04.02-run.ipynb",
       "path": "01-bootstrap/01.04-compose/01.04.02-run.ipynb",
-      "size": 4987,
+      "size": 5431,
       "type": "notebook",
       "writable": true
     }
