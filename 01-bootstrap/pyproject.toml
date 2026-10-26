@@ -11,8 +11,8 @@ dependencies = ["lark", "icontract", "click"]
 # The language server (ide/lsp.py) is optional: the CLI does not import it.
 [project.optional-dependencies]
 ide = ["pygls", "lsprotocol"]
-
-[dependency-groups]
+# An extra, not a dependency group: deptry reads a group as dev-only (DEP004) and the ide/
+# tests import pytest from the scanned tree.
 test = ["pytest"]
 
 [project.scripts]
