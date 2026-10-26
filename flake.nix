@@ -337,6 +337,13 @@
           "icontract"
           "lark"
         ];
+        # Not on the installed program's path: the optional language server (extra ide) and
+        # the tests (group test). The dev shell and the package do not build from these.
+        extra = [
+          "lsprotocol"
+          "pygls"
+          "pytest"
+        ];
       };
 
       # The fpl package: the wheel of 01-bootstrap/pyproject.toml (the tangled tree, the seed

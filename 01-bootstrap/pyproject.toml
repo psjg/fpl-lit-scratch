@@ -8,6 +8,13 @@ version = "0"
 requires-python = ">=3.12,<3.13"
 dependencies = ["lark", "icontract", "click"]
 
+# The language server (ide/lsp.py) is optional: the CLI does not import it.
+[project.optional-dependencies]
+ide = ["pygls", "lsprotocol"]
+
+[dependency-groups]
+test = ["pytest"]
+
 [project.scripts]
 fpl = "fpl.cli:entry"
 
@@ -30,7 +37,7 @@ known_first_party = ["fpl"]
 # The tools come from the harness environment, not from this project's dependencies.
 # nagini_contracts: fpl.advance, tangled from the Nagini page, imports it from .vendor/ and
 # nothing declares it (TD-0015).
-DEP001 = ["hypothesis", "pytest", "nagini_contracts"]
+DEP001 = ["hypothesis", "nagini_contracts"]
 # click is used by the tangled python/ tree, which the deptry scan excludes.
 DEP002 = ["click"]
 

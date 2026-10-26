@@ -8,7 +8,7 @@
 Every dependency enters through the Nix flake (AGENTS.md). The fpl
 package is built in the sandbox from nixpkgs alone, from the names in
 lib.pythonDeps of flake.nix. A name that 01-bootstrap/pyproject.toml
-declares (a runtime dependency, an optional one, a dependency group or
+declares (a runtime dependency, an optional one or one of a dependency group (role extra: not on the installed program's path) or
 a build-system requirement) and the flake does not list works in a uv
 venv and breaks the Nix build; a name the flake lists and nothing
 declares is drift the other way. This holds the two lists equal. That
@@ -54,14 +54,17 @@ def declared(pyproject: dict) -> set[tuple[str, str]]:
     """Every name the project declares, with its role."""
     project = pyproject.get("project", {})
     runtime = list(project.get("dependencies", []))
-    for extra in project.get("optional-dependencies", {}).values():
-        runtime += extra
+    extra = []
+    for names in project.get("optional-dependencies", {}).values():
+        extra += names
     for group in pyproject.get("dependency-groups", {}).values():
-        runtime += [spec for spec in group if isinstance(spec, str)]
+        extra += [spec for spec in group if isinstance(spec, str)]
     build = pyproject.get("build-system", {}).get("requires", [])
-    return {(requirement(spec), "build") for spec in build} | {
-        (requirement(spec), "runtime") for spec in runtime
-    }
+    return (
+        {(requirement(spec), "build") for spec in build}
+        | {(requirement(spec), "runtime") for spec in runtime}
+        | {(requirement(spec), "extra") for spec in extra}
+    )
 
 
 def problems(pyproject: dict, provided: Provided, where: str) -> list[str]:
@@ -153,7 +156,7 @@ GOOD = (
     '[project]\ndependencies = ["lark>=1", "click"]\n'
     '[build-system]\nrequires = ["hatchling"]\n'
 )
-HAVE = {"build": ["hatchling"], "runtime": ["click", "lark"]}
+HAVE = {"build": ["hatchling"], "runtime": ["click", "lark"], "extra": []}
 OPTIONAL = '[project.optional-dependencies]\nx = ["PyYAML[c]"]\n'
 GROUP = '[dependency-groups]\ndev = ["rich"]\n'
 CASES: list[tuple[str, str, Provided, str | None]] = [
@@ -166,6 +169,12 @@ CASES: list[tuple[str, str, Provided, str | None]] = [
     ),
     ("a build backend the flake lacks", GOOD, HAVE | {"build": []}, "build"),
     ("an optional name the flake lacks", GOOD + OPTIONAL, HAVE, "pyyaml"),
+    (
+        "an optional name the flake has as extra",
+        GOOD + OPTIONAL,
+        HAVE | {"extra": ["pyyaml"]},
+        None,
+    ),
     ("a group name the flake lacks", GOOD + GROUP, HAVE, "rich"),
     (
         "a name nothing declares",
