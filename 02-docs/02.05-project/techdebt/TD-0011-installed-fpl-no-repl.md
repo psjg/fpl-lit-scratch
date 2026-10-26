@@ -14,7 +14,8 @@ closed-by:
 ---
 
 [ADR-0006](../adr/ADR-0006-one-fpl-executable.md) makes bare `fpl` the interactive
-interface, but that holds only inside a clone.
+interface, but that holds only inside a clone. The script entry itself came with
+[TD-0010](TD-0010-click-undeclared.md).
 
 ## Symptom
 

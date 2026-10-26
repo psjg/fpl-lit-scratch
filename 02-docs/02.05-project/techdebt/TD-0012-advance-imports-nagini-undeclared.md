@@ -12,7 +12,8 @@ closed-by:
 ---
 
 Found when deptry was first run over the tangled tree, `python/`, for the nix-deps rule
-(every dependency enters through the Nix flake, AGENTS.md).
+(every dependency enters through the Nix flake, AGENTS.md), after
+[TD-0011](TD-0011-installed-fpl-no-repl.md) put the package in the flake.
 
 ## Symptom
 
