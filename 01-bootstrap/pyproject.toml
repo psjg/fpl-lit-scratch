@@ -39,7 +39,9 @@ known_first_party = ["fpl"]
 # nothing declares it (TD-0015).
 DEP001 = ["hypothesis", "nagini_contracts"]
 # click is used by the tangled python/ tree, which the deptry scan excludes.
-DEP002 = ["click"]
+# pygls, lsprotocol and pytest are the extras ide and test: ide/ imports them, python/ never does,
+# and the second scan (deptry python) sees only python/.
+DEP002 = ["click", "pygls", "lsprotocol", "pytest"]
 
 [tool.mutmut]
 source_paths = ["fpl/"]

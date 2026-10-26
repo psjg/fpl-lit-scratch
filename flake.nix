@@ -338,7 +338,7 @@
           "lark"
         ];
         # Not on the installed program's path: the optional language server (extra ide) and
-        # the tests (group test). The dev shell and the package do not build from these.
+        # the tests (extra test). The dev shell and the package do not build from these.
         extra = [
           "lsprotocol"
           "pygls"
