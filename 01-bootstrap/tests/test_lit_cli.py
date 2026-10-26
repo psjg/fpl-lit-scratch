@@ -9,10 +9,12 @@ so no stage name is spelled out in the CLI or in the tangler.
 """
 
 import re
+import shutil
 import subprocess
 import sys
+from pathlib import Path
 
-from lit import BOOTSTRAP, PYTHON, TANGLE, env, fpl, lit
+from lit import BOOTSTRAP, PYTHON, TANGLE, TIMEOUT, env, fpl, lit
 
 FRAMES = (
     BOOTSTRAP.parent
@@ -115,6 +117,31 @@ def test_repl_is_a_command_and_bare_fpl_is_its_alias() -> None:
     assert named.returncode == bare.returncode == 0, named.stderr.decode()
     assert named.stdout == bare.stdout == b"[ 1 2 + ]\n"
     assert b"repl" in fpl("--help").stdout
+
+
+def test_the_repl_opens_from_the_wheel_layout(tmp_path: Path) -> None:
+    """
+    Laid out as the wheel lays it out, the tangled tree with the seed
+    in fpl/_seed, and run outside the checkout, `fpl repl` opens the
+    seed REPL (TD-0011).
+    """
+    site = tmp_path / "site"
+    skip = shutil.ignore_patterns("__pycache__")
+    shutil.copytree(PYTHON / "fpl", site / "fpl", ignore=skip)
+    shutil.copytree(
+        BOOTSTRAP / "fpl", site / "fpl" / "_seed" / "fpl", ignore=skip
+    )
+    opened = subprocess.run(
+        [sys.executable, "-m", "fpl", "repl"],
+        input=b"1 2 +\n",
+        capture_output=True,
+        cwd=tmp_path,
+        env=env() | {"PYTHONPATH": str(site)},
+        timeout=TIMEOUT,
+        check=False,
+    )
+    assert opened.returncode == 0, opened.stderr.decode()
+    assert opened.stdout == b"[ 1 2 + ]\n"
 
 
 def test_the_status_of_the_repl_is_the_status_of_fpl() -> None:
