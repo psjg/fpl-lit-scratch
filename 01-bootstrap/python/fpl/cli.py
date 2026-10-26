@@ -11,7 +11,12 @@ needs no line here.
 it. For now that is the seed walker's REPL, `python -m fpl.repl` run
 from [the seed](../fpl/repl.py) in a child process: the tangled tree has
 no REPL of its own yet, and the seed cannot be imported beside it, since
-both packages are named `fpl`.
+both packages are named `fpl`. The wheel carries the seed as
+`fpl/_seed/fpl` (`pyproject.toml`), so an installed `fpl` finds it
+there; a checkout finds it in `01-bootstrap/` (TD-0014). The child's
+path is the seed's root ahead of this process's own, so the seed wins
+the name `fpl` and the dependencies stay in reach wherever they are
+installed.
 
 `fpl <stage>` is one filter across the pipe of
 [01.01.03-pipe](01.01.03-pipe.md): a pass of `PASSES`, or one of the two
@@ -42,9 +47,12 @@ from fpl.graph import dot, explain, mermaid
 from fpl.pipe import ENDS, PASSES, cli, shell_script
 from fpl.run import COMPOSITIONS, run_file
 
-SEED = Path(__file__).resolve().parents[2]
+HERE = Path(__file__).resolve().parent
+SEEDS = (HERE / "_seed", HERE.parents[1])
 """
-The seed walker's root, 01-bootstrap/; its `fpl.repl` is the REPL.
+Where the seed walker's root may be, in order: beside this module, as
+the wheel installs it, or the checkout's 01-bootstrap/. Its `fpl.repl`
+is the REPL.
 """
 
 FORMATS = {"text": explain, "dot": dot, "mermaid": mermaid}
@@ -57,13 +65,17 @@ def repl() -> int:
     """
     Run the seed REPL on this terminal; its exit status.
 
-    The child sees the seed and nothing else: PYTHONPATH is replaced,
-    and PYTHONSAFEPATH keeps the working directory off the path.
+    The child's path is the seed's root, then this process's own, so
+    `fpl` is the seed and lark and the rest are found where they were;
+    PYTHONSAFEPATH keeps the working directory off the path.
     """
-    if not (SEED / "fpl" / "repl.py").is_file():
-        print(f"fpl: no REPL: {SEED / 'fpl'} is missing", file=sys.stderr)
+    found = [root for root in SEEDS if (root / "fpl" / "repl.py").is_file()]
+    if not found:
+        places = " or ".join(str(root / "fpl") for root in SEEDS)
+        print(f"fpl: no REPL: no seed in {places}", file=sys.stderr)
         return 2
-    env = os.environ | {"PYTHONPATH": str(SEED), "PYTHONSAFEPATH": "1"}
+    path = os.pathsep.join([str(found[0]), *filter(None, sys.path)])
+    env = os.environ | {"PYTHONPATH": path, "PYTHONSAFEPATH": "1"}
     child = [sys.executable, "-m", "fpl.repl"]
     return subprocess.run(child, env=env, check=False).returncode
 

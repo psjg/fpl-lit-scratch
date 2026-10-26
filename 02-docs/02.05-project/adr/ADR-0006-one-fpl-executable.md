@@ -93,8 +93,9 @@ The ingress is `fpl source`, the egress `fpl render`:
 - The command names are read off the registries: `PASSES` and `ENDS` of the pipe,
   `COMPOSITIONS` of the run note. No list of stage names is written by hand.
 - `fpl repl` and bare `fpl` run the seed walker's REPL (`01-bootstrap/fpl/repl.py`) as a child process with
-  the seed alone on its path, since the seed and the tangled tree are both named `fpl`. The
-  REPL is not yet a literate page.
+  the seed ahead of its path, since the seed and the tangled tree are both named `fpl`. The
+  wheel carries the seed as `fpl/_seed/fpl`, so an installed `fpl` has it too
+  ([TD-0014](../techdebt/TD-0014-installed-fpl-no-repl.md)). The REPL is not yet a literate page.
 - `fpl <file>` remains as short for `fpl run <file>`: it conflicts with no command, and a
   command name wins over a file of the same name.
 - Each stage package's `__main__.py` is a few lines, `from . import <stage>`, then

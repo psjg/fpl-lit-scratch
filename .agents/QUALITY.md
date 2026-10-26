@@ -27,7 +27,8 @@ make quick    lint, format, tests; stops at the first failure. Seconds. The inne
 make check    the one gate. Green means done.
 make harden   check, then the long search: 20x the examples, CrossHair on every property
               and every contract, mutation testing
-make ready    harden, then gates, then a known-vulnerability audit of the pinned tools
+make ready    harden, then gates, then a known-vulnerability audit of the pinned tools,
+              then nix flake check: the fpl package built and its REPL run in the sandbox
 make gates    proof that each check still refuses a bad example, and the harness's own lint
 make tools    the tooling beside the language, .harness/tools/<name>/, judged as strictly (see Tools)
 make map      the map of the code, never committed (below); no other lane runs it
@@ -77,7 +78,8 @@ request that moves the package is drawn where the package was.
 | `pytest` under `coverage` | a failing test; less than 100% line and branch coverage (`.harness/quality/coveragerc`) |
 | `.harness/scripts/crap` | a function whose CRAP score is over 8 (`.harness/quality/crap.toml`) |
 | `lint-imports` | an import that crosses the layering of CONVENTIONS.md (`.harness/quality/importlinter.ini`) |
-| `deptry` | an import of a package `pyproject.toml` does not declare, or a declared one nobody imports |
+| `deptry` | an import of a package `pyproject.toml` does not declare, or a declared one nobody imports; run over the seed and its tests, then over `python/`, the tree the wheel ships |
+| `.harness/scripts/nix-deps` | a dependency `01-bootstrap/pyproject.toml` declares (runtime, optional, group, build-system) that `lib.pythonDeps` of `flake.nix` does not provide, or one the flake provides that nothing declares |
 | `vulture` | code nothing uses |
 | `pylint` duplicate-code | six or more lines repeated |
 | `make run` from the root | the entry a README points to failing, or printing other than the `.expected` of `03-fpl/OLD/03.01-features/draft2/examples/01-frames` (the lanes run in `01-bootstrap/`, so only this step runs the walker from the root) |

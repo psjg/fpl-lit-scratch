@@ -14,3 +14,5 @@
 - [TD-0011-substrate-citations-unaudited.md](TD-0011-substrate-citations-unaudited.md): Roughly sixty references behind the substrate design were verified by source for five of them; the rest carry a measured base rate of one wrong year or venue in ten.
 - [TD-0012-atlas-pinned-agda-untested.md](TD-0012-atlas-pinned-agda-untested.md): The cubical Agda atlas typechecked only under Agda 2.6.3 and cubical 0.5; the flake pins Agda 2.8 and cubical 0.9, and the check verb under Nix never ran.
 - [TD-0013-decisions-table-glyph-spelling.md](TD-0013-decisions-table-glyph-spelling.md): The substrate decisions table and register use APL glyph examples while the grammar and section 8 use canonical name spellings, so examples do not match the canon.
+- [TD-0014-installed-fpl-no-repl.md](TD-0014-installed-fpl-no-repl.md): an installed `fpl` could not open the REPL; the wheel lacked the seed it starts. Closed by 7320411.
+- [TD-0015-advance-imports-nagini-undeclared.md](TD-0015-advance-imports-nagini-undeclared.md): the packaged `fpl.advance` imports `nagini_contracts`, which neither the pyproject nor the flake names.

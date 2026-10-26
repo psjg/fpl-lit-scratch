@@ -86,6 +86,12 @@ Full rationale in `.agents/STACK.md`. In brief:
   dataclasses. A pyright error is a build failure.
 - **Grammar ambiguity is a bug:** the grammar loads with `ambiguity='explicit'` and a test
   asserts zero ambiguity over the corpus.
+- **Dependencies through Nix:** every dependency enters through the Nix flake, and nothing
+  reaches a network at build or test time. `flake.nix` builds the `fpl` package from nixpkgs
+  alone (`lib.pythonDeps`, `nix build .#fpl`), and `make nix-check` runs its REPL in the
+  sandbox. The `nix-deps` step of `make check` refuses a name `01-bootstrap/pyproject.toml`
+  declares that the flake does not provide, and deptry one the code imports undeclared. A new
+  dependency goes into both in the same change.
 - **Backend, later:** core IR → C → `clang` before anything LLVM. tree-sitter comes later and
   only for editor tooling, never as the semantic frontend.
 

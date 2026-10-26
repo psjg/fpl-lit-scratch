@@ -15,9 +15,10 @@
 #   make graph        the repository as one OKF bundle, as Turtle: build/okf.ttl
 #   make okf-check    the OKF gates over that graph (.harness/tools/okfgraph/README.md)
 #   make okf-check-tg the same OKF rules, judged by Typed Graph's checker, pinned
+#   make nix-check    the fpl package built in the Nix sandbox, and its REPL run there (nix flake check)
 .DEFAULT_GOAL := check
 LANES := fix quick check harden ready gates tools map venv pristine clean-noslop
-.PHONY: $(LANES) run repl tangle-fpl graph okf-check okf-check-tg
+.PHONY: $(LANES) run repl tangle-fpl graph okf-check okf-check-tg nix-check
 
 $(LANES):
 	@$(MAKE) --no-print-directory -C 01-bootstrap $@
@@ -67,3 +68,9 @@ okf-check:
 # dot-folders, so run it on a clean checkout.
 okf-check-tg:
 	@npm_config_yes=true npx @typedgraph/cli@0.6.0 okf check $(CURDIR)
+
+# The installed command, hermetic: flake.nix builds the wheel from nixpkgs alone and runs
+# `fpl repl` and `fpl --help` against it, with no network. Slower than a lane, so check does not
+# wait on it; CI and the full lane run it by name.
+nix-check:
+	nix flake check
