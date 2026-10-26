@@ -11,5 +11,5 @@
 - [TD-0008-pass-composition-opaque-closure.md](TD-0008-pass-composition-opaque-closure.md): `Pass.__rshift__` erases a chain's structure into a closure.
 - [TD-0009-seed-fon-braced-not-postfix.md](TD-0009-seed-fon-braced-not-postfix.md): the seed FON is braced, not the postfix stream FON is decided to be.
 - [TD-0010-click-undeclared.md](TD-0010-click-undeclared.md): the `fpl` CLI imports Click, but `01-bootstrap/pyproject.toml` does not declare it.
-- [TD-0011-installed-fpl-no-repl.md](TD-0011-installed-fpl-no-repl.md): an installed `fpl` cannot open the REPL; the wheel lacks the seed it starts from the checkout.
+- [TD-0011-installed-fpl-no-repl.md](TD-0011-installed-fpl-no-repl.md): an installed `fpl` could not open the REPL; the wheel lacked the seed it starts. Closed by 7320411.
 - [TD-0012-advance-imports-nagini-undeclared.md](TD-0012-advance-imports-nagini-undeclared.md): the packaged `fpl.advance` imports `nagini_contracts`, which neither the pyproject nor the flake names.

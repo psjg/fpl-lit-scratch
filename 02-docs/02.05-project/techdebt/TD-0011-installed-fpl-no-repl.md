@@ -3,14 +3,14 @@ type: Note
 title: The installed fpl cannot open the REPL
 description: "`fpl repl` and bare `fpl` start the seed REPL from `01-bootstrap/fpl/` by its place in the checkout; the wheel holds only `python/fpl`, so an installed `fpl` reports that it has no REPL."
 tags: [bootstrap, packaging]
-status: draft
+status: deprecated
 date: 2026-10-22
 found-in: [01-bootstrap/01.01-boundary/01.01.06-cli.md, 01-bootstrap/python/fpl/cli.py, 01-bootstrap/pyproject.toml, flake.nix]
 related:
   - ../adr/ADR-0006-one-fpl-executable.md
   - TD-0010-click-undeclared.md
   - TD-0009-seed-fon-braced-not-postfix.md
-closed-by:
+closed-by: 7320411
 ---
 
 [ADR-0006](../adr/ADR-0006-one-fpl-executable.md) makes bare `fpl` the interactive
@@ -75,3 +75,11 @@ nix develop -c sh -c 'uv build --offline --wheel --out-dir "$T/dist" 01-bootstra
 ```
 
 with `T` a scratch directory outside the checkout. Run on 2026-10-22 at d450bf3.
+
+## Closed
+
+Closed by 7320411: the CLI finds the seed in `fpl/_seed`, where the wheel puts it since
+7e7e306, and keeps its own path behind the seed's in the child. 4c8b078 builds the package
+in the Nix sandbox, and `checks.<system>.fpl-repl` (`make nix-check`) runs
+`echo '1 2 +' | fpl repl`, which prints `[ 1 2 + ]`, and `fpl --help`. The nix-deps step
+of `make check` (2d96bbd, d350904) holds the declared dependencies to the flake.
