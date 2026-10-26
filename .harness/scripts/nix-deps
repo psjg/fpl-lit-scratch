@@ -50,8 +50,8 @@ def requirement(spec: str) -> str:
     return canonical(found.group(1))
 
 
-def declared(pyproject: dict) -> dict[str, str]:
-    """Every name the project declares, mapped to its role."""
+def declared(pyproject: dict) -> set[tuple[str, str]]:
+    """Every name the project declares, with its role."""
     project = pyproject.get("project", {})
     runtime = list(project.get("dependencies", []))
     for extra in project.get("optional-dependencies", {}).values():
@@ -59,31 +59,34 @@ def declared(pyproject: dict) -> dict[str, str]:
     for group in pyproject.get("dependency-groups", {}).values():
         runtime += [spec for spec in group if isinstance(spec, str)]
     build = pyproject.get("build-system", {}).get("requires", [])
-    names = {requirement(spec): "build" for spec in build}
-    names.update({requirement(spec): "runtime" for spec in runtime})
-    return names
+    return {(requirement(spec), "build") for spec in build} | {
+        (requirement(spec), "runtime") for spec in runtime
+    }
 
 
 def problems(pyproject: dict, provided: Provided, where: str) -> list[str]:
-    """What keeps the declared and the provided names apart."""
+    """
+    What keeps the declared and the provided names apart. A name is
+    compared with its role, since a build requirement is not on the
+    path of the installed program.
+    """
     wanted = declared(pyproject)
     have = {
-        canonical(name): role
+        (canonical(name), role)
         for role, names in provided.items()
         for name in names
     }
     lines = [
-        f"dependency {name} is declared in {where} but not provided by"
-        f" flake.nix: add it to lib.pythonDeps.{role} in flake.nix"
-        for name, role in sorted(wanted.items())
-        if name not in have
+        f"dependency {name} is declared in {where} ({role}) but not"
+        f" provided by flake.nix: add it to lib.pythonDeps.{role}"
+        " in flake.nix"
+        for name, role in sorted(wanted - have)
     ]
     lines += [
-        f"dependency {name} is provided by flake.nix but not declared in"
-        f" {where}: declare it there, or drop it from"
+        f"dependency {name} is provided by flake.nix ({role}) but not"
+        f" declared in {where}: declare it there, or drop it from"
         f" lib.pythonDeps.{role} in flake.nix"
-        for name, role in sorted(have.items())
-        if name not in wanted
+        for name, role in sorted(have - wanted)
     ]
     return lines
 
@@ -169,6 +172,12 @@ CASES: list[tuple[str, str, Provided, str | None]] = [
         GOOD,
         HAVE | {"runtime": ["click", "lark", "yaml"]},
         "drop",
+    ),
+    (
+        "a runtime name the flake has as build only",
+        GOOD,
+        {"build": ["hatchling", "lark"], "runtime": ["click"]},
+        "lib.pythonDeps.runtime",
     ),
     ("names that differ in case", GOOD.replace("click", "Click"), HAVE, None),
 ]
