@@ -28,7 +28,9 @@ known_first_party = ["fpl"]
 
 [tool.deptry.per_rule_ignores]
 # The tools come from the harness environment, not from this project's dependencies.
-DEP001 = ["hypothesis", "pytest"]
+# nagini_contracts: fpl.advance, tangled from the Nagini page, imports it from .vendor/ and
+# nothing declares it (TD-0012).
+DEP001 = ["hypothesis", "pytest", "nagini_contracts"]
 # click is used by the tangled python/ tree, which the deptry scan excludes.
 DEP002 = ["click"]
 
