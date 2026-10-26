@@ -1,0 +1,207 @@
+#!/usr/bin/env python3
+"""
+.harness/scripts/nix-deps: a Python dependency enters through flake.nix.
+
+    .harness/scripts/nix-deps [--pyproject FILE] [--provided JSON]
+    .harness/scripts/nix-deps --self-test
+
+Every dependency enters through the Nix flake (AGENTS.md). The fpl
+package is built in the sandbox from nixpkgs alone, from the names in
+lib.pythonDeps of flake.nix. A name that 01-bootstrap/pyproject.toml
+declares (a runtime dependency, an optional one, a dependency group or
+a build-system requirement) and the flake does not list works in a uv
+venv and breaks the Nix build; a name the flake lists and nothing
+declares is drift the other way. This holds the two lists equal. That
+every third-party import of the packaged code is declared is deptry's
+half: the check lane runs it over python/ too.
+
+FILE is 01-bootstrap/pyproject.toml unless given. JSON is the output of
+`nix eval --json .#lib.pythonDeps`, read from the flake unless given.
+Exit 0: the lists agree. 1: they do not, or one could not be read.
+2: usage.
+"""
+
+from __future__ import annotations
+
+import json
+import re
+import subprocess
+import sys
+import tempfile
+import tomllib
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[2]
+DEFAULT = ROOT / "01-bootstrap" / "pyproject.toml"
+NAME = re.compile(r"^\s*([A-Za-z0-9][A-Za-z0-9._-]*)")
+Provided = dict[str, list[str]]
+
+
+def canonical(name: str) -> str:
+    """The PEP 503 form of a name, in which nixpkgs names compare."""
+    return re.sub(r"[-_.]+", "-", name).lower()
+
+
+def requirement(spec: str) -> str:
+    """The name in a PEP 508 requirement, without what follows it."""
+    found = NAME.match(spec)
+    if found is None:
+        raise ValueError(f"not a requirement: {spec!r}")
+    return canonical(found.group(1))
+
+
+def declared(pyproject: dict) -> dict[str, str]:
+    """Every name the project declares, mapped to its role."""
+    project = pyproject.get("project", {})
+    runtime = list(project.get("dependencies", []))
+    for extra in project.get("optional-dependencies", {}).values():
+        runtime += extra
+    for group in pyproject.get("dependency-groups", {}).values():
+        runtime += [spec for spec in group if isinstance(spec, str)]
+    build = pyproject.get("build-system", {}).get("requires", [])
+    names = {requirement(spec): "build" for spec in build}
+    names.update({requirement(spec): "runtime" for spec in runtime})
+    return names
+
+
+def problems(pyproject: dict, provided: Provided, where: str) -> list[str]:
+    """What keeps the declared and the provided names apart."""
+    wanted = declared(pyproject)
+    have = {
+        canonical(name): role
+        for role, names in provided.items()
+        for name in names
+    }
+    lines = [
+        f"dependency {name} is declared in {where} but not provided by"
+        f" flake.nix: add it to lib.pythonDeps.{role} in flake.nix"
+        for name, role in sorted(wanted.items())
+        if name not in have
+    ]
+    lines += [
+        f"dependency {name} is provided by flake.nix but not declared in"
+        f" {where}: declare it there, or drop it from"
+        f" lib.pythonDeps.{role} in flake.nix"
+        for name, role in sorted(have.items())
+        if name not in wanted
+    ]
+    return lines
+
+
+def flake() -> Provided:
+    """lib.pythonDeps, read from the flake beside this harness."""
+    done = subprocess.run(
+        ["nix", "eval", "--json", f"{ROOT}#lib.pythonDeps"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if done.returncode != 0:
+        raise OSError(done.stderr.strip() or "nix eval failed")
+    return json.loads(done.stdout)
+
+
+def compare(args: dict[str, str]) -> int:
+    """Compare the two lists; print each difference with its remedy."""
+    path = Path(args.get("--pyproject", DEFAULT))
+    try:
+        pyproject = tomllib.loads(path.read_text(encoding="utf-8"))
+        provided = (
+            json.loads(Path(args["--provided"]).read_text(encoding="utf-8"))
+            if "--provided" in args
+            else flake()
+        )
+        where = str(path.relative_to(ROOT) if ROOT in path.parents else path)
+        lines = problems(pyproject, provided, where)
+    except (OSError, ValueError) as e:
+        print(
+            f"nix-deps: cannot compare the dependencies: {e}", file=sys.stderr
+        )
+        print(
+            "    remedy: run it in the dev shell, where nix is"
+            " (.agents/DEVSHELL.md)",
+            file=sys.stderr,
+        )
+        return 1
+    for line in lines:
+        print(f"nix-deps: {line}", file=sys.stderr)
+    if lines:
+        print(
+            "    the rule: every dependency enters through the Nix flake"
+            " (AGENTS.md)",
+            file=sys.stderr,
+        )
+    return 1 if lines else 0
+
+
+def main(argv: list[str]) -> int:
+    if argv == ["--self-test"]:
+        return self_test()
+    args = dict(zip(argv[::2], argv[1::2], strict=False))
+    if len(argv) % 2 or set(args) - {"--pyproject", "--provided"}:
+        print(__doc__, file=sys.stderr)
+        return 2
+    return compare(args)
+
+
+# One pyproject and one provided set per case, and the word a refusal
+# must say; the first case is the control.
+GOOD = (
+    '[project]\ndependencies = ["lark>=1", "click"]\n'
+    '[build-system]\nrequires = ["hatchling"]\n'
+)
+HAVE = {"build": ["hatchling"], "runtime": ["click", "lark"]}
+OPTIONAL = '[project.optional-dependencies]\nx = ["PyYAML[c]"]\n'
+GROUP = '[dependency-groups]\ndev = ["rich"]\n'
+CASES: list[tuple[str, str, Provided, str | None]] = [
+    ("the lists agree", GOOD, HAVE, None),
+    (
+        "a runtime name the flake lacks",
+        GOOD,
+        HAVE | {"runtime": ["click"]},
+        "runtime",
+    ),
+    ("a build backend the flake lacks", GOOD, HAVE | {"build": []}, "build"),
+    ("an optional name the flake lacks", GOOD + OPTIONAL, HAVE, "pyyaml"),
+    ("a group name the flake lacks", GOOD + GROUP, HAVE, "rich"),
+    (
+        "a name nothing declares",
+        GOOD,
+        HAVE | {"runtime": ["click", "lark", "yaml"]},
+        "drop",
+    ),
+    ("names that differ in case", GOOD.replace("click", "Click"), HAVE, None),
+]
+
+
+def self_test() -> int:
+    failed = 0
+    with tempfile.TemporaryDirectory() as tmp:
+        for i, (what, text, provided, refused) in enumerate(CASES):
+            toml = Path(tmp) / f"case{i}.toml"
+            data = Path(tmp) / f"case{i}.json"
+            toml.write_text(text, encoding="utf-8")
+            data.write_text(json.dumps(provided), encoding="utf-8")
+            argv = ["--pyproject", str(toml), "--provided", str(data)]
+            run = subprocess.run(
+                [sys.executable, __file__, *argv],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            want = 0 if refused is None else 1
+            said = refused is None or refused in run.stderr
+            if run.returncode != want or not said:
+                failed += 1
+                print(
+                    f"nix-deps: {what}: exit {run.returncode}, want {want}",
+                    file=sys.stderr,
+                )
+                print(run.stderr, file=sys.stderr)
+    verdict = "FAILED" if failed else "ok"
+    print(f"nix-deps: self-test {verdict} ({failed} of {len(CASES)} cases)")
+    return 1 if failed else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))
