@@ -325,6 +325,79 @@
             exec "$top/.harness/scripts/publish.sh" "$@"
           '';
         };
+
+      # The Python names the fpl package is built from, one list per role, as nixpkgs spells
+      # them. The package below is built from exactly these, and the nix-deps gate
+      # (.harness/scripts/nix-deps, make check) holds 01-bootstrap/pyproject.toml to them:
+      # every dependency enters through this flake. `nix eval --json .#lib.pythonDeps`.
+      pythonDeps = {
+        build = [ "hatchling" ];
+        runtime = [
+          "click"
+          "icontract"
+          "lark"
+        ];
+      };
+
+      # The fpl package: the wheel of 01-bootstrap/pyproject.toml (the tangled tree, the seed
+      # inside as fpl/_seed), built by hatchling in the Nix sandbox from nixpkgs alone, so
+      # neither the build nor its checks reach a network. `nix build .#fpl`; `nix run .#fpl`.
+      fplPackage =
+        pkgs:
+        let
+          python = pkgs.python312.override {
+            packageOverrides = _final: prev: {
+              # icontract's checks pull deal, z3 and Django (measured 2026-10-16); the
+              # package needs the module only.
+              icontract = prev.icontract.overridePythonAttrs (_: {
+                doCheck = false;
+              });
+            };
+          };
+          from = map (name: python.pkgs.${name});
+          fs = nixpkgs.lib.fileset;
+        in
+        python.pkgs.buildPythonApplication {
+          pname = "fpl";
+          version = "0";
+          pyproject = true;
+          src = fs.toSource {
+            root = ./01-bootstrap;
+            fileset = fs.unions [
+              ./01-bootstrap/pyproject.toml
+              ./01-bootstrap/python/fpl
+              ./01-bootstrap/fpl
+            ];
+          };
+          build-system = from pythonDeps.build;
+          dependencies = from pythonDeps.runtime;
+          pythonImportsCheck = [ "fpl.cli" ];
+          meta = {
+            description = "FPL: the fpl command, its REPL, stages and runs";
+            mainProgram = "fpl";
+          };
+        };
+
+      # The installed command, run in the sandbox: the REPL on piped input, and --help.
+      fplCheck =
+        pkgs:
+        let
+          fpl = fplPackage pkgs;
+        in
+        pkgs.runCommand "fpl-repl" { } ''
+          export HOME="$TMPDIR"
+          cd "$TMPDIR"
+          got="$(echo '1 2 +' | ${fpl}/bin/fpl repl)"
+          if [ "$got" != "[ 1 2 + ]" ]; then
+            echo "fpl-repl: echo '1 2 +' | fpl repl printed '$got', not '[ 1 2 + ]'" >&2
+            exit 1
+          fi
+          ${fpl}/bin/fpl --help | grep -q '^  repl' || {
+            echo "fpl-repl: fpl --help does not list repl" >&2
+            exit 1
+          }
+          echo "$got" > "$out"
+        '';
     in
     {
       devShells = forAllSystems (
@@ -409,6 +482,16 @@
 
       # The line limits, one source (see `limits` above): `nix eval --json .#lib.limits`.
       lib.limits = limits;
+      lib.pythonDeps = pythonDeps;
+
+      packages = forAllSystems (pkgs: {
+        fpl = fplPackage pkgs;
+        default = fplPackage pkgs;
+      });
+
+      checks = forAllSystems (pkgs: {
+        fpl-repl = fplCheck pkgs;
+      });
 
       apps = forAllSystems (pkgs: {
         gen-config = {
