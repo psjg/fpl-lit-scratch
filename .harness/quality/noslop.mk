@@ -13,7 +13,8 @@
 #                 (make run)
 #   make harden   the long search: 20x the examples, CrossHair on every property and every
 #                 contract, mutants
-#   make ready    check + harden + gates + a known-vulnerability audit; before a PR leaves draft
+#   make ready    check + harden + gates + a known-vulnerability audit + nix flake check; before
+#                 a PR leaves draft
 #   make gates    proof that each check still bites: the harness's own lint, its self-tests,
 #                 and a bad example each check refuses; also that the files generated from
 #                 flake.nix's lib.limits are current. Also what the root runs, where there
@@ -124,6 +125,9 @@ rootrun:
 
 # deptry skips mutmut's copies and python/, the tangle output generated from the literate
 # sources (not hand-written code). A regex; the CLI flag overrides pyproject's extend_exclude.
+# python/ is what the wheel ships, so a second deptry run holds its imports to the declared
+# dependencies, and nix-deps holds those to what flake.nix provides (AGENTS.md): together, every
+# third-party import of the package enters through the flake.
 DEPTRY_EXCLUDE = mutants|(^|/)python/
 
 check: venv pristine config-fresh
@@ -145,6 +149,8 @@ check: venv pristine config-fresh
 	  echo "       from it, and deptry has no switch to look anyway; allow fpl/ and tests/ there" >&2; \
 	  exit 1; }
 	$(BIN)/deptry . --extend-exclude '$(DEPTRY_EXCLUDE)'
+	$(BIN)/deptry python
+	$(BIN)/python $(S)/nix-deps
 	$(BIN)/vulture fpl tests --min-confidence 60
 	$(BIN)/pylint --rcfile=/dev/null --persistent=n --score=n --disable=all --enable=duplicate-code \
 	  --min-similarity-lines=6 --ignore-imports=yes --ignore-signatures=yes fpl
@@ -162,9 +168,10 @@ ready: harden gates
 	@mkdir -p $(OUT)
 	uv export --project $(Q) --frozen --quiet > $(OUT)/requirements.txt
 	$(BIN)/pip-audit --progress-spinner off --requirement $(OUT)/requirements.txt --disable-pip
+	nix flake check $(ROOT)
 
 # The harness's own Python, judged by the same ruff it judges others with.
-HARNESS := $(addprefix $(S)/,crap props escapes mutants gates forward-only diagrams ruff-limits) \
+HARNESS := $(addprefix $(S)/,crap props escapes mutants gates forward-only diagrams ruff-limits nix-deps) \
            $(Q)/noslop_pytest.py
 
 # config-fresh is a prerequisite, as it is of check; .harness/scripts/gen-config-self-test.sh is the proof
@@ -179,6 +186,7 @@ gates: venv config-fresh
 	$(BIN)/python $(S)/mutants --self-test
 	$(BIN)/python $(S)/diagrams --self-test
 	$(BIN)/python $(S)/ruff-limits --self-test
+	$(BIN)/python $(S)/nix-deps --self-test
 	$(S)/leak-check.sh --self-test
 	$(S)/pre-push-self-test.sh
 	$(S)/boundary-self-test.sh
