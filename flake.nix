@@ -409,6 +409,32 @@
             echo "fpl-repl: fpl --help does not list repl" >&2
             exit 1
           }
+          # The session kernel: a piped input is a transcript, a later call finds the log,
+          # and the full-screen interface refuses a terminal that cannot draw.
+          export XDG_STATE_HOME="$TMPDIR/state"
+          export XDG_CONFIG_HOME="$TMPDIR/config"
+          export XDG_RUNTIME_DIR="$(mktemp -d)"
+          pty="$(echo '1 2 +' | ${fpl}/bin/fpl pty --session x)"
+          case "$pty" in
+            "1 2 +"$'\n'"|= [ 1 2 + ]"$'\n'";; HEAD 1 "*) ;;
+            *)
+              echo "fpl-repl: fpl pty printed '$pty'" >&2
+              exit 1
+              ;;
+          esac
+          echo '3' | ${fpl}/bin/fpl pty --session x --replay | grep -q '^|= \[ 1 2 + \]$' || {
+            echo "fpl-repl: fpl pty --replay did not replay the log" >&2
+            exit 1
+          }
+          ${fpl}/bin/fpl pty --session x --stop
+          refusal="$(TERM=dumb ${fpl}/bin/fpl tui </dev/null 2>&1 || true)"
+          case "$refusal" in
+            *"needs a terminal"*) ;;
+            *)
+              echo "fpl-repl: fpl tui did not refuse a dumb terminal: '$refusal'" >&2
+              exit 1
+              ;;
+          esac
           echo "$got" > "$out"
         '';
     in
