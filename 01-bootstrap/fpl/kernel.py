@@ -16,8 +16,10 @@ argv not taken.
 """
 
 import contextlib
+import fcntl
 import json
 import os
+import queue
 import re
 import select
 import socket
@@ -25,7 +27,7 @@ import sys
 import threading
 import time
 from argparse import ArgumentParser
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Generator, Mapping
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any, cast
@@ -39,6 +41,19 @@ RESULT = "|="
 A line that starts with this, then a space or the end of the line, is a
 result: written after the input that printed it, swallowed on the way
 in.
+"""
+WHO = {"model": "FPL_MODEL", "session": "FPL_SESSION_ID"}
+"""
+The fields of a feed's `who`, and the variables the REPL reads.
+"""
+PATIENCE = 2.0
+"""
+Seconds a closing connection waits for a client that does not read.
+"""
+BACKLOG = 64
+"""
+Messages a connection may have waiting to be written before a watcher
+that does not read is dropped.
 """
 NAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]*")
 Sender = Callable[[dict[str, Any]], None]
@@ -157,15 +172,12 @@ class Kernel:
         self.name = name
         self.log = log
         self.fuel = fuel
-        self.env = {
-            k: v
-            for k, v in env.items()
-            if k not in ("FPL_MODEL", "FPL_SESSION_ID")
-        }
+        self.env = {k: v for k, v in env.items() if k not in WHO.values()}
         self.clock = clock
         self.lock = threading.Lock()
         self.watchers: list[Sender] = []
         self.stopped = threading.Event()
+        self.stopper: int | None = None
         self.plain: dict[str, Callable[[], dict[str, Any]]] = {
             "hello": self.hello,
             "replay": self.replay,
@@ -191,11 +203,7 @@ class Kernel:
         who: Mapping[str, str] = request.get("who", {})
         env = {
             **self.env,
-            **{
-                f"FPL_{key.upper()}": value
-                for key, value in who.items()
-                if key in ("model", "session")
-            },
+            **{WHO[key]: value for key, value in who.items() if key in WHO},
         }
         with self.lock:
             turns = [self.turn(each, fuel, env) for each in split(text)]
@@ -206,7 +214,7 @@ class Kernel:
         for watcher in list(self.watchers):
             try:
                 watcher({"event": "feed", **answer})
-            except OSError:
+            except (OSError, queue.Full):
                 self.watchers.remove(watcher)
         return answer
 
@@ -220,9 +228,10 @@ class Kernel:
 
     def stop(self) -> dict[str, Any]:
         """
-        Ask the server to end; the answer still goes out first.
+        Ask the server to end: the thread of the connection that asked
+        sets `stopped` once its answer is out.
         """
-        self.stopped.set()
+        self.stopper = threading.get_ident()
         return {}
 
     def hello(self) -> dict[str, Any]:
@@ -277,6 +286,13 @@ def fuel_ok(request: Request) -> bool:
     )
 
 
+def failed(ident: object, error: object) -> dict[str, Any]:
+    """
+    The response to a request refused, which still names the request.
+    """
+    return {"id": ident, "status": "error", "error": str(error)}
+
+
 def response(kernel: Kernel, line: bytes, send: Sender) -> dict[str, Any]:
     """
     The response to one line: the request's `id` echoed, `status` done,
@@ -285,59 +301,111 @@ def response(kernel: Kernel, line: bytes, send: Sender) -> dict[str, Any]:
     """
     try:
         parsed: object = json.loads(line)
-        if not isinstance(parsed, dict):
-            raise ValueError("a request is a JSON object")
-        request = cast("Request", parsed)
-        return {
-            "id": request.get("id"),
-            **kernel.answer(request, send),
-            "status": "done",
-        }
     except ValueError as error:
-        return {"id": None, "status": "error", "error": str(error)}
+        return failed(None, error)
+    if not isinstance(parsed, dict):
+        return failed(None, "a request is a JSON object")
+    request = cast("Request", parsed)
+    try:
+        answer = kernel.answer(request, send)
+    except ValueError as error:
+        return failed(request.get("id"), error)
+    return {"id": request.get("id"), **answer, "status": "done"}
+
+
+class Outbox:
+    """
+    The messages to one client, written by a thread of its own from a
+    bounded queue, so that a client that stops reading holds up only
+    itself: `push` never waits, and at the bound it cuts the connection
+    and raises queue.Full.
+    """
+
+    def __init__(self, conn: socket.socket) -> None:
+        self.conn = conn
+        self.queue: queue.Queue[dict[str, Any] | None] = queue.Queue(BACKLOG)
+        self.dead = threading.Event()
+        self.thread = threading.Thread(target=self.write, daemon=True)
+        self.thread.start()
+
+    def cut(self) -> None:
+        """
+        Cut the connection, which ends the threads waiting on it.
+        """
+        with contextlib.suppress(OSError):
+            self.conn.shutdown(socket.SHUT_RDWR)
+
+    def push(self, message: dict[str, Any]) -> None:
+        """
+        Queue a message; if the client is that far behind, cut the
+        connection, so its threads end, and raise queue.Full.
+        """
+        try:
+            self.queue.put_nowait(message)
+        except queue.Full:
+            self.cut()
+            raise
+
+    def write(self) -> None:
+        """
+        Write the queue until the end mark; a client gone ends it.
+        """
+        try:
+            with self.conn.makefile("wb") as writer:
+                while (message := self.queue.get()) is not None:
+                    writer.write(json.dumps(message).encode() + b"\n")
+                    writer.flush()
+        except OSError:
+            self.dead.set()
+
+    def say(self, message: dict[str, Any] | None) -> None:
+        """
+        Queue a message, waiting for room, unless the writer is gone.
+        """
+        while not self.dead.is_set():
+            try:
+                self.queue.put(message, timeout=0.2)
+                return
+            except queue.Full:
+                continue
+
+    def close(self) -> None:
+        """
+        End the queue and give the writer a moment to empty it; a
+        client that does not read is cut off.
+        """
+        try:
+            self.queue.put(None, timeout=PATIENCE)
+        except queue.Full:
+            self.cut()
+        self.thread.join(PATIENCE)
 
 
 def connection(kernel: Kernel, conn: socket.socket) -> None:
     """
-    One connection: a response per line until the client goes. Writes
-    go under a lock of the connection's own, since a watcher is written
-    to from another connection's thread.
+    One connection: a response per line until the client goes, or the
+    kernel is asked to stop, which is set once the answer is written.
     """
-    mine = threading.Lock()
-    reader, writer = conn.makefile("rb"), conn.makefile("wb")
-
-    def send(message: dict[str, Any]) -> None:
-        data = json.dumps(message).encode() + b"\n"
-        with mine:
-            writer.write(data)
-            writer.flush()
-
-    with conn, reader, writer:
+    out = Outbox(conn)
+    with conn, conn.makefile("rb") as reader:
         try:
             for line in reader:
-                send(response(kernel, line, send))
+                out.say(response(kernel, line, out.push))
+                if kernel.stopper:
+                    break
         finally:
             with contextlib.suppress(ValueError):
-                kernel.watchers.remove(send)
-
-
-def alive(path: Path) -> bool:
-    """
-    Something accepts connections on the socket at path.
-    """
-    with socket.socket(socket.AF_UNIX) as probe:
-        try:
-            probe.connect(str(path))
-        except OSError:
-            return False
-    return True
+                kernel.watchers.remove(out.push)
+            out.close()
+            if kernel.stopper == threading.get_ident():
+                kernel.stopped.set()
 
 
 def serve(kernel: Kernel, path: Path) -> None:
     """
     Serve the kernel on a socket at path (mode 0600, in a directory
     only the user may enter), a thread per connection, until a client
-    stops it. A socket nobody answers on is a dead kernel's, and
+    stops it. A socket file found there is a dead kernel's, and
     replaced.
     """
     path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
@@ -371,13 +439,35 @@ def names(argv: list[str]) -> tuple[str, Path, Path, int]:
     return args.name, args.log, args.socket, args.fuel
 
 
+@contextlib.contextmanager
+def lifetime(path: Path) -> Generator[bool]:
+    """
+    The right to be the kernel behind the socket at path: an exclusive
+    lock on `<path>.lock`, held for the block and dropped with the
+    process, so a kernel that died leaves nothing to clear. False where
+    another kernel holds it.
+    """
+    path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+    fd = os.open(f"{path}.lock", os.O_WRONLY | os.O_CREAT, 0o600)
+    try:
+        try:
+            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            yield False
+        else:
+            yield True
+    finally:
+        os.close(fd)
+
+
 def main(argv: list[str], env: Mapping[str, str] = os.environ) -> int:
     """
     Serve the named session, unless another kernel already does.
     """
     name, log, path, fuel = names(argv)
-    if not alive(path):
-        serve(Kernel(name, log, fuel, env), path)
+    with lifetime(path) as mine:
+        if mine:
+            serve(Kernel(name, log, fuel, env), path)
     return 0
 
 

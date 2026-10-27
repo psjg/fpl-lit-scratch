@@ -41,13 +41,17 @@ async def main():
     conn = attach("h", os.environ)
     app = Tui(conn, "h", os.environ)
     async with app.run_test(size=(100, 24)) as pilot:
+        await app.workers.wait_for_complete()
         await pilot.press(*"1 2 +")
         await pilot.press("shift+enter")
+        await app.workers.wait_for_complete()
         await pilot.pause()
         print(screen(app))
         print("EDITOR", repr(app.query_one("#editor").text))
         await pilot.press("shift+enter")
+        await app.workers.wait_for_complete()
         await pilot.press("ctrl+r")
+        await app.workers.wait_for_complete()
         await pilot.pause()
         print("EDITOR", repr(app.query_one("#editor").text))
     conn.ask("stop")
@@ -76,6 +80,9 @@ def test_the_cell_and_its_results_are_plain_functions() -> None:
         "from fpl.tui import cell, evaluated\n"
         "lines = ['a', 'b', '|= 1', '|=', '', 'c', '|= 2']\n"
         "print(*(cell(lines, row) for row in (1, 3, 4, 5)))\n"
+        "again = ['1', '|= 1', '2', '|= 2']\n"
+        "print(*(cell(again, row) for row in range(4)), cell(['|= x'], 0),\n"
+        "      cell(['1', '', '|= y'], 2))\n"
         "turn = [{'out': 'x\\n\\ny\\n'}]\n"
         "print(evaluated('\\n'.join(lines), 0, turn).split('\\n'))\n"
         "print(evaluated('q', 0, [{'out': ''}]) == 'q')\n"
@@ -84,9 +91,10 @@ def test_the_cell_and_its_results_are_plain_functions() -> None:
     assert done.returncode == 0, done.stderr.decode()
     got = done.stdout.decode().splitlines()
     assert got[0] == "(0, 2, 4) (0, 2, 4) None (5, 6, 7)"
-    assert got[1] == "['a', 'b', '|= x', '|=', '|= y', '', 'c', '|= 2']"
-    assert got[2] == "True"
-    assert got[3] == "|= z"
+    assert got[1] == "(0, 1, 2) (0, 1, 2) (2, 3, 4) (2, 3, 4) None None"
+    assert got[2] == "['a', 'b', '|= x', '|=', '|= y', '', 'c', '|= 2']"
+    assert got[3] == "True"
+    assert got[4] == "|= z"
 
 
 def test_shift_enter_writes_the_result_under_the_cell(

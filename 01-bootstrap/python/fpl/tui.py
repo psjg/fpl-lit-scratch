@@ -32,7 +32,9 @@ The full-screen interface of a session kernel.
 """
 
 import sys
+import threading
 from collections.abc import Mapping
+from functools import partial
 from typing import Any
 
 from textual.app import App, ComposeResult
@@ -54,16 +56,22 @@ def is_result(line: str) -> bool:
 
 def cell(lines: list[str], row: int) -> tuple[int, int, int] | None:
     """
-    The cell at `row`: the lines of its block up to a blank line, as
-    (start, end, stop): the input is lines[start:end], the results of an
-    earlier evaluation lines[end:stop]. None on a blank line.
+    The cell at `row`: the input lines of its block, up to a blank line
+    or the results of an earlier input, as (start, end, stop): the
+    input is lines[start:end], the results of its earlier evaluation
+    lines[end:stop]. On a result line the cell is the input above it.
+    None on a blank line, and on results with no input above.
     """
     if not lines[row].strip():
         return None
-    start = row
-    while start > 0 and lines[start - 1].strip():
+    top = row
+    while top > 0 and is_result(lines[top]):
+        top -= 1
+    if not lines[top].strip() or is_result(lines[top]):
+        return None
+    start, end = top, top + 1
+    while start > 0 and lines[start - 1].strip() and not is_result(lines[start - 1]):
         start -= 1
-    end = start
     while end < len(lines) and lines[end].strip() and not is_result(lines[end]):
         end += 1
     stop = end
@@ -130,6 +138,7 @@ class Tui(App[None]):
         self.conn = conn
         self.session = name
         self.env = env
+        self.busy = threading.Lock()
 
     def compose(self) -> ComposeResult:
         """
@@ -151,20 +160,16 @@ class Tui(App[None]):
         self.query_one("#editor").focus()
         self.action_replay()
 
-    def shown(self, text: str) -> None:
+    def shown(self, text: str, line: str, *, clear: bool = False) -> None:
         """
-        Write the transcript text into its pane.
-        """
-        self.query_one("#transcript", RichLog).write(text.rstrip("\n"))
-
-    def action_replay(self) -> None:
-        """
-        Reload the transcript from the kernel's log.
+        Write text into the transcript pane, after clearing it if asked,
+        and the status bar. Runs on the interface's thread.
         """
         pane = self.query_one("#transcript", RichLog)
-        pane.clear()
-        self.shown(self.conn.ask("replay")["transcript"])
-        self.query_one("#status", Static).update(self.line([]))
+        if clear:
+            pane.clear()
+        pane.write(text.rstrip("\n"))
+        self.query_one("#status", Static).update(line)
 
     def line(self, turns: list[dict[str, Any]]) -> str:
         """
@@ -173,10 +178,26 @@ class Tui(App[None]):
         hello = self.conn.ask("hello")
         return status(self.session, hello["head"], hello["fuel"], turns)
 
+    def action_replay(self) -> None:
+        """
+        Reload the transcript from the kernel's log, off the interface's
+        thread: a kernel that is busy leaves the interface alive.
+        """
+        self.run_worker(self.reload, thread=True, group="kernel")
+
+    def reload(self) -> None:
+        """
+        The worker of `action_replay`. A kernel operation and the update
+        it causes are one step under `busy`, so they cannot interleave.
+        """
+        with self.busy:
+            text = self.conn.ask("replay")["transcript"]
+            self.call_from_thread(self.shown, text, self.line([]), clear=True)
+
     def action_evaluate(self) -> None:
         """
-        Feed the cell under the cursor to the kernel; its results go
-        under it, and the whole of what happened into the transcript.
+        Feed the cell under the cursor to the kernel, off the
+        interface's thread; see `evaluate`.
         """
         editor = self.query_one("#editor", TextArea)
         row, col = editor.cursor_location
@@ -186,11 +207,38 @@ class Tui(App[None]):
             self.query_one("#status", Static).update(" nothing to evaluate here")
             return
         source = "\n".join(lines[found[0] : found[1]]) + "\n"
-        got = self.conn.ask("feed", text=source, who=who(self.env))
-        editor.load_text(evaluated(editor.text, row, got["turns"]))
-        editor.cursor_location = (row, col)
-        self.shown(got["transcript"])
-        self.query_one("#status", Static).update(self.line(got["turns"]))
+        self.run_worker(
+            partial(self.evaluate, source, row, col), thread=True, group="kernel"
+        )
+
+    def evaluate(self, source: str, row: int, col: int) -> None:
+        """
+        The worker of `action_evaluate`: ask, then write the results
+        under the cell, if the buffer still holds that cell, and the
+        whole of what happened into the transcript.
+        """
+        with self.busy:
+            got = self.conn.ask("feed", text=source, who=who(self.env))
+            self.call_from_thread(
+                self.applied, got, self.line(got["turns"]), source, row, col
+            )
+
+    def applied(
+        self, got: dict[str, Any], line: str, source: str, row: int, col: int
+    ) -> None:
+        """
+        Write the results under the cell at `row` and the transcript;
+        a buffer that was edited meanwhile is left alone and says so.
+        """
+        editor = self.query_one("#editor", TextArea)
+        lines = editor.text.split("\n")
+        found = cell(lines, row) if row < len(lines) else None
+        if found and "\n".join(lines[found[0] : found[1]]) + "\n" == source:
+            editor.load_text(evaluated(editor.text, row, got["turns"]))
+            editor.cursor_location = (row, col)
+        else:
+            line += "  (the text changed meanwhile: results not written)"
+        self.shown(got["transcript"], line)
 
 
 def run(name: str, env: Mapping[str, str]) -> int:

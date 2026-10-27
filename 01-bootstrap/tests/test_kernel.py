@@ -8,6 +8,7 @@ import json
 import socket
 import tempfile
 import threading
+import time
 from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
@@ -19,6 +20,7 @@ from hypothesis import strategies as st
 
 from fpl.kernel import (
     Kernel,
+    Outbox,
     Turn,
     main,
     names,
@@ -176,48 +178,109 @@ def test_refusals_are_errors_not_crashes() -> None:
         c.close()
 
 
-def test_stop_ends_the_kernel_and_main_yields_to_a_live_one() -> None:
-    with running() as (_kernel, path, work):
-        assert (
-            main(
-                [
-                    "--name",
-                    "t",
-                    "--log",
-                    str(work / "t.log"),
-                    "--socket",
-                    str(path),
-                ]
-            )
-            == 0
-        )
-        Client(path).ask(op="stop")
+def test_stop_is_answered_and_main_yields_to_a_live_kernel() -> None:
     with tempfile.TemporaryDirectory(dir="/tmp") as root:
         sock = Path(root) / "k.sock"
         sock.write_text("stale")
-        done: list[int] = []
         env = {"FPL_LOG_KEY": f"{root}/key"}
-        thread = threading.Thread(
-            target=lambda: done.append(
-                main(
-                    [
-                        "--name",
-                        "k",
-                        "--log",
-                        f"{root}/k.log",
-                        "--socket",
-                        str(sock),
-                    ],
-                    env,
-                )
-            )
-        )
+        argv = ["--name", "k", "--log", f"{root}/k.log", "--socket", str(sock)]
+        done: list[int] = []
+        thread = threading.Thread(target=lambda: done.append(main(argv, env)))
         thread.start()
         while not _live(sock):
             thread.join(0.01)
-        Client(sock).ask(op="stop")
+        assert main(argv, env) == 0
+        assert _live(sock)
+        assert Client(sock).ask(op="stop")["status"] == "done"
         thread.join()
         assert done == [0]
+        assert not sock.exists()
+
+
+def test_a_refusal_names_its_request() -> None:
+    with running() as (_kernel, path, _work):
+        c = Client(path)
+        huge = c.ask(op="feed", text="1", fuel=2**64, id=5)
+        assert (huge["id"], huge["status"]) == (5, "error")
+        c.close()
+
+
+def test_a_feed_is_recorded_under_the_client_that_made_it() -> None:
+    with running() as (kernel, path, _work):
+        c = Client(path)
+        c.ask(op="feed", text="1\n", who={"model": "m", "session": "s"})
+        event = load(kernel.log, keyed(kernel.env)).events[0]
+        assert (event.who, event.model, event.session) == ("agent", "m", "s")
+        c.close()
+
+
+def test_a_watcher_that_never_reads_is_dropped_not_waited_for(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr("fpl.kernel.BACKLOG", 1)
+    with running() as (kernel, path, _work):
+        idle, doer = Client(path), Client(path)
+        doer.sock.settimeout(60)
+        idle.ask(op="watch")
+        for _ in range(12):
+            assert doer.ask(op="feed", text="a" * 400_000)["status"] == "done"
+            if not kernel.watchers:
+                break
+        assert kernel.watchers == []
+        idle.close()
+        doer.close()
+
+
+def test_saying_waits_for_room_and_gives_up_on_a_gone_client(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr("fpl.kernel.BACKLOG", 1)
+    ours, theirs = socket.socketpair()
+    out = Outbox(ours)
+    big = {"x": "y" * 4_000_000}
+
+    def say() -> None:
+        for _ in range(4):
+            out.say(big)
+
+    saying = threading.Thread(target=say)
+    saying.start()
+    time.sleep(0.6)
+    assert saying.is_alive()
+    theirs.close()
+    saying.join(20)
+    assert not saying.is_alive()
+    out.close()
+    ours.close()
+
+
+def test_closing_cuts_off_a_client_that_does_not_read(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr("fpl.kernel.BACKLOG", 1)
+    monkeypatch.setattr("fpl.kernel.PATIENCE", 0.2)
+    ours, theirs = socket.socketpair()
+    out = Outbox(ours)
+    big = {"x": "y" * 4_000_000}
+    out.push(big)
+    time.sleep(0.3)
+    out.push(big)
+    out.close()
+    assert not out.thread.is_alive()
+    ours.close()
+    theirs.close()
+
+
+def test_a_client_that_leaves_before_its_answer_costs_nothing() -> None:
+    with running() as (_kernel, path, _work):
+        gone = Client(path)
+        request = json.dumps({"op": "feed", "text": "1\n", "id": 1})
+        gone.sock.sendall(request.encode() + b"\n")
+        gone.close()
+        c = Client(path)
+        assert c.ask(op="hello")["status"] == "done"
+        time.sleep(0.3)
+        c.close()
 
 
 def _live(path: Path) -> bool:
