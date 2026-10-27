@@ -11,6 +11,8 @@ dependencies = ["lark", "icontract", "click"]
 # The language server (ide/lsp.py) is optional: the CLI does not import it.
 [project.optional-dependencies]
 ide = ["pygls", "lsprotocol"]
+# The full-screen interface, `fpl tui` (ADR-0006): imported by that command alone.
+tui = ["textual"]
 # An extra, not a dependency group: deptry reads a group as dev-only (DEP004) and the ide/
 # tests import pytest from the scanned tree.
 test = ["pytest"]
@@ -39,9 +41,9 @@ known_first_party = ["fpl"]
 # nothing declares it (TD-0015).
 DEP001 = ["hypothesis", "nagini_contracts"]
 # click is used by the tangled python/ tree, which the deptry scan excludes.
-# pygls, lsprotocol and pytest are the extras ide and test: ide/ imports them, python/ never does,
+# pygls, lsprotocol and pytest are the extras ide and test, textual the extra tui: ide/ imports them, python/ never does,
 # and the second scan (deptry python) sees only python/.
-DEP002 = ["click", "pygls", "lsprotocol", "pytest"]
+DEP002 = ["click", "pygls", "lsprotocol", "pytest", "textual"]
 
 [tool.mutmut]
 source_paths = ["fpl/"]
