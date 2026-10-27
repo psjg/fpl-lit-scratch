@@ -78,10 +78,11 @@ FON is the serialisation language; the representations are the schemas carried i
 
 ## Consequences
 
-- The tree holds this for `source`, `lex` and `render`: `fonify_tokens` and `defonify_tokens`
-  in `01.01.03-pipe.md` round-trip a token stream. After `parse` the filters still send a
-  FON string of rendered source, not `FON<Syntax>`
-  ([TD-0006](../techdebt/TD-0006-pipe-reparses-rendered-text.md)).
+- The tree holds this for every pass: a filter reads `FON<A>` through the codec of its
+  `source` and writes `FON<B>` through that of its `target` (`Codec.defonify` and
+  `Codec.fonify` in `01-bootstrap/python/fpl/codec.py`, wired in `fpl/pipe/__init__.py`), for
+  Tokens, Syntax, Core and Stacks alike, and an `Error` document carries a raised `FplError`
+  ([TD-0006](../techdebt/TD-0006-pipe-reparses-rendered-text.md), deprecated: resolved).
 - Canonical `written()` forms and `&multihash` content references exist in the FON codec.
   The chain canonical FON, bytes, hash, identity is not yet stated as a rule.
 - Schema-over-FON exists in fact (the token document is a FON `Dict`), but no page states

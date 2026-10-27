@@ -72,7 +72,7 @@ process the values are ABTs and FON is only the wire.
 FPL's native program representation is the ABT. FON is a restricted, inert subset of FPL
 that writes FPL objects out and reads them back. It is a materialisation, not the
 representation itself. Like FPL, it is postfix: a stream of objects and constructors that
-decodes left to right on a stack (`1 2 Add`), lexically ASCII.
+decodes left to right on a stack (`1 2 Add/2`, the constructor naming its arity), lexically ASCII.
 
 ## Consequences
 
@@ -80,11 +80,11 @@ decodes left to right on a stack (`1 2 Add`), lexically ASCII.
   language), FON (the textual materialisation), and a possible later packed or binary FON
   carrying the same abstract value. Only the first split is written down today, in
   `01-bootstrap/index.md`.
-- The seed FON in `01.01.02-fon.md` is a braced data profile (`⟨⟩ {} () []`) read by a Lark
-  LALR grammar, not a postfix stream decoded on a stack. The page calls it "the seed's FON
-  reader and writer" but does not say whether the braced form is the eventual FON. Until
-  that is settled, the braced form should not be treated as normative
-  ([TD-0009](../techdebt/TD-0009-seed-fon-braced-not-postfix.md)).
+- The seed FON in `01.01.02-fon.md` is the postfix stream this decision describes: the reader
+  and writer in `01-bootstrap/python/fpl/fon/__init__.py` decode tokens left to right on a
+  stack, a literal pushes a value and a constructor `name/arity` pops its fields and pushes
+  what it builds. There is no braced FON; a brace or bracket outside a string is refused
+  ([TD-0009](../techdebt/TD-0009-seed-fon-braced-not-postfix.md), deprecated: resolved).
 - Binding-aware ABTs (hygiene, alpha-equivalence and substitution in the representation) are
   the intent; the walker's AST in `01-bootstrap/python/fpl/ast_surface.py` carries spans but
   no binding structure yet.

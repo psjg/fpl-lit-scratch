@@ -63,11 +63,9 @@ constraint on it.
 
 ## Consequences
 
-- The tree uses Click: `01-bootstrap/python/fpl/__main__.py` is a `click.group` and adds one
-  command per stage with `add_command`. Typer was suggested as the first try; Click is the
+- The tree uses Click: `01-bootstrap/python/fpl/cli.py` is a `click.group` and adds one
+  command per stage with `add_command`; `__main__.py` only calls its `dispatch`. Typer was suggested as the first try; Click is the
   better fit once commands are generated from `Pass` metadata, which is not done yet.
-- Click is provided by Nix only inside the `fpl-marimo` environment (`ps.click` in
-  `flake.nix`); `01-bootstrap/pyproject.toml` lists only `lark` and `icontract`, so an install
-  from the package metadata would lack it. The deptry gate excludes the tangled `python/`
-  tree, so it does not flag this. Adding `click` is a policy change to `pyproject.toml`
-  (`.agents/QUALITY.md`); see [TD-0010](../techdebt/TD-0010-click-undeclared.md).
+- Click is declared: `01-bootstrap/pyproject.toml` lists `lark`, `icontract` and `click`, and
+  `flake.nix` provides it, so an install from the package metadata has it
+  ([TD-0010](../techdebt/TD-0010-click-undeclared.md), deprecated: resolved).

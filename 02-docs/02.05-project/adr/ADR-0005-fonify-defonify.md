@@ -69,13 +69,13 @@ inverse. The stdio wrapper is `defonify >> stage >> fonify`.
 
 ## Consequences
 
-- The tree uses the names: `fonify_text`, `defonify_text`, `fonify_tokens` and
-  `defonify_tokens` in `01.01.03-pipe.md`, whose description reads
-  "defonify >> stage >> fonify, except at the two ends".
-- The finer split (`to_fon` / `from_fon` for object to FON value, `encode` / `decode` for
-  FON value to bytes) is not made. The FON module exposes `read` and `write` for text. If the
-  materialisation and transport levels get their own code, they can take those names without
-  changing this decision.
-- `stdio = Pass("stdio", lambda stage: stage)` in the pipe page is an identity placeholder;
-  the boundary logic lives in the stage-aware `_run`. The formula is not yet one generic,
-  type-driven wrapper ([TD-0006](../techdebt/TD-0006-pipe-reparses-rendered-text.md)).
+- The tree uses the names on `Codec` in `01-bootstrap/python/fpl/codec.py`:
+  `Codec.fonify` (value to FON bytes) and `Codec.defonify` (bytes back to the value), one
+  codec per representation (`SOURCE`, `TOKENS`, `SYNTAX`, `CORE`, `STACKS`, `ERROR`).
+- The finer split exists inside the codec: `to_fon` / `from_fon` take an object to a FON value
+  and back, and `fon.write` / `fon.read` carry the value to text and back; `Codec` adds the
+  document tag and the byte encoding. No materialisation or transport level needs other names.
+- The formula is one generic wrapper over a `Stage`: `run_filter` in
+  `01-bootstrap/python/fpl/pipe/__init__.py` picks the codecs from the stage's `source` and
+  `target`, and names no stage ([TD-0006](../techdebt/TD-0006-pipe-reparses-rendered-text.md),
+  deprecated: resolved).

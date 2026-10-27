@@ -100,10 +100,12 @@ an executor only picks one. The meaning of a program does not depend on the exec
 - The shell pipeline of [ADR-0001](ADR-0001-passes-are-pipeable-filters.md) stays, as the
   linear projection of the graph; graphs that branch are the job of an executor with a
   coordinator, not of `tee` and FIFOs.
-- The tree contradicts this today: `Pass.__rshift__` in `01-bootstrap/python/fpl/arrow.py`
-  returns `Pass(f"{self.name}>>{nxt.name}", lambda value: nxt(self(value)))`, so the
-  structure of a chain survives only as a name string, and `01-bootstrap/stamp.py` emits the
-  same code into the pages ([TD-0008](../techdebt/TD-0008-pass-composition-opaque-closure.md)).
+- The tree follows this for composition: `>>` in `01-bootstrap/python/fpl/arrow.py` builds a
+  `PassCompose`, a flat tuple of stages that refuses a chain whose representations do not
+  meet, so the structure of a chain is data, not a name string over an opaque lambda; calling
+  it runs the stages directly, and `01-bootstrap/stamp.py` emits the same code into the pages
+  ([TD-0008](../techdebt/TD-0008-pass-composition-opaque-closure.md), deprecated: resolved).
+  The graph that may grow while it runs is still not built.
 - Only one interpreter exists: a direct in-process call (`01.04.02-run.md`); the shell
   filters dispatch on stage names, not on a graph.
 - Executors can be tested against each other: a pass run natively must equal the same pass
