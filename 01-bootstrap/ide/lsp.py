@@ -71,7 +71,7 @@ def semantic(
     Every word of the document, classified.
     """
     text = ls.workspace.get_text_document(params.text_document.uri).source
-    return types.SemanticTokens(data=analysis.encode(units))
+    return types.SemanticTokens(data=analysis.lsp_data(text))
 
 
 if __name__ == "__main__":
