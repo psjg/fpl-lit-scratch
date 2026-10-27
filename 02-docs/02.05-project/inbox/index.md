@@ -48,3 +48,10 @@ Tick a box when you have answered; comment under the line.
 - [ ] [DI-0044 BQNPAD as the model for the IDE and REPL](DI-0044-bqnpad-as-model-for-ide-repl.md) — instant eval, Shift-Enter and indented results, combined with the round-trip transcript and judgement lines
 - [ ] [DI-0045 The editor session and the REPL session collapse into one](DI-0045-editor-and-repl-session-collapse.md) — compose an FPL program at a REPL like an instrument, as in Coq or Jupyter
 - [ ] [DI-0046 The session is a stream with two heads](DI-0046-session-is-a-stream-with-two-heads.md) — --at reads, --head writes, one hashed log; REPL commands as words
+- [ ] [DI-0047 The whiteboard test as the readability measure](DI-0047-whiteboard-test-for-readability.md) — can a third programmer explain the code and whiteboard it after reading it once
+- [ ] [DI-0048 Terseness as the anti-slop strategy](DI-0048-terseness-as-unslop-strategy.md) — optimise the natural language for terseness and succinctness to remove slop
+- [ ] [DI-0049 Clickable code references and foldable elisions in rendered pages](DI-0049-clickable-references-foldable-elisions.md) — a reference like (S26) jumps to its chunk, a [ ... ] cut unfolds in place, a code reference becomes an Emacs-style link
+- [ ] [DI-0050 An in-place doctest that demonstrates a prose claim](DI-0050-inplace-doctest-for-prose-claims.md) — a doctest next to the sentence, showing that the claim holds (here: that nothing is fused)
+- [ ] [DI-0051 Finer-grained FplError subclasses](DI-0051-finer-grained-fplerror-subclasses.md) — subclass FplError into more specific errors
+- [ ] [DI-0052 fpl fmt from the pre-lexer](DI-0052-fpl-fmt-from-the-pre-lexer.md) — whether the pre-lexer leads back to an fpl fmt command
+- [ ] [DI-0053 Relations between prose blocks and code chunks in the graph](DI-0053-prose-code-relations-in-the-graph.md) — store which prose block explains which code chunk as semantic relations in the graph (he suspects over-engineering)
