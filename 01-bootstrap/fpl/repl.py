@@ -161,7 +161,7 @@ def provenance(env: Mapping[str, str]) -> tuple[Who, str, str]:
 
 
 @dataclass(frozen=True)
-class _Said:
+class Said:
     """
     What a call prints, and its exit status. `entered` is set when the
     call ran `enter`; `spent` is the input's own steps when it did.
@@ -183,7 +183,7 @@ class _Change:
 
     event: Event
     bodies: Mapping[Multihash, bytes]
-    said: _Said
+    said: Said
 
 
 def _parsed(text: str) -> Program | None:
@@ -222,7 +222,7 @@ def _entered(
     return _Change(
         outcome.event,
         outcome.bodies,
-        _Said(
+        Said(
             shown + outcome.out,
             outcome.notes,
             code,
@@ -239,7 +239,7 @@ def _rewound(
     A rewind of the head to the event named.
     """
     return _Change(
-        rewind(log, resolve(log, call.value), context), {}, _Said("", (), 0)
+        rewind(log, resolve(log, call.value), context), {}, Said("", (), 0)
     )
 
 
@@ -252,7 +252,7 @@ def _seq(
     return seqs[ids[0]] if ids else none
 
 
-def _listed(log: Log, _at: Event | None) -> _Said:
+def _listed(log: Log, _at: Event | None) -> Said:
     """
     A line an event: seq, kind, status, the seq of its dep or 0, of its
     link or -, id.
@@ -264,17 +264,17 @@ def _listed(log: Log, _at: Event | None) -> _Said:
         f" ${e.ident.spelled()}\n"
         for e in log.events
     )
-    return _Said("".join(rows), (), 0)
+    return Said("".join(rows), (), 0)
 
 
-def _shown(log: Log, at: Event | None) -> _Said:
+def _shown(log: Log, at: Event | None) -> Said:
     """
     The program at `at`: its accepted inputs, joined.
     """
-    return _Said("".join(part.text for part in program(log, at)), (), 0)
+    return Said("".join(part.text for part in program(log, at)), (), 0)
 
 
-READERS: dict[str, Callable[[Log, Event | None], _Said]] = {
+READERS: dict[str, Callable[[Log, Event | None], Said]] = {
     "log": _listed,
     "show": _shown,
 }
@@ -297,7 +297,7 @@ def _changed(
     return WRITERS[call.action](call, log, context, at)
 
 
-def _read(call: _Call, log: Log, env: Mapping[str, str]) -> _Said:
+def _read(call: _Call, log: Log, env: Mapping[str, str]) -> Said:
     """
     A call that appends nothing: a reader, or an input evaluated as of
     --at, or at the head of a log held in memory.
@@ -318,7 +318,7 @@ def _reads(call: _Call) -> bool:
 
 def _kept(
     call: _Call, env: Mapping[str, str], memory: Log
-) -> tuple[_Said, Log]:
+) -> tuple[Said, Log]:
     """
     The call on a log held in memory; an append grows it and names no
     head.
@@ -331,7 +331,7 @@ def _kept(
 
 def _said(
     call: _Call, env: Mapping[str, str], memory: Log
-) -> tuple[_Said, Log]:
+) -> tuple[Said, Log]:
     """
     The call carried out, and the log as it stands after it. An append
     loads, checks and writes under the lock, and names the new head
@@ -349,6 +349,21 @@ def _said(
         log = write(call.session, key, log, change.event, change.bodies)
     head = f"HEAD {change.event.seq} ${change.event.ident.spelled()}"
     return replace(change.said, notes=(*change.said.notes, head)), log
+
+
+def once(argv: list[str], env: Mapping[str, str]) -> Said:
+    """
+    One call of argv that names an action (-e, --rewind, --log or
+    --show), carried out as main carries it out but told to nobody: what
+    it would print, its notes and exit status, a refusal as the ERROR
+    line main writes. For whoever drives the REPL from code, the kernel.
+    """
+    try:
+        return _said(_call(argv), env, EMPTY)[0]
+    except UsageError:
+        return Said("", (USAGE,), 2)
+    except (RefusedError, OSError) as error:
+        return Said(f"ERROR: {error}\n", (), 2)
 
 
 def pending(text: str) -> bool:
@@ -689,7 +704,7 @@ def _commanded(call: _Call, text: str) -> _Call:
             raise RefusedError("unknown command")
 
 
-def _told(said: _Said, stdout: TextIO, stderr: TextIO) -> None:
+def _told(said: Said, stdout: TextIO, stderr: TextIO) -> None:
     """
     The output to stdout, flushed for whoever drives the loop, the notes
     to stderr.
@@ -740,7 +755,7 @@ def _bare(lines: tuple[Line, ...]) -> Iterator[str]:
         yield from _bare(line.block)
 
 
-def _flagged(text: str, said: _Said) -> _Said:
+def _flagged(text: str, said: Said) -> Said:
     """
     What an input said, with a NOTE first for each definition in it that
     has no body.
@@ -782,7 +797,7 @@ def _turn(  # noqa: PLR0913 -- call/env/log/streams plus optional Tty
             return this, log, None, None
         said, log = _said(this, env, log)
     except RefusedError as error:
-        _told(_Said(f"ERROR: {error}\n", (), 2), stdout, stderr)
+        _told(Said(f"ERROR: {error}\n", (), 2), stdout, stderr)
         log = _loaded(call, env, log)
         return _seen(call, log), log, None, None
     said = _transcribed(this, _flagged(text, said), tty)
@@ -797,7 +812,7 @@ def _turn(  # noqa: PLR0913 -- call/env/log/streams plus optional Tty
     return _seen(call, log), log, None, None
 
 
-def _transcribed(this: _Call, said: _Said, tty: Tty | None) -> _Said:
+def _transcribed(this: _Call, said: Said, tty: Tty | None) -> Said:
     """
     What a turn tells: on a TTY, a source that ran shows its stdout
     lines as `|- value : ...`; anything else is told as it was said.
