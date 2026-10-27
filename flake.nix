@@ -337,14 +337,20 @@
           "icontract"
           "lark"
         ];
-        # Not on the installed program's path: the optional language server (extra ide) and
-        # the tests (extra test). The dev shell and the package do not build from these.
+        # Not on the installed program's path: the optional language server (extra ide), the
+        # full-screen interface (extra tui, below) and the tests (extra test). The dev shell does
+        # not build from these.
         extra = [
           "lsprotocol"
           "pygls"
           "pytest"
-        ];
+        ]
+        ++ tui;
       };
+
+      # The full-screen interface `fpl tui` (extra tui). Optional to the wheel, but the Nix
+      # package carries it, so the installed command has all three frontends.
+      tui = [ "textual" ];
 
       # The fpl package: the wheel of 01-bootstrap/pyproject.toml (the tangled tree, the seed
       # inside as fpl/_seed), built by hatchling in the Nix sandbox from nixpkgs alone, so
@@ -377,7 +383,7 @@
             ];
           };
           build-system = from pythonDeps.build;
-          dependencies = from pythonDeps.runtime;
+          dependencies = from (pythonDeps.runtime ++ tui);
           pythonImportsCheck = [ "fpl.cli" ];
           meta = {
             description = "FPL: the fpl command, its REPL, stages and runs";
