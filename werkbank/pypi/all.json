@@ -57,17 +57,17 @@
         {
           "comment_text": "",
           "digests": {
-            "md5": "3663c01c43659d1de6f4179246ba4cf4",
-            "sha256": "12fd6645777882da3509fb4a1a3d0c412a494f3a45c5430b85f5d8f9168bf814"
+            "md5": "ea4e2734ad0288076290c3e53f366a48",
+            "sha256": "ccff9180c91d2729d457256d369c78485219aaa95a942ad91dea243f0576d17a"
           },
           "downloads": -1,
           "filename": "fpl_walker-0.0.0-py3-none-any.whl",
           "has_sig": false,
-          "md5_digest": "3663c01c43659d1de6f4179246ba4cf4",
+          "md5_digest": "ea4e2734ad0288076290c3e53f366a48",
           "packagetype": "bdist_wheel",
           "python_version": "py3",
           "requires_python": ">=3.12",
-          "size": 89391,
+          "size": 89659,
           "upload_time": "1980-01-01T00:00:00Z",
           "upload_time_iso_8601": "1980-01-01T00:00:00Z",
           "url": "./fpl_walker-0.0.0-py3-none-any.whl",

@@ -9,6 +9,9 @@
  *   https://docs.sentry.io/platforms/javascript/install/loader/
  */
 
+import { maxOf } from "./fpl-max.js";
+import { scrubBreadcrumb, scrubEvent } from "./fpl-scrub.js";
+
 const SENTRY_VERSION = "10.20.0";
 const SENTRY_SRC = `https://browser.sentry-cdn.com/${SENTRY_VERSION}/bundle.tracing.min.js`;
 const SENTRY_SRI = "sha384-+9wUXHfFUeGwAnEesSxSFwKwBHDbnc32jfpX3HN0aB9RHa4lbS1rqsSnM6DI9/LM";
@@ -34,6 +37,9 @@ export async function initTelemetry() {
   Sentry.init({
     dsn,
     integrations: [Sentry.browserTracingIntegration()],
+    beforeSend: scrubEvent,
+    beforeSendTransaction: scrubEvent,
+    beforeBreadcrumb: scrubBreadcrumb,
     tracesSampleRate: globalThis.FPL_CONFIG.tracesSampleRate ?? 1.0,
   });
   return true;
@@ -63,7 +69,7 @@ export function recordPasses(events) {
   const origin = performance.timeOrigin / 1000 + performance.now() / 1000;
   const parent = Sentry.getActiveSpan();
   const t1 = origin; // seconds, "now"; passes are laid back from the end of the run
-  const end = Math.max(...events.filter((e) => e.ph === "X").map((e) => e.ts + (e.dur || 0)), 0);
+  const end = maxOf(events.filter((e) => e.ph === "X").map((e) => e.ts + (e.dur || 0)), 0);
   for (const e of events) {
     if (e.ph !== "X" || e.cat !== "pass") continue;
     const s = Sentry.startInactiveSpan({
