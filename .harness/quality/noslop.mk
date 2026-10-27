@@ -130,8 +130,17 @@ rootrun:
 # third-party import of the package enters through the flake.
 DEPTRY_EXCLUDE = mutants|(^|/)python/
 
+# The literate pages, the webs of .harness/tools/lit/README.md: `lit check` fails when a file a
+# page tangles to differs from the page, at the page's line, and on any fault of the web;
+# `lit lint` fails when the prose and the code disagree, or an example of the prose does not
+# run. lit runs with the lanes' interpreter, so a page's examples import what its module
+# imports. The reader check, `make lit-readable` at the root, asks a model and is not here.
+LIT := PYTHONPATH=$(H)/tools/lit:$(CURDIR) $(BIN)/python -m lit
+
 check: venv pristine config-fresh
 	@mkdir -p $(OUT)
+	$(LIT) check
+	$(LIT) lint
 	$(BIN)/ruff check --config $(Q)/ruff.toml $(RUFF_ALL) fpl tests
 	$(BIN)/ruff format --config $(Q)/ruff.toml $(RUFF_ALL) --check fpl tests
 	pyright --project $(Q)/pyright.json

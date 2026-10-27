@@ -1,0 +1,34 @@
+# .harness/tools/lit — the literate pages' own tool: tangle, check, lint, weave, readable, run.
+#
+# A uv project of its own, judged by `make tools` (.agents/QUALITY.md). Every module but weave
+# uses the standard library alone, so the walker's lanes run lit with the walker's interpreter
+# (`make check`, .harness/quality/noslop.mk), where a page's examples can import what its
+# module imports; weave alone needs markdown-it-py.
+
+[project]
+name = "fpl-lit"
+version = "0"
+description = "Tangle, check, lint and weave the walker's literate pages"
+requires-python = ">=3.12,<3.13"
+dependencies = ["markdown-it-py==4.2.0"]
+
+[project.scripts]
+lit = "lit.__main__:main"
+
+[dependency-groups]
+# hypothesis-crosshair: the harness plugin registers a CrossHair profile, which current
+# Hypothesis refuses to register without the backend installed.
+dev = ["pytest", "hypothesis", "hypothesis-crosshair", "coverage", "mypy"]
+
+[build-system]
+requires = ["uv_build>=0.11,<0.13"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "lit"
+module-root = ""
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# The harness's plugin: the Hypothesis profiles (.harness/quality/noslop_pytest.py).
+addopts = ["-p", "noslop_pytest"]
