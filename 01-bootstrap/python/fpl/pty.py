@@ -21,7 +21,11 @@ turns: 0 ok, 1 an input failed, 2 refused. At a terminal the log is
 replayed first, then blocks of lines ended by a blank line are fed.
 `--replay` replays when piped too, `--watch` prints what other clients
 feed, `--stop` ends the kernel, `--fuel N` is the step budget of the
-call.
+call. `--at EVENT` reads the program as it stood at that event and
+appends nothing, `--head EVENT` appends only if that is still the head
+(for the first input), as the REPL's flags of the same names do: a seek
+is free, a write is checked
+([DI-0046](../../02-docs/02.05-project/inbox/DI-0046-session-is-a-stream-with-two-heads.md)).
 
 `Conn` and `attach` are also what `fpl tui` talks through.
 
@@ -174,12 +178,16 @@ def who(env: Mapping[str, str]) -> dict[str, str]:
     }
 
 
-def fed(conn: Conn, text: str, env: Mapping[str, str], fuel: int | None) -> tuple[str, int]:
+def fed(
+    conn: Conn,
+    text: str,
+    env: Mapping[str, str],
+    extra: Mapping[str, Any],
+) -> tuple[str, int]:
     """
-    The transcript of `text` fed to the kernel, and the worst status of
-    its turns.
+    The transcript of `text` fed to the kernel with the `extra` fields
+    of the request (fuel, at, head), and the worst status of its turns.
     """
-    extra = {} if fuel is None else {"fuel": fuel}
     got = conn.ask("feed", text=text, who=who(env), **extra)
     return got["transcript"], max((t["code"] for t in got["turns"]), default=0)
 
@@ -226,6 +234,8 @@ def run(  # noqa: PLR0913 -- the command's options, one each
     watch: bool = False,
     stop: bool = False,
     fuel: int | None = None,
+    at: str | None = None,
+    head: str | None = None,
 ) -> int:
     """
     The `fpl pty` command: attach, then stop the kernel, watch, or feed
@@ -238,13 +248,18 @@ def run(  # noqa: PLR0913 -- the command's options, one each
                 found.ask("stop")
             return 0
         conn = attach(name, env, fuel)
+        extra = {
+            k: v
+            for k, v in (('fuel', fuel), ('at', at), ('head', head))
+            if v is not None
+        }
         if watch:
             return watching(conn, out)
         if replay or stdin.isatty():
             out.write(conn.ask("replay")["transcript"])
         worst = 0
         for text in blocks(stdin) if stdin.isatty() else [stdin.read()]:
-            shown, code = fed(conn, text, env, fuel)
+            shown, code = fed(conn, text, env, extra)
             out.write(shown)
             out.flush()
             worst = max(worst, code)

@@ -91,8 +91,16 @@ def repl_command() -> None:
 @click.option("--watch", is_flag=True, help="Print what other clients feed.")
 @click.option("--stop", is_flag=True, help="End the session's kernel.")
 @click.option("--fuel", type=click.IntRange(min=0), help="Step budget.")
-def pty_command(
-    name: str, replay: bool, watch: bool, stop: bool, fuel: int | None
+@click.option("--at", help="Read the program as of this event; append nothing.")
+@click.option("--head", help="Append only if this event is still the head.")
+def pty_command(  # noqa: PLR0913 -- one parameter per option
+    name: str,
+    replay: bool,
+    watch: bool,
+    stop: bool,
+    fuel: int | None,
+    at: str | None,
+    head: str | None,
 ) -> None:
     """Join the named session's kernel: stdin in, the transcript out."""
     sys.exit(
@@ -105,6 +113,8 @@ def pty_command(
             watch=watch,
             stop=stop,
             fuel=fuel,
+            at=at,
+            head=head,
         )
     )
 

@@ -110,10 +110,13 @@ class Turn:
         return "".join(line + "\n" for line in lines)
 
 
-def argv_of(session: Path, fuel: int, text: str) -> list[str]:
+def argv_of(
+    session: Path, fuel: int, text: str, heads: list[str]
+) -> list[str]:
     """
     The REPL call an input stands for: `:log`, `:show` and `:rewind N`
-    as the loop reads them, else the input as -e.
+    as the loop reads them, else the input as -e; `heads` is the
+    --at and --head the call carries.
     """
     match text.split():
         case [":log"]:
@@ -124,7 +127,7 @@ def argv_of(session: Path, fuel: int, text: str) -> list[str]:
             tail = ["--rewind", event]
         case _:
             tail = ["-e", text]
-    return ["--session", str(session), "--fuel", str(fuel), *tail]
+    return ["--session", str(session), "--fuel", str(fuel), *heads, *tail]
 
 
 def turned(told: Said, text: str, ms: float) -> Turn:
@@ -186,13 +189,28 @@ class Kernel:
             "stop": self.stop,
         }
 
-    def turn(self, text: str, fuel: int, env: Mapping[str, str]) -> Turn:
+    def turn(
+        self, text: str, fuel: int, env: Mapping[str, str], heads: list[str]
+    ) -> Turn:
         """
         One input, carried out; the REPL's refusal is its code 2.
         """
         started = self.clock()
-        told = once(argv_of(self.log, fuel, text), env)
+        told = once(argv_of(self.log, fuel, text, heads), env)
         return turned(told, text, (self.clock() - started) * 1000.0)
+
+    @staticmethod
+    def heads(request: Request, n: int) -> list[str]:
+        """
+        The heads input `n` of a feed carries: the read head `at`, if
+        the request names one, for every input; the write head `head`,
+        if it does, for the first only, since an append moves it.
+        """
+        at, head = request.get("at"), request.get("head")
+        return [
+            *(["--at", at] if at is not None else []),
+            *(["--head", head] if head is not None and n == 0 else []),
+        ]
 
     def fed(self, request: Request) -> dict[str, Any]:
         """
@@ -206,7 +224,10 @@ class Kernel:
             **{WHO[key]: value for key, value in who.items() if key in WHO},
         }
         with self.lock:
-            turns = [self.turn(each, fuel, env) for each in split(text)]
+            turns = [
+                self.turn(each, fuel, env, self.heads(request, n))
+                for n, each in enumerate(split(text))
+            ]
         answer = {
             "turns": [asdict(each) for each in turns],
             "transcript": "".join(each.block() for each in turns),
@@ -271,14 +292,15 @@ class Kernel:
 
 def fuel_ok(request: Request) -> bool:
     """
-    A feed's fuel, if it names one, is a decimal budget below 2^64, and
-    its `who`, if any, holds text only.
+    A feed's fuel, if it names one, is a decimal budget below 2^64, its
+    `who`, if any, holds text only, and so do `at` and `head`.
     """
     fuel = request.get("fuel", 0)
     who = request.get("who", {})
     return (
         type(fuel) is int
         and 0 <= fuel < U64
+        and all(isinstance(request.get(k, ""), str) for k in ("at", "head"))
         and isinstance(who, dict)
         and all(
             isinstance(v, str) for v in cast("dict[str, Any]", who).values()

@@ -197,6 +197,23 @@ def test_stop_is_answered_and_main_yields_to_a_live_kernel() -> None:
         assert not sock.exists()
 
 
+def test_a_feed_reads_at_one_head_and_writes_at_another() -> None:
+    with running() as (kernel, path, _work):
+        c = Client(path)
+        c.ask(op="feed", text="1\n2\n")
+        read = c.ask(op="feed", text="3\n", at="1")
+        assert read["turns"][0]["code"] == 0
+        events = load(kernel.log, keyed(kernel.env)).events
+        assert len(events) == 2
+        stale = c.ask(op="feed", text="4\n5\n", head="1")
+        assert [t["code"] for t in stale["turns"]] == [2, 0]
+        assert "head moved" in stale["turns"][0]["out"]
+        fresh = c.ask(op="feed", text="6\n7\n", head="3")
+        assert [t["code"] for t in fresh["turns"]] == [0, 0]
+        assert c.ask(op="feed", text="1", at=1)["status"] == "error"
+        c.close()
+
+
 def test_a_refusal_names_its_request() -> None:
     with running() as (_kernel, path, _work):
         c = Client(path)

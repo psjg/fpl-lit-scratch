@@ -77,6 +77,20 @@ def test_the_next_call_joins_the_same_session(home: dict[str, str]) -> None:
     assert "|= [ 1 2 + ]" in again.stdout
 
 
+def test_a_read_head_appends_nothing_and_a_stale_write_head_is_refused(
+    home: dict[str, str],
+) -> None:
+    pty(home, stdin="1 2 +\n")
+    read = pty(home, "--at", "0", stdin="3 4 +\n")
+    assert read.returncode == 0, read.stderr
+    assert "|= [ 3 4 + ]" in read.stdout
+    assert ";; HEAD" not in read.stdout
+    stale = pty(home, "--head", "0", stdin="5\n")
+    assert stale.returncode == 2
+    assert "head moved" in stale.stdout
+    assert pty(home, "--head", "1", stdin="5\n").returncode == 0
+
+
 def test_stop_ends_the_kernel_and_a_bad_name_is_refused(
     home: dict[str, str],
 ) -> None:
