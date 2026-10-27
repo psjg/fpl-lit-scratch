@@ -11,6 +11,8 @@ project:
     - assets/fpl-playground.css
     - assets/fpl-dock.js
     - assets/fpl-telemetry.js
+    - assets/fpl-scrub.js
+    - assets/fpl-max.js
     - assets/fpl-trace.js
     - assets/fpl-flame.js
     - assets/fpl-stepper.js
