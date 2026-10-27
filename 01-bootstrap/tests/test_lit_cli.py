@@ -44,11 +44,13 @@ def test_help_lists_every_command() -> None:
         "graph",
         "lex",
         "parse",
+        "pty",
         "render",
         "repl",
         "run",
         "shell",
         "source",
+        "tui",
     ]
 
 
