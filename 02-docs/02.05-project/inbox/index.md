@@ -45,3 +45,5 @@ Tick a box when you have answered; comment under the line.
 - [ ] [DI-0041 Turnstiles: the literate draft and the 10-08 decision disagree](DI-0041-turnstile-literate-vs-decision-disagree.md) — which turnstile prints a REPL value: `|-` or `|=`?
 - [ ] [DI-0042 Study the literate draft and merge it back](DI-0042-merge-literate-draft-back.md) — harvest the literate layer without the harness move
 - [ ] [DI-0043 Carry every open item into the next design note](DI-0043-post-mortem-and-design-note-carry.md) — the standing rule behind this inbox
+- [ ] [DI-0044 BQNPAD as the model for the IDE and REPL](DI-0044-bqnpad-as-model-for-ide-repl.md) — instant eval, Shift-Enter and indented results, combined with the round-trip transcript and judgement lines
+- [ ] [DI-0045 The editor session and the REPL session collapse into one](DI-0045-editor-and-repl-session-collapse.md) — compose an FPL program at a REPL like an instrument, as in Coq or Jupyter
