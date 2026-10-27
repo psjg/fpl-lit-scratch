@@ -1,0 +1,249 @@
+"""lint: prose and code agree, and a page's examples pass."""
+
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+import pytest
+from lit import lint, web
+from support import FENCE, GOOD, lit, md, page
+
+
+def run_lint(root: Path, text: str, capsys: pytest.CaptureFixture[str]) -> str:
+    """Lint a page written to ``root``; what it printed."""
+    page(root, "p.md", text)
+    code = lit(root, "lint")
+    out = capsys.readouterr().out
+    assert code == (
+        1 if "finding(s)" in out and " 0 finding" not in out else 0
+    )
+    return out
+
+
+def test_clean_page(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """A page whose prose names its code and whose examples pass."""
+    out = run_lint(tmp_path, GOOD, capsys)
+    assert out == "lit lint: 1 page(s), 0 finding(s)\n"
+
+
+def test_unknown_reference(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """A reference to nothing bound is lit-unknown at its line."""
+    out = run_lint(
+        tmp_path, md(GOOD) + "\nSee `ghost' and `add.nope'.\n", capsys
+    )
+    assert "p.md:18: lit-unknown: `ghost' names nothing the code" in out
+    assert "`add.nope'" in out
+
+
+def test_reference_inside_a_fence_is_not_read(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """A fenced `name' may quote anything."""
+    text = md(GOOD) + f"\n{FENCE}text\n`ghost'\n{FENCE}\n"
+    assert "0 finding(s)" in run_lint(tmp_path, text, capsys)
+
+
+MODULE = """
+    # Demo
+
+    `Box.size' and `LIMIT' are described; `_hidden' is private.
+
+    ```python
+    <<m.py>>=
+    import os.path as osp
+    from typing import Any
+
+    LIMIT: int = 3
+    _PRIV = 2
+    _skip = 1
+    a, b = 1, 2
+
+
+    class Box:
+        count: int = 0
+
+        def size(self) -> int:
+            self.n = 1
+            return 1
+
+        def other(self) -> int:
+            return 2
+
+        def _private(self) -> int:
+            return 3
+
+    def free(x: Any) -> Any:
+        return osp.join(x)
+    ```
+
+    ```text
+    <<notes.txt>>=
+    plain
+    ```
+    """
+
+
+def test_unmentioned_names(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Public names the section's prose never names are findings."""
+    out = run_lint(tmp_path, MODULE, capsys)
+    assert "lit-unmentioned: `_PRIV'" in out
+    assert "`count'" in out
+    assert "`other'" in out
+    assert "`free'" in out
+    assert "`Box'" in out
+    assert "`size'" not in out
+    assert "`LIMIT'" not in out
+    assert "`_skip'" not in out
+    assert "`a'" not in out
+    assert "`_private'" not in out
+
+
+def test_qualified_reference_and_allow_list(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """`Cls.meth' satisfies meth; lit-allow waives a name."""
+    text = "---\nlit-allow: [other, free, _PRIV]\n---\n" + MODULE
+    text = text.replace("`LIMIT' are", "`LIMIT' `Box' `count' are")
+    out = run_lint(tmp_path, md(text), capsys)
+    assert "0 finding(s)" in out
+
+
+def test_two_files_from_one_chunk_owe_once(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Two roots reaching one chunk report its name once."""
+    text = """
+        # Two
+
+        ```python
+        <<a.py>>=
+        <<Shared>>
+        ```
+
+        ```python
+        <<b.py>>=
+        <<Shared>>
+        ```
+
+        ```python
+        <<Shared>>=
+        def twice() -> int:
+            return 2
+        ```
+        """
+    out = run_lint(tmp_path, text, capsys)
+    assert out.count("lit-unmentioned") == 1
+
+
+EX = """
+    # Ex
+
+    The `add' sums.
+
+    ```python
+    <<m.py>>=
+    <<Add>>
+    ```
+
+    {prose}
+
+    ```python
+    <<Add>>=
+    def add(a: int, b: int) -> int:
+        return a + b
+    ```
+
+    ```pycon
+    {example}
+    ```
+    """
+
+
+@pytest.mark.parametrize(
+    ("example", "message"),
+    [
+        (">>> add(1, 2)\n3", None),
+        (">>> add(1, 2)\n4", "p.md:19: lit-example: expected '4', got '3'"),
+        (">>> add(1, None)", "lit-example: raised TypeError"),
+    ],
+)
+def test_examples(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    example: str,
+    message: str | None,
+) -> None:
+    """A pycon fence passes, fails on a value, or on an exception."""
+    body = md(EX).format(prose="Adds: `add'.", example=example)
+    out = run_lint(tmp_path, body, capsys)
+    if message is None:
+        assert "0 finding(s)" in out
+    else:
+        assert message in out
+
+
+def test_example_without_python_file(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """An example with no Python file to run in is a finding."""
+    text = f"""
+        {FENCE}text
+        <<n.txt>>=
+        hi
+        {FENCE}
+
+        {FENCE}pycon
+        >>> 1
+        1
+        {FENCE}
+        """
+    out = run_lint(tmp_path, text.replace("text\n", "python\n", 1), capsys)
+    assert "lit-example: an example, and no Python file to run it in" in out
+
+
+def test_module_that_fails_to_load(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """A module that raises on load is one finding at line 1."""
+    text = """
+        # Boom
+
+        `x' is bound.
+
+        ```python
+        <<boom_mod.py>>=
+        x = 1
+        raise RuntimeError("no")
+        ```
+
+        ```pycon
+        >>> x
+        1
+        ```
+        """
+    out = run_lint(tmp_path, text, capsys)
+    assert "p.md:1: lit-example: boom_mod.py does not load" in out
+    assert "boom_mod" not in sys.modules
+
+
+def test_load_restores_the_module_it_replaced(tmp_path: Path) -> None:
+    """A tangle named like a live module leaves that module in place."""
+    import textwrap  # noqa: PLC0415 -- the module whose entry is saved
+
+    t = web.Tangled("textwrap.py", "p.md", ("y = 1",), (1,))
+    space = lint.load(t, tmp_path)
+    assert space["y"] == 1
+    assert sys.modules["textwrap"] is textwrap
+
+
+def test_dotted() -> None:
+    """A path becomes its module name, a package's init its package."""
+    assert lint.dotted("fpl/lex.py") == "fpl.lex"
+    assert lint.dotted("fpl/__init__.py") == "fpl"
