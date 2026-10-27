@@ -16,9 +16,12 @@
 #   make okf-check    the OKF gates over that graph (.harness/tools/okfgraph/README.md)
 #   make okf-check-tg the same OKF rules, judged by Typed Graph's checker, pinned
 #   make nix-check    the fpl package built in the Nix sandbox, and its REPL run there (nix flake check)
+#   make lit-readable a model reads each literate page without its code and answers its tests'
+#                     facts; report-only, since it needs the claude CLI (.harness/tools/lit/README.md)
+#   make lit-weave    each literate page as HTML, into build/lit/
 .DEFAULT_GOAL := check
 LANES := fix quick check harden ready gates tools map venv pristine clean-noslop
-.PHONY: $(LANES) run repl tangle-fpl graph okf-check okf-check-tg nix-check
+.PHONY: $(LANES) run repl tangle-fpl graph okf-check okf-check-tg nix-check lit-readable lit-weave
 
 $(LANES):
 	@$(MAKE) --no-print-directory -C 01-bootstrap $@
@@ -74,3 +77,22 @@ okf-check-tg:
 # wait on it; CI and the full lane run it by name.
 nix-check:
 	nix flake check
+
+
+# The literate pages' reader check and weave (.harness/tools/lit/README.md). The reader check
+# runs lit with the lanes' interpreter, which can load the page's module to judge an answer,
+# and asks Haiku through the claude CLI; it costs a few cents and varies from run to run, so
+# no gate waits on it. The weave needs markdown-it-py, so it runs in lit's own environment.
+LITG := $(CURDIR)/.harness/tools/lit
+LIT_PAGES = $(shell cd 01-bootstrap && PYTHONPATH=$(LITG) python3 -c \
+  'from pathlib import Path; from lit.web import discover; print(*discover(Path(".")))')
+
+lit-readable:
+	$(VENV)
+	@cd 01-bootstrap && for p in $(LIT_PAGES); do \
+	  PYTHONPATH=$(LITG) $(CURDIR)/.harness/.venv/bin/python -m lit readable $$p || status=1; \
+	done; exit $${status:-0}
+
+lit-weave:
+	@cd 01-bootstrap && UV_PROJECT_ENVIRONMENT=$(LITG)/.venv uv run --quiet --frozen \
+	  --project $(LITG) python -m lit weave $(CURDIR)/build/lit
