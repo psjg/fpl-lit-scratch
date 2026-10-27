@@ -19,6 +19,8 @@ dependencies = [
   "pytest-xdist",
   "hypothesis",
   "icontract",
+  # the full-screen interface, fpl tui (ADR-0006): its tests drive it headless
+  "textual",
   "mypy",
   # coverage
   "coverage[toml]",

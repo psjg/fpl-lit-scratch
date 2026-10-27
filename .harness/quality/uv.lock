@@ -328,6 +328,7 @@ dependencies = [
     { name = "pytest-xdist" },
     { name = "radon" },
     { name = "ruff" },
+    { name = "textual" },
     { name = "vulture" },
 ]
 
@@ -349,6 +350,7 @@ requires-dist = [
     { name = "pytest-xdist" },
     { name = "radon" },
     { name = "ruff" },
+    { name = "textual" },
     { name = "vulture" },
 ]
 
