@@ -1,10 +1,12 @@
 /**
  * Trace panel for the playground dock: a timeline of one traced run from
- * the Chrome trace events of fpl_trace. Lanes: passes, run lines (width =
+ * the Chrome trace events of the .wasm tracer (fpl_trace). Lanes: passes, run lines (width =
  * wall time, label = fuel), calls (a tick per call of a defined word), and
  * the fuel spent as a line. Hover reads the numbers; the button hands the
  * same JSON to Perfetto.
  */
+
+import { maxOf } from "./fpl-max.js";
 
 const NS = "http://www.w3.org/2000/svg";
 const LANES = [
@@ -50,9 +52,9 @@ export function createFlamePanel(host, opts = {}) {
   function render(events, failure) {
     svgHost.textContent = "";
     const xs = events.filter((e) => e.ph === "X");
-    const end = Math.max(1, ...xs.map((e) => e.ts + (e.dur || 0)));
+    const end = maxOf(xs.map((e) => e.ts + (e.dur || 0)), 1);
     const calls = events.filter((e) => e.cat === "call");
-    const maxFuel = Math.max(1, ...calls.map((e) => e.args.fuel || 0));
+    const maxFuel = maxOf(calls.map((e) => e.args.fuel || 0), 1);
     const W = 1000;
     const x = (t) => (t / end) * W;
     const svg = el("svg", {
