@@ -1,7 +1,7 @@
 ---
 type: ADR
 title: "ADR-0006 One fpl executable with a subcommand per stage"
-description: "The shell route is `fpl source < f | fpl lex | fpl parse | ... | fpl render`, one executable whose subcommands are the stages; `fpl run <file>` runs the whole chain in-process, and `fpl repl`, or bare `fpl`, opens the interactive interface."
+description: "The shell route is `fpl source < f | fpl lex | fpl parse | ... | fpl render`, one executable whose subcommands are the stages; `fpl run <file>` runs the whole chain in-process, and `fpl repl`, or bare `fpl`, opens the interactive interface; `fpl tui` and `fpl pty` are two more frontends on the same session kernel."
 tags:
   - adr
 status: stable
@@ -14,6 +14,7 @@ superseded-by:
 related:
   - ADR-0001-passes-are-pipeable-filters.md
   - ADR-0007-cli-libraries-welcome.md
+  - ../notes/02.05.14-session-kernel.md
 affects:
   - ../../../01-bootstrap/01.01-boundary/01.01.03-pipe.md
   - ../../../01-bootstrap/01.01-boundary/01.01.01-source.md
@@ -22,6 +23,7 @@ affects:
   - ../../../01-bootstrap/01.01-boundary/01.01.06-cli.md
   - ../../../01-bootstrap/python/fpl/__main__.py
   - ../../../01-bootstrap/pyproject.toml
+  - ../notes/02.05.14-session-kernel.md
 drivers:
   - "the shell workflow should read like `fpl lex | fpl parse | fpl eval`"
   - "no stage-specific CLI code: one adapter for every stage"
@@ -54,6 +56,7 @@ options:
 - superseded-by:: none
 - related:: [ADR-0001 Pipeable filters](ADR-0001-passes-are-pipeable-filters.md)
 - related:: [ADR-0007 CLI libraries welcome](ADR-0007-cli-libraries-welcome.md)
+- related:: [02.05.14 The session kernel](../notes/02.05.14-session-kernel.md)
 - affects:: [01.01.03 Pipe](../../../01-bootstrap/01.01-boundary/01.01.03-pipe.md)
 - affects:: [01.01.01 Source](../../../01-bootstrap/01.01-boundary/01.01.01-source.md)
 - affects:: [01.01.04 Render](../../../01-bootstrap/01.01-boundary/01.01.04-render.md)
@@ -110,3 +113,19 @@ The ingress is `fpl source`, the egress `fpl render`:
 
 Revised 2026-10-22 by the maintainer: `fpl repl` starts the interactive interface, bare
 `fpl` is an alias of it; the whole run is `fpl run <file>`. The consequences above describe the tree after that revision.
+
+Revised 2026-10-27 by the maintainer: there are three interactive frontends on one session
+kernel, [02.05.14](../notes/02.05.14-session-kernel.md).
+
+- `fpl repl` is the line REPL, and bare `fpl` stays its alias.
+- `fpl tui` is a full-screen terminal interface resembling the web IDE: an editor, the REPL
+  transcript, and (stubbed until they have data) the trace and the stepper. It uses Textual.
+- `fpl pty --session NAME` starts or joins a named session kernel, the same image and the same
+  log, which an agent can attach to from a pipe or a terminal. `echo '1 2 +' | fpl pty --session x`
+  prints the transcript of that input, its results as `|=` lines.
+
+The kernel is one process per session; a frontend is a client that speaks JSON lines to it over a
+unix socket. The log stays the one durable truth, so a kernel that dies loses nothing but its
+socket, and the next frontend starts another. Textual is an optional dependency (extra `tui`),
+imported only by `fpl tui`, so the other commands start without it. It enters through the Nix
+flake like every dependency. The consequences above otherwise stand.

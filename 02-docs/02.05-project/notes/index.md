@@ -13,3 +13,4 @@
 * [Discussion design notes](02.05.10-discussion-design-notes.md) - Design questions settled between the markup, syntax, substrate, version-control, harness and backend work, paraphrased from the shared message room.
 * [Substrate liabilities](02.05.11-substrate-liabilities.md) - The register of open liabilities of the substrate design (unverified claims, inferences, unrun sketches, inconsistencies, process, open decisions), the ladder under the first decision, and the sketches of planted theories. As of 2026-09-27, partly updated to 2026-09-29.
 * [02.05.13 Playground tracing](02.05.13-playground-tracing.md) - Perfetto traces and optional Sentry spans
+* [02.05.14 The session kernel](02.05.14-session-kernel.md) - one kernel per named session, JSON lines over a unix socket, and repl, tui and pty as frontends on it
