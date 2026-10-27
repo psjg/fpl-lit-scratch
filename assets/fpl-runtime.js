@@ -114,7 +114,7 @@ export function checkExpected(actual, expected) {
 }
 
 /**
- * Record one frame per evaluator step for the stepper (assets/fpl_trace.py).
+ * Record one frame per evaluator step for the stepper (assets/fpl_steprec.py).
  * @param {string} src
  * @returns {Promise<{ runs?: {line:number, end:string, error:string,
  *   frames:{n:number,node:string,line:number,col:number,stack:string,waiting:number}[]}[],
@@ -122,12 +122,12 @@ export function checkExpected(actual, expected) {
  */
 export async function traceFpl(src) {
   const pyodide = await ensurePyodide();
-  if (!pyodide.globals.get("_fpl_trace_ready")) {
-    const text = await (await fetch(new URL("./fpl_trace.py", import.meta.url))).text();
-    pyodide.FS.writeFile("/home/pyodide/fpl_trace.py", text);
-    pyodide.globals.set("_fpl_trace_ready", true);
+  if (!pyodide.globals.get("_fpl_steprec_ready")) {
+    const text = await (await fetch(new URL("./fpl_steprec.py", import.meta.url))).text();
+    pyodide.FS.writeFile("/home/pyodide/fpl_steprec.py", text);
+    pyodide.globals.set("_fpl_steprec_ready", true);
   }
   pyodide.globals.set("_fpl_buf", src);
-  const json = await pyodide.runPythonAsync("import fpl_trace\nfpl_trace.trace(_fpl_buf)");
+  const json = await pyodide.runPythonAsync("import fpl_steprec\nfpl_steprec.trace(_fpl_buf)");
   return JSON.parse(String(json));
 }

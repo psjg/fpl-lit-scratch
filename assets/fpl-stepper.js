@@ -1,6 +1,6 @@
 /**
  * Reduction stepper for /try: back/forward over the recorded evaluation of
- * one run line. The model is plain data (frames from fpl_trace.py); `Stepper`
+ * one run line. The model is plain data (frames from fpl_steprec.py); `Stepper`
  * holds position and announcement text with no DOM, so it can be tested
  * under node; `mountStepper` is the keyboard-first, screen-reader-aware view.
  *

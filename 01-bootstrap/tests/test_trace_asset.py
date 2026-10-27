@@ -1,11 +1,12 @@
 """
-The playground's reduction recorder (assets/fpl_trace.py) runs under
+The playground's reduction recorder (assets/fpl_steprec.py) runs under
 Pyodide beside the tangled walker (01-bootstrap/python/fpl), not this
 package, so it is checked in a child interpreter with that walker on
 the path.
 """
 
 import json
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -15,7 +16,7 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 def traced(source: str) -> dict[str, Any]:
-    code = "import fpl_trace, sys; print(fpl_trace.trace(sys.argv[1]))"
+    code = "import fpl_steprec, sys; print(fpl_steprec.trace(sys.argv[1]))"
     env_path = f"{ROOT / '01-bootstrap' / 'python'}:{ROOT / 'assets'}"
     out = subprocess.run(
         [sys.executable, "-P", "-c", code, source],
@@ -50,3 +51,27 @@ def test_a_loop_is_cut_not_failed() -> None:
 
 def test_a_front_end_failure_is_reported() -> None:
     assert "unknown word" in traced("1 bogus\n")["error"]
+
+
+def test_playground_python_modules_have_distinct_names() -> None:
+    """
+    The stepper recorder (assets/) and Perfetto tracer (.wasm/) share
+    one Pyodide `sys.modules`; a shared name shadows one of them.
+    """
+    assets = {p.stem for p in (ROOT / "assets").glob("*.py")}
+    wasm = {p.stem for p in (ROOT / ".wasm").glob("*.py")}
+    assert assets.isdisjoint(wasm), assets & wasm
+    assert "fpl_trace" in wasm
+    assert "fpl_steprec" in assets
+
+
+def test_python_imports_in_playground_js_name_shipped_modules() -> None:
+    """
+    Each `import fpl_x` inside assets/*.js names a shipped module.
+    """
+    shipped = {p.stem for p in (ROOT / "assets").glob("*.py")} | {
+        p.stem for p in (ROOT / ".wasm").glob("*.py")
+    }
+    for js in (ROOT / "assets").glob("*.js"):
+        for name in re.findall(r"import (fpl_\w+)", js.read_text()):
+            assert name in shipped, (js.name, name)
