@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 from lit import run, web
-from support import GOOD, lit, page
+from support import GOOD, lit, md, page
 
 
 def py(code: str) -> list[str]:
@@ -70,3 +70,12 @@ def test_table_spellings(tmp_path: Path) -> None:
     t = web.Tangled("m.py", "p.md", ("x",), (4,))
     keys = set(run.table([t], tmp_path))
     assert {"m.py", str((tmp_path / "m.py").resolve())} <= keys
+
+
+def test_a_longer_name_ending_in_a_file_is_left_alone(tmp_path: Path) -> None:
+    """``other-demo.py`` is not ``demo.py``."""
+    files, _ = web.tangle(web.read("p.md", md(GOOD)))
+    table = run.table(files, tmp_path)
+    assert run.rewrite("other-demo.py:1: x", table, tmp_path) == (
+        "other-demo.py:1: x"
+    )

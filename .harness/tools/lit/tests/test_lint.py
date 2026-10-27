@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
+from types import ModuleType
+from typing import cast
 
 import pytest
 from lit import lint, web
@@ -101,7 +103,8 @@ def test_unmentioned_names(
     assert "`size'" not in out
     assert "`LIMIT'" not in out
     assert "`_skip'" not in out
-    assert "`a'" not in out
+    assert "`a'" in out
+    assert "`b'" in out
     assert "`_private'" not in out
 
 
@@ -247,3 +250,54 @@ def test_dotted() -> None:
     """A path becomes its module name, a package's init its package."""
     assert lint.dotted("fpl/lex.py") == "fpl.lex"
     assert lint.dotted("fpl/__init__.py") == "fpl"
+
+
+def test_qualified_reference_must_name_a_member(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """`Cls.member' must be a member of that class; a reference into
+    an import is not checked past the module."""
+    text = md(MODULE) + "\nSee `Box.free', `Box.size' and `osp.join'.\n"
+    out = run_lint(tmp_path, text, capsys)
+    assert "`Box.free' names nothing" in out
+    assert "`Box.size' names nothing" not in out
+    assert "`osp.join' names nothing" not in out
+
+
+def test_load_restores_a_none_entry(tmp_path: Path) -> None:
+    """An entry of None in sys.modules is put back, not deleted."""
+    files, _ = web.tangle(web.read("p.md", md(GOOD)))
+    sys.modules["demo"] = cast("ModuleType", None)  # the case under test
+    try:
+        lint.load(files[0], tmp_path)
+        assert "demo" in sys.modules
+        assert sys.modules["demo"] is None
+    finally:
+        del sys.modules["demo"]
+
+
+PACKAGE = """
+    # Pkg
+
+    `VALUE' is the helper's.
+
+    ```python
+    <<pkg/__init__.py>>=
+    from .helper import VALUE
+    ```
+
+    ```pycon
+    >>> VALUE
+    7
+    ```
+    """
+
+
+def test_a_package_root_runs_relative_imports(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """An __init__.py root is a package; relative imports resolve."""
+    (tmp_path / "pkg").mkdir()
+    (tmp_path / "pkg" / "helper.py").write_text("VALUE = 7\n")
+    out = run_lint(tmp_path, PACKAGE, capsys)
+    assert "0 finding(s)" in out, out

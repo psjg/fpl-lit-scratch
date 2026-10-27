@@ -35,7 +35,7 @@ def rewrite(text: str, files: dict[str, Tangled], root: Path) -> str:
         re.escape(k) for k in sorted(files, key=len, reverse=True)
     )
     trace = re.compile(rf'File "({names})", line (\d+)')
-    colon = re.compile(rf"(?<![\w/.])({names}):(\d+)")
+    colon = re.compile(rf"(?<![\w/.-])({names}):(\d+)")
 
     def page(name: str, line: str) -> tuple[str, int] | None:
         t = files[name]

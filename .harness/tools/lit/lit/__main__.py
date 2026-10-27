@@ -76,8 +76,8 @@ def drift(t: web.Tangled, root: Path) -> web.Finding | None:
         return web.Finding(
             t.page, t.origin[0] if t.origin else 1, "lit-drift", message
         )
-    held = disk.read_text(encoding="utf-8").split("\n")
-    fresh = t.text.split("\n")
+    held = disk.read_bytes().split(b"\n")
+    fresh = t.text.encode().split(b"\n")
     if held == fresh:
         return None
     k = next(

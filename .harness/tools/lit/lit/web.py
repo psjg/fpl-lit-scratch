@@ -285,8 +285,12 @@ def tangle(page: Page) -> tuple[list[Tangled], list[Finding]]:
     findings = rules(page)
     reached: set[str] = set()
     out: list[Tangled] = []
-    for name in page.defined():
+    for name, chunks in page.defined().items():
         if not is_file(name):
+            continue
+        if {".", ".."} & set(name.split("/")):
+            message = f"{name} is not a path inside the root"
+            findings.append(_bad(page, chunks[0].line, message))
             continue
         ex = _Expander(page)
         ex.expand(name, "", ())
@@ -302,7 +306,7 @@ def tangle(page: Page) -> tuple[list[Tangled], list[Finding]]:
 
 def discover(root: Path) -> list[Path]:
     """The literate pages under ``root``: Markdown holding a header."""
-    found = re.compile(r"^```python\n<<[^<>]+>>\+?=$", re.MULTILINE)
+    found = re.compile(r"^```python\n<<[^<>]+>>\+?=[ \t]*$", re.MULTILINE)
     return sorted(
         p
         for p in root.rglob("*.md")

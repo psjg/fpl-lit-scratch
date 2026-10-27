@@ -118,10 +118,10 @@ def test_facts_from_tuple_names_and_two_decorators() -> None:
 
 
 def test_facts_from_single_parameter() -> None:
-    """One parameter's rows are single values."""
+    """One parameter's rows are single values; an expected value that
+    is no literal (``1 * 2``) cannot be judged, so its fact goes."""
     got = questions()
-    assert "What is `add(1, 1)`? = 1 * 2" in got
-    assert "What is `add(2, 2)`? = 2 * 2" in got
+    assert not [q for q in got if q.endswith("* 2")]
 
 
 def test_prompt_numbers_the_questions() -> None:
@@ -140,7 +140,26 @@ class Point:
     y: int = 0
 
 
-SPACE: dict[str, object] = {"Point": Point, "k": 3}
+@dataclass(frozen=True)
+class Checked:
+    """A record that runs code of its own when built."""
+
+    x: int
+
+    def __post_init__(self) -> None:
+        """Code a model's answer must not run."""
+
+
+class Plain:
+    """A class that is no record at all."""
+
+
+SPACE: dict[str, object] = {
+    "Point": Point,
+    "Checked": Checked,
+    "Plain": Plain,
+    "k": 3,
+}
 
 
 @pytest.mark.parametrize(
@@ -161,10 +180,20 @@ def test_value_evaluates_safe_answers(text: str, want: object) -> None:
 
 @pytest.mark.parametrize(
     "text",
-    ["k", "Point(1).x", "len([])", "1(2)", "Point(1)(2)", "1 + 2"],
+    [
+        "k",
+        "Point(1).x",
+        "len([])",
+        "1(2)",
+        "Point(1)(2)",
+        "1 + 2",
+        "Checked(1)",
+        "Plain()",
+    ],
 )
 def test_value_refuses_unsafe_answers(text: str) -> None:
-    """Names outside the namespace, attributes and calls are refused."""
+    """Names outside the records, attributes, calls of anything but a
+    record, and records with code of their own are refused."""
     with pytest.raises(ValueError, match=r"."):
         readable.value(text, SPACE)
 

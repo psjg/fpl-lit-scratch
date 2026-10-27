@@ -137,3 +137,17 @@ def test_usage_error_exits_two() -> None:
     with pytest.raises(SystemExit) as stop:
         main([])
     assert stop.value.code == 2
+
+
+def test_check_sees_a_carriage_return(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Drift is judged on bytes: CRLF is not the page's LF."""
+    page(tmp_path, "p.md", GOOD)
+    assert lit(tmp_path, "tangle") == 0
+    target = tmp_path / "demo.py"
+    target.chmod(0o644)
+    target.write_bytes(target.read_bytes().replace(b"\n", b"\r\n"))
+    capsys.readouterr()
+    assert lit(tmp_path, "check") == 1
+    assert "lit-drift" in capsys.readouterr().out

@@ -253,3 +253,17 @@ def test_non_python_fence_is_prose_and_blank_tail_is_dropped() -> None:
     assert [s.number for s in got.sections] == [1]
     assert got.sections[0].chunk is not None
     assert got.sections[0].prose[0].text == "```text"
+
+
+def test_a_file_outside_the_root_is_refused() -> None:
+    """A file chunk with a ``..`` or ``.`` segment writes nothing."""
+    text = md(GOOD).replace("<<demo.py>>=", "<<../demo.py>>=")
+    files, findings = web.tangle(web.read("p.md", text))
+    assert files == []
+    assert any("not a path inside the root" in str(f) for f in findings)
+
+
+def test_discover_finds_a_header_with_trailing_space(tmp_path: Path) -> None:
+    """Discovery reads a header as the reader does, spaces and all."""
+    page(tmp_path, "p.md", md(GOOD).replace("<<demo.py>>=", "<<demo.py>>= "))
+    assert web.discover(tmp_path) == [tmp_path / "p.md"]

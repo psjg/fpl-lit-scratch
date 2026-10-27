@@ -5,9 +5,11 @@ The page is stripped of its code; each chunk leaves only its name, as
 mechanically: every ``assert L == R`` and ``assert L is None`` in a test
 function becomes the question "what is ``L``?" with ``R`` as its
 answer, once per row of a ``pytest.mark.parametrize`` table. A fact is
-kept only when a reader of the page could answer it: every name in it
-is bound by the page's code, is a builtin, or is a helper of the test
-file whose docstring says what it does, quoted with the question.
+kept only when a reader of the page could answer it, and the answer
+can be judged: every name in it is bound by the page's code, is a
+builtin, or is a helper of the test file whose docstring says what it
+does, quoted with the question; and the expected value is literals,
+containers and calls of the page's records.
 Facts over a test's local variables (a Hypothesis draw, say) are
 dropped.
 
@@ -16,14 +18,16 @@ with a Python expression; it does so three times by default, and the
 score is the mean, since one reply of a small model varies (measured,
 2026-10-27: 0.71 and 0.50 on the same page, one minute apart). An
 answer is right when it evaluates to the expected value, where only
-literals and the page's own classes are evaluated. The score is the
-fraction right; the page passes at or above a threshold.
+literals and data classes that run no code of their own are evaluated.
+The score is the fraction right; the page passes at or above a
+threshold.
 """
 
 from __future__ import annotations
 
 import ast
 import builtins
+import dataclasses
 import itertools
 import os
 import re
@@ -219,7 +223,7 @@ def _fact(
     lhs = _Subst(row).visit(ast.parse(ast.unparse(left), mode="eval")).body
     rhs = _Subst(row).visit(ast.parse(ast.unparse(right), mode="eval")).body
     free = _free(lhs) | _free(rhs)
-    if not free <= allowed:
+    if not free <= allowed or not plain(rhs):
         return None
     notes = [
         f" Here `{h}` is: {helpers[h]}" for h in sorted(free & set(helpers))
@@ -250,25 +254,48 @@ SAFE = (
 )
 
 
-def value(text: str, space: dict[str, object]) -> object:
-    """The value of an answer built of literals and the page's types.
+def plain(tree: ast.AST) -> bool:
+    """Whether a tree is literals, containers, minus and named calls."""
+    return all(
+        isinstance(node, SAFE)
+        and not (
+            isinstance(node, ast.Call) and not isinstance(node.func, ast.Name)
+        )
+        for node in ast.walk(tree)
+    )
 
-    Only literals, containers, a minus sign, and calls of classes the
-    page's module defines are evaluated, with no builtins: an answer is
-    a model's text, and nothing else of it runs. Anything more raises
+
+def records(space: dict[str, object]) -> dict[str, type]:
+    """The data classes a namespace holds that run no code of their own.
+
+    A dataclass's ``__init__`` only stores its fields; one with a
+    ``__post_init__`` runs more, and any other class may run anything
+    (``Popen`` would run a command), so neither is a record.
+    """
+    return {
+        k: v
+        for k, v in space.items()
+        if isinstance(v, type)
+        and dataclasses.is_dataclass(v)
+        and not hasattr(v, "__post_init__")
+    }
+
+
+def value(text: str, space: dict[str, object]) -> object:
+    """The value of an answer built of literals and records.
+
+    Only literals, containers, a minus sign, and calls of the records
+    in ``space`` are evaluated, with no builtins: an answer is a
+    model's text, and nothing else of it runs. Anything more raises
     ValueError.
     """
     tree = ast.parse(text, mode="eval")
-    types_ = {k: v for k, v in space.items() if isinstance(v, type)}
-    for node in ast.walk(tree):
-        if not isinstance(node, SAFE) or (
-            isinstance(node, ast.Name) and node.id not in types_
-        ):
-            raise ValueError(text)
-        if isinstance(node, ast.Call) and not isinstance(node.func, ast.Name):
-            raise ValueError(text)
+    kinds = records(space)
+    names = {n.id for n in ast.walk(tree) if isinstance(n, ast.Name)}
+    if not plain(tree) or not names <= set(kinds):
+        raise ValueError(text)
     code = compile(tree, "<answer>", "eval")
-    return eval(code, {"__builtins__": {}}, types_)
+    return eval(code, {"__builtins__": {}}, kinds)
 
 
 def same(expected: str, got: str, space: dict[str, object]) -> bool:
@@ -331,8 +358,21 @@ def ask(text: str, command: list[str]) -> str:
     return run.stdout
 
 
+SYSTEM = (
+    "You answer questions about a document you are given. Reply with"
+    " exactly one line per question, '<number>: <Python expression>',"
+    " and nothing else."
+)
+
+
 def claude(model: str) -> list[str]:
-    """The headless Claude CLI, with no tools and no settings."""
+    """The headless Claude CLI, with no tools and no settings.
+
+    Its own system prompt, that of a coding agent, is replaced by one
+    that asks for the answer lines alone: with the default one, Haiku
+    worked through the questions in prose and two runs of three gave no
+    line the score could read (measured, 2026-10-27).
+    """
     return [
         "claude",
         "-p",
@@ -341,6 +381,8 @@ def claude(model: str) -> list[str]:
         "--tools",
         "",
         "--safe-mode",
+        "--system-prompt",
+        SYSTEM,
         "--output-format",
         "text",
     ]

@@ -30,7 +30,7 @@ import types
 from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
-from typing import override
+from typing import cast, override
 
 from lit.web import Finding, Page, Section, Tangled
 
@@ -55,10 +55,15 @@ def public(name: str) -> bool:
 def _targets(node: ast.stmt) -> list[str]:
     """The plain names a definition or assignment statement binds."""
     match node:
-        case ast.FunctionDef() | ast.ClassDef():
+        case ast.FunctionDef() | ast.AsyncFunctionDef() | ast.ClassDef():
             return [node.name]
         case ast.Assign():
-            return [t.id for t in node.targets if isinstance(t, ast.Name)]
+            return [
+                n.id
+                for t in node.targets
+                for n in ast.walk(t)
+                if isinstance(n, ast.Name)
+            ]
         case ast.AnnAssign(target=ast.Name(id=name)):
             return [name]
         case _:
@@ -90,7 +95,10 @@ def bound(tree: ast.Module) -> set[str]:
     for node in ast.walk(tree):
         match node:
             case (
-                ast.FunctionDef(name=n) | ast.ClassDef(name=n) | ast.arg(arg=n)
+                ast.FunctionDef(name=n)
+                | ast.AsyncFunctionDef(name=n)
+                | ast.ClassDef(name=n)
+                | ast.arg(arg=n)
             ):
                 out.add(n)
             case ast.Name(id=n, ctx=ast.Store()):
@@ -112,23 +120,43 @@ def refs(section: Section) -> Iterator[tuple[int, str]]:
                 yield line.number, m["name"]
 
 
+def imported(tree: ast.Module) -> set[str]:
+    """The names the module's imports bind."""
+    return {
+        a.asname or a.name.split(".")[0]
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Import | ast.ImportFrom)
+        for a in node.names
+    }
+
+
 def code_names(
     tangled: list[Tangled],
 ) -> tuple[set[str], dict[tuple[str, int], Defined]]:
     """What the Python files bind, and what they owe the prose, by line.
 
-    A name the two files of one page both define from the same chunk
-    line is owed once.
+    What they bind holds the plain names, each ``Class.member`` the
+    module defines, and each import as a prefix, ``re.`` for ``re``:
+    a reference into an imported module is not checked past it. A name
+    the two files of one page both define from the same chunk line is
+    owed once.
     """
     known: set[str] = set()
     owed: dict[tuple[str, int], Defined] = {}
     for t in tangled:
         if t.name.endswith(".py"):
             tree = ast.parse(t.text)
-            known |= bound(tree)
+            known |= bound(tree) | {d.qualified for d in definitions(tree)}
+            known |= {f"{n}." for n in imported(tree)}
             for d in required(tree):
                 owed.setdefault((d.qualified, t.origin[d.line - 1]), d)
     return known, owed
+
+
+def resolves(name: str, known: set[str]) -> bool:
+    """Whether a reference names what the code binds."""
+    head = name.split(".", maxsplit=1)[0]
+    return name in known or ("." in name and f"{head}." in known)
 
 
 def names(page: Page, tangled: list[Tangled]) -> list[Finding]:
@@ -139,7 +167,7 @@ def names(page: Page, tangled: list[Tangled]) -> list[Finding]:
     for s in page.sections:
         for line, name in refs(s):
             said.setdefault(s.number, set()).add(name)
-            if not all(part in known for part in name.split(".")):
+            if not resolves(name, known):
                 message = f"`{name}' names nothing the code binds"
                 out.append(Finding(page.path, line, "lit-unknown", message))
     for (qualified, line), d in sorted(owed.items(), key=lambda i: i[0][1]):
@@ -169,21 +197,29 @@ def load(t: Tangled, root: Path) -> dict[str, object]:
     in the line cache, so that a traceback quotes it, not the file.
     """
     name = dotted(t.name)
+    path = root / t.name
     module = types.ModuleType(name)
-    module.__file__ = str(root / t.name)
+    module.__file__ = str(path)
+    module.__package__ = name.rpartition(".")[0]
+    if path.name == "__init__.py":
+        module.__package__ = name
+        module.__path__ = [str(path.parent)]
+    had = name in sys.modules
     saved = sys.modules.get(name)
     sys.modules[name] = module
     sys.path.insert(0, str(root))
-    path = str(root / t.name)
-    linecache.cache[path] = (len(t.text), None, list(t.lines), path)
+    lines = [line + "\n" for line in t.lines]
+    linecache.cache[str(path)] = (len(t.text), None, lines, str(path))
     try:
-        exec(compile(t.text, path, "exec"), module.__dict__)
+        exec(compile(t.text, str(path), "exec"), module.__dict__)
     finally:
         sys.path.remove(str(root))
-        if saved is None:
-            del sys.modules[name]
+        if had:
+            # None is a valid entry (an import that must fail);
+            # typeshed does not say so. It is put back as found.
+            sys.modules[name] = cast("types.ModuleType", saved)
         else:
-            sys.modules[name] = saved
+            del sys.modules[name]
     return dict(module.__dict__)
 
 

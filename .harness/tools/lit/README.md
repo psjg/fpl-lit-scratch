@@ -38,7 +38,8 @@ line names it, and every chunk is named for its purpose:
 - A line holding only `<<Name>>` is a use. The chunk's lines go there, each indented by the
   use's indentation, so a chunk can be the body of an `if` inside a function.
 - A chunk named like a path, such as `<<fpl/lex.py>>=`, is a file. It is written relative to
-  the root, byte for byte, with no header line, and set read-only (0444). git does not keep
+  the root, byte for byte, with no header line, and set read-only (0444). A `.` or `..`
+  segment is refused, so a file cannot land outside the root. git does not keep
   the mode, so the drift gate is what holds the file to the page.
 - Every other fence (`pycon`, `text`, `fpl`) is prose. A `pycon` fence is an example, and the
   lint runs it.
@@ -60,7 +61,8 @@ name, an apostrophe, as in `` `prelex' `` or `` `Lines.span' ``. A plain code sp
 is any code and is not checked. Three rules:
 
 - **lit-unknown**: a reference must name something the tangled code binds: a definition, a
-  field, a parameter, an assignment or an import.
+  field, a parameter, an assignment or an import. `Cls.member' must be a member the class
+  defines. A reference into an import, `re.compile', is checked only as far as the import.
 - **lit-unmentioned**: every constant (an upper-case module name, `_LEXER` included) and
   every public name (a function, class, method or field without a leading underscore) must
   be referenced in the prose of the section whose chunk defines it. The front matter can
@@ -89,10 +91,12 @@ definition.
    name in it is bound by the page's code, is a builtin, or is a test helper with a
    docstring, which the question quotes. Facts over a test's locals are dropped.
 3. A model gets the chapter and the questions in one prompt. The default is Haiku through
-   the claude CLI: `claude -p --model haiku --tools "" --safe-mode`. It runs in an empty
-   directory, with extended thinking off, three times. An answer counts as right when it
-   evaluates to the expected value. Only literals, containers and calls of the page's own
-   classes are evaluated, with no builtins.
+   the claude CLI: `claude -p --model haiku --tools "" --safe-mode`, with a system prompt
+   that asks for the answer lines alone. It runs in an empty directory, with extended
+   thinking off, three times. An answer counts as right when it evaluates to the expected
+   value. Only literals, containers and calls of data classes without a `__post_init__`
+   are evaluated, with no builtins, since an answer is a model's text. A fact whose
+   expected value is anything else is dropped.
 4. The score is the mean fraction right. Below `--threshold` (default 0.7) the exit status
    is 1.
 
@@ -102,9 +106,11 @@ comes from the user's own profile. Without it, `--command CMD` names any program
 the prompt on stdin and prints the answers, and `--show` prints the prompt for a person to
 answer.
 
-Measured on 01.02.01-lex.md, 2026-10-27: the knuth-max prose scored 0.32. Rewriting the prose
-where the misses showed real gaps (the refusal messages and their places, what a comment
-leaves behind, the sigils and number forms of a token) brought it to 0.74 over three runs.
+Measured on 01.02.01-lex.md, 2026-10-27, 28 facts from tests/test_lex.py: the knuth-max
+prose scored 0.32 in one run. Rewriting the prose where the misses showed real gaps (the
+refusal messages and their places, what a comment leaves behind, the sigils and number
+forms of a token) brought it to 0.71 and 0.73 in two measurements of three runs each,
+and 0.60 and 0.61 with the examples stripped.
 
 ## Layout
 
