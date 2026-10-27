@@ -348,78 +348,9 @@ def wrap(name: str, source: str, tail: str) -> str:
     return source.rstrip() + "\n\n" + tail.strip() + "\n"
 
 
-LEX_TAIL = '''
-from pathlib import Path
-
-from lark import Lark
-
-from fpl.arrow import Pass
-
-GRAMMAR = Path(__file__).resolve().parents[1] / "grammar.lark"
-
-
-@dataclass(frozen=True)
-class Tokens:
-    "The lexer's output: the pre-lexed text and the tokens the second Lark"
-    'will read.'
-
-    source: str
-    lexed: Prelexed
-    raw: tuple[tuple[str, str, int, int], ...]
-
-
-_LEXER: Lark | None = None
-
-
-def token_lark() -> Lark:
-    """The lexer Lark. It does not parse."""
-    global _LEXER
-    if _LEXER is None:
-        _LEXER = Lark(
-            GRAMMAR.read_text(),
-            parser="lalr",
-            propagate_positions=True,
-            maybe_placeholders=False,
-        )
-    return _LEXER
-
-
-def code_tokens(code: str) -> list:
-    """Tokens for code the pre-lexer already produced."""
-    return list(token_lark().lex(code))
-
-
-def _pack(got: list) -> tuple[tuple[str, str, int, int], ...]:
-    return tuple(
-        (token.type, str(token), token.start_pos or 0,
-        token.end_pos or 0) for token in got
-    )
-
-
-def _lex(source: str) -> Tokens:
-    lexed = prelex(source)
-    return Tokens(source, lexed, _pack(code_tokens(lexed.code)))
-
-
-lex = Pass("lex", _lex)
-'''
-
-
 def filled() -> None:
-    lex_src = (SEED / "lex.py").read_text()
-    page(
-        ROOT / part_dir("pass") / note("pass", "lex"),
-        "Pass",
-        "Lex",
-        'One Lark. Source in, tokens out. The hand counter stays inside this'
-        'stage.',
-        "The hand counter in the seed's `lex.py` counts pairs and tabs,"
-        'because a grammar cannot.'
-        "Then a Lark lexer, and nothing else, yields the tokens.\n\n"
-        "[01.02.02-parse](01.02.02-parse.md) reads those tokens with a second Lark.\n\n"
-        + cell("lex", wrap("lex", lex_src, LEX_TAIL)),
-        "pass",
-    )
+    # The lex page is a literate web now, its own source: lit tangles
+    # fpl/lex.py from it (.harness/tools/lit/), so it is not stamped.
     body = (SEED / "desugar.py").read_text()
     page(
         ROOT / part_dir("pass") / note("pass", "desugar"),

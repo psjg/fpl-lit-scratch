@@ -1,12 +1,4 @@
 """
-# 01.02.01 Lex
-
-The hand counter in the seed's `lex.py` counts pairs and tabs, because a
-grammar cannot. Then a Lark lexer, and nothing else, yields the tokens.
-
-[01.02.02-parse](01.02.02-parse.md) reads those tokens with a second
-Lark.
-
 The pre-lexer: what the grammar cannot count, counted before Lark sees
 the text.
 
@@ -23,14 +15,16 @@ import re
 from bisect import bisect_right
 from collections.abc import Callable
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Literal
+
+from fpl.ast_surface import Kind
+from fpl.errors import FplError, Span
+
+from pathlib import Path
 
 from lark import Lark
 
 from fpl.arrow import Pass
-from fpl.ast_surface import Kind
-from fpl.errors import FplError, Span
 
 PAIRS = {"“": "”", "「": "」", "⟦": "⟧"}
 BRACKETS = {"[": "]", "(": ")", "⟨": "⟩", "{": "}"}

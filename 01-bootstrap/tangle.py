@@ -12,17 +12,25 @@ The Markdown is the source. This writes 01-bootstrap/python/fpl/, and a
 
 Neither ``--out`` nor ``--check`` writes into the repository, so a test
 may run them while another process reads python/.
+
+A page written as a noweb web (``<<Name>>=`` chunks in plain python
+fences, .harness/tools/lit/README.md) is tangled by lit, not here: its
+module is the page's file chunk ``python/fpl/<dest>``, expanded by lit's
+web, and its Quarto alias is a copy whose `name' references are code
+spans, since a lone backtick would pair with the next one.
 """
 
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import re
 import shutil
 import sys
 import tempfile
 import textwrap
 from pathlib import Path
+from types import ModuleType
 
 ROOT = Path(__file__).resolve().parent
 SEED = ROOT / "fpl"
@@ -201,6 +209,46 @@ def _one_docstring(parts: list[str]) -> list[str]:
     return [merged, rest, *parts[2:]] if rest else [merged, *parts[2:]]
 
 
+def _web() -> ModuleType:
+    """
+    lit's web module, loaded from its file: the tests have a module of
+    their own named lit, so the package cannot be imported by name.
+    """
+    path = ROOT.parent / ".harness" / "tools" / "lit" / "lit" / "web.py"
+    spec = importlib.util.spec_from_file_location("lit_web", path)
+    assert spec is not None
+    assert spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules["lit_web"] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+web = _web()
+
+
+def literate(text: str) -> bool:
+    """
+    Whether a page is a noweb web, tangled by lit.
+    """
+    return "{.marimo" not in text and "\n```python\n<<" in text
+
+
+def module(page: str, dest: str) -> str:
+    """
+    The module a page tangles to: its marimo cells and prose, or, for a
+    web, lit's tangle of its file chunk ``python/fpl/<dest>``.
+    """
+    text = (ROOT / page).read_text()
+    if not literate(text):
+        return cell(text)
+    files, findings = web.tangle(web.read(page, text))
+    if findings:
+        raise SystemExit("\n".join(map(str, findings)))
+    [found] = [t for t in files if t.name == f"python/fpl/{dest}"]
+    return found.text
+
+
 def aliases() -> None:
     """
     Point ``name.qmd`` at every page Quarto should execute.
@@ -212,12 +260,16 @@ def aliases() -> None:
             or OUT in path.parents
         ):
             continue
-        if "{.marimo" not in path.read_text():
+        text = path.read_text()
+        if "{.marimo" not in text and not literate(text):
             continue
         link = path.with_suffix(".qmd")
         if link.is_symlink() or link.exists():
             link.unlink()
-        link.symlink_to(path.name)
+        if literate(text):
+            link.write_text(re.sub(r"`([A-Za-z_][\w.]*)'", r"`\1`", text))
+        else:
+            link.symlink_to(path.name)
 
 
 def build(out: Path) -> None:
@@ -233,7 +285,7 @@ def build(out: Path) -> None:
     for page, dest in MODULES.items():
         target = out / dest
         target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_text(cell((ROOT / page).read_text()))
+        target.write_text(module(page, dest))
     for name in PACKAGES:
         (out / name / "__main__.py").write_text(STAGE_MAIN.format(name=name))
     (out / "__init__.py").write_text(INIT)
