@@ -55,3 +55,9 @@ Tick a box when you have answered; comment under the line.
 - [ ] [DI-0051 Finer-grained FplError subclasses](DI-0051-finer-grained-fplerror-subclasses.md) — subclass FplError into more specific errors
 - [ ] [DI-0052 fpl fmt from the pre-lexer](DI-0052-fpl-fmt-from-the-pre-lexer.md) — whether the pre-lexer leads back to an fpl fmt command
 - [ ] [DI-0053 Relations between prose blocks and code chunks in the graph](DI-0053-prose-code-relations-in-the-graph.md) — store which prose block explains which code chunk as semantic relations in the graph (he suspects over-engineering)
+- [ ] [DI-0054 Doc fields are symbolic edges](DI-0054-doc-fields-are-symbolic-edges.md) — a doc comment is a typed node whose fields (raises, see, param) point at symbols, so a rename moves the documentation with it
+- [ ] [DI-0055 Documents as views over the semantic graph](DI-0055-documents-as-views-over-the-graph.md) — a document is a query over definitions, docs and examples, so the order of the explanation need not be the order of storage
+- [ ] [DI-0056 Spec examples as conformance assertions](DI-0056-spec-examples-as-conformance-assertions.md) — an example in a spec carries an id and its expected output, a negative example its expected diagnostic category, and every example has one of five kinds
+- [ ] [DI-0057 One authority per kind of information](DI-0057-authority-and-projection-table.md) — one place where each kind of information is edited; HTML, JupyterLite, API pages and Obsidian views are projections
+- [ ] [DI-0058 Stable identity between a literate fragment and its definition](DI-0058-stable-identity-fragment-to-definition.md) — two-way mapping between prose fragment and code definition without text heuristics
+- [ ] [DI-0059 A docstring convention for the Python bootstrap](DI-0059-python-docstring-convention-for-the-bootstrap.md) — Google style, type hints, `#:` for public data, doctests as witness, enforceable with ruff's pydocstyle rules

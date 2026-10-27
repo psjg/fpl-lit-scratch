@@ -14,3 +14,4 @@
 * [Substrate liabilities](02.05.11-substrate-liabilities.md) - The register of open liabilities of the substrate design (unverified claims, inferences, unrun sketches, inconsistencies, process, open decisions), the ladder under the first decision, and the sketches of planted theories. As of 2026-09-27, partly updated to 2026-09-29.
 * [02.05.13 Playground tracing](02.05.13-playground-tracing.md) - Perfetto traces and optional Sentry spans
 * [02.05.14 The session kernel](02.05.14-session-kernel.md) - one kernel per named session, JSON lines over a unix socket, and repl, tui and pty as frontends on it
+* [02.05.15 One source form: .fpl and .fml](02.05.15-one-source-form.md) - one language with the lexical default inverted; tangle, weave and exports are tooling
