@@ -15,6 +15,7 @@ related:
   - ADR-0001-passes-are-pipeable-filters.md
   - ADR-0007-cli-libraries-welcome.md
   - ../notes/02.05.14-session-kernel.md
+  - ../inbox/DI-0046-session-is-a-stream-with-two-heads.md
 affects:
   - ../../../01-bootstrap/01.01-boundary/01.01.03-pipe.md
   - ../../../01-bootstrap/01.01-boundary/01.01.01-source.md
@@ -57,6 +58,7 @@ options:
 - related:: [ADR-0001 Pipeable filters](ADR-0001-passes-are-pipeable-filters.md)
 - related:: [ADR-0007 CLI libraries welcome](ADR-0007-cli-libraries-welcome.md)
 - related:: [02.05.14 The session kernel](../notes/02.05.14-session-kernel.md)
+- related:: [DI-0046 The session is a stream with two heads](../inbox/DI-0046-session-is-a-stream-with-two-heads.md)
 - affects:: [01.01.03 Pipe](../../../01-bootstrap/01.01-boundary/01.01.03-pipe.md)
 - affects:: [01.01.01 Source](../../../01-bootstrap/01.01-boundary/01.01.01-source.md)
 - affects:: [01.01.04 Render](../../../01-bootstrap/01.01-boundary/01.01.04-render.md)
