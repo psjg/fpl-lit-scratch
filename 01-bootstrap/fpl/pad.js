@@ -13,8 +13,12 @@
  * The backend takes the routes of fpl/pad_web.py and answers with the pad,
  * {cells: [{source, status, bar, turns, changes}], buffer, caret}:
  *
- *   load()               the pad as it stands
- *   change(route, body)  "/buffer" {text, cursor}, "/reset"
+ *   load(body)           the pad as it stands, "/pad" {indent}
+ *   change(route, body)  "/buffer" {text, cursor, indent}, "/reset" {indent}
+ *
+ * `indent` is what each result line is set in by: "" at the margin as the
+ * REPL writes, "\t" set in as BQNPad does; the page opened as
+ * `?results=indented` asks for the tab.
  *
  * `http` is the backend of `python -m fpl pad`; the site's /pad/ page passes
  * one that runs fpl.pad under Pyodide (assets/fpl-pad.js). The keys are the
@@ -25,8 +29,8 @@ import {plain} from "./editors.js";
 
 /** The backend of `python -m fpl pad`: the routes over HTTP. */
 export const http = {
-	async load() {
-		return answer(await fetch("pad"));
+	async load(body) {
+		return http.change("/pad", body);
 	},
 	async change(route, body) {
 		return answer(await fetch(route.slice(1), {
@@ -42,17 +46,23 @@ async function answer(response) {
 	return response.json();
 }
 
+/** The indent the page's URL asks for: a tab under `?results=indented`. */
+export function indented(search) {
+	return new URLSearchParams(search).get("results") === "indented" ? "\t" : "";
+}
+
 /**
- * Put the buffer into `root`, with `said` for messages, on `backend`.
- * @param {{load(): Promise<object>, change(route: string, body: object): Promise<object>}} backend
+ * Put the buffer into `root`, with `said` for messages, on `backend`, the
+ * result lines set in by `indent`.
+ * @param {{load(body: object): Promise<object>, change(route: string, body: object): Promise<object>}} backend
  */
-export async function mount(backend, root, said) {
+export async function mount(backend, root, said, indent = "") {
 	let cells = [];
 	const host = document.createElement("div");
 	root.replaceChildren(host);
 	const editor = plain.make(host, "", {
 		input: () => {},
-		evaluate: () => sync("/buffer", {text: editor.value(), cursor: editor.cursor()}),
+		evaluate: () => sync("/buffer", {text: editor.value(), cursor: editor.cursor(), indent}),
 		up: () => false,
 		down: () => false,
 		remove: () => false,
@@ -73,7 +83,7 @@ export async function mount(backend, root, said) {
 
 	await plain.ready();
 	return {
-		reset: () => sync("/reset", {}),
+		reset: () => sync("/reset", {indent}),
 		copy: async () => {
 			await navigator.clipboard.writeText(editor.value());
 			said.textContent = `copied ${cells.length} cells`;
@@ -81,7 +91,7 @@ export async function mount(backend, root, said) {
 		ready: (async () => {
 			let buffer;
 			let caret;
-			({cells, buffer, caret} = await backend.load());
+			({cells, buffer, caret} = await backend.load({indent}));
 			editor.set(buffer, caret);
 		})(),
 	};

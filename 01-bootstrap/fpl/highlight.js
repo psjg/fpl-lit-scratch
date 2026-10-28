@@ -75,11 +75,12 @@ export function tokenized(definition, text) {
 }
 
 /** A line the loop wrote (fpl.repl.written): a result, a bar or a note, an ERROR. */
-const LOOP = /^(\|-|;;!|ERROR:)( |$)/;
+const LOOP = /^[\t ]*(\|-|;;!|ERROR:)( |$)/;
 
 /** The class of a loop line, by what it is. */
 function kind(line) {
-	return line.startsWith("ERROR:") ? "error" : line.startsWith("|-") ? "result" : "note";
+	const bare = line.trimStart();
+	return bare.startsWith("ERROR:") ? "error" : bare.startsWith("|-") ? "result" : "note";
 }
 
 /**

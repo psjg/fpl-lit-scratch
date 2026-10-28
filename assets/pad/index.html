@@ -14,14 +14,15 @@
 	<a href="../try/index.html">Playground</a>
 	<button id="copy" type="button" title="the pad as text: paste it into fpl repl">copy</button>
 	<button id="reset" type="button">reset</button>
+	<span>results: <a href="./">at the margin</a> · <a href="./?results=indented">set in</a></span>
 	<span id="said" role="status">loading Pyodide…</span>
 </header>
 <main id="pad"></main>
 <script type="module">
-import {mount} from "./pad.js";
+import {indented, mount} from "./pad.js";
 import {pyodide} from "../assets/fpl-pad.js";
 const said = document.getElementById("said");
-const pad = await mount(pyodide, document.getElementById("pad"), said);
+const pad = await mount(pyodide, document.getElementById("pad"), said, indented(location.search));
 said.textContent = "";
 document.getElementById("reset").addEventListener("click", pad.reset);
 document.getElementById("copy").addEventListener("click", pad.copy);

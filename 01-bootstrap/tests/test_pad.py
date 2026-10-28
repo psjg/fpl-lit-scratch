@@ -183,6 +183,9 @@ def test_a_buffer_is_read_as_cells_and_synced_from_the_first_change() -> None:
     assert turns(after[1:]) == [("|- 16 : number",), before[2].turns]
     assert chunks("1 2 +\n;;! -( 9 )-< command 2 >-\n\n") == ["1 2 +"]
     assert synced(before, "", CTX, TTY) == ()
+    set_in = buffer(before, TTY, "\t")
+    assert synced(before, set_in, CTX, TTY) == before
+    assert caret(set_in, 0, before, TTY, "\t") == set_in.index("3 sq")
 
 
 def test_the_caret_goes_to_the_cell_after_the_one_it_was_in() -> None:
@@ -235,6 +238,8 @@ def test_a_transcript_reads_back_as_the_pad_and_as_a_repl_session() -> None:
     cells = pad(*sources, "1 drop")
     text = transcript(cells)
     assert seeded(text, CTX, TTY) == cells
+    assert seeded(transcript(cells, "\t"), CTX, TTY) == cells
+    assert "\n\t|- 9 : number\n" in transcript(cells, "\t")
     out, err = io.StringIO(), io.StringIO()
     ticks = count()
     still = Tty(now=lambda: AT, timer=lambda: float(next(ticks)))
@@ -283,6 +288,9 @@ def test_the_page_drives_the_pad_over_http() -> None:
         assert posted(url + "/pad", None) == empty
         text = empty["buffer"] + SQ + "\n" + phrase_bar(2, 1, AT) + "\n3 sq"
         state = posted(url + "/buffer", {"text": text, "cursor": len(text)})
+        set_in = posted(url + "/pad", {"indent": "\t"})
+        assert "\n\t|- 9 : number\n" in set_in["buffer"]
+        assert set_in["caret"] == len(set_in["buffer"])
         assert state["cells"][1] == {
             "source": "3 sq",
             "status": "ok",

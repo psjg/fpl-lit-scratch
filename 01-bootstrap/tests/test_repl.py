@@ -431,6 +431,7 @@ def test_what_the_loop_wrote_reads_back_as_the_program() -> None:
         "\t2",
         ";;!",
         "f",
+        "\t|- 2 : number",
         "|-x",
     ]
     made = ["1 | 1 +\n", "x\n", "f : -- x\n\t2\n", "f\n", "|-x\n"]

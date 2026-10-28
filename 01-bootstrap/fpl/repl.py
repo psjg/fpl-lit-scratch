@@ -521,18 +521,20 @@ WRITTEN = (RESULT, BAR, "ERROR:")
 
 
 def written(line: str) -> bool:
-    """Tell whether *line* is the loop's, not the program's.
+    r"""Tell whether *line* is the loop's, not the program's.
 
     The reader drops such a line, so a transcript pasted back is the
     program it came from: read(print(session)) = session. A line is the
-    loop's when it is one of :data:`WRITTEN` or starts with one and a
+    loop's when, after any tabs and spaces (the pad may indent what it
+    writes), it is one of :data:`WRITTEN` or starts with one and a
     space.
 
     Examples:
-        >>> [written(l) for l in ("|- 2 : ...", ";;! -( 9 )-", "|-x")]
+        >>> [written(l) for l in ("|- 2 : ...", "\t;;! -( 9 )-", "|-x")]
         [True, True, False]
     """
-    return any(line == mark or line.startswith(mark + " ") for mark in WRITTEN)
+    bare = line.lstrip("\t ")
+    return any(bare == mark or bare.startswith(mark + " ") for mark in WRITTEN)
 
 
 def inputs(read: Callable[[bool], str | None]) -> Iterator[str]:

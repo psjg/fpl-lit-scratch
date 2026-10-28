@@ -12,13 +12,14 @@
 	<span>Shift+Enter evaluates · Enter newline · Tab indents · the buffer is the session: copy it, paste it into fpl repl</span>
 	<button id="copy" type="button" title="the pad as text: paste it into fpl repl">copy</button>
 	<button id="reset" type="button">reset</button>
+	<span>results: <a href="./">at the margin</a> · <a href="./?results=indented">set in</a></span>
 	<span id="said" role="status"></span>
 </header>
 <main id="pad"></main>
 <script type="module">
-import {http, mount} from "./pad.js";
+import {http, indented, mount} from "./pad.js";
 const said = document.getElementById("said");
-const pad = await mount(http, document.getElementById("pad"), said);
+const pad = await mount(http, document.getElementById("pad"), said, indented(location.search));
 document.getElementById("reset").addEventListener("click", pad.reset);
 document.getElementById("copy").addEventListener("click", pad.copy);
 </script>

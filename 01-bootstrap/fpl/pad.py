@@ -197,22 +197,28 @@ def synced(
     return replayed(cells[:kept], sources[kept:], ctx, tty)
 
 
-def buffer(cells: Sequence[Cell], tty: Tty) -> str:
+def buffer(cells: Sequence[Cell], tty: Tty, indent: str = "") -> str:
     """Return the pad as the page edits it.
 
     It is the :func:`transcript`, then the bar of the cell to come on a
     line of its own, for the text typed under it.
     """
-    return transcript(cells) + bar(cells, tty) + "\n"
+    return transcript(cells, indent) + bar(cells, tty) + "\n"
 
 
-def caret(text: str, cursor: int, cells: Sequence[Cell], tty: Tty) -> int:
+def caret(
+    text: str,
+    cursor: int,
+    cells: Sequence[Cell],
+    tty: Tty,
+    indent: str = "",
+) -> int:
     """Return where the caret goes once *text* is synced to *cells*.
 
     *cursor* is an offset into *text*. The caret goes to the start of
     the text of the cell after the one the cursor was in, as the REPL
     reads on under the next bar; past the last cell, to the end of the
-    :func:`buffer`.
+    :func:`buffer`, written with *indent*.
     """
     starts = [0]
     filled = [False]
@@ -227,8 +233,9 @@ def caret(text: str, cursor: int, cells: Sequence[Cell], tty: Tty) -> int:
     here = bisect_right(starts, cursor)
     target = sum(filled[:here])
     if target < len(cells):
-        return len(transcript(cells[:target])) + len(cells[target].bar) + 1
-    return len(buffer(cells, tty))
+        before = transcript(cells[:target], indent)
+        return len(before) + len(cells[target].bar) + 1
+    return len(buffer(cells, tty, indent))
 
 
 def bar(above: Sequence[Cell], tty: Tty) -> str:
@@ -253,13 +260,15 @@ def bar(above: Sequence[Cell], tty: Tty) -> str:
     )
 
 
-def transcript(cells: Sequence[Cell]) -> str:
+def transcript(cells: Sequence[Cell], indent: str = "") -> str:
     """Return the pad as text, as the page shows it.
 
-    Each cell is its bar, its text and its turns; a blank line parts the
-    cells. Everything but the text is what the loop writes, so the
-    reader of ``fpl repl`` and of ``fpl pad FILE`` drops it
-    (:func:`fpl.repl.written`) and reads the program the cells hold.
+    Each cell is its bar, its text and its turns, each turn under
+    *indent* (a tab sets the results in from the text, as BQNPad does;
+    the REPL writes none); a blank line parts the cells. Everything but
+    the text is what the loop writes, so the reader of ``fpl repl`` and
+    of ``fpl pad FILE`` drops it (:func:`fpl.repl.written`), indented
+    or not, and reads the program the cells hold.
 
     Examples:
         >>> from datetime import datetime
@@ -272,7 +281,14 @@ def transcript(cells: Sequence[Cell]) -> str:
         <BLANKLINE>
     """
     return "".join(
-        "\n".join([cell.bar, cell.source.rstrip("\n"), *cell.turns]) + "\n\n"
+        "\n".join(
+            [
+                cell.bar,
+                cell.source.rstrip("\n"),
+                *(indent + turn if turn else turn for turn in cell.turns),
+            ]
+        )
+        + "\n\n"
         for cell in cells
     )
 

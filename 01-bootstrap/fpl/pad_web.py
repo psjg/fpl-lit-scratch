@@ -20,7 +20,11 @@ each with its bar and turns, the buffer, and where the caret goes):
   ``GET /pad`` the pad.
 - ``POST /buffer`` with ``{"text": buffer, "cursor": offset}``:
   :func:`fpl.pad.synced`, the caret as :func:`fpl.pad.caret` puts it.
-- ``POST /reset``: an empty pad.
+- ``POST /reset``: an empty pad; ``POST /pad``: the pad as it is.
+
+A ``POST`` body may carry ``"indent"``, the string each result line is
+set in by (:func:`fpl.pad.transcript`); the page asks for a tab when
+opened as ``/?results=indented``.
 
 A ``FILE`` seeds the pad: each input :func:`fpl.repl.inputs` finds in
 it becomes a cell, evaluated before the page opens.
@@ -80,6 +84,8 @@ class Pad:
         self.cells = cells
         self.ctx = ctx
         self.tty = tty if tty is not None else Tty()
+        #: What the page sets result lines in by; the last request's.
+        self.indent = ""
 
     def change(self, route: str, body: Mapping[str, Any]) -> int | None:
         """Carry out a ``POST`` route; None when there is none.
@@ -91,20 +97,23 @@ class Pad:
             KeyError: The body lacks a field the route needs.
             TypeError: A field has the wrong type.
         """
+        self.indent = str(body.get("indent", ""))
         match route:
             case "/buffer":
                 text, cursor = str(body["text"]), int(body["cursor"])
                 self.cells = synced(self.cells, text, self.ctx, self.tty)
-                return caret(text, cursor, self.cells, self.tty)
+                return caret(text, cursor, self.cells, self.tty, self.indent)
             case "/reset":
                 self.cells = ()
-                return len(buffer((), self.tty))
+                return self.end()
+            case "/pad":
+                return self.end()
             case _:
                 return None
 
     def end(self) -> int:
         """Return the end of the buffer, where the caret rests first."""
-        return len(buffer(self.cells, self.tty))
+        return len(buffer(self.cells, self.tty, self.indent))
 
 
 def shown(pad: Pad, at: int) -> dict[str, Any]:
@@ -124,7 +133,7 @@ def shown(pad: Pad, at: int) -> dict[str, Any]:
             }
             for cell in pad.cells
         ],
-        "buffer": buffer(pad.cells, pad.tty),
+        "buffer": buffer(pad.cells, pad.tty, pad.indent),
         "caret": at,
     }
 
