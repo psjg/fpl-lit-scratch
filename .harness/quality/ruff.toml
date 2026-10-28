@@ -39,7 +39,7 @@ max-complexity = 8
 convention = "google"
 
 [lint.per-file-ignores]
-"tests/**" = ["PLR0913", "D"]  # D: tests are not an API
+"**/tests/**" = ["PLR0913", "D"]  # D: tests are not an API; ** so a path given from another directory matches too
 
 [format]
 docstring-code-format = true

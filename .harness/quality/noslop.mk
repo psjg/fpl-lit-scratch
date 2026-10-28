@@ -209,8 +209,8 @@ gates: venv config-fresh
 TOOLS := $(patsubst %/pyproject.toml,%,$(wildcard $(H)/tools/*/pyproject.toml))
 
 tools: venv
-	$(BIN)/ruff check --config $(Q)/ruff.toml $(H)/tools
-	$(BIN)/ruff format --config $(Q)/ruff.toml --check $(H)/tools
+	cd $(H)/tools && $(BIN)/ruff check --config $(Q)/ruff.toml .
+	cd $(H)/tools && $(BIN)/ruff format --config $(Q)/ruff.toml --check .
 	@set -ex; for t in $(TOOLS); do \
 	  p=$$(basename $$t); \
 	  UV_PROJECT_ENVIRONMENT=$$t/.venv uv sync --project $$t --frozen --all-extras \
