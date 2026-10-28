@@ -272,7 +272,7 @@ def wikilinks(children: Sequence[Token]) -> list[str]:
 
 @dataclass(slots=True)
 class Fields:
-    """The links of one inline run, with the field each is a value of.
+    r"""The links of one inline run, with the field each is a value of.
 
     The run is read line by line (a soft or hard break ends a line,
     but not one inside a link label, which a wrapped label holds).
@@ -281,7 +281,7 @@ class Fields:
     bracketed field, the next plain ``]`` closes it, and the links in
     between are its values; a bracket the line never closes gives its
     links no key of its own. Link labels and escapes are not plain
-    text, so ``\\[`` and ``\\]`` open and close nothing.
+    text, so ``\[`` and ``\]`` open and close nothing.
     """
 
     found: list[Link] = field(default_factory=list[Link])

@@ -32,6 +32,7 @@ from okfgraph.project import PREFIXES
 
 
 def parser() -> argparse.ArgumentParser:
+    """The command line: a command, its names, and the options."""
     ap = argparse.ArgumentParser(
         prog="okfgraph",
         description="Project an OKF bundle onto RDF and check it.",
@@ -47,10 +48,12 @@ def parser() -> argparse.ArgumentParser:
 
 
 def say(text: str) -> None:
+    """Print ``text`` to stderr, where timings and counts go."""
     print(text, file=sys.stderr)
 
 
 def graph(g: Graph, out: Path) -> int:
+    """Write the graph to ``out`` as Turtle; exit 0."""
     out.parent.mkdir(parents=True, exist_ok=True)
     g.store.dump(
         str(out),
@@ -63,6 +66,7 @@ def graph(g: Graph, out: Path) -> int:
 
 
 def check(g: Graph, baseline: Path | None) -> int:
+    """Print the findings outside ``baseline``; exit 1 on any."""
     known: set[str] = set()
     if baseline:
         lines = (line.strip() for line in baseline.read_text().splitlines())
@@ -80,6 +84,7 @@ def check(g: Graph, baseline: Path | None) -> int:
 
 
 def report(g: Graph, names: list[str]) -> int:
+    """Print the reports ``names`` (all if none) as TSV; 2 on a typo."""
     reports = {q.name: q for q in queries() if not q.rule}
     if unknown := [n for n in names if n not in reports]:
         have = ", ".join(reports)
@@ -91,6 +96,7 @@ def report(g: Graph, names: list[str]) -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Build the graph under ``--root``, run the command, time it."""
     a = parser().parse_args(argv)
     t0 = time.perf_counter()
     g = build(a.root.resolve(), a.base, a.exclude)

@@ -42,6 +42,7 @@ class Query:
 
     @classmethod
     def read(cls, file: Traversable) -> Query:
+        """The query in ``file``; its header gives rule and remedy."""
         text = file.read_text()
         head = dict(HEADER.findall(text))
         name = file.name.removesuffix(".rq")
@@ -59,6 +60,7 @@ class Finding:
 
     @property
     def key(self) -> str:
+        """``path: rule: detail``, the line a baseline holds."""
         return f"{self.path}: {self.rule}: {self.detail}"
 
 
