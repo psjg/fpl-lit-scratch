@@ -31,6 +31,7 @@
 * [test_parse](test_parse.py) - test_parse
 * [test_print](test_print.py) - test_print
 * [test_references](test_references.py) - A full path, `examples/<name>`, or `<name>:<line>`; a glob or a brace
+* [test_pad](test_pad.py) - the pad: top to bottom, editable history, the toplevel's turns
 * [test_repl](test_repl.py) - What str.isprintable admits: no character of the categories C* and
 * [test_session](test_session.py) - test_session
 * [test_trivia](test_trivia.py) - test_trivia

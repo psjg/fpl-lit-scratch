@@ -13,6 +13,8 @@
 * [lex](lex.py) - lex
 * [log](log.py) - log
 * [multihash](multihash.py) - multihash
+* [pad](pad.py) - a column of cells read as one program, history editable
+* [pad_web](pad_web.py) - `python -m fpl pad`: the pad as a local web page ([pad.html](pad.html), [pad.js](pad.js), [pad.css](pad.css))
 * [parse](parse.py) - pyright: reportIncompatibleMethodOverride=false, reportAssignmentType=false
 * [print](print.py) - print
 * [repl](repl.py) - repl

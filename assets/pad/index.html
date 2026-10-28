@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FPL pad</title>
+<!-- pad.js and pad.css are 01-bootstrap/fpl's, copied here by .wasm/assemble.sh. -->
+<link rel="stylesheet" href="pad.css">
+</head>
+<body>
+<header>
+	<a href="../index.html"><b>FPL</b></a> <b>pad</b>
+	<span>Shift+Enter evaluates · Enter newline · Tab indents · ↑↓ move between cells · Backspace in an empty cell removes it</span>
+	<a href="../try/index.html">Playground</a>
+	<button id="reset" type="button">reset</button>
+	<span id="said" role="status">loading Pyodide…</span>
+</header>
+<main id="pad"></main>
+<script type="module">
+import {mount} from "./pad.js";
+import {pyodide} from "../assets/fpl-pad.js";
+const said = document.getElementById("said");
+const pad = await mount(pyodide, document.getElementById("pad"), said);
+said.textContent = "";
+document.getElementById("reset").addEventListener("click", pad.reset);
+</script>
+</body>
+</html>

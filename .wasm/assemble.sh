@@ -61,8 +61,11 @@ mv "$tmp/werkbank" .site/werkbank
 # The playground's language service (assets/fpl-service.js) unpacks this beside the wheels.
 python3 01-bootstrap/ide/pack_analysis.py .site/werkbank/pypi/fpl-bootstrap.zip
 
-rm -rf .site/try .site/ide .site/learn
+rm -rf .site/try .site/ide .site/learn .site/pad
 cp -R assets/try .site/try
+# The pad: the shell is the site's, the page itself 01-bootstrap/fpl's (fpl/pad_web.py).
+cp -R assets/pad .site/pad
+cp 01-bootstrap/fpl/pad.js 01-bootstrap/fpl/pad.css .site/pad/
 cp -R assets/try .site/ide  # the IDE alias of the playground page
 # Telemetry is off unless a Sentry DSN is given at build time; none is committed.
 if [ -n "${FPL_SENTRY_DSN:-}" ]; then

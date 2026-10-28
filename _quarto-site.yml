@@ -17,6 +17,7 @@ project:
     - assets/fpl-flame.js
     - assets/fpl-stepper.js
     - assets/fpl_steprec.py
+    - assets/fpl-pad.js
   render:
     - index.qmd
     - 01-bootstrap/README.md
@@ -93,6 +94,8 @@ website:
     contents:
       - text: Playground
         href: try/index.html
+      - text: Pad
+        href: pad/index.html
       - text: Katas
         href: try/kata.html
       - text: JupyterLite
