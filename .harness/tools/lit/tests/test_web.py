@@ -181,7 +181,7 @@ def test_unclosed_fence() -> None:
 def test_cli_prints_findings_and_fails(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """tangle prints a web's finding, writes nothing, and exits 1."""
+    """`tangle' prints a web's finding, writes nothing, and exits 1."""
     page(tmp_path, "p.md", "```python\n<<m.py>>+=\nx\n```\n")
     assert lit(tmp_path, "tangle") == 1
     out = capsys.readouterr().out
@@ -237,8 +237,10 @@ def test_unclosed_front_matter_is_prose() -> None:
 
 
 def test_non_python_fence_is_prose_and_blank_tail_is_dropped() -> None:
-    """A text fence stays prose; blank prose after the last chunk is not
-    a section."""
+    """A text fence stays prose.
+
+    Blank prose after the last chunk is not a section.
+    """
     got = read("""
         ```text
         <<m.py>>=

@@ -255,8 +255,10 @@ def test_dotted() -> None:
 def test_qualified_reference_must_name_a_member(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """`Cls.member' must be a member of that class; a reference into
-    an import is not checked past the module."""
+    """`Cls.member' must be a member of that class.
+
+    A reference into an import is not checked past the module.
+    """
     text = md(MODULE) + "\nSee `Box.free', `Box.size' and `osp.join'.\n"
     out = run_lint(tmp_path, text, capsys)
     assert "`Box.free' names nothing" in out

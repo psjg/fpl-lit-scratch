@@ -61,7 +61,7 @@ def test_no_pages_leaves_output_alone(
 
 
 def test_rewrite_with_an_empty_table() -> None:
-    """rewrite returns its text when no file is known."""
+    """`rewrite' returns its text when no file is known."""
     assert run.rewrite("a.py:1", {}, Path()) == "a.py:1"
 
 
