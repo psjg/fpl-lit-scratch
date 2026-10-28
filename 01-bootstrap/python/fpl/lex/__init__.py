@@ -1,14 +1,12 @@
-"""
-The pre-lexer: what the grammar cannot count, counted before Lark sees
-the text.
+"""Count what the grammar cannot, before Lark reads the text.
 
-Strings “ ” and 「 」 and block comments ⟦ ⟧ are pairs counted by their
-own pair only, so they cannot overlap. A string becomes one placeholder
-token, its interior left in the source for the pair's reader; a block
-comment becomes nothing. Indentation is then held strict: tabs only, and
-no bracket left open across a dedent below the line that opened it. The
-affix pass reads a token's shape after lexing. Positions stay in the
-source: every code character keeps its origin.
+:func:`prelex` counts each pair (strings “ ” and 「 」, block comments
+⟦ ⟧) by its own pair only. A string becomes one placeholder with its
+interior left in the source, and a block comment becomes a space or
+nothing. It then refuses indentation with spaces and a dedent below the
+line of a bracket still open. Every character of the :class:`Prelexed`
+code keeps its source offset. After lexing, :func:`shape` reads a
+token's sigil, kind and modifiers.
 """
 
 import re
@@ -26,32 +24,51 @@ from lark import Lark
 
 from fpl.arrow import Pass
 
+#: Opener to closer of each pair: string, raw string and block comment.
 PAIRS = {"“": "”", "「": "」", "⟦": "⟧"}
+#: Opener to closer of each bracket.
 BRACKETS = {"[": "]", "(": ")", "⟨": "⟩", "{": "}"}
+#: Closer to opener, for the pairs of :data:`PAIRS` and the brackets of
+#: :data:`BRACKETS`.
 CLOSERS = {close: opener for opener, close in (PAIRS | BRACKETS).items()}
+#: Stands for a whole string in the code the grammar reads.
 PLACEHOLDER = "¶"
+#: The characters :func:`pairs` stops at: the openers and closers of the
+#: pairs, and the marks ``;`` and ``⍝`` of a line comment.
 SPECIAL = re.compile(r"[“「⟦”」⟧;⍝]")
+#: A line comment: a run of ``;`` or one ``⍝``, up to the end of the
+#: line.
 LINE_COMMENT = re.compile(r"(;+|⍝)[^\n]*")
+#: The modifier characters that may end a token.
 MODS = "\u00b4`\u00a8\u02dc\u207c\u02d9"
+#: A token as sigil, body and trailing :data:`MODS`, the groups
+#: :func:`shape` reads.
 SHAPE = re.compile(rf"(->|→|\$|#|&|\.\./|\.\.)?([^{MODS}]*?)([{MODS}]*)")
+#: A number body: an optional minus, then digits with an optional
+#: fraction, ``∞`` or ``π``.
 NUMBER = re.compile(r"-?(\d+(\.\d+)?|∞|π)")
 
 
 class Lines:
-    """
-    Offsets into a source as the 1-based line and column an editor
-    shows.
-    """
+    """Turn offsets into a source into lines and columns."""
 
     def __init__(self, source: str) -> None:
+        """Index the lines of *source*."""
+        #: Offset at which each line starts, the first line included.
         self.starts = [0] + [
             n + 1 for n, char in enumerate(source) if char == "\n"
         ]
 
     def span(self, offset: int) -> Span:
-        """
-        The line and column of a source offset; the end is just past the
-        last line.
+        r"""Return the 1-based line and column of a source offset.
+
+        Args:
+            offset: Position in the source; the end of the source is
+                just past its last line.
+
+        Examples:
+            >>> Lines("ab\ncd").span(3)
+            Span(line=2, col=1)
         """
         line = bisect_right(self.starts, offset)
         return Span(line, offset - self.starts[line - 1] + 1)
@@ -59,36 +76,54 @@ class Lines:
 
 @dataclass(frozen=True)
 class Stashed:
-    """
-    A string's interior, [start, end) in the source: `str` interpolates
-    ⟨ ⟩, `raw` does not. depth is the tabs before the line it opens on,
-    which its continuation lines drop (S26).
-    """
+    """A string's interior in the source, the range ``[start, end)``."""
 
+    #: ``str`` for “ ”, which interpolates ⟨ ⟩; ``raw`` for 「 」, which
+    #: does not.
     kind: Literal["str", "raw"]
+    #: Source offset of the first interior character.
     start: int
+    #: Source offset just past the last interior character.
     end: int
+    #: Tabs before the line the string opens on; its continuation lines
+    #: drop that many (S26).
     depth: int
 
 
 @dataclass(frozen=True)
 class Prelexed:
-    """
-    Code for the grammar, the source offset of each of its characters
-    and of its end, and the string each placeholder stands for, by the
-    placeholder's offset in the code.
-    """
+    """The output of :func:`prelex`: grammar code with its origins."""
 
+    #: The code the grammar reads; it ends in a newline.
     code: str
+    #: Source offset of each character of *code*, then of the end.
     origin: tuple[int, ...]
+    #: The string each placeholder stands for, by the placeholder's
+    #: offset in *code*.
     stash: dict[int, Stashed]
 
 
 def counted(text: str, at: int, close: str, end: int) -> int | None:
-    """
-    The offset just past the closer that balances the opener at `at`, or
-    None if none does before `end`. Only the opener's own pair is
-    counted.
+    """Return the offset just past the closer that balances an opener.
+
+    Only the opener's own pair is counted, so a nested opener of the
+    same pair needs a closer of its own and other brackets are ignored.
+
+    Args:
+        text: Source holding the opener.
+        at: Offset of the opener.
+        close: Closer of that opener.
+        end: Offset where counting stops; the closer lies before it.
+
+    Returns:
+        The offset after the balancing closer, or ``None`` if none
+        occurs before *end*.
+
+    Examples:
+        >>> counted("“a”", 0, "”", 3)
+        3
+        >>> counted("“a“b”", 0, "”", 5) is None
+        True
     """
     opener, depth, j = text[at], 1, at + 1
     while j < end and depth:
@@ -98,9 +133,7 @@ def counted(text: str, at: int, close: str, end: int) -> int | None:
 
 
 class _Code:
-    """
-    The code being written, each character with its source offset.
-    """
+    """Collect the code being written, with each character's origin."""
 
     def __init__(self) -> None:
         self.chars: list[str] = []
@@ -108,9 +141,14 @@ class _Code:
         self.stash: dict[int, Stashed] = {}
 
     def put(self, text: str, at: int, verbatim: bool = True) -> None:
-        """
-        Append text from source offset `at`; a pad or placeholder keeps
-        `at` for every char.
+        """Append *text* to the code.
+
+        Args:
+            text: Characters to append.
+            at: Source offset the text comes from.
+            verbatim: If true, character *k* of *text* has origin
+                ``at + k``; if false, as for a pad or placeholder, every
+                character has origin *at*.
         """
         self.chars.extend(text)
         self.origin.extend(
@@ -118,9 +156,7 @@ class _Code:
         )
 
     def at_line_start(self) -> bool:
-        """
-        Nothing but tabs written since the last newline.
-        """
+        """Tell whether only tabs came since the last newline."""
         for char in reversed(self.chars):
             if char != "\t":
                 return char == "\n"
@@ -128,9 +164,25 @@ class _Code:
 
 
 def _pair(source: str, at: int, end: int, code: _Code) -> int:
-    """
-    Write the string or comment opening at `at`; return the offset after
-    its closer.
+    """Write the string or block comment that opens at *at*.
+
+    A string becomes a placeholder, preceded by a space unless the code
+    ends in whitespace, and is stashed. A block comment becomes a space,
+    or nothing at the start of a line.
+
+    Args:
+        source: Text being read.
+        at: Offset of the opener.
+        end: Offset where reading stops.
+        code: The code being written.
+
+    Returns:
+        The offset where the next write starts: after the closer or, for
+        a block comment at the start of a line, after the spaces that
+        follow it.
+
+    Raises:
+        FplError: The pair is never closed.
     """
     opener = source[at]
     after = counted(source, at, PAIRS[opener], end)
@@ -157,9 +209,23 @@ def _pair(source: str, at: int, end: int, code: _Code) -> int:
 
 
 def _special(source: str, at: int, end: int, code: _Code) -> int:
-    """
-    Write what starts with a special character at `at`; return where the
-    next write starts.
+    """Write what starts with a special character.
+
+    A pair goes to :func:`_pair`, a closer with no opener is refused,
+    and anything else is a line comment, copied up to its newline.
+
+    Args:
+        source: Text being read.
+        at: Offset of the special character.
+        end: Offset where reading stops.
+        code: The code being written.
+
+    Returns:
+        The offset where the next write starts.
+
+    Raises:
+        FplError: The character is a closer with no opener, or opens a
+            pair that is never closed.
     """
     char = source[at]
     if char in PAIRS:
@@ -178,11 +244,24 @@ def pairs(
     end: int | None = None,
     special: re.Pattern[str] = SPECIAL,
 ) -> Prelexed:
-    """
-    Stash the strings and drop the block comments of source[start:end],
-    ending the code in a newline; `special` names the characters that
-    open or close a pair or a line comment. Refuses a pair never closed
-    and a closer with no opener; indentation is not looked at.
+    """Stash the strings and drop the block comments of a source range.
+
+    Indentation and brackets are not checked here; :func:`strict` does
+    that.
+
+    Args:
+        source: Text to read.
+        start: Offset where reading starts.
+        end: Offset where reading stops; the end of *source* by default.
+        special: The characters that open or close a pair or start a
+            line comment.
+
+    Returns:
+        The code, ending in a newline, with the source offset of each of
+        its characters and the strings it stashed.
+
+    Raises:
+        FplError: A pair is never closed, or a closer has no opener.
     """
     stop = len(source) if end is None else end
     code, at = _Code(), start
@@ -196,10 +275,32 @@ def pairs(
 
 
 def prelex(source: str, start: int = 0, end: int | None = None) -> Prelexed:
-    """
-    Pre-lex source[start:end] (all of it by default) to code the grammar
-    reads, ending in a newline. Refuses a pair never closed, a closer
-    with no opener, and loose indentation.
+    r"""Pre-lex ``source[start:end]`` into code the grammar reads.
+
+    Args:
+        source: Text to read.
+        start: Offset where reading starts.
+        end: Offset where reading stops; the end of *source* by default.
+
+    Returns:
+        The code, ending in a newline, with the source offset of each of
+        its characters and the strings it stashed.
+
+    Raises:
+        FplError: A pair is never closed, a closer has no opener, a line
+            is indented with spaces outside brackets, a dedent goes
+            below the line of a bracket still open, or a bracket closes
+            nothing, closes the wrong opener or is never closed. The
+            error is placed at the offending line and column of
+            *source*.
+
+    Examples:
+        >>> prelex("a “b” c\n").code
+        'a ¶  c\n\n'
+        >>> prelex("x “ab\n")
+        Traceback (most recent call last):
+            ...
+        fpl.errors.FplError: ERROR: 1:3 “ never closed
     """
     lexed = pairs(source, start, end)
     strict(source, lexed.code, lexed.origin)
@@ -207,10 +308,7 @@ def prelex(source: str, start: int = 0, end: int | None = None) -> Prelexed:
 
 
 class _RefusalError(Exception):
-    """
-    A strictness refusal at a code offset, before it is placed in the
-    source.
-    """
+    """A strictness refusal at a code offset, not yet placed."""
 
     def __init__(self, offset: int, message: str) -> None:
         super().__init__(message)
@@ -221,10 +319,18 @@ class _RefusalError(Exception):
 def _brackets(
     line: str, base: int, depth: int, open_: list[tuple[str, int, int]]
 ) -> None:
-    """
-    Track the brackets of one code line, its line comment aside, on the
-    stack of open ones; refuse a closer that closes nothing or not the
-    latest opener. Offsets are into the code.
+    """Track the brackets of one code line, ignoring its line comment.
+
+    Args:
+        line: The line, without its newline.
+        base: Offset in the code of the line's first character.
+        depth: Tabs at the start of the line.
+        open_: Stack of the open brackets as (bracket, offset in the
+            code, depth), updated in place.
+
+    Raises:
+        _RefusalError: A closer closes nothing, or does not close the
+            latest opener.
     """
     body = LINE_COMMENT.split(line, maxsplit=1)[0]
     for n, char in enumerate(body):
@@ -241,10 +347,20 @@ def _brackets(
 
 
 def _lines(code: str, line_of: Callable[[int], int]) -> None:
-    """
-    Refuse leading spaces outside brackets, and a dedent below the line
-    of a bracket still open; the dedent is reported at the dedenting
-    line and names the opener's line.
+    """Refuse loose indentation, line by line.
+
+    A dedent below the line of a bracket still open is reported at the
+    dedenting line and names the opener's line.
+
+    Args:
+        code: The code to check.
+        line_of: Maps an offset in *code* to its source line number.
+
+    Raises:
+        _RefusalError: A line is indented with spaces outside brackets,
+            a dedent goes below the line of a bracket still open, or a
+            bracket is never closed. A bracket error of
+            :func:`_brackets` passes through.
     """
     open_: list[tuple[str, int, int]] = []
     base = 0
@@ -266,9 +382,19 @@ def _lines(code: str, line_of: Callable[[int], int]) -> None:
 
 
 def strict(source: str, code: str, origin: tuple[int, ...]) -> None:
-    """
-    Hold the code to strict indentation, reporting a refusal at its
-    place in the source.
+    """Refuse loose indentation in code, at its place in the source.
+
+    Args:
+        source: Text the code was lexed from.
+        code: The code from :func:`pairs`.
+        origin: Source offset of each character of *code*, then of the
+            end.
+
+    Raises:
+        FplError: A line is indented with spaces outside brackets, a
+            dedent goes below the line of a bracket still open, or a
+            bracket closes nothing, closes the wrong opener or is never
+            closed.
     """
     lines = Lines(source)
     try:
@@ -280,9 +406,24 @@ def strict(source: str, code: str, origin: tuple[int, ...]) -> None:
 
 
 def shape(token: str) -> tuple[str, Kind, tuple[str, ...], str] | None:
-    """
-    A token's prefix sigil, kind, body (a path's segments) and suffix
-    modifiers, or None when a modifier stands anywhere but at the end.
+    """Split a token into prefix sigil, kind, body and suffix modifiers.
+
+    Args:
+        token: One token of lexed code.
+
+    Returns:
+        A tuple of the prefix sigil (``""`` for none), the kind, the
+        body (the segments of a path, else the one-element name) and the
+        modifiers of :data:`MODS`; ``None`` when a modifier stands
+        anywhere but at the end.
+
+    Examples:
+        >>> shape("->x´")
+        ('->', 'name', ('x',), '´')
+        >>> shape("a/b")
+        ('', 'path', ('a', 'b'), '')
+        >>> shape("a´b") is None
+        True
     """
     match = SHAPE.fullmatch(token)
     if match is None:

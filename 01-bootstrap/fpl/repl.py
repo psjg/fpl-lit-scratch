@@ -1,12 +1,14 @@
-"""
-`python -m fpl.repl`: one input entered at a session's head or evaluated
-as of an event, a rewind, the log listed, or the program at an event
-shown; with none of these, inputs read one after another, each as its
-own -e. Without --session the log is empty and held in memory, so one
-input runs as its file does. An append is checked against --head and
-made durable under the session's lock before anything is printed. Exit 0
-ok, 1 the input failed, 2 argv not taken or a refusal, a path the system
-refuses included, with nothing written but a lock.
+"""Command line and read-eval loop over a session log.
+
+:func:`main` runs one call of ``argv``, or the loop when ``argv`` names
+no action. :func:`once` runs one call without printing, for
+:mod:`fpl.kernel`. :func:`inputs` and :func:`pending` group typed lines
+into inputs. An append is checked against ``--head`` and durable before
+anything is printed.
+
+Exit status is 0 for success, 1 when the input failed, and 2 for bad
+argv or a refusal (a path the system refuses included), with nothing
+written but a lock.
 """
 
 import importlib
@@ -48,26 +50,26 @@ from fpl.print import render
 from fpl.session import Context, enter, evaluator, program, rewind
 from fpl.trivia import code, head
 
+#: The usage line written for bad argv.
 USAGE = (
     "usage: python -m fpl.repl [--session FILE] [--fuel N] "
     "[--canonical] [--at EVENT]"
     " [--head EVENT] [-e SOURCE | --rewind EVENT | --log | --show]"
 )
+#: Names of the actions a call can carry, in lookup order.
 ACTIONS = ("source", "rewind", "log", "show")
+#: A decimal numeral without leading zeros.
 NUMERAL = re.compile(r"0|[1-9][0-9]*")
+#: The empty log, which a call without ``--session`` starts from.
 EMPTY = Log((), {}, 0)
 
 
 class UsageError(Exception):
-    """
-    argv the command line does not take.
-    """
+    """Raised for argv that the command line does not take."""
 
 
 class _Parser(ArgumentParser):
-    """
-    An ArgumentParser that raises where it would print and exit.
-    """
+    """An ArgumentParser that raises :exc:`UsageError`, not exits."""
 
     @override
     def error(self, message: str) -> NoReturn:
@@ -75,8 +77,19 @@ class _Parser(ArgumentParser):
 
 
 def _fuel(text: str) -> int:
-    """
-    A step budget: a decimal numeral below 2^64, as the log records it.
+    """Parse a step budget as the log records it.
+
+    The budget is a decimal numeral without leading zeros, below 2^64.
+
+    Raises:
+        ValueError: *text* is not such a numeral.
+
+    Examples:
+        >>> _fuel("10")
+        10
+        >>> _fuel("010")
+        Traceback (most recent call last):
+        ValueError: 010
     """
     if not NUMERAL.fullmatch(text) or int(text) >= U64:
         raise ValueError(text)
@@ -84,9 +97,16 @@ def _fuel(text: str) -> int:
 
 
 def _sourced(argv: list[str]) -> list[str]:
-    """
-    argv with a source that opens with - joined to its -e, as
-    -e<source>, which argparse would otherwise take for an option.
+    """Join a source that opens with ``-`` to its ``-e``.
+
+    argparse would otherwise take the source for an option.
+
+    Returns:
+        *argv* with each such pair joined as ``-e<source>``.
+
+    Examples:
+        >>> _sourced(["-e", "-1", "--log"])
+        ['-e-1', '--log']
     """
     out: list[str] = []
     for arg in argv:
@@ -99,9 +119,9 @@ def _sourced(argv: list[str]) -> list[str]:
 
 @dataclass(frozen=True)
 class _Call:
-    """
-    argv taken: the options, and the one action with its value ("" for a
-    flag).
+    """The options of a call, and its action with the action's value.
+
+    The value is ``""`` for a flag action.
     """
 
     session: Path | None
@@ -114,10 +134,15 @@ class _Call:
 
 
 def _call(argv: list[str]) -> _Call:
-    """
-    argv as a call; with no action, the loop. Refused (UsageError):
-    anything argparse refuses, two actions, and --at beside --head,
-    --rewind or --log, which name no state to evaluate at.
+    """Parse *argv* into a call.
+
+    With no action, the action is ``"loop"``.
+
+    Raises:
+        UsageError: argparse refuses *argv* (an unknown option, two
+            actions or a bad ``--fuel``), or ``--at`` is beside
+            ``--head``, ``--rewind`` or ``--log``, which name no state
+            to evaluate at.
     """
     parser = _Parser(add_help=False, allow_abbrev=False)
     parser.add_argument("--session", type=Path)
@@ -144,11 +169,30 @@ def _call(argv: list[str]) -> _Call:
 
 
 def provenance(env: Mapping[str, str]) -> tuple[Who, str, str]:
-    """
-    Who enters an input, under which model and session: an agent when
-    $FPL_MODEL or $FPL_SESSION_ID is set, else an operator. Refused
-    (RefusedError): either not printable ASCII of at most 256
-    characters.
+    """Tell who enters an input, under which model and session.
+
+    The actor is ``"agent"`` when ``$FPL_MODEL`` or ``$FPL_SESSION_ID``
+    is set in *env*, else ``"operator"``.
+
+    Args:
+        env: The environment; only the two variables are read.
+
+    Returns:
+        The actor, the model and the session id; the last two are ``""``
+        when unset.
+
+    Raises:
+        RefusedError: Either variable is not printable ASCII of at most
+            256 characters.
+
+    Examples:
+        >>> provenance({})
+        ('operator', '', '')
+        >>> provenance({"FPL_MODEL": "m"})
+        ('agent', 'm', '')
+        >>> provenance({"FPL_MODEL": "é"})  # doctest: +ELLIPSIS
+        Traceback (most recent call last):
+        fpl.log.RefusedError: $FPL_MODEL is not ...
     """
     names = ("FPL_MODEL", "FPL_SESSION_ID")
     for name in names:
@@ -162,24 +206,27 @@ def provenance(env: Mapping[str, str]) -> tuple[Who, str, str]:
 
 @dataclass(frozen=True)
 class Said:
-    """
-    What a call prints, and its exit status. `entered` is set when the
-    call ran `enter`; `spent` is the input's own steps when it did.
+    """What a call prints, and its exit status.
+
+    ``entered`` is set when the call ran :func:`fpl.session.enter`;
+    ``spent`` is then the input's own steps.
     """
 
+    #: Text for stdout.
     out: str
+    #: Lines for stderr.
     notes: tuple[str, ...]
+    #: Exit status.
     code: int
+    #: Steps the entered input took; None when nothing was entered.
     spent: int | None = None
+    #: Whether the call entered an input.
     entered: bool = False
 
 
 @dataclass(frozen=True)
 class _Change:
-    """
-    An event to append, the bodies it names, and what the call prints
-    once it is.
-    """
+    """An event to append, its bodies, and what the call says."""
 
     event: Event
     bodies: Mapping[Multihash, bytes]
@@ -187,9 +234,7 @@ class _Change:
 
 
 def _parsed(text: str) -> Program | None:
-    """
-    The input as a program, or None when it does not parse alone.
-    """
+    """Parse *text* alone, or return None when it does not parse."""
     try:
         return parse(text)
     except FplError:
@@ -197,9 +242,10 @@ def _parsed(text: str) -> Program | None:
 
 
 def _canonical(text: str) -> str:
-    """
-    The input as the printer writes it, or nothing when it does not
-    parse alone.
+    """Print *text* as the printer does.
+
+    Returns:
+        The printed text, or ``""`` if *text* does not parse.
     """
     program = _parsed(text)
     return "" if program is None else render(program)
@@ -208,9 +254,17 @@ def _canonical(text: str) -> str:
 def _entered(
     call: _Call, log: Log, context: Context, at: Event | None
 ) -> _Change:
-    """
-    The input after the program at `at`. Refused: text that is not
-    UTF-8, which argv holds as lone surrogates.
+    """Enter the input after the program at *at*.
+
+    Args:
+        call: The call; its value is the input.
+        log: The log holding *at* and its ancestors.
+        context: What the new event records beside the input.
+        at: The event to extend; None is the origin.
+
+    Raises:
+        RefusedError: The input is not UTF-8, which argv holds as lone
+            surrogates.
     """
     try:
         call.value.encode()
@@ -235,8 +289,11 @@ def _entered(
 def _rewound(
     call: _Call, log: Log, context: Context, _at: Event | None
 ) -> _Change:
-    """
-    A rewind of the head to the event named.
+    """Rewind the head to the event named by the call's value.
+
+    Raises:
+        RefusedError: No event answers to the name, or
+            :func:`fpl.session.rewind` refuses the target.
     """
     return _Change(
         rewind(log, resolve(log, call.value), context), {}, Said("", (), 0)
@@ -246,16 +303,15 @@ def _rewound(
 def _seq(
     seqs: Mapping[Multihash, str], ids: tuple[Multihash, ...], none: str
 ) -> str:
-    """
-    The seq of the first event named, or `none`.
-    """
+    """Return the seq of the first event in *ids*, else *none*."""
     return seqs[ids[0]] if ids else none
 
 
 def _listed(log: Log, _at: Event | None) -> Said:
-    """
-    A line an event: seq, kind, status, the seq of its dep or 0, of its
-    link or -, id.
+    """List the log, one line per event.
+
+    A line holds seq, kind, status, the seq of its dep or 0, the seq of
+    its link or ``-``, and the id.
     """
     seqs = {event.ident: str(event.seq) for event in log.events}
     rows = (
@@ -268,16 +324,16 @@ def _listed(log: Log, _at: Event | None) -> Said:
 
 
 def _shown(log: Log, at: Event | None) -> Said:
-    """
-    The program at `at`: its accepted inputs, joined.
-    """
+    """Show the program at *at*: its accepted inputs, joined."""
     return Said("".join(part.text for part in program(log, at)), (), 0)
 
 
+#: The actions that only read a log, by name.
 READERS: dict[str, Callable[[Log, Event | None], Said]] = {
     "log": _listed,
     "show": _shown,
 }
+#: The actions that append an event, by name.
 WRITERS: dict[str, Callable[[_Call, Log, Context, Event | None], _Change]] = {
     "source": _entered,
     "rewind": _rewound,
@@ -287,9 +343,11 @@ WRITERS: dict[str, Callable[[_Call, Log, Context, Event | None], _Change]] = {
 def _changed(
     call: _Call, log: Log, env: Mapping[str, str], at: Event | None
 ) -> _Change:
-    """
-    The event the call would append at the head. Refused: a --head that
-    is not it.
+    """Build the event the call would append at the head.
+
+    Raises:
+        RefusedError: ``--head`` names an event other than the head, or
+            the action refuses.
     """
     if call.head is not None and resolve(log, call.head) is not log.head:
         raise RefusedError(f"head moved: the head is {len(log.events)}")
@@ -298,9 +356,13 @@ def _changed(
 
 
 def _read(call: _Call, log: Log, env: Mapping[str, str]) -> Said:
-    """
-    A call that appends nothing: a reader, or an input evaluated as of
-    --at, or at the head of a log held in memory.
+    """Carry out a call that appends nothing to *log*.
+
+    The call is a reader, or an input evaluated as of ``--at``; the
+    event the input would make is dropped.
+
+    Raises:
+        RefusedError: ``--at`` names no event, or the action refuses.
     """
     at = log.head if call.at is None else resolve(log, call.at)
     if call.action in READERS:
@@ -309,9 +371,9 @@ def _read(call: _Call, log: Log, env: Mapping[str, str]) -> Said:
 
 
 def _reads(call: _Call) -> bool:
-    """
-    The call appends nothing: a reader, or an input evaluated as of
-    --at.
+    """Tell whether the call appends nothing.
+
+    That holds for a reader, and when ``--at`` is set.
     """
     return call.action in READERS or call.at is not None
 
@@ -319,9 +381,12 @@ def _reads(call: _Call) -> bool:
 def _kept(
     call: _Call, env: Mapping[str, str], memory: Log
 ) -> tuple[Said, Log]:
-    """
-    The call on a log held in memory; an append grows it and names no
-    head.
+    """Carry out the call on a log held in memory.
+
+    An append returns the log grown by the new event.
+
+    Raises:
+        RefusedError: The call is refused.
     """
     if _reads(call):
         return _read(call, memory, env), memory
@@ -332,10 +397,15 @@ def _kept(
 def _said(
     call: _Call, env: Mapping[str, str], memory: Log
 ) -> tuple[Said, Log]:
-    """
-    The call carried out, and the log as it stands after it. An append
-    loads, checks and writes under the lock, and names the new head
-    last.
+    """Carry out the call and return what it says and the log after it.
+
+    An append loads, checks and writes under the session's lock, and
+    puts a ``HEAD <seq> $<id>`` note last.
+
+    Raises:
+        RefusedError: The log does not load, the call is refused, or the
+            write is refused.
+        OSError: The lock or a file of the session cannot be used.
     """
     if call.session is None:
         return _kept(call, env, memory)
@@ -352,11 +422,25 @@ def _said(
 
 
 def once(argv: list[str], env: Mapping[str, str]) -> Said:
-    """
-    One call of argv that names an action (-e, --rewind, --log or
-    --show), carried out as main carries it out but told to nobody: what
-    it would print, its notes and exit status, a refusal as the ERROR
-    line main writes. For whoever drives the REPL from code, the kernel.
+    """Carry out one call of *argv* without printing.
+
+    *argv* must name an action: ``-e``, ``--rewind``, ``--log`` or
+    ``--show``. The call runs on an empty log unless ``--session`` is
+    given.
+
+    Returns:
+        What :func:`main` would print, as a :class:`Said`. A refusal
+        comes back as the ``ERROR`` line that :func:`main` writes, with
+        code 2, and bad argv as :data:`USAGE` in ``notes``.
+
+    Raises:
+        KeyError: *argv* names no action; the loop has no :class:`Said`.
+
+    Examples:
+        >>> once(["--show"], {}).code
+        0
+        >>> once(["--bogus"], {}).notes == (USAGE,)
+        True
     """
     try:
         return _said(_call(argv), env, EMPTY)[0]
@@ -367,9 +451,16 @@ def once(argv: list[str], env: Mapping[str, str]) -> Said:
 
 
 def pending(text: str) -> bool:
-    """
-    The input goes on: a pair left open, a definition head or a line
-    with a block last, or a trailing / (a directory head).
+    """Tell whether the input goes on after its last line.
+
+    It does when a pair is left open, a definition head or a line with a
+    block is last, or the text ends in ``/`` (a directory head).
+
+    Examples:
+        >>> pending("f x [")
+        True
+        >>> pending("a = 1")
+        False
     """
     try:
         last = parse(text).lines[-1]
@@ -379,20 +470,19 @@ def pending(text: str) -> bool:
 
 
 def _body(text: str) -> str:
-    """
-    The tabs the body of a definition takes if the input so far ends in
-    its head, else nothing: one more than the head has. The head is
-    judged in the parse of the whole input, down the last line's block
-    to the deepest line last written: so a head after the closer of a
-    block comment on its line counts, a head whose body has begun does
-    not, and an input that does not parse so far is inside a pair left
-    open (any other error has ended it, see `inputs`), where a line that
-    reads as a head is only text, such as a line of a string. The tabs
-    are the depth the pre-lexer gives the head's line, the tabs that
-    lead the line of code it stands on once the block comments are gone:
-    so a head under a directory is one deeper still, also when a block
-    comment stands between the head and its body, or before the head on
-    its own line.
+    """Return the tabs the body of a definition takes, or ``""``.
+
+    The result is one tab more than the head's own depth when *text*
+    so far ends in a definition head, else ``""``. The head is the
+    deepest last line of the parse of *text*. A head after the closer
+    of a block comment on its line counts; a head whose body has begun
+    does not. When *text* does not parse, it is inside an open pair
+    (any other error has ended the input, see :func:`inputs`), where a
+    line that reads as a head is only text, such as a line of a string.
+    The depth is the count of leading tabs that :func:`fpl.lex.prelex`
+    gives the line of code the head stands on, block comments removed.
+    A head under a directory is one deeper, also with a block comment
+    between the head and its body or before the head on its own line.
     """
     program = _parsed(text)
     if program is None:
@@ -412,24 +502,34 @@ def _body(text: str) -> str:
 
 
 def _taken(text: str, line: str) -> str:
-    """
-    A line as the input so far takes it: a line at the margin right
-    after a definition head is the body's first, one tab deeper; any
-    other line, as it was written.
+    """Return *line* as the input *text* so far takes it.
+
+    A line at the margin right after a definition head is the body's
+    first, one tab deeper. Any other line is returned as written.
     """
     return line if line[:1] in ("", " ", "\t") else _body(text) + line
 
 
 def inputs(read: Callable[[bool], str | None]) -> Iterator[str]:
-    """
-    Physical lines, read until None, grouped into inputs: an input ends
-    at a blank line or at a line after which it is not pending, and
-    blank lines between inputs are skipped. A line at the margin right
-    after a definition head is taken as the body's first, as if it were
-    written one tab deeper; one that starts with a space or a tab is
-    left as written, so the tabs-only rule of a file holds. Each input
-    is its lines, each ending in a newline; `read` is told whether one
-    goes on.
+    r"""Group physical lines into inputs.
+
+    An input ends at a blank line or at a line after which
+    :func:`pending` is false; blank lines between inputs are skipped. A
+    line at the margin right after a definition head is taken as the
+    body's first, as if it were written one tab deeper. A line that
+    starts with a space or a tab is left as written.
+
+    Args:
+        read: Called with whether an input is in progress; returns the
+            next line without its newline, or None at the end.
+
+    Yields:
+        The lines of one input, each ending in a newline.
+
+    Examples:
+        >>> lines = iter(["a = 1", "", "b = 2"])
+        >>> list(inputs(lambda on: next(lines, None)))
+        ['a = 1\n', 'b = 2\n']
     """
     text = ""
     while (line := read(bool(text))) is not None:
@@ -445,8 +545,9 @@ def inputs(read: Callable[[bool], str | None]) -> Iterator[str]:
 
 
 def _plain(stdin: TextIO) -> Callable[[bool], str | None]:
-    """
-    Lines from a stream that is not a terminal, without prompts.
+    """Return a line reader over a stream that is not a terminal.
+
+    It writes no prompts.
     """
 
     def read(_on: bool) -> str | None:
@@ -457,9 +558,11 @@ def _plain(stdin: TextIO) -> Callable[[bool], str | None]:
 
 
 def _typed(_on: bool) -> str | None:
-    """
-    A line from the terminal under readline, with no prompt text so the
-    session reads as a utop-style transcript.
+    """Read a line from the terminal; None at end of input.
+
+    The terminal is read under readline.
+
+    No prompt is printed, so a session reads like a utop transcript.
     """
     try:
         return input("")
@@ -468,9 +571,10 @@ def _typed(_on: bool) -> str | None:
 
 
 def _reader(stdin: TextIO) -> Callable[[bool], str | None]:
-    """
-    The terminal through readline, where a tab inserts itself (an
-    indent), or the stream.
+    """Return a line reader over *stdin*.
+
+    At a terminal it goes through readline, where a tab inserts itself
+    (an indent).
     """
     if not stdin.isatty():
         return _plain(stdin)
@@ -479,10 +583,12 @@ def _reader(stdin: TextIO) -> Callable[[bool], str | None]:
     return _typed
 
 
+#: Width in columns of a phrase bar, when its fields leave room.
 BAR_WIDTH = 72
 
 # Kakoune assistant_clippy; smoke / jonko tweak eyes and prop. Meatdog
 # stays plain ASCII.
+#: Face of the default assistant, in box-drawing characters.
 CLIPPER_FACE: tuple[str, ...] = (
     " ╭──╮",
     " │  │",
@@ -492,6 +598,7 @@ CLIPPER_FACE: tuple[str, ...] = (
     " │╰─╯│",
     " ╰───╯",
 )
+#: Face of the smoking variant of the clipper.
 CLIPPER_SMOKE_FACE: tuple[str, ...] = (
     " ╭──╮",
     " │  │",
@@ -501,6 +608,7 @@ CLIPPER_SMOKE_FACE: tuple[str, ...] = (
     " │╰─╯│",
     " ╰───╯",
 )
+#: Face of the red-eyed variant of the clipper.
 CLIPPER_JONKO_FACE: tuple[str, ...] = (
     " ╭──╮",
     " │  │",
@@ -510,6 +618,7 @@ CLIPPER_JONKO_FACE: tuple[str, ...] = (
     " │╰─╯│",
     " ╰───╯",
 )
+#: ASCII face of the dog assistant, in plain ASCII.
 MEATDOG_FACE: tuple[str, ...] = (
     " /\\_/\\",
     "( o.o )",
@@ -572,17 +681,22 @@ _BYE_NONE: tuple[str, ...] = (
 
 @dataclass(frozen=True)
 class Assistant:
-    """
-    One TTY mascot for a REPL session: optional ASCII face and the
-    hello / bye line pools it speaks (chrome only, offline for now).
+    """A TTY mascot for a session: an optional face and its lines.
+
+    ``hello`` and ``bye`` are the lines it speaks. It is display only.
     """
 
+    #: Name of the assistant.
     id: str
+    #: Lines of the face; empty for none.
     face: tuple[str, ...]
+    #: Lines it may greet with.
     hello: tuple[str, ...]
+    #: Lines it may part with.
     bye: tuple[str, ...]
 
 
+#: The assistants :func:`pick_assistant` chooses from.
 ASSISTANTS: tuple[Assistant, ...] = (
     Assistant("clipper", CLIPPER_FACE, _HELLO_CLIPPER, _BYE_CLIPPER),
     Assistant("clipper-smoke", CLIPPER_SMOKE_FACE, _HELLO_SMOKE, _BYE_SMOKE),
@@ -593,12 +707,18 @@ ASSISTANTS: tuple[Assistant, ...] = (
 # smoke + jonko ~14%; meatdog / none uncommon; clipper the rest
 _ASSISTANT_WEIGHTS: tuple[int, ...] = (70, 7, 7, 10, 6)
 
+#: The hello lines of all :data:`ASSISTANTS`, for :func:`splash_line`.
 SPLASHES: tuple[str, ...] = tuple(line for a in ASSISTANTS for line in a.hello)
 
 
 def pick_assistant(rng: random.Random | None = None) -> Assistant:
-    """
-    One assistant for a session, weighted (smoke / jonko rare).
+    """Pick the assistant for a session, weighted.
+
+    The smoke and jonko variants are rare.
+
+    Args:
+        rng: The generator to choose with; the one in :mod:`random` when
+            None.
     """
     choice = rng.choices if rng is not None else random.choices
     return choice(ASSISTANTS, weights=_ASSISTANT_WEIGHTS, k=1)[0]
@@ -610,8 +730,20 @@ def speak(
     *,
     pick: Callable[[Sequence[str]], str] | None = None,
 ) -> str:
-    """
-    Face (if any) plus one line from the hello or bye pool.
+    """Return the face (if any) plus one hello or bye line.
+
+    Args:
+        assistant: The assistant whose face and lines to use.
+        kind: Which of the assistant's lines to choose from.
+        pick: Chooses the line; :func:`random.choice` when None.
+
+    Returns:
+        The face lines, then the chosen line, each ending in a newline.
+
+    Examples:
+        >>> first = lambda lines: lines[0]
+        >>> print(speak(ASSISTANTS[-1], "bye", pick=first), end="")
+        Bye.
     """
     lines = assistant.hello if kind == "hello" else assistant.bye
     choose = pick if pick is not None else random.choice
@@ -624,8 +756,12 @@ def speak(
 def splash_line(
     pick: Callable[[Sequence[str]], str] | None = None,
 ) -> str:
-    """
-    One Minecraft-style MOTD line (ASCII); prefer `speak` for faces.
+    """Return one Minecraft-style MOTD line in ASCII.
+
+    Prefer :func:`speak`, which also gives a face.
+
+    Args:
+        pick: Chooses the line; :func:`random.choice` when None.
     """
     choose = pick if pick is not None else random.choice
     return choose(SPLASHES)
@@ -633,18 +769,20 @@ def splash_line(
 
 @dataclass(frozen=True)
 class Tty:
-    """
-    Clocks for a TTY transcript: wall date for phrase bars, and a
-    monotonic timer for per-phrase ms. Presence of a `Tty` means the
-    loop writes bars and typed result lines. Optional `state_id` fills
-    `&` on each bar; `splash` greets (and later byes) with one
-    session `assistant`, picked if none is injected.
+    """Clocks and chrome for a TTY transcript.
+
+    With a :class:`Tty` the loop writes bars and typed result lines.
     """
 
+    #: Wall clock for the time on a phrase bar.
     now: Callable[[], datetime] = datetime.now
+    #: Monotonic timer for the ms of a phrase.
     timer: Callable[[], float] = time.perf_counter
+    #: Gives the fingerprint shown as ``&`` on a bar; None shows none.
     state_id: Callable[[], int] | None = None
+    #: Whether the loop greets, and says goodbye, with an assistant.
     splash: bool = False
+    #: The session's assistant; None lets :func:`pick_assistant` pick.
     assistant: Assistant | None = None
 
 
@@ -657,11 +795,25 @@ def phrase_bar(  # noqa: PLR0913 -- bar fields are the chrome, not a bag type
     ms: float | None = None,
     state_id: int | None = None,
 ) -> str:
-    """
-    ASCII DOC line between TTY phrases: `;;!` so paste is a DOC, then a
-    utop-shaped command bar with local time, phrase number, and head.
-    Optional `fuel` and `ms` are the previous phrase's steps and wall
-    time; optional `state_id` is a turn fingerprint as `&<decimal>`.
+    """Build the DOC line between TTY phrases: a command bar.
+
+    The line opens with ``;;!``, which makes a paste a DOC, and shows
+    the local time, the phrase number and the head.
+
+    Args:
+        n: The phrase number.
+        head: The sequence number of the log's head.
+        when: The local time to show.
+        fuel: The previous phrase's steps; None shows none.
+        ms: The previous phrase's wall time in milliseconds; None shows
+            none.
+        state_id: A turn fingerprint, shown as ``&<decimal>``.
+
+    Examples:
+        >>> from datetime import datetime
+        >>> at = datetime(2026, 1, 1, 9, 5, 3)
+        >>> phrase_bar(1, 0, at)  # doctest: +ELLIPSIS
+        ';;! -( 09:05:03 )-< command 1 >-...-{ head: 0 }-'
     """
     left = f";;! -( {when.strftime('%H:%M:%S')} )-< command {n} >-"
     fields = [f"head: {head}"]
@@ -677,17 +829,28 @@ def phrase_bar(  # noqa: PLR0913 -- bar fields are the chrome, not a bag type
 
 
 def result_line(value: str, typ: str = "...") -> str:
-    """
-    One TTY result line: turnstile, value, and a type slot (`...` until
-    the walker exposes a type; not FPL's `?` goal or `_` hole).
+    """Build one TTY result line.
+
+    The line is a turnstile, *value*, and a type slot *typ*.
+
+    The slot is ``...`` until the walker exposes a type; it is not FPL's
+    ``?`` goal or ``_`` hole.
+
+    Examples:
+        >>> result_line("3")
+        '|- 3 : ...'
     """
     return f"|- {value} : {typ}"
 
 
 def _commanded(call: _Call, text: str) -> _Call:
-    """
-    A : command as the call it makes; :log and :rewind name no state to
-    evaluate at. Refused: a command not known.
+    """Turn a ``:`` command in *text* into the call it makes.
+
+    ``:log`` and ``:rewind`` name no state to evaluate at, so they clear
+    ``at``.
+
+    Raises:
+        RefusedError: The command is not known.
     """
     match text.split():
         case [":show"]:
@@ -705,9 +868,9 @@ def _commanded(call: _Call, text: str) -> _Call:
 
 
 def _told(said: Said, stdout: TextIO, stderr: TextIO) -> None:
-    """
-    The output to stdout, flushed for whoever drives the loop, the notes
-    to stderr.
+    """Write the output to *stdout* and the notes to *stderr*.
+
+    *stdout* is flushed for whoever drives the loop.
     """
     stdout.write(said.out)
     stdout.flush()
@@ -715,9 +878,14 @@ def _told(said: Said, stdout: TextIO, stderr: TextIO) -> None:
 
 
 def transcript(out: str) -> str:
-    """
-    Each non-empty line of a successful TTY eval as `|- value : ...`
-    (shell convention, not grammar). Blank lines stay blank.
+    r"""Turn the lines of a successful TTY eval into result lines.
+
+    Each line becomes a :func:`result_line`; blank lines stay blank. The
+    form is a shell convention, not grammar.
+
+    Examples:
+        >>> transcript("1\n\n2\n")
+        '|- 1 : ...\n\n|- 2 : ...\n'
     """
     parts: list[str] = []
     for line in out.splitlines(keepends=True):
@@ -727,9 +895,9 @@ def transcript(out: str) -> str:
 
 
 def _seen(call: _Call, log: Log) -> _Call:
-    """
-    The call checked against the head of `log`, unless it evaluates as
-    of --at.
+    """Check the call against the head of *log*.
+
+    A call that evaluates as of ``--at`` is returned as it is.
     """
     return (
         call
@@ -739,13 +907,13 @@ def _seen(call: _Call, log: Log) -> _Call:
 
 
 def _bare(lines: tuple[Line, ...]) -> Iterator[str]:
-    """
-    A NOTE for each definition among the lines, and the blocks under
-    them, whose head has no code under it, which an empty line where the
-    body was meant would otherwise leave without a word. It says only
-    that the written body is empty: what the word then does is the
-    desugaring's (a head group makes it a match), which this parse does
-    not see.
+    """Yield a NOTE for each definition in *lines* that has no body.
+
+    The definitions in the blocks under *lines* are included. An empty
+    line where the body was meant would otherwise pass without a word.
+    The note says only that the written body is empty; what the word
+    then does belongs to the desugaring (a head group makes it a match),
+    which this parse does not see.
     """
     for line in lines:
         name = plain(line.frames[0].cells[0].items[0]) if head(line) else None
@@ -756,10 +924,7 @@ def _bare(lines: tuple[Line, ...]) -> Iterator[str]:
 
 
 def _flagged(text: str, said: Said) -> Said:
-    """
-    What an input said, with a NOTE first for each definition in it that
-    has no body.
-    """
+    """Put a NOTE first in *said* for each bodiless definition."""
     program = _parsed(text)
     return (
         said
@@ -777,13 +942,26 @@ def _turn(  # noqa: PLR0913 -- call/env/log/streams plus optional Tty
     *,
     tty: Tty | None = None,
 ) -> tuple[_Call, Log, int | None, float | None]:
-    """
-    One input, entered as -e enters it, or one command, carried out and
-    told; the call and log the next one starts from, and on a TTY the
-    steps and wall ms of an entered source (else None). A refusal is
-    told, and the head as it now stands adopted. On a TTY loop, a
-    successful source eval's stdout lines are written as
-    `|- value : ...`.
+    """Carry out one input or one command, and tell the result.
+
+    An input is entered as ``-e`` enters it. On a TTY, a successful
+    source eval writes its stdout lines as ``|- value : ...``. A refusal
+    is told, and the head as it now stands is adopted.
+
+    Args:
+        call: The call this turn starts from.
+        text: An input, or a command that starts with ``:``.
+        env: The environment, for provenance and the key.
+        log: The log held in memory when the call has no session.
+        streams: The stdout and stderr to write to.
+        tty: Set on a TTY, which timestamps the turn and prints results.
+
+    Returns:
+        The call and log the next turn starts from; on a TTY, the steps
+        and the wall ms of an entered source, else None for both.
+
+    Raises:
+        OSError: The session file cannot be used.
     """
     stdout, stderr = streams
     started = tty.timer() if tty is not None else 0.0
@@ -813,9 +991,10 @@ def _turn(  # noqa: PLR0913 -- call/env/log/streams plus optional Tty
 
 
 def _transcribed(this: _Call, said: Said, tty: Tty | None) -> Said:
-    """
-    What a turn tells: on a TTY, a source that ran shows its stdout
-    lines as `|- value : ...`; anything else is told as it was said.
+    """Return what a turn tells.
+
+    On a TTY, a source that ran shows its stdout lines as ``|- value :
+    ...``; anything else is told as it was said.
     """
     if tty is None or this.action != "source" or said.code != 0:
         return said
@@ -823,8 +1002,11 @@ def _transcribed(this: _Call, said: Said, tty: Tty | None) -> Said:
 
 
 def _loaded(call: _Call, env: Mapping[str, str], memory: Log) -> Log:
-    """
-    The session's log as it stands, or the log held in memory.
+    """Return the session's log as it stands, else the one in *memory*.
+
+    Raises:
+        RefusedError: The session's log does not load.
+        OSError: The session file cannot be read.
     """
     return memory if call.session is None else load(call.session, keyed(env))
 
@@ -837,12 +1019,23 @@ def _looped(
     *,
     tty: Tty | None = None,
 ) -> int:
-    """
-    Inputs and commands until the end or :quit, each checked against the
-    head last seen: --head at first, else the head at start. Refused: a
-    log that does not load at start. A TTY writes `;;!` phrase bars and
-    `|- value : ...` result lines; a bar may name the previous phrase's
+    """Run inputs and commands until the end or ``:quit``; return 0.
+
+    Each is checked against the head last seen: ``--head`` at first,
+    else the head at start. A TTY writes ``;;!`` phrase bars and ``|-
+    value : ...`` result lines, and a bar may name the previous phrase's
     fuel and wall ms.
+
+    Args:
+        call: The call whose options the loop runs under.
+        read: The line reader given to :func:`inputs`.
+        streams: The stdout and stderr to write to.
+        env: The environment, for provenance and the key.
+        tty: Set on a TTY, which gets bars, results and an assistant.
+
+    Raises:
+        RefusedError: The log does not load at start.
+        OSError: The session file cannot be used.
     """
     log = _loaded(call, env, EMPTY)
     if call.head is None:
@@ -901,13 +1094,27 @@ def main(  # noqa: PLR0913 -- argv and stdio/env plus optional Tty
     *,
     tty: Tty | None = None,
 ) -> int:
-    """
-    Carry out argv; the output, or one ERROR line, to stdout; goals, the
-    caret under an error, inputs changed and the new head to stderr, all
-    after any append is durable. An OSError is a refusal: its line names
-    the path the system refused. `tty` supplies clocks when the loop is
-    driven as a transcript (tests); at a real terminal it is built from
-    `stdin.isatty()`.
+    """Carry out *argv* and return the exit status.
+
+    The output, or one ``ERROR`` line, goes to *stdout*; goals, the
+    caret under an error, inputs changed and the new head go to
+    *stderr*, all after any append is durable. An :exc:`OSError` is a
+    refusal: its line names the path the system refused. Bad argv writes
+    :data:`USAGE` to *stderr* and returns 2.
+
+    Args:
+        argv: The command line without the program name; with no action
+            it starts the read-eval loop.
+        stdin: Read by the loop only.
+        stdout: Receives the output.
+        stderr: Receives the notes.
+        env: Where the model, session id and key location come from.
+        tty: Clocks and chrome for the loop, for a driven transcript
+            (tests); when None and *stdin* is a terminal, one is built.
+
+    Returns:
+        The exit status described in the module docstring; 0 for the
+        loop.
     """
     try:
         call = _call(argv)

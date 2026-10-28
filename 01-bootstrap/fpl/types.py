@@ -1,15 +1,11 @@
-"""
-Elaboration over the core AST: each word's effect inferred from its body
-and checked against its effect line, before any line runs.
+"""Infer each word's effect and check it against its effect line.
 
-A sort is what elaboration knows of a value: a number, a text, a symbol,
-or a value of no sort it tracks (a list, a quotation, a dict, what a
-control word leaves: trusted, hole typed-fragment). While a body is
-inferred, the values it takes are inputs whose sorts are not known yet;
-arithmetic on one makes it a number. An arrow is a word's inferred
-effect: the sorts it takes and leaves. A ? is a goal: reported with the
-arrow that would fill it, elaboration going on past it; a _ is inferred
-as nothing, or refused (holes goal-placeholder, infer-hole).
+:func:`elaborate` walks the core AST before any line runs and returns
+the :class:`Arrow` of every word and the :class:`Goal` of each ``?`` in
+typed code. A body that leaves another count of values than its effect
+line promises, or takes a sort a word cannot take, is refused with
+:exc:`FplError`. Code that elaboration does not infer keeps its effect
+line.
 """
 
 from collections.abc import Mapping
@@ -48,109 +44,122 @@ from fpl.eval import CONTROLS
 
 @dataclass(frozen=True)
 class Input:
-    """
-    The index-th value a word takes, its sort not known yet.
-    """
+    """The *index*-th value a word takes, its sort not known yet."""
 
+    #: Position among the word's inputs, counted from the deepest.
     index: int
 
 
 class Verdict(IntEnum):
-    """
-    Whether values of known sorts fit a pattern: surely not, perhaps,
-    surely; a conjunction is the least of its parts.
+    """How surely values of known sorts fit a pattern.
+
+    A conjunction of verdicts is the least of them, so the members are
+    ordered.
     """
 
+    #: The values surely do not fit.
     NO = 0
+    #: The values may fit; only a run can tell.
     MAYBE = 1
+    #: The values surely fit.
     YES = 2
 
 
 class Kind(Enum):
-    """
-    A sort of value elaboration tracks; VALUE is one of no sort it
-    tracks.
+    """A sort of value that elaboration tracks.
+
+    ``VALUE`` stands for a value of no tracked sort: a list, a
+    quotation, a dict, or what a control word leaves.
     """
 
+    #: A number, an int or a decimal.
     NUMBER = "number"
+    #: A text.
     TEXT = "text"
+    #: A symbol.
     SYMBOL = "symbol"
+    #: A value of no tracked sort.
     VALUE = "value"
 
 
+#: What elaboration knows of a value: a kind, or an input not yet
+#: resolved.
 type Sort = Kind | Input
 
 
 @dataclass(frozen=True)
 class Arrow:
-    """
-    A word's effect: the sorts it takes, then those it leaves; an Input
-    in `outs` is the value taken at that index.
+    """A word's inferred effect: the sorts it takes and leaves.
+
+    An :class:`Input` in *outs* is the value taken at that index.
     """
 
+    #: The sorts taken, deepest first.
     ins: tuple[Sort, ...]
+    #: The sorts left, top last.
     outs: tuple[Sort, ...]
 
 
 @dataclass(frozen=True)
 class Dispatch(Arrow):
-    """
-    A dispatcher's arrow, and its rows in the order it tries them
-    (design 09 §3.6).
-    """
+    """A dispatcher's arrow, with the rows it tries (design 09 §3.6)."""
 
+    #: The rows in the order they are tried.
     rows: tuple[Row, ...]
 
 
 @dataclass(frozen=True)
 class Goal:
-    """
-    A ? met: where it is and the arrow that would fill it.
-    """
+    """A ``?`` met in typed code."""
 
+    #: Where the ``?`` is.
     span: Span
+    #: The arrow that would fill it.
     arrow: Arrow
 
 
 @dataclass(frozen=True)
 class Typing:
-    """
-    What elaboration knows at a point in the code: the sorts on the
-    stack, top last; the sort each bound name stands for; the sorts the
-    body's inputs have been found to be; the goals met so far; whether
-    the code gets here, which a refusal never passes.
-    """
+    """What elaboration knows at one point in the code."""
 
+    #: The sorts on the stack, top last.
     stack: tuple[Sort, ...]
+    #: The sort each bound name stands for.
     env: Mapping[str, Sort]
+    #: The sort found for each input of the body, by index.
     known: Mapping[int, Sort]
+    #: The goals met so far.
     goals: tuple[Goal, ...] = ()
+    #: Whether the code gets here; a refusal never passes.
     reached: bool = True
 
 
 class UntypedError(Exception):
-    """
-    Code outside what elaboration infers (a control word, whose effect
-    is the code it runs; a match whose rows disagree): its word's effect
-    line is trusted.
+    """Code that elaboration does not infer.
+
+    Raised for a control word, whose effect is the code it runs, for a
+    match whose rows leave different counts, and for a call to a name
+    with no arrow. The word's effect line is trusted instead.
     """
 
 
 class UnderflowError(FplError):
-    """
-    Fewer values than a word, a binder or a match takes.
-    """
+    """Fewer values than a word, a binder or a match takes."""
 
     def __init__(self, span: Span) -> None:
-        """
-        An underflow at the word, binder or match the span points to;
-        the message is always the same.
+        """Build the error with the message ``stack underflow``.
+
+        Args:
+            span: The word, binder or match that took too many values.
         """
         super().__init__(span, "stack underflow")
 
 
+#: The hole words: ``?`` is a goal, ``_`` is inferred as nothing.
 HOLES = ("?", "_")
+#: The arrow of binary arithmetic: two numbers in, one out.
 NUMBERS = Arrow((Kind.NUMBER, Kind.NUMBER), (Kind.NUMBER,))
+#: The arrow of each builtin word, without control words and holes.
 ARROWS: dict[str, Arrow] = {
     **{
         name: Arrow(
@@ -166,7 +175,9 @@ ARROWS: dict[str, Arrow] = {
     "dup": Arrow((Input(0),), (Input(0), Input(0))),
     "drop": Arrow((Input(0),), ()),
 }
+#: The query suffixes every definition gets, as in ``word/doc``.
 QUERIES = ("history", "doc", "effect")
+#: The kind each builtin type word tests for.
 TESTED = {
     "Int": Kind.NUMBER,
     "Decimal": Kind.NUMBER,
@@ -178,13 +189,26 @@ TESTED = {
 def elaborate(
     statements: tuple[Statement, ...],
 ) -> tuple[dict[str, Arrow], tuple[Goal, ...]]:
-    """
-    Every word's arrow, builtins and queries too, and the goals met, in
-    the order written. A body that leaves another count than its effect
-    line promises is refused at its definition, and a sort a word cannot
-    take, in a body or a line, at the word. A word called before its
-    last definition is inferred meets that definition's effect line. A
-    goal in code that is not typed is not met.
+    """Infer the arrow of every word and collect the goals met.
+
+    The result holds the builtins and the ``/history``, ``/doc`` and
+    ``/effect`` queries of each definition. A word called before its
+    last definition has been inferred meets that definition's effect
+    line. A goal in code that is not typed is not met.
+
+    Args:
+        statements: The program's top-level statements, in order
+            written.
+
+    Returns:
+        The arrow of each word by name, and the goals met in the order
+            written.
+
+    Raises:
+        FplError: A body leaves another count of values than its effect
+            line promises, a word takes a sort it cannot take, a ``_``
+            cannot be inferred, or a word takes more values than exist
+            (the subclass :exc:`UnderflowError`).
     """
     arrows = dict(ARROWS)
     defines = [s for s in statements if isinstance(s, Define)]
@@ -207,9 +231,19 @@ def elaborate(
 def checked(
     statement: Statement, last: Mapping[str, Define], arrows: dict[str, Arrow]
 ) -> tuple[Goal, ...]:
-    """
-    The goals a statement meets; a word's last definition sets its
-    arrow.
+    """Return the goals one statement meets.
+
+    The last definition of a word also sets the word's arrow in
+    *arrows*.
+
+    Args:
+        statement: A definition or a run of code.
+        last: The last definition of each word.
+        arrows: The arrow of each word so far; updated in place.
+
+    Raises:
+        FplError: As for :func:`elaborate`.
+        UntypedError: A ``Run`` holds code that is not typed.
     """
     if isinstance(statement, Run):
         return after(Typing((), {}, {}), statement.code, arrows).goals
@@ -220,8 +254,10 @@ def checked(
 
 
 def dispatching(define: Define, arrow: Arrow) -> Arrow:
-    """
-    A dispatcher's arrow with its rows; any other word's as it is.
+    """Return a dispatcher's arrow with its rows, any other as is.
+
+    A dispatcher is a definition with one clause number whose code is a
+    single match.
     """
     match define.code:
         case (Match(rows=rows),) if len(define.clause) == 1:
@@ -231,9 +267,9 @@ def dispatching(define: Define, arrow: Arrow) -> Arrow:
 
 
 def declared(define: Define) -> Arrow:
-    """
-    The effect line as an arrow: any values in, values of no known sort
-    out.
+    """Return the effect line of *define* as an arrow.
+
+    Every input is general and every output is ``Kind.VALUE``.
     """
     ins = tuple(map(Input, range(len(define.effect.ins))))
     return Arrow(ins, (Kind.VALUE,) * len(define.effect.outs))
@@ -242,10 +278,14 @@ def declared(define: Define) -> Arrow:
 def inferred(
     define: Define, arrows: Mapping[str, Arrow]
 ) -> tuple[Arrow, tuple[Goal, ...]]:
-    """
-    The arrow of the body, its inputs as general as the body lets them
-    be, and the goals it meets; the effect line's, and none, if the body
-    is untyped.
+    """Infer the arrow of a body and the goals it meets.
+
+    Inputs are as general as the body lets them be. A body that is not
+    typed gets its effect line as arrow and no goals.
+
+    Raises:
+        FplError: The body leaves another count of values than its
+            effect line promises, or :func:`after` refuses it.
     """
     start = Typing(tuple(map(Input, range(len(define.effect.ins)))), {}, {})
     promised = len(define.effect.outs)
@@ -262,16 +302,12 @@ def inferred(
 
 
 def resolved(sorts: tuple[Sort, ...], typing: Typing) -> tuple[Sort, ...]:
-    """
-    The sorts with each input found to be of a sort replaced by it.
-    """
+    """Replace each input found to be of a sort by that sort."""
     return tuple(known(s, typing) for s in sorts)
 
 
 def known(s: Sort, typing: Typing) -> Sort:
-    """
-    An input's sort once found, else the sort itself.
-    """
+    """Return the sort found for an input, else *s* itself."""
     return typing.known.get(s.index, s) if isinstance(s, Input) else s
 
 
@@ -281,9 +317,18 @@ def after(
     arrows: Mapping[str, Arrow],
     need: int | None = None,
 ) -> Typing:
-    """
-    What is known once the code has run, `need` the count it must end at
-    when known; a node that cannot run is refused at its span.
+    """Return what is known once *code* has run.
+
+    Args:
+        typing: What is known before the code.
+        code: The nodes to run, in order.
+        arrows: The arrow of each word.
+        need: The count of values the code must end at, when known.
+
+    Raises:
+        FplError: A node cannot run; the error points at its span. This
+            includes the subclass :exc:`UnderflowError`.
+        UntypedError: The code is not typed.
     """
     for index, node in enumerate(code):
         rest = code[index + 1 :]
@@ -305,10 +350,23 @@ def filled(
     arrows: Mapping[str, Arrow],
     need: int | None,
 ) -> Typing:
-    """
-    A ? takes the stack under it and leaves values of no known sort, as
-    many as the rest takes, and a goal with those values' sorts; a _ is
-    nothing, when the rest takes the stack as it is, else refused at it.
+    """Elaborate a hole, ``?`` or ``_``.
+
+    A ``?`` takes the stack under it, leaves values of no known sort as
+    many as the rest takes, and records a goal with those sorts. A ``_``
+    is nothing when the rest takes the stack as it is.
+
+    Args:
+        typing: What is known before the hole.
+        node: The hole.
+        rest: The nodes after the hole.
+        arrows: The arrow of each word.
+        need: The count of values the code must end at, when known.
+
+    Raises:
+        FplError: A ``_`` would leave another count than it takes, or
+            :func:`wanted` finds no count for the hole.
+        UntypedError: The rest is not typed.
     """
     arrow = Arrow(
         resolved(typing.stack, typing),
@@ -331,14 +389,25 @@ def wanted(
     arrows: Mapping[str, Arrow],
     need: int | None,
 ) -> tuple[Sort, ...]:
-    """
-    The sorts of the fewest values the rest runs on, ending at `need`
-    values when known; a value the rest puts no sort on is of none;
-    refused at the hole when no count does.
+    """Return the sorts of the fewest values the rest runs on.
 
-    Past `reach(rest)` values nothing underflows, and each value more is
-    either left on top or cleared by a hole in the rest: `reach(rest) +
-    need` values end at `need` when any count does.
+    The rest ends at *need* values when that is known. A value the rest
+    puts no sort on is ``Kind.VALUE``.
+
+    Past ``reach(rest)`` values nothing underflows, and each value more
+    is either left on top or cleared by a hole in the rest. So
+    ``reach(rest) + need`` values end at *need* when any count does.
+
+    Args:
+        typing: What is known before the hole.
+        hole: The hole whose values are wanted.
+        rest: The nodes after the hole.
+        arrows: The arrow of each word.
+        need: The count of values the code must end at, when known.
+
+    Raises:
+        FplError: No count of values lets the rest run or end at *need*.
+        UntypedError: The rest is not typed.
     """
     for count in range(reach(rest, arrows) + (need or 0) + 1):
         start = Typing(tuple(map(Input, range(count))), typing.env, {})
@@ -356,10 +425,11 @@ def wanted(
 
 
 def reach(code: tuple[Node, ...], arrows: Mapping[str, Arrow]) -> int:
-    """
-    The most values code can take from under it: what each node takes,
-    summed, a match's most taking row counted; a hole takes none, since
-    it takes only what is there.
+    """Return the most values *code* can take from under it.
+
+    Sums what each node takes. For a match the first row's patterns
+    count, and the body that takes most. A hole takes none, since it
+    takes only what is there.
     """
     total = 0
     for node in code:
@@ -381,8 +451,13 @@ def reach(code: tuple[Node, ...], arrows: Mapping[str, Arrow]) -> int:
 
 
 def shown(arrow: Arrow) -> str:
-    """
-    An arrow as an effect line: an input as t and its index.
+    """Format an arrow as an effect line.
+
+    An input is written ``t`` and its index.
+
+    Examples:
+        >>> shown(Arrow((Input(0), Kind.NUMBER), (Input(0),)))
+        't0 number -- t0'
     """
     names = [
         f"t{s.index}" if isinstance(s, Input) else s.value
@@ -392,8 +467,11 @@ def shown(arrow: Arrow) -> str:
 
 
 def reported(goal: Goal) -> str:
-    """
-    The line a goal is reported as.
+    """Format a goal as the line :mod:`fpl.driver` reports.
+
+    Examples:
+        >>> reported(Goal(Span(3, 4), Arrow((Kind.NUMBER,), ())))
+        'GOAL 3:4 ? : number --'
     """
     return f"GOAL {goal.span.line}:{goal.span.col} ? : {shown(goal.arrow)}"
 
@@ -404,8 +482,11 @@ def through(
     arrows: Mapping[str, Arrow],
     need: int | None = None,
 ) -> Typing:
-    """
-    What is known once one node has run.
+    """Return what is known once one node has run.
+
+    Raises:
+        FplError: The node cannot run, as for :func:`after`.
+        UntypedError: The node is not typed.
     """
     match node:
         case Push():
@@ -427,9 +508,14 @@ def through(
 def bound(
     typing: Typing, node: Bind, arrows: Mapping[str, Arrow], need: int | None
 ) -> Typing:
-    """
-    The top taken and named for the binder's scope, which runs; the name
-    dies with it.
+    """Elaborate a binder: name the top for its scope and run the scope.
+
+    The name ends with the scope.
+
+    Raises:
+        UnderflowError: The stack is empty.
+        FplError: The scope cannot run, as for :func:`after`.
+        UntypedError: The scope is not typed.
     """
     if not typing.stack:
         raise UnderflowError(node.span)
@@ -446,15 +532,23 @@ def bound(
 def matched(
     typing: Typing, node: Match, arrows: Mapping[str, Arrow], need: int | None
 ) -> Typing:
-    """
-    Each row run on the values under those the match takes, its pattern
-    names standing for values of no known sort; the sorts the rows agree
-    on, where they leave as many values, else untyped. Every row counts,
-    one after a sure fit included: a sort a row finds for an input holds
-    for the rows after it and the word, whichever row runs, and what a
-    row that never runs leaves joins the agreement, so no pruning of
-    rows can let the word leave a sort it does not promise (hole
-    typed-fragment); pruning serves only `chosen`.
+    """Elaborate a match: run each row on the values under its patterns.
+
+    A row's pattern names stand for values of no known sort. The result
+    leaves the sorts the rows agree on, where they leave as many values.
+
+    Every row counts, one after a sure fit included. A sort a row finds
+    for an input holds for the rows after it and for the word, whichever
+    row runs, and what a row that never runs leaves joins the agreement.
+    So no pruning of rows lets the word leave a sort it does not promise
+    (hole ``typed-fragment``). Pruning serves only :func:`chosen`.
+
+    Raises:
+        UnderflowError: The stack holds fewer values than the match
+            takes.
+        FplError: A row cannot run, as for :func:`after`.
+        UntypedError: The rows leave different counts, or a row is not
+            typed.
     """
     cut = len(typing.stack) - len(node.rows[0].patterns)
     if cut < 0:
@@ -471,10 +565,14 @@ def matched(
 
 
 def agreed(ends: list[Typing]) -> tuple[Sort, ...]:
-    """
-    The sorts rows leave, inputs resolved by what every row found: each
-    where they agree, else of no known sort; untyped where they leave
-    different counts. A row that refuses leaves nothing.
+    """Return the sorts the rows leave.
+
+    Inputs are resolved by what every row found. Each position keeps the
+    sort where the rows agree and is ``Kind.VALUE`` elsewhere. A row
+    that refuses leaves nothing and does not count.
+
+    Raises:
+        UntypedError: The rows leave different counts.
     """
     stacks = {resolved(end.stack, ends[-1]) for end in ends if end.reached}
     if len({len(stack) for stack in stacks}) != 1:
@@ -486,16 +584,12 @@ def agreed(ends: list[Typing]) -> tuple[Sort, ...]:
 
 
 def bindings(patterns: tuple[Pattern, ...]) -> tuple[str, ...]:
-    """
-    The names patterns bind, in the order written.
-    """
+    """Return the names the patterns bind, in the order written."""
     return tuple(name for pattern in patterns for name in bound_by(pattern))
 
 
 def bound_by(pattern: Pattern) -> tuple[str, ...]:
-    """
-    The names one pattern binds.
-    """
+    """Return the names one pattern binds."""
     match pattern:
         case Var():
             return (pattern.name,)
@@ -510,9 +604,16 @@ def bound_by(pattern: Pattern) -> tuple[str, ...]:
 
 
 def called(typing: Typing, node: Call, arrows: Mapping[str, Arrow]) -> Typing:
-    """
-    A bound name pushes the sort it stands for; a word takes and leaves
+    """Elaborate a call.
+
+    A bound name pushes the sort it stands for. A word takes and leaves
     its arrow's sorts.
+
+    Raises:
+        UntypedError: The name is neither bound nor a word with an
+            arrow.
+        FplError: The word cannot take the sorts, as for
+            :func:`applied`.
     """
     if node.name in typing.env:
         return replace(typing, stack=(*typing.stack, typing.env[node.name]))
@@ -524,12 +625,14 @@ def called(typing: Typing, node: Call, arrows: Mapping[str, Arrow]) -> Typing:
 
 
 def chosen(typing: Typing, arrow: Arrow, arrows: Mapping[str, Arrow]) -> Arrow:
-    """
-    The arrow a call applies: a dispatcher's resolved to its clause's
-    when exactly one row survives, it is a clause's, no value is an
-    input and, where the row only may fit, the clause takes the values'
-    sorts, since the run would miss where it refuses; else the arrow as
-    it is.
+    """Return the arrow a call applies.
+
+    A dispatcher's arrow is resolved to its clause's when exactly one
+    row survives and the call is certain to reach that clause: the row
+    surely fits, or the clause takes the sorts of the values. Where the
+    row only may fit, the run would miss by refusing, so the clause must
+    take them. Any other arrow, and a dispatcher whose call cannot be
+    resolved, is returned as it is.
     """
     cut = len(typing.stack) - len(arrow.ins)
     if not isinstance(arrow, Dispatch) or cut < 0:
@@ -552,9 +655,10 @@ def chosen(typing: Typing, arrow: Arrow, arrows: Mapping[str, Arrow]) -> Arrow:
 def surviving(
     rows: tuple[Row, ...], sorts: tuple[Sort, ...], arrows: Mapping[str, Arrow]
 ) -> tuple[Row, ...]:
-    """
-    The rows values of the sorts may take, in order: those that surely
-    miss dropped, none after the first that surely fits.
+    """Return the rows values of the sorts may take, in order.
+
+    A row that surely misses is dropped, and none is kept after the
+    first that surely fits.
     """
     kept: list[Row] = []
     for row in rows:
@@ -569,9 +673,7 @@ def surviving(
 def verdict(
     row: Row, sorts: tuple[Sort, ...], arrows: Mapping[str, Arrow]
 ) -> Verdict:
-    """
-    How surely values of the sorts fit the row's patterns.
-    """
+    """Return how surely values of the sorts fit the row's patterns."""
     fits = (
         fitted(have, p, arrows)
         for have, p in zip(sorts, row.patterns, strict=True)
@@ -582,11 +684,11 @@ def verdict(
 def fitted(
     have: Sort, pattern: Pattern, arrows: Mapping[str, Arrow]
 ) -> Verdict:
-    """
-    How surely a value of the sort fits the pattern: a name or _ surely
-    does; a guarded pattern, an ascription `x: w` included, at most may,
-    and surely not where its pattern or its test surely misses; a
-    literal or a constructor may.
+    """Return how surely a value of the sort fits the pattern.
+
+    A name or ``_`` surely does. A guarded pattern, an ascription ``x:
+    w`` included, at most may, and surely not where its pattern or its
+    test surely misses. A literal or a constructor may.
     """
     match pattern:
         case Var() | Wild():
@@ -603,13 +705,14 @@ def fitted(
 
 
 def tested(have: Sort, test: str, arrows: Mapping[str, Arrow]) -> Verdict:
-    """
-    How surely a test leaves 1 on a value of the sort, never surely: the
-    word runs on the value only at run time, so a guarded row is never a
-    sure fit and pruning never stops at it. A builtin type word surely
-    does not on a known sort other than its own; on its own sort, an
-    input or a value of no known sort it may, as any other test may, a
-    type word the program redefines included.
+    """Return how surely a test leaves 1 on a value of the sort.
+
+    Never ``Verdict.YES``: the test word runs on the value only at run
+    time, so a guarded row is never a sure fit and pruning never stops
+    at it. A builtin type word surely does not on a known sort other
+    than its own. On its own sort, on an input or on a value of no known
+    sort it may, as any other test may, a type word the program
+    redefines included.
     """
     want = TESTED.get(test)
     if want is None or arrows.get(test) is not ARROWS[test]:
@@ -620,8 +723,16 @@ def tested(have: Sort, test: str, arrows: Mapping[str, Arrow]) -> Verdict:
 
 
 def taken(arrow: Arrow, sorts: tuple[Sort, ...]) -> bool:
-    """
-    Whether the arrow takes values of the sorts, as `met` finds.
+    """Return whether the arrow takes values of the sorts.
+
+    A general input takes any sort. A sort taken takes itself or
+    ``Kind.VALUE``.
+
+    Examples:
+        >>> taken(NUMBERS, (Kind.NUMBER, Kind.VALUE))
+        True
+        >>> taken(NUMBERS, (Kind.TEXT, Kind.NUMBER))
+        False
     """
     pairs = zip(arrow.ins, sorts, strict=True)
     return all(
@@ -631,9 +742,19 @@ def taken(arrow: Arrow, sorts: tuple[Sort, ...]) -> bool:
 
 
 def applied(typing: Typing, arrow: Arrow, span: Span) -> Typing:
-    """
-    The arrow's inputs met by the values under the top, its outputs in
-    their place.
+    """Return *typing* with the arrow's inputs met and outputs placed.
+
+    The inputs are met by the values under the top.
+
+    Args:
+        typing: What is known before the call.
+        arrow: The arrow to apply.
+        span: Where the call is.
+
+    Raises:
+        UnderflowError: The stack holds fewer values than the arrow
+            takes.
+        FplError: An input is met by a sort it cannot take.
     """
     cut = len(typing.stack) - len(arrow.ins)
     if cut < 0:
@@ -655,9 +776,28 @@ def met(
     found: dict[int, Sort],
     span: Span,
 ) -> None:
-    """
-    One input met: a general one takes the value's sort, a number wants
-    one; an input of the body met by a number is found to be one.
+    """Meet one input of an arrow with the sort of a value.
+
+    A general input takes the value's sort, recorded in *local*. A
+    number wants a number: an input of the body met by one is found to
+    be one, recorded in *found*.
+
+    Args:
+        need: The sort the arrow takes.
+        have: The sort of the value.
+        local: The sort each general input of the arrow took; updated.
+        found: The sort found for each input of the body; updated.
+        span: Where the call is.
+
+    Raises:
+        FplError: *have* is a known sort other than *need* and
+            ``Kind.VALUE``.
+
+    Examples:
+        >>> met(Kind.NUMBER, Kind.TEXT, {}, {}, Span(3, 4))
+        Traceback (most recent call last):
+            ...
+        fpl.errors.FplError: ERROR: 3:4 arithmetic on a non-number
     """
     match need:
         case Input():
@@ -671,9 +811,17 @@ def met(
 
 
 def sort(value: Value) -> Sort:
-    """
-    The sort of a value: a strand has its items' sort when they share
-    one.
+    """Return the sort of a value.
+
+    A strand has its items' sort when they share one.
+
+    Examples:
+        >>> sort(Decimal("1.5")) is Kind.NUMBER
+        True
+        >>> sort(Strand((1, 2))) is Kind.NUMBER
+        True
+        >>> sort(Strand((1, "a"))) is Kind.VALUE
+        True
     """
     match value:
         case int() | Decimal():

@@ -1,10 +1,10 @@
-"""
-The session log's events: an input, or a rewind, named by the
-blake2b-256 of its header bytes and kept as one canonical FON record per
-line, with a keyed blake2b of its id beside it (HOLES.md: log-signing).
-A record reads back only as the writer would have written it; the log
-loads only as a chain of records each following those before it, and
-grows only by a durable append under a lock.
+"""Store a session's events as canonical FON records, one per line.
+
+An :class:`Event` (an input or a rewind) is named by the blake2b-256 of
+its header bytes, :attr:`Event.ident`; its record also carries a keyed
+blake2b of that id, :func:`mac` (HOLES.md: log-signing). :func:`load`
+reads a session file back, :func:`write` appends to it under
+:func:`locked`, and :func:`keyed` supplies the key.
 """
 
 import contextlib
@@ -26,14 +26,23 @@ from fpl.errors import FplError
 from fpl.fon import Cell, Dict, Hash, List, Num, Str, Sym, Value
 from fpl.multihash import INLINE, Multihash, content, hashed, spelling
 
+#: What an event is: an input, or a rewind to an earlier event.
 type Kind = Literal["input", "rewind"]
+#: How the event's run ended.
 type Status = Literal["ok", "error"]
+#: Who entered the event.
 type Who = Literal["agent", "operator"]
 
+#: The record schema version; :func:`parsed` refuses any other.
 SCHEMA = 1
+#: The values a record's ``kind`` may take.
 KINDS: tuple[Kind, ...] = ("input", "rewind")
+#: The values a record's ``status`` may take.
 STATUSES: tuple[Status, ...] = ("ok", "error")
+#: The values a record's ``who`` may take.
 WHO: tuple[Who, ...] = ("agent", "operator")
+#: The fifteen record keys in the order a record writes them: the
+#: thirteen header fields, then ``id`` and ``mac``.
 FIELDS = (
     "schema",
     "evaluator",
@@ -51,67 +60,99 @@ FIELDS = (
     "id",
     "mac",
 )
+#: :data:`FIELDS` as FON symbols.
 KEYS = tuple(Sym(name) for name in FIELDS)
+#: The text a ``model`` or ``session`` may hold: 0 to 256 printable
+#: ASCII characters.
 ASCII = re.compile(r"[\x20-\x7e]{0,256}")
+#: The bound of every number in a record: it must be below 2^64.
 U64 = 1 << 64
 
 
 class RefusedError(Exception):
-    """
-    A record or an append refused; nothing was written.
-    """
+    """A record, log file or append was refused; nothing is written."""
 
 
 def u64(n: int) -> bytes:
-    """
-    n as eight big-endian bytes.
+    """Return *n* as eight big-endian bytes.
+
+    Raises:
+        OverflowError: *n* is negative or 2^64 or more.
+
+    Examples:
+        >>> u64(258).hex()
+        '0000000000000102'
+        >>> u64(1 << 64)
+        Traceback (most recent call last):
+            ...
+        OverflowError: int too big to convert
     """
     return n.to_bytes(8, "big")
 
 
 def prefixed(data: bytes) -> bytes:
-    """
-    data after its length, as eight big-endian bytes.
+    """Return *data* after its length, as eight big-endian bytes.
+
+    Examples:
+        >>> prefixed(b"ab").hex()
+        '00000000000000026162'
     """
     return u64(len(data)) + data
 
 
 def _joined(ids: tuple[Multihash, ...]) -> bytes:
-    """
-    Raw multihashes, each length-prefixed.
-    """
+    """Return the raw multihashes, each length-prefixed."""
     return b"".join(prefixed(each.raw()) for each in ids)
 
 
 @dataclass(frozen=True)
 class Event:
-    """
-    One step of a session: an input of `body` whose output is `out`, or
-    a rewind. `deps` names the event whose state it extends, `links` the
-    head it abandons; `fuel` is the step budget each run line had.
+    """One step of a session: an input or a rewind.
+
+    An input has *body* as its text and *out* as its output. *deps*
+    names the event whose state this one extends, *links* the head it
+    abandons; *fuel* is the step budget each run line had.
     """
 
+    #: The record schema version, :data:`SCHEMA`.
     schema: int
+    #: The evaluator the event ran under.
     evaluator: Multihash
+    #: Whether this is an input or a rewind.
     kind: Kind
+    #: The event's position in the log, counting from 1.
     seq: int
+    #: The events whose state this one extends: none or one.
     deps: tuple[Multihash, ...]
+    #: The head a rewind abandons; empty for an input.
     links: tuple[Multihash, ...]
+    #: The ``&`` of the input text.
     body: Multihash
+    #: The ``&`` of the output text.
     out: Multihash
+    #: How the run ended.
     status: Status
+    #: Who entered the event.
     who: Who
+    #: The model that entered it; printable ASCII.
     model: str
+    #: The session it belongs to; printable ASCII.
     session: str
+    #: The step budget of each run line.
     fuel: int
 
     def header(self) -> bytes:
-        """
-        The id preimage: the thirteen fields in order, each
-        length-prefixed; numbers as eight big-endian bytes, multihashes
-        raw, deps and links a length-prefixed run of raw multihashes,
-        text ASCII. Numbers of 2^64 or more and text beyond ASCII are
-        refused.
+        """Return the preimage of the event's id.
+
+        The preimage is the thirteen fields in order, each
+        length-prefixed. Numbers are eight big-endian bytes, multihashes
+        raw, *deps* and *links* a length-prefixed run of raw
+        multihashes, and text ASCII.
+
+        Raises:
+            OverflowError: A number is negative or 2^64 or more (from
+                :func:`u64`).
+            UnicodeEncodeError: *model* or *session* is not ASCII.
         """
         fields = (
             u64(self.schema),
@@ -132,18 +173,18 @@ class Event:
 
     @cached_property
     def ident(self) -> Multihash:
-        """
-        The event's $: the blake2b-256 of its header, no domain tag,
-        since $ is & applied to the log.
+        """The event's ``$``: the blake2b-256 of :meth:`header`.
+
+        It has no domain tag, as ``$`` is ``&`` applied to the log.
         """
         return hashed(self.header())
 
 
 def mac(ident: Multihash, key: bytes) -> Multihash:
-    """
-    The keyed blake2b-256 of an id, 32 bytes held inline. It lies
-    outside the preimage, so a signature can replace it without renaming
-    history.
+    """Return the keyed blake2b-256 of an id, 32 bytes held inline.
+
+    It lies outside the preimage of the id, so a signature can replace
+    it without renaming history.
     """
     return content(
         hashlib.blake2b(ident.raw(), digest_size=32, key=key).digest()
@@ -151,9 +192,20 @@ def mac(ident: Multihash, key: bytes) -> Multihash:
 
 
 def record(event: Event, key: bytes) -> bytes:
-    """
-    The event as one canonical FON dict and a newline, ASCII: its fields
-    in header order, then id and mac, then dict/15.
+    """Return *event* as one canonical FON dict and a newline, in ASCII.
+
+    The dict holds the fields in header order, then ``id`` and ``mac``,
+    and is written as ``dict/15``.
+
+    Args:
+        event: The event to write.
+        key: The key for :func:`mac`.
+
+    Raises:
+        OverflowError: A number of *event* is negative or 2^64 or more
+            (from :meth:`Event.header` through :attr:`Event.ident`).
+        UnicodeEncodeError: *model* or *session* is not ASCII
+            (likewise).
     """
     values: tuple[Value, ...] = (
         Num(Decimal(event.schema)),
@@ -178,8 +230,11 @@ def record(event: Event, key: bytes) -> bytes:
 
 
 def _fields(line: bytes) -> dict[str, Value]:
-    """
-    The values of a record's fifteen keys, which must stand in order.
+    """Return the values of a record's fifteen keys, in their order.
+
+    Raises:
+        RefusedError: *line* is not UTF-8 or not FON,
+            or its keys differ from :data:`FIELDS`.
     """
     try:
         value = fon.read(line.decode())
@@ -201,8 +256,10 @@ def _fields(line: bytes) -> dict[str, Value]:
 
 
 def _number(fields: dict[str, Value], name: str) -> int:
-    """
-    A whole number below 2^64.
+    """Return a whole number below 2^64.
+
+    Raises:
+        RefusedError: The value is not such a number.
     """
     value = fields[name]
     if (
@@ -215,8 +272,10 @@ def _number(fields: dict[str, Value], name: str) -> int:
 
 
 def _hash(fields: dict[str, Value], name: str) -> Multihash:
-    """
-    A &.
+    """Return a ``&``.
+
+    Raises:
+        RefusedError: The value is not a ``&``.
     """
     value = fields[name]
     if isinstance(value, Hash):
@@ -225,8 +284,10 @@ def _hash(fields: dict[str, Value], name: str) -> Multihash:
 
 
 def _identity(value: Value, what: str) -> Multihash:
-    """
-    A $ that names by hash.
+    """Return a ``$`` that names by hash.
+
+    Raises:
+        RefusedError: *value* is not such a ``$``.
     """
     if isinstance(value, Cell) and isinstance(value.name, Multihash):
         return value.name
@@ -234,8 +295,11 @@ def _identity(value: Value, what: str) -> Multihash:
 
 
 def _identities(fields: dict[str, Value], name: str) -> tuple[Multihash, ...]:
-    """
-    A list of $ that name by hash.
+    """Return a list of ``$`` that name by hash.
+
+    Raises:
+        RefusedError: The value is not a list or an item is not
+            such a ``$`` (from :func:`_identity`).
     """
     value = fields[name]
     if not isinstance(value, List):
@@ -246,8 +310,10 @@ def _identities(fields: dict[str, Value], name: str) -> tuple[Multihash, ...]:
 def _choice[T: str](
     fields: dict[str, Value], name: str, choices: tuple[T, ...]
 ) -> T:
-    """
-    One of a few symbols.
+    """Return the one of *choices* that the symbol spells.
+
+    Raises:
+        RefusedError: The value is none of *choices*.
     """
     for choice in choices:
         if fields[name] == Sym(choice):
@@ -256,8 +322,10 @@ def _choice[T: str](
 
 
 def _text(fields: dict[str, Value], name: str) -> str:
-    """
-    Printable ASCII of at most 256 characters.
+    """Return printable ASCII of at most 256 characters.
+
+    Raises:
+        RefusedError: The value is not such a string.
     """
     value = fields[name]
     if isinstance(value, Str) and ASCII.fullmatch(value.text):
@@ -268,8 +336,11 @@ def _text(fields: dict[str, Value], name: str) -> str:
 
 
 def _event(fields: dict[str, Value]) -> Event:
-    """
-    The event the thirteen header fields spell.
+    """Return the event that the thirteen header fields spell.
+
+    Raises:
+        RefusedError: A field has the wrong kind or is out of range
+            (from the field readers).
     """
     return Event(
         schema=_number(fields, "schema"),
@@ -289,13 +360,19 @@ def _event(fields: dict[str, Value]) -> Event:
 
 
 def parsed(line: bytes, key: bytes) -> Event:
-    """
-    The event a record spells, given without its newline. Refused
-    (RefusedError, the reason bare): bytes not UTF-8 or not FON, keys
-    other than the fifteen in order, a value of the wrong kind or out of
-    range, a schema other than 1, an id that does not recompute, a mac
-    that does not verify under `key`, any spelling `record` would not
-    have written.
+    """Return the event that a record spells.
+
+    Args:
+        line: The record without its newline.
+        key: The key the record's mac must verify under.
+
+    Raises:
+        RefusedError: *line* is not UTF-8 or not FON, its keys are not
+            the fifteen in order, or a value has the wrong kind or is
+            out of range (from :func:`_fields` and :func:`_event`); the
+            schema is not :data:`SCHEMA`; the id does not recompute; the
+            mac does not verify under *key*; or the spelling is not the
+            one :func:`record` writes. The reason carries no position.
     """
     fields = _fields(line)
     event = _event(fields)
@@ -314,39 +391,49 @@ def parsed(line: bytes, key: bytes) -> Event:
 
 @dataclass(frozen=True)
 class Log:
-    """
-    The events of a session file in order, the bytes every body and
-    output they name, and the size of the file's complete records; a
-    torn tail lies beyond `size`.
+    """A session file's events, their bodies' bytes, and its size.
+
+    Every body and output that the events name has its bytes in
+    *bodies*. *size* is the size of the file's complete records; a torn
+    tail lies beyond it.
     """
 
+    #: The events in file order.
     events: tuple[Event, ...]
+    #: The bytes of every body and output the events name.
     bodies: Mapping[Multihash, bytes]
+    #: The size in bytes of the complete records in the file.
     size: int
 
     @property
     def head(self) -> Event | None:
-        """
-        The last event, or None before the first.
-        """
+        """The last event, or ``None`` before the first."""
         return self.events[-1] if self.events else None
 
     def grown(
         self, event: Event, bodies: Mapping[Multihash, bytes], size: int
     ) -> "Log":
-        """
-        The log with one more event, its bodies, and the file's size
-        after its record.
+        """Return the log with one more event, its bodies, a new size.
+
+        Args:
+            event: The event to add at the end.
+            bodies: The bytes of its body and output.
+            size: The file's size after the event's record.
         """
         return Log((*self.events, event), {**self.bodies, **bodies}, size)
 
 
 def _follows(idents: set[Multihash], event: Event) -> None:
-    """
-    Refuse an event that is not the next of `idents`, names an event not
-    among them, names one event both as its state and as the head it
-    abandons, or has more deps or links than its kind: an input one dep
-    at most and no link, a rewind one dep at most and one link.
+    """Refuse an event that cannot come next after the events *idents*.
+
+    An event is refused if its seq is not the next one, if it names an
+    event that is not in *idents*, if it names one event both as its
+    state and as the head it abandons, or if it has more deps or links
+    than its kind allows: an input has at most one dep and no link, a
+    rewind at most one dep and one link.
+
+    Raises:
+        RefusedError: On each of those conditions.
     """
     if event.seq != len(idents) + 1:
         raise RefusedError(f"seq {event.seq} is not {len(idents) + 1}")
@@ -363,17 +450,18 @@ def _follows(idents: set[Multihash], event: Event) -> None:
 
 
 def _store(path: Path) -> Path:
-    """
-    The directory beside the log that holds bodies of more than 32 bytes
-    by name.
+    """Return the directory beside the log holding long bodies.
+
+    Bodies of more than 32 bytes are kept there.
     """
     return Path(f"{path}.bodies")
 
 
 def _stored(path: Path, name: Multihash) -> bytes | None:
-    """
-    The bytes a name holds inline, or the file the store keeps under it;
-    None if none.
+    """Return the bytes *name* holds inline or the store keeps.
+
+    Returns:
+        The bytes, or ``None`` if the store has no file for *name*.
     """
     if name.code == INLINE:
         return name.digest
@@ -386,11 +474,15 @@ def _stored(path: Path, name: Multihash) -> bytes | None:
 def _bodies(
     path: Path, event: Event, given: Mapping[Multihash, bytes]
 ) -> dict[Multihash, bytes]:
-    """
-    The event's body and output, from `given` or else the store, each
-    refused unless it is exactly the bytes its name promises: one & per
-    byte string, so a hashed name for bytes that fit inline is refused
-    too.
+    """Return the bytes of the event's body and output.
+
+    They come from *given* or else the store. Each must be exactly the
+    bytes its name promises, with one ``&`` per byte string: a hashed
+    name for bytes that fit inline is refused too.
+
+    Raises:
+        RefusedError: A body is missing or does not hash to its
+            name.
     """
     found: dict[Multihash, bytes] = {}
     for name in (event.body, event.out):
@@ -406,14 +498,23 @@ def _bodies(
 
 
 def load(path: Path, key: bytes) -> Log:
-    """
-    The log a session file holds; no file is the empty log. Records end
-    in a newline, so bytes after the last newline are a torn append,
-    dropped. Record n is refused as `<path>:<n> <reason>` for anything
-    `parsed` refuses, a seq other than n, a dep or link naming no
-    earlier event, deps and links that overlap, arity its kind does not
-    have, or a body missing or other than its name; readers take no
-    lock.
+    """Return the log that the session file at *path* holds.
+
+    A missing file is the empty log. Records end in a newline, so bytes
+    after the last newline are a torn append and are dropped. Readers
+    take no lock.
+
+    Args:
+        path: The session file.
+        key: The key every record's mac must verify under.
+
+    Raises:
+        RefusedError: Record *n* is refused as ``<path>:<n> <reason>``
+            for anything :func:`parsed` refuses, a seq other than *n*, a
+            dep or link that names no earlier event, deps and links that
+            overlap, more deps or links than the kind allows, or a body
+            that is missing or is not the bytes its name promises.
+        OSError: The file exists but cannot be read.
     """
     try:
         data = path.read_bytes()
@@ -436,9 +537,10 @@ def load(path: Path, key: bytes) -> Log:
 
 
 def _ident(name: str) -> Multihash | None:
-    """
-    The id a name spells after an optional $, in decimal or as a hex
-    multihash; None if it spells none.
+    """Return the id that *name* spells after an optional ``$``.
+
+    The id is in decimal or a hex multihash; ``None`` if *name* spells
+    none.
     """
     try:
         return spelling(name.removeprefix("$"), inline=False)
@@ -447,10 +549,13 @@ def _ident(name: str) -> Multihash | None:
 
 
 def resolve(log: Log, name: str) -> Event | None:
-    """
-    The event an operator names: 0 the origin, which None is; a seq as
-    written; else an id. Refused (RefusedError): a name no event of the
-    log answers to.
+    """Return the event that an operator's *name* picks out of *log*.
+
+    ``0`` is the origin, which is ``None``; a seq is read as written;
+    any other name is read as an id.
+
+    Raises:
+        RefusedError: No event of *log* answers to *name*.
     """
     if name == "0":
         return None
@@ -462,17 +567,17 @@ def resolve(log: Log, name: str) -> Event | None:
 
 
 def _written(fd: int, data: bytes) -> None:
-    """
-    All of data written to fd at once, or OSError.
+    """Write all of *data* to *fd* in one call.
+
+    Raises:
+        OSError: The write is short or fails.
     """
     if os.write(fd, data) != len(data):
         raise OSError(f"short write of {len(data)} bytes")
 
 
 def _synced(directory: Path) -> None:
-    """
-    A directory's entries made durable.
-    """
+    """Make the entries of *directory* durable."""
     fd = os.open(directory, os.O_RDONLY)
     try:
         os.fsync(fd)
@@ -481,10 +586,10 @@ def _synced(directory: Path) -> None:
 
 
 def _kept(store: Path, name: Multihash, data: bytes) -> None:
-    """
-    data durable in the store under its name, whole or not at all. A
-    store made here has its own entry synced too, so a record naming a
-    body in it never outlives the store.
+    """Make *data* durable in *store* under *name*, whole or not at all.
+
+    A store made here has its own entry synced too, so a record that
+    names a body in it never outlives the store.
     """
     with contextlib.suppress(FileExistsError):
         store.mkdir(mode=0o700)
@@ -501,10 +606,12 @@ def _kept(store: Path, name: Multihash, data: bytes) -> None:
 
 
 def _recorded(event: Event, key: bytes) -> bytes:
-    """
-    The event's record. Refused (RefusedError): one `parsed` would not
-    read back, and a number of 2^64 or more or a model or session not
-    ASCII, which no record can spell.
+    """Return the event's record, refusing one that cannot be read back.
+
+    Raises:
+        RefusedError: A number is 2^64 or more or a model or session is
+            not ASCII, so that no record can spell it; or the record is
+            one :func:`parsed` would not read back.
     """
     try:
         line = record(event, key)
@@ -523,15 +630,26 @@ def write(
     event: Event,
     bodies: Mapping[Multihash, bytes],
 ) -> Log:
-    """
-    The log after appending event, whose body and output are in `bodies`
-    or already stored. The caller holds `locked(path)` and loaded `log`
-    under it. An event `load` would refuse after `log` is refused
-    (RefusedError) before anything is written. Bodies are made durable
-    first, so a reader never meets a record whose body is missing; then
-    any torn tail past `log.size` is cut and the record appended in one
-    write, and file and directory are synced before this returns
-    (HOLES.md: log-fsync-barrier).
+    """Return *log* after appending *event* to the file at *path*.
+
+    The caller holds :func:`locked` on *path* and loaded *log* under it.
+    Bodies are made durable first, so a reader never meets a record
+    whose body is missing. Then any torn tail past ``log.size`` is cut,
+    the record is appended in one write, and file and directory are
+    synced before this returns (HOLES.md: log-fsync-barrier).
+
+    Args:
+        path: The session file.
+        key: The key for :func:`mac`.
+        log: The log as loaded from *path*.
+        event: The event to append.
+        bodies: The bytes of the event's body and output, unless already
+            stored.
+
+    Raises:
+        RefusedError: *event* is one :func:`load` would refuse after
+            *log*; nothing is written then.
+        OSError: A file or directory operation fails.
     """
     _follows({each.ident for each in log.events}, event)
     line = _recorded(event, key)
@@ -552,10 +670,13 @@ def write(
 
 @contextlib.contextmanager
 def locked(path: Path) -> Generator[None]:
-    """
-    An exclusive lock on the session at path, held for the block: a
-    blocking flock on `<path>.lock` through a descriptor of its own, so
-    threads exclude one another too.
+    """Hold an exclusive lock on the session at *path* for the block.
+
+    The lock is a blocking ``flock`` on ``<path>.lock`` through a
+    descriptor of its own, so threads exclude one another too.
+
+    Raises:
+        OSError: The lock file cannot be opened.
     """
     fd = os.open(f"{path}.lock", os.O_WRONLY | os.O_CREAT, 0o600)
     try:
@@ -566,10 +687,14 @@ def locked(path: Path) -> Generator[None]:
 
 
 def _key_file(env: Mapping[str, str]) -> Path:
-    """
-    $FPL_LOG_KEY, else $XDG_CONFIG_HOME/fpl/log.key, else
-    $HOME/.config/fpl/log.key. Refused (RefusedError): none of the three
-    set.
+    """Return the key file named by ``$FPL_LOG_KEY``, else XDG's.
+
+    The order is ``$FPL_LOG_KEY``, then
+    ``$XDG_CONFIG_HOME/fpl/log.key``, then
+    ``$HOME/.config/fpl/log.key``.
+
+    Raises:
+        RefusedError: None of the three variables is set.
     """
     if env.get("FPL_LOG_KEY"):
         return Path(env["FPL_LOG_KEY"])
@@ -583,14 +708,14 @@ def _key_file(env: Mapping[str, str]) -> Path:
 
 
 def _made(directory: Path, mode: int) -> None:
-    """
-    directory and its missing ancestors made from the top down,
-    ancestors with the default mode and directory with mode, each one's
-    entry synced into its parent before the next is made under it. The
-    deepest one found made, before the loop or inside it, has its entry
-    synced all the same: a racing maker may not have run that sync yet.
-    Those above it need none, as such a maker synced each before it made
-    the next under it.
+    """Make *directory* and its missing ancestors, from the top down.
+
+    Ancestors get the default mode and *directory* gets *mode*. Each
+    entry is synced into its parent before the next directory is made
+    under it. The deepest directory found made, before the loop or
+    inside it, has its entry synced all the same, as a racing maker may
+    not have run that sync yet. The directories above it need none, as
+    such a maker synced each before it made the next under it.
     """
     missing: list[Path] = []
     while not directory.exists():
@@ -604,18 +729,27 @@ def _made(directory: Path, mode: int) -> None:
 
 
 def keyed(env: Mapping[str, str]) -> bytes:
-    """
-    The key that macs this operator's records, made on first use as 32
-    random bytes in a file only its owner may read, in a directory only
-    its owner may enter. Each directory made on the way, and the deepest
-    one found, has its entry synced into its parent, and the file's
-    bytes, once read, and its entry in its directory are synced before
-    the key is used, made here or found made by a racing maker whose own
-    sync may not have run, so no record outlives the key that macs it.
-    The bytes are read before their sync, so none read can have been
-    written after it. Refused: a key file others may read or write, or
-    one not 32 bytes long; a reader racing the first maker may meet it
-    empty and be refused.
+    """Return the key that macs this operator's records.
+
+    The key is made on first use as 32 random bytes in a file only its
+    owner may read, in a directory only its owner may enter. Each
+    directory made on the way, and the deepest one found, has its entry
+    synced into its parent. The file's bytes, once read, and its entry
+    in its directory are synced before the key is used, whether made
+    here or found made by a racing maker whose own sync may not have
+    run, so no record outlives the key that macs it. The bytes are read
+    before their sync, so none read can have been written after it.
+
+    Args:
+        env: The environment that locates the key file, as in
+            :func:`_key_file`.
+
+    Raises:
+        RefusedError: No key file location is set; the key file can be
+            read or written by others or is not 32 bytes long. A reader
+            racing the first maker may meet the file empty and be
+            refused.
+        OSError: A file or directory operation fails.
     """
     path = _key_file(env)
     _made(path.parent, 0o700)

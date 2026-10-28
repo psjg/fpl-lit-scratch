@@ -1,9 +1,10 @@
-"""
-A session over a log: the state at an event is every accepted input its
-deps lead back through, run again as one file; entering an input prints
-only what its own lines leave, and names, once, each earlier input whose
-output the input moved from what the state before it printed. Pure but
-for `evaluator`, which reads the package's sources once.
+"""Run an input against the state of a session log.
+
+The state at an event is the accepted inputs its deps lead back through,
+joined and run as one file. :func:`enter` prints only the output of the
+new input's own lines and names each earlier input whose output the new
+input changed; :func:`rewind` makes the event that returns to an earlier
+state. Only :func:`evaluator` does I/O: it reads the package's sources.
 """
 
 from bisect import bisect_right
@@ -19,56 +20,67 @@ from fpl.log import SCHEMA, Event, Log, RefusedError, Status, Who, prefixed
 from fpl.multihash import Multihash, content, hashed
 from fpl.types import Goal, reported
 
+#: Message of the :exc:`FplError` that :meth:`_Entry.margin` raises.
 MARGIN = "an input starts at the left margin"
 
 
 @dataclass(frozen=True)
 class Context:
-    """
-    What every event of a call records beside its input: the evaluator,
-    who entered it, under which model and session, and the step budget
-    of each run line (HOLES.md: fuel-scope).
+    """What every event of a call records beside its input.
+
+    HOLES.md (fuel-scope) describes *fuel*.
     """
 
+    #: Hash of the evaluator's sources, from :func:`evaluator`.
     evaluator: Multihash
+    #: Who entered the input.
     who: Who
+    #: The model that entered it.
     model: str
+    #: The session it was entered in.
     session: str
+    #: Step budget of each run line.
     fuel: int
 
 
 @dataclass(frozen=True)
 class Part:
-    """
-    An accepted input of a program, and its text.
-    """
+    """An accepted input of a program, with its text."""
 
+    #: The input's event.
     event: Event
+    #: The decoded body of *event*.
     text: str
 
 
 @dataclass(frozen=True)
 class Outcome:
-    """
-    An entered input: its event, the bytes of the body and output it
-    names, the output for stdout and the notes for stderr (goals met,
-    the caret under an error, inputs changed). `spent` is the steps the
-    input's own run lines took in this enter, not kept on the event.
-    """
+    """An entered input, not yet appended to a log."""
 
+    #: The new event.
     event: Event
+    #: The bytes of the body and output that *event* names.
     bodies: Mapping[Multihash, bytes]
+    #: Output for stdout.
     out: str
+    #: Notes for stderr: goals met, the caret under an error, inputs
+    #: changed.
     notes: tuple[str, ...]
+    #: Steps the input's own run lines took in this call; not kept on
+    #: the event. ``None`` when no run line of the input reported steps.
     spent: int | None = None
 
 
 @cache
 def evaluator() -> Multihash:
-    """
-    The hash of the package's sources, each name and its bytes
-    length-prefixed, in name order: every edit to the evaluator names a
-    new one.
+    """Hash the package's sources.
+
+    Each ``*.py`` and ``*.lark`` file next to this module contributes
+    its name and its bytes, both length-prefixed, in name order. Cached
+    for the life of the process.
+
+    Returns:
+        A hash that changes with any edit to those files.
     """
     here = Path(__file__).parent
     sources = sorted([*here.glob("*.py"), *here.glob("*.lark")])
@@ -81,11 +93,23 @@ def evaluator() -> Multihash:
 
 
 def program(log: Log, at: Event | None) -> tuple[Part, ...]:
-    """
-    The accepted inputs of the state at `at`, oldest first: the ok
-    inputs among `at` and the events its deps lead back through to the
-    origin, which None is. An error or a rewind adds nothing, so an
-    error's program is its parent's and a rewind's its target's.
+    """List the accepted inputs of the state at an event, oldest first.
+
+    Follows the first dep of each event back to the origin. An event
+    adds a part only if it is an input with status ``ok``, so an error's
+    program is its parent's and a rewind's is its target's.
+
+    Args:
+        log: The log holding *at* and its ancestors.
+        at: The event whose state is wanted; ``None`` is the origin.
+
+    Returns:
+        The parts, oldest first; empty at the origin.
+
+    Examples:
+        >>> from fpl.log import Log
+        >>> program(Log((), {}, 0), None)
+        ()
     """
     events = {each.ident: each for each in log.events}
     parts: list[Part] = []
@@ -97,10 +121,7 @@ def program(log: Log, at: Event | None) -> tuple[Part, ...]:
 
 
 def _next(log: Log, context: Context, at: Event | None) -> Event:
-    """
-    An ok input of nothing after the last event, extending the state at
-    `at`.
-    """
+    """Build an empty ``ok`` input event extending the state at *at*."""
     empty = content(b"")
     return Event(
         schema=SCHEMA,
@@ -121,9 +142,9 @@ def _next(log: Log, context: Context, at: Event | None) -> Event:
 
 @dataclass(frozen=True)
 class _Entry:
-    """
-    An input after the program at an event, and where each part and the
-    input start in the source they join into.
+    """An input to run after the program at an event.
+
+    Knows where each part and the input start in the joined source.
     """
 
     log: Log
@@ -134,41 +155,44 @@ class _Entry:
 
     @cached_property
     def source(self) -> str:
-        """
-        The program at the input's state: its parts, joined.
-        """
+        """The program at the input's state: its parts, joined."""
         return "".join(part.text for part in self.parts)
 
     @cached_property
     def starts(self) -> tuple[int, ...]:
-        """
-        The line each part starts at, then the line the input starts at.
-        """
+        """The line each part starts at, then the input's first line."""
         starts = [1]
         for part in self.parts:
             starts.append(starts[-1] + part.text.count("\n"))
         return tuple(starts)
 
     def owner(self, line: int) -> int:
-        """
-        The index of the part a line of the joined source lies in; the
-        input's is last.
+        """Find the part that holds a line of the joined source.
+
+        Args:
+            line: A line number in :attr:`source`, counted from 1.
+
+        Returns:
+            The part's index; the input's own index is ``len(parts)``.
         """
         return bisect_right(self.starts, line) - 1
 
     def local(self, span: Span) -> Span:
-        """
-        A span of the joined source as its owner counts it.
-        """
+        """Convert a span of the joined source to one in its part."""
         return Span(
             span.line - self.starts[self.owner(span.line)] + 1, span.col
         )
 
     def margin(self) -> None:
-        """
-        Refuse an input after the first whose first non-blank line is
-        indented: joined, it would become the block of the input before
-        it. A first input stays its own file.
+        """Refuse an indented input that follows other parts.
+
+        Joined, such an input would become part of the block of the
+        input before it. The first input is not checked.
+
+        Raises:
+            FplError: The input has earlier parts and its first
+                non-blank line starts with whitespace; the span is that
+                line, and the message is :data:`MARGIN`.
         """
         lines = self.text.split("\n")
         first = next((line for line in lines if line.strip()), "")
@@ -178,9 +202,7 @@ class _Entry:
             )
 
     def noted(self, goals: tuple[Goal, ...]) -> tuple[str, ...]:
-        """
-        The goals met in the input, at their place in it.
-        """
+        """Report the goals in the input, at their place in it."""
         mine = (g for g in goals if self.owner(g.span.line) == len(self.parts))
         return tuple(
             reported(replace(g, span=self.local(g.span))) for g in mine
@@ -194,9 +216,7 @@ class _Entry:
         *,
         spent: int | None = None,
     ) -> Outcome:
-        """
-        The input as an event with its output.
-        """
+        """Make the input's outcome from status, output and notes."""
         body, shown = self.text.encode(), out.encode()
         event = replace(
             _next(self.log, self.context, self.at),
@@ -216,10 +236,12 @@ def _failed(
     *,
     spent: int | None = None,
 ) -> Outcome:
-    """
-    The error as an error event: its line at its place in the input, or
-    `@<seq>` and its place in the earlier input it lies in; the caret
-    under it, shown in that input, noted.
+    """Make the outcome of an input that failed.
+
+    The output is one ``ERROR:`` line with the error's place in the
+    input, or ``@<seq>`` and its place in the earlier input it lies in.
+    The caret under the error, drawn in that input, is added to the
+    notes.
     """
     owner = entry.owner(error.span.line)
     local = FplError(entry.local(error.span), error.message)
@@ -242,8 +264,10 @@ def _phrase_spent(
     statements: tuple[Statement, ...],
     per_run: list[int | None],
 ) -> int | None:
-    """
-    Steps the input's own run lines took: history replay is omitted.
+    """Sum the steps of the input's own run lines, not of history.
+
+    Returns:
+        ``None`` if none of those lines reported steps.
     """
     runs = (s for s in statements if isinstance(s, Run))
     total = 0
@@ -257,10 +281,7 @@ def _phrase_spent(
 
 
 def _by_part(entry: _Entry, lines: Lines) -> list[Lines]:
-    """
-    The lines of a run grouped by the part they lie in, the input's
-    last.
-    """
+    """Group a run's lines by the part they lie in, the input last."""
     groups: list[Lines] = [() for _ in entry.starts]
     for line, stack in lines:
         groups[entry.owner(line)] += ((line, stack),)
@@ -268,12 +289,16 @@ def _by_part(entry: _Entry, lines: Lines) -> list[Lines]:
 
 
 def _earlier(entry: _Entry, left: Lines) -> Lines:
-    """
-    The lines the program at the input's state leaves, run again under
-    the fuel it was accepted with: that of its last part, whose run was
-    the whole of it. When it no longer runs within that fuel (it was
-    accepted under another evaluator), `left`: nothing is then compared,
-    so the baseline never refuses an input whose own run succeeded.
+    """Run the program at the input's state again, as a baseline.
+
+    The fuel is the one its last part was accepted with, whose run
+    covered the whole program.
+
+    Args:
+        entry: The input; its program is the one run again.
+        left: The lines of the new run, returned when the baseline
+            fails. Nothing then differs, so the baseline never refuses
+            an input whose own run succeeded.
     """
     fuel = entry.parts[-1].event.fuel if entry.parts else entry.context.fuel
     try:
@@ -285,11 +310,19 @@ def _earlier(entry: _Entry, left: Lines) -> Lines:
 def _changed(
     entry: _Entry, left: Lines, before: Lines, notes: tuple[str, ...]
 ) -> Outcome:
-    """
-    The input's output, the notes given, then each earlier input whose
-    lines print other than they did in `before`, the run of the state
-    the input extends: a move is named at the input that makes it, and
-    not again.
+    """Make the outcome of an input that ran.
+
+    Args:
+        entry: The input.
+        left: The lines of the run with the input.
+        before: The lines of the run of the state the input extends.
+        notes: Notes to keep, which come before the changed ones.
+
+    Returns:
+        The input's own output, and a ``CHANGED <seq> $<hash>`` note for
+        each earlier input whose lines print differently than in
+        *before*. A change is named at the input that causes it, not
+        again after.
     """
     now, was = _by_part(entry, left), _by_part(entry, before)
     moved = (
@@ -302,16 +335,24 @@ def _changed(
 
 
 def enter(log: Log, text: str, context: Context, at: Event | None) -> Outcome:
-    """
-    The outcome of `text` after the program at `at` (None, the origin),
-    not yet appended. The input gains a final newline if it lacks one.
-    Joined after the program's parts, it is run as one file; its goals
-    are noted even when the run then fails, and any FplError, from the
-    margin rule on, becomes an error event whose state is its parent's.
-    The program at `at` is run once more, under the fuel it was accepted
-    with, for the lines to compare the new run's with; if that run fails
-    (it was accepted under another evaluator), nothing is named. `spent`
-    on the outcome is the input's own run lines only.
+    """Run *text* after the program at an event.
+
+    A final newline is added if *text* lacks one. The text is joined
+    after the program's parts and run as one file. Goals are noted even
+    when the run then fails. An :exc:`FplError` from the margin rule on,
+    whether raised while checking or running, becomes an ``error`` event
+    whose state is its parent's. The program at *at* is run once more to
+    compare lines with; if that run fails, no earlier input is named.
+
+    Args:
+        log: The log holding *at* and its ancestors.
+        text: The input.
+        context: What the new event records beside the input.
+        at: The event to extend; ``None`` is the origin.
+
+    Returns:
+        The outcome, not yet appended to *log*; its ``spent`` counts the
+        input's own run lines only.
     """
     entry = _Entry(
         log,
@@ -342,10 +383,25 @@ def enter(log: Log, text: str, context: Context, at: Event | None) -> Outcome:
 
 
 def rewind(log: Log, target: Event | None, context: Context) -> Event:
-    """
-    A rewind of the head to `target` (None, the origin): its state is
-    the target's and it links the head it leaves. Refused
-    (RefusedError): an empty log, or the head as target.
+    """Make the event that returns the head to an earlier state.
+
+    The event's state is that of *target*, and it links the head it
+    leaves.
+
+    Args:
+        log: The log to rewind.
+        target: The event to return to; ``None`` is the origin.
+        context: What the new event records.
+
+    Raises:
+        RefusedError: The log is empty, or *target* is the head.
+
+    Examples:
+        >>> from fpl.log import Log
+        >>> rewind(Log((), {}, 0), None, None)
+        Traceback (most recent call last):
+        ...
+        fpl.log.RefusedError: nothing to rewind
     """
     head = log.head
     if head is None:
