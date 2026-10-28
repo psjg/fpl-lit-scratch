@@ -14,3 +14,4 @@
 * [ADR-0011 FPL aims to match or surpass Lisp in metaprogramming](ADR-0011-lisp-level-metaprogramming.md) - operatives through staging
 * [ADR-0012 The pipeline is an inspectable computation graph that several executors run](ADR-0012-pipeline-is-a-computation-graph.md) - draft: one graph, many interpreters
 * [ADR-0013 Events observe the compiler; they do not carry its dependencies](ADR-0013-events-observe-not-drive.md) - draft: no event spaghetti
+* [ADR-0014 One composition operator at every level of a pass](ADR-0014-one-composition-operator-at-every-level.md) - draft: compose a stage only when it meets the pass contract
