@@ -5,6 +5,14 @@ The walk decides what is bundle. In a git checkout it is the index
 untracked scratch file never counts and a new note counts once
 ``git add`` sees it; elsewhere it is every file below the root.
 ``exclude`` takes path prefixes out of the walk.
+
+Beside the notes, the store takes the fact layer (``facts.py``): every
+sidecar ``<page>.facts.json`` of the walk, and every
+``build/facts/<page stem>.json`` on disk, the generated layer, which
+is never in the index and so is read by name. A rows file with no one
+page of its name is a ``fact-load`` finding. In a git checkout one
+triple, ``<urn:okf:build> fact:asOf "<HEAD>"``, says which commit the
+graph is of.
 """
 
 from __future__ import annotations
@@ -20,8 +28,10 @@ from urllib.parse import unquote
 
 import pyoxigraph as ox
 
+from okfgraph.facts import load_facts, refuse
 from okfgraph.project import (
     CLS,
+    FACT,
     RDF_TYPE,
     Bundle,
     Context,
@@ -51,9 +61,14 @@ def context() -> Context:
     return Context.load(here.joinpath("context.jsonld").read_text())
 
 
+def checkout(root: Path) -> bool:
+    """Whether ``root`` is a git checkout."""
+    return (root / ".git").exists()
+
+
 def walk(root: Path) -> list[str]:
     """Every bundle file, any suffix, as a sorted POSIX path."""
-    if (root / ".git").exists():
+    if checkout(root):
         cmd = ["git", "-C", str(root), "ls-files", "-z"]
         out = subprocess.run(cmd, check=True, capture_output=True).stdout
         names = out.decode().split("\0")
@@ -78,6 +93,39 @@ def kind(path: str, notes: set[str], files: set[str], dirs: set[str]) -> str:
     if path in files:
         return "File"
     return "Folder" if path in dirs else ""
+
+
+def head(root: Path) -> str:
+    """The commit ``root`` has checked out, or ``""``."""
+    if not checkout(root):
+        return ""
+    cmd = ["git", "-C", str(root), "rev-parse", "--verify", "-q", "HEAD"]
+    out = subprocess.run(cmd, capture_output=True, check=False)
+    return out.stdout.decode().strip()
+
+
+def facts(
+    store: ox.Store, root: Path, files: list[str], notes: set[str], base: str
+) -> None:
+    """Load every rows file of the bundle against its page."""
+    side = [
+        (f, f.removesuffix(".facts.json") + ".md")
+        for f in files
+        if f.endswith(".facts.json")
+    ]
+    for p in sorted((root / "build" / "facts").glob("*.json")):
+        hits = [n for n in notes if posixpath.basename(n) == p.stem + ".md"]
+        page = hits[0] if len(hits) == 1 else ""
+        side.append((p.relative_to(root).as_posix(), page))
+    for path, page in side:
+        if page not in notes:
+            store.extend(refuse(path, "no one page of this name"))
+            continue
+        text = (root / path).read_text(encoding="utf-8")
+        load_facts(store, path, text, page, base)
+    if sha := head(root):
+        at = ox.NamedNode(FACT + "asOf")
+        store.add(ox.Quad(ox.NamedNode("urn:okf:build"), at, ox.Literal(sha)))
 
 
 def build(root: Path, base: str = BASE, exclude: Iterable[str] = ()) -> Graph:
@@ -113,5 +161,6 @@ def build(root: Path, base: str = BASE, exclude: Iterable[str] = ()) -> Graph:
             ]
     store = ox.Store()
     store.extend(quads)
+    facts(store, root, files, notes, base)
     took = time.perf_counter() - t0
     return Graph(store, base, len(files), len(texts), took)

@@ -1,0 +1,16 @@
+{
+  "@context": {
+    "@vocab": "https://fpl-org.github.io/okf/fact#",
+    "fact": "https://fpl-org.github.io/okf/fact#",
+    "xsd": "http://www.w3.org/2001/XMLSchema#",
+
+    "id":        "@id",
+    "item":      { "@id": "fact:source", "@type": "@id" },
+    "targets":   { "@id": "fact:target", "@type": "@id" },
+    "labels":    "fact:label",
+    "start":     { "@id": "fact:start",     "@type": "xsd:integer" },
+    "end":       { "@id": "fact:end",       "@type": "xsd:integer" },
+    "createdAt": { "@id": "fact:createdAt", "@type": "xsd:dateTime" },
+    "updatedAt": { "@id": "fact:updatedAt", "@type": "xsd:dateTime" }
+  }
+}

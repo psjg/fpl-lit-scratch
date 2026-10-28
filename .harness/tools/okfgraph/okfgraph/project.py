@@ -59,6 +59,7 @@ CLS = "https://fpl-org.github.io/okf/type#"
 KEY = "https://fpl-org.github.io/okf/key#"
 REL = "https://fpl-org.github.io/okf/rel#"
 BODY = "https://fpl-org.github.io/okf/body#"
+FACT = "https://fpl-org.github.io/okf/fact#"
 PREFIXES = {
     "rdf": "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
     "xsd": "http://www.w3.org/2001/XMLSchema#",
@@ -67,6 +68,7 @@ PREFIXES = {
     "key": KEY,
     "rel": REL,
     "body": BODY,
+    "fact": FACT,
 }
 RESERVED = frozenset({"index.md", "log.md"})  # OKF §3.1: not concepts
 SCHEME = re.compile(r"^[A-Za-z][A-Za-z0-9+.-]*:")  # http:, mailto:, urn:

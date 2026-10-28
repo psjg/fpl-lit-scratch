@@ -1,0 +1,6 @@
+# rule: fact-load
+# remedy: fix the rows file: a JSON array of objects, each with a unique `id` that is an IRI fragment (no space), `item` a bundle path, `targets` a list of such ids, beside its page
+# A rows file (`<page>.facts.json`, `build/facts/<stem>.json`) that did not load whole; facts.py.
+SELECT ?path ?detail WHERE {
+  ?f okf:factsFile ?path ; okf:factsError ?detail .
+} ORDER BY ?path ?detail

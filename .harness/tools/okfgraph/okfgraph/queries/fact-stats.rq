@@ -1,0 +1,10 @@
+# Fact rows by kind and state: a node under the base with a fact: key. A hand row has no
+# kind, a row lit has not located no state; both count as "-".
+SELECT ?kind ?state (COUNT(DISTINCT ?f) AS ?n) WHERE {
+  ?f ?p ?o .
+  FILTER(STRSTARTS(STR(?p), STR(fact:)) && STRSTARTS(STR(?f), STR(b:)))
+  OPTIONAL { ?f fact:kind ?k }
+  OPTIONAL { ?f fact:state ?s }
+  BIND(COALESCE(?k, "-") AS ?kind)
+  BIND(COALESCE(?s, "-") AS ?state)
+} GROUP BY ?kind ?state ORDER BY ?kind ?state

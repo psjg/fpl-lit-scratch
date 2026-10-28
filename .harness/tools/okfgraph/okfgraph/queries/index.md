@@ -7,6 +7,8 @@
 * [c-adr](c-adr.rq) - report: ADR states and edges
 * [d-supersede-pair](d-supersede-pair.rq) - gate: supersedes and superseded-by agree
 * [e-edge-without-link](e-edge-without-link.rq) - gate: every typed edge is also a body link
+* [fact-load](fact-load.rq) - gate: every rows file of the fact layer loads whole
+* [fact-stats](fact-stats.rq) - report: fact rows by kind and state
 * [f-dangling](f-dangling.rq) - gate: no edge into nothing
 * [g-wikilink](g-wikilink.rq) - gate: no wikilinks
 * [h-status-enum](h-status-enum.rq) - gate: status is draft, stable or deprecated
