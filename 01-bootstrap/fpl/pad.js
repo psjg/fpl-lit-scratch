@@ -107,7 +107,9 @@ export async function mount(backend, root, said, indent = "") {
 			ask();
 			return;
 		}
-		if (asked === epoch && text === editor.value()) editor.shade(ghost);
+		if (asked === epoch && text === editor.value()) {
+			editor.shade(ghost && {...ghost, text: indent + ghost.text});
+		}
 	}
 
 	async function sync(route, body) {

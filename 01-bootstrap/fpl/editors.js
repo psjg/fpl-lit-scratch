@@ -14,7 +14,7 @@
  * playground's dark theme (assets/fpl-playground.js), with a light twin.
  * The editor also gives cursor() and set(text, caret), for a page that
  * rewrites the buffer and puts the caret where the evaluation went, and
- * shade(ghost), which paints a ghost ({line, kind, text}, fpl.pad.Ghost) at
+ * shade(ghost), which sets a ghost ({line, kind, text}, fpl.pad.Ghost) on the line below its cell, over whatever stands there, at
  * the end of its line, faded, in the painted layer only: the textarea's text
  * and rows stay as typed. Any change to the text clears the ghost.
  */
@@ -71,12 +71,23 @@ export const plain = {
 		const area = document.createElement("textarea");
 		area.spellcheck = false;
 		area.value = text;
-		host.append(paint, area);
+		const shade = document.createElement("div");
+		shade.className = "ghostline";
+		shade.hidden = true;
+		host.append(paint, area, shade);
 		let ghost = null;
 
+		/** Paint the text; set the ghost on the line below its cell, where a commit would write the result. */
 		function draw() {
 			area.rows = Math.max(1, area.value.split("\n").length);
-			painted(paint, fplMonarch, area.value, PALETTE[scheme()], ghost);
+			painted(paint, fplMonarch, area.value, PALETTE[scheme()]);
+			shade.hidden = !ghost;
+			if (ghost) {
+				const step = paint.getBoundingClientRect().height / area.rows;
+				shade.style.top = `${(ghost.line + 1) * step}px`;
+				shade.className = `ghostline ghost-${ghost.kind}`;
+				shade.textContent = ghost.text;
+			}
 		}
 
 		/** The text changed: the ghost, of the text before, goes. */

@@ -43,8 +43,12 @@ textarea, pre { font: inherit; tab-size: 4; margin: 0; }
 /* The loop's lines in the buffer: bars and notes dim, errors red. */
 .paint .note { color: var(--dim); }
 .paint .error { color: var(--err); }
-/* A ghost: what the cell under the cursor would show, not yet committed. */
-.paint .ghost { color: var(--dim); opacity: 0.6; }
-.paint .ghost-error { color: var(--err); opacity: 0.5; }
-.paint .ghost-fuel { color: var(--warn); opacity: 0.5; }
+/* A ghost: what the cell under the cursor would show, not yet committed,
+   on the line where a commit would write it, over whatever stands there. */
+.ghostline {
+	position: absolute; left: 0; right: 0; z-index: 1; pointer-events: none;
+	white-space: pre; background: var(--bg); color: var(--dim); opacity: 0.6;
+}
+.ghostline.ghost-error { color: var(--err); opacity: 0.5; }
+.ghostline.ghost-fuel { color: var(--warn); opacity: 0.5; }
 #said { color: var(--warn); }
