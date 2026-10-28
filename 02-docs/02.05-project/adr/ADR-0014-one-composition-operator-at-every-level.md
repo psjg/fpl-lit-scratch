@@ -1,10 +1,10 @@
 ---
 type: ADR
 title: "ADR-0014 One composition operator at every level of a pass"
-description: "The pipeline's composition operator also composes the stages inside a pass, but only a stage that meets the pass contract; proposed, to be decided against a measurement on the lex page."
+description: "The pipeline's composition operator also composes the stages inside a pass, but only a stage that meets the pass contract; accepted, to be checked against a measurement on the lex page."
 tags:
   - adr
-status: draft
+status: stable
 rejected: false
 date: 2026-10-28
 deciders:
@@ -53,8 +53,8 @@ options:
 - related:: [02.05.15 One source form](../notes/02.05.15-one-source-form.md)
 - affects:: none
 
-Status: draft. Proposed by the maintainer on 2026-10-27 while annotating the history web of the
-lex page; not yet decided.
+Status: accepted on 2026-10-28. Proposed by the maintainer on 2026-10-27 while annotating the history web of the
+lex page.
 
 ## Context
 
@@ -77,7 +77,7 @@ with refusals; the shape reader is token to tuple.
 
 ## Decision
 
-Proposed. A stage inside a pass may be composed with the pipeline's operator when, and only
+A stage inside a pass may be composed with the pipeline's operator when, and only
 when, it meets the pass contract: a total function from one representation to the next that
 carries the origin map and reports refusals through `FplError` at a source span. Stages that
 meet it compose with `pass_compose`; stages that do not stay plain functions, and the page says
@@ -86,6 +86,8 @@ and answers it with a measurement, not a claim: which stages meet the contract t
 costs to make the others meet it (the escapes as an eager stage would decode every string; the
 shape reader as a stage would run per token), and whether the composed form reads better by the
 page's own measures (dependency length, readable score, the maintainer's annotations).
+
+Accepted by the maintainer on 2026-10-28; the lex page is rewritten to it.
 
 This decision is about the Python bootstrap. In FPL's own source form (02.05.15) the question
 dissolves into "a pass is a form like any other"; nothing here binds the language.
