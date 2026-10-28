@@ -58,16 +58,16 @@ def turns(cells: Sequence[Cell]) -> list[tuple[str, ...]]:
 
 def test_a_turn_is_written_as_the_repl_writes_one() -> None:
     """
-    A run line is the REPL's result line with the effect in its type
-    slot; a definition, as in the REPL, prints nothing; an empty stack
-    is a blank line.
+    A run line is the REPL's result line with the sorts on the stack in
+    its type slot; a definition, as in the REPL, prints nothing; an
+    empty stack is a blank line.
     """
     assert turns(pad(SQ, "3 sq", "1 | 2 +\n4 sq", "1 drop", "[ 1 2 ]")) == [
         (),
-        ("|- 9 : -- number",),
-        ("|- 3 : -- number", "|- 16 : -- number"),
+        ("|- 9 : number",),
+        ("|- 3 : number", "|- 16 : number"),
         ("",),
-        ("|- [ 1 2 ] : -- value",),
+        ("|- [ 1 2 ] : value",),
     ]
 
 
@@ -75,7 +75,7 @@ def test_an_untyped_line_keeps_the_repl_s_dots() -> None:
     clauses = "f : x: Int -- y\n\tdrop #int\nf : x: Text -- y\n\tdrop #text"
     assert turns(pad(clauses, "5 f\n1 [2] [3] if")) == [
         (),
-        ("|- #int : -- symbol", "|- 2 : ..."),
+        ("|- #int : symbol", "|- 2 : ..."),
     ]
 
 
@@ -109,7 +109,7 @@ def test_an_error_stops_no_cell_and_adds_nothing_to_the_state() -> None:
     cells = pad("x", "1 | 2 +", "sq : n -- n\n\tdup nope", "3 sq")
     assert [cell.status for cell in cells] == ["error", "ok", "error", "error"]
     assert cells[0].turns == ("ERROR: 1:1 unknown word: x", ";;! x", ";;! ^")
-    assert cells[1].turns == ("|- 3 : -- number",)
+    assert cells[1].turns == ("|- 3 : number",)
     assert cells[3].turns[0] == "ERROR: 1:3 unknown word: sq"
 
 
@@ -118,8 +118,8 @@ def test_an_edit_runs_the_cell_and_every_cell_below_from_its_state() -> None:
     after = run(before, 1, "f : -- x\n\t3", CTX, TTY)
     assert after[0] is before[0]
     assert turns(after[2:]) == [
-        ("|- 3 : -- number",),
-        ("|- 3 | 3 : -- number number",),
+        ("|- 3 : number",),
+        ("|- 3 | 3 : number number",),
     ]
     assert run(after, 1, "f : -- x\n\t2", CTX, TTY)[2:] == before[2:]
 
@@ -127,7 +127,7 @@ def test_an_edit_runs_the_cell_and_every_cell_below_from_its_state() -> None:
 def test_an_edit_can_break_and_mend_the_cells_below() -> None:
     cells = run(pad(SQ, "3 sq"), 0, "", CTX, TTY)
     assert [cell.status for cell in cells] == ["empty", "error"]
-    assert run(cells, 0, SQ, CTX, TTY)[1].turns == ("|- 9 : -- number",)
+    assert run(cells, 0, SQ, CTX, TTY)[1].turns == ("|- 9 : number",)
 
 
 def test_an_open_pair_waits_and_the_cells_below_still_run() -> None:
@@ -135,7 +135,7 @@ def test_an_open_pair_waits_and_the_cells_below_still_run() -> None:
     assert [cell.status for cell in cells] == ["pending", "ok"]
     assert not cells[0].log.events
     closed = run(cells, 0, "1 [\n2 ]", CTX, TTY)
-    assert closed[0].turns == ("|- 1 [ 2 ] : -- number value",)
+    assert closed[0].turns == ("|- 1 [ 2 ] : number value",)
 
 
 def test_a_cell_holds_the_inputs_the_repl_would_group() -> None:
@@ -146,11 +146,11 @@ def test_a_cell_holds_the_inputs_the_repl_would_group() -> None:
     (cell,) = pad("f : -- x\n2\n\nf\n\nx\n\n1 | 1 +")
     assert cell.status == "error"
     assert cell.turns == (
-        "|- 2 : -- number",
+        "|- 2 : number",
         "ERROR: 1:1 unknown word: x",
         ";;! x",
         ";;! ^",
-        "|- 2 : -- number",
+        "|- 2 : number",
     )
     assert len(cell.log.events) == 4
 
@@ -180,7 +180,7 @@ def test_a_buffer_is_read_as_cells_and_synced_from_the_first_change() -> None:
     edited = text.replace("3 sq", "4 sq").replace("\nx\n", "\n\nx\n\n")
     after = synced(before, edited, CTX, TTY)
     assert after[0] is before[0]
-    assert turns(after[1:]) == [("|- 16 : -- number",), before[2].turns]
+    assert turns(after[1:]) == [("|- 16 : number",), before[2].turns]
     assert chunks("1 2 +\n;;! -( 9 )-< command 2 >-\n\n") == ["1 2 +"]
     assert synced(before, "", CTX, TTY) == ()
 
@@ -287,11 +287,11 @@ def test_the_page_drives_the_pad_over_http() -> None:
             "source": "3 sq",
             "status": "ok",
             "bar": phrase_bar(2, 1, AT, ms=1000.0),
-            "turns": ["|- 9 : -- number"],
+            "turns": ["|- 9 : number"],
             "changes": [],
         }
         assert state["buffer"].endswith(
-            "3 sq\n|- 9 : -- number\n\n"
+            "3 sq\n|- 9 : number\n\n"
             + phrase_bar(3, 2, AT, fuel=4, ms=1000.0)
             + "\n"
         )
@@ -356,6 +356,6 @@ def test_the_pad_colours_with_the_playground_s_tokenizer() -> None:
 
 def test_a_file_seeds_one_cell_per_input(tmp_path: Path) -> None:
     cells = seeded(f"{SQ}\n3 sq\n", CTX, TTY)
-    assert [cell.turns for cell in cells] == [(), ("|- 9 : -- number",)]
+    assert [cell.turns for cell in cells] == [(), ("|- 9 : number",)]
     with pytest.raises(FileNotFoundError):
         main(["pad", str(tmp_path / "missing.fpl"), "--no-browser"])

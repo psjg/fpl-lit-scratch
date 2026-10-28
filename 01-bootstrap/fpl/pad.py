@@ -22,12 +22,12 @@ A cell is written as the REPL writes a phrase: the ``;;!`` bar above
 it (:func:`fpl.repl.phrase_bar`), which counts the cell, names the
 head it starts from and carries the fuel and ms of the cell above;
 then a result line per line the input printed
-(:func:`fpl.repl.result_line`), with FPL's effect line in the type
-slot (:func:`fpl.types.shown`) where the elaborator infers it:
+(:func:`fpl.repl.result_line`), with the sorts the elaborator infers
+on the stack in the type slot:
 
     ;;! -( 09:05:03 )-< command 2 >-------------{ head: 1; ms: 1.0 }-
     3 sq
-    |- 9 : -- number
+    |- 9 : number
 
 A definition prints nothing, as in the REPL; a type the elaborator
 does not infer is ``...``, as in the REPL. A refusal is the REPL's
@@ -138,7 +138,7 @@ def run(
     Examples:
         >>> pad = run((), 0, "1 | 2 +", context({}), Tty())
         >>> pad[0].turns
-        ('|- 3 : -- number',)
+        ('|- 3 : number',)
     """
     if not 0 <= index <= len(cells):
         raise IndexError(index)
@@ -268,7 +268,7 @@ def transcript(cells: Sequence[Cell]) -> str:
         >>> print(transcript(pad))  # doctest: +ELLIPSIS
         ;;! -( 09:05:03 )-< command 1 >-...-{ head: 0 }-
         1 | 2 +
-        |- 3 : -- number
+        |- 3 : number
         <BLANKLINE>
     """
     return "".join(
@@ -371,9 +371,9 @@ def _turned(log: Log, text: str, outcome: Outcome) -> list[str]:
     """Return the result lines of an input that ran.
 
     Each run line of the input gives the REPL's result line for the
-    stack it printed, with the effect it has from an empty stack in the
-    type slot; a definition gives no line. A line printed beyond the
-    run lines keeps the REPL's ``...``.
+    stack it printed, with the sorts it leaves on the stack from an
+    empty one in the type slot; a definition gives no line. A line
+    printed beyond the run lines keeps the REPL's ``...``.
     """
     before = "".join(part.text for part in program(log, log.head))
     entered = text if text.endswith("\n") else text + "\n"
@@ -398,15 +398,18 @@ def _resulted(value: str, typ: str = "...") -> str:
 
 
 def _ran(run_line: Run, arrows: Mapping[str, Arrow]) -> str:
-    """Return the effect a run line has from an empty stack.
+    """Return the sorts a run line leaves on the stack, from empty.
+
+    They are the outputs of its effect line, :func:`fpl.types.shown`
+    without the ``--`` that parts the inputs, of which there are none.
 
     Returns:
-        ``-- <sorts>``, or ``...`` when the elaborator does not infer
-        the line, as :func:`fpl.repl.result_line` writes one.
+        The sorts, parted by spaces, or ``...`` when the elaborator does
+        not infer the line, as :func:`fpl.repl.result_line` writes one.
     """
     with suppress(UntypedError, FplError):
         end = after(Typing((), {}, {}), run_line.code, arrows)
-        return effect(Arrow((), end.stack))
+        return effect(Arrow((), end.stack)).removeprefix("--").strip()
     return "..."
 
 
