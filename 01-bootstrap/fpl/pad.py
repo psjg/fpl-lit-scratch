@@ -456,9 +456,10 @@ def transcript(cells: Sequence[Cell], indent: str = "") -> str:
 
     Each cell is its bar, its text and its turns, each turn under
     *indent* (a tab sets the results in from the text, as BQNPad does;
-    the REPL writes none); a blank line parts the cells. Every line
+    the REPL writes none); the bars part the cells. Every line
     that is not blank ends in :data:`fpl.repl.TERMINATOR`, an empty
-    note, which the reader takes off again. Everything but the text is
+    note, which the reader takes off again; the next bar follows at
+    once, no blank line between cells. Everything but the text is
     what the loop writes, so the reader of ``fpl repl`` and of ``fpl
     pad FILE`` drops it (:func:`fpl.repl.written`), indented or not,
     and reads the program the cells hold.
@@ -471,7 +472,6 @@ def transcript(cells: Sequence[Cell], indent: str = "") -> str:
         ;;! -( 09:05:03 )-< command 1 >-...-{ head: 0 }- ;
         1 | 2 + ;
         |- 3 : number ;
-        <BLANKLINE>
     """
     return "".join(
         "".join(
@@ -482,7 +482,6 @@ def transcript(cells: Sequence[Cell], indent: str = "") -> str:
                 *(indent + turn if turn else turn for turn in cell.turns),
             ]
         )
-        + "\n"
         for cell in cells
     )
 

@@ -481,7 +481,7 @@ def test_the_page_drives_the_pad_over_http() -> None:
             "changes": [],
         }
         assert state["buffer"].endswith(
-            "3 sq ; \n|- 9 : number ; \n\n"
+            "3 sq ; \n|- 9 : number ; \n"
             + phrase_bar(3, 2, AT, fuel=4, ms=1000.0)
             + " ; \n"
         )
