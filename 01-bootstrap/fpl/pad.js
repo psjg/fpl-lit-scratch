@@ -3,7 +3,8 @@
  *
  * The page holds only what is typed and not yet run; the pad itself lives
  * behind a backend, which takes the routes of fpl/pad_web.py and answers
- * with the pad, {cells: [{source, status, turns, changes}]}:
+ * with the pad, {cells: [{source, status, bar, turns, changes}], bar}: each
+ * cell under its REPL phrase bar, and the bar of the cell to come.
  *
  *   load()               the pad as it stands
  *   change(route, body)  "/run" {index, source}, "/remove" {index}, "/reset"
@@ -35,15 +36,16 @@ export const http = {
 
 async function answer(response) {
 	if (!response.ok) throw new Error(await response.text());
-	return (await response.json()).cells;
+	return response.json();
 }
 
 /**
  * Draw the pad into `root`, with `said` for messages, on `backend`.
- * @param {{load(): Promise<any[]>, change(route: string, body: object): Promise<any[]>}} backend
+ * @param {{load(): Promise<object>, change(route: string, body: object): Promise<object>}} backend
  */
 export async function mount(backend, root, said) {
 	let cells = [];
+	let next = "";
 
 	function texts() {
 		return [...root.querySelectorAll("textarea")].map(area => area.value);
@@ -56,7 +58,7 @@ export async function mount(backend, root, said) {
 	function render(typed, focus, caret) {
 		const staleBy = {};
 		cells.forEach((cell, j) => cell.changes.forEach(i => (staleBy[i] = j)));
-		const drafted = {source: "", status: "draft", turns: [], changes: []};
+		const drafted = {source: "", status: "draft", bar: next, turns: [], changes: []};
 		root.replaceChildren(...[...cells, drafted].map(
 			(cell, i) => drawn(cell, i, typed[i] ?? cell.source, staleBy[i])));
 		move(Math.min(focus, cells.length), caret);
@@ -66,9 +68,9 @@ export async function mount(backend, root, said) {
 		const section = document.createElement("section");
 		section.className = "cell";
 		section.dataset.status = cell.status;
-		const gutter = document.createElement("div");
-		gutter.className = "gutter";
-		gutter.textContent = `[${i + 1}]`;
+		const bar = document.createElement("div");
+		bar.className = "bar";
+		bar.textContent = cell.bar;
 		const area = document.createElement("textarea");
 		area.spellcheck = false;
 		area.value = text;
@@ -90,7 +92,7 @@ export async function mount(backend, root, said) {
 			span.textContent = line + "\n";
 			turns.append(span);
 		}
-		section.append(gutter, area, turns);
+		section.append(bar, area, turns);
 		return section;
 	}
 
@@ -103,7 +105,7 @@ export async function mount(backend, root, said) {
 
 	async function changed(route, body, typed, focus, caret) {
 		try {
-			cells = await backend.change(route, body);
+			({cells, bar: next} = await backend.change(route, body));
 		} catch (error) {
 			said.textContent = String(error);
 			return;
@@ -164,7 +166,7 @@ export async function mount(backend, root, said) {
 	return {
 		reset: () => changed("/reset", {}, [""], 0, "end"),
 		ready: (async () => {
-			cells = await backend.load();
+			({cells, bar: next} = await backend.load());
 			render([], cells.length, "end");
 		})(),
 	};

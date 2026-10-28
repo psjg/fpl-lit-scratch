@@ -1,8 +1,8 @@
 """A pad: one FPL program written as a column of cells.
 
 The pad is read top to bottom, like a file, and every cell shows the
-turns it gave, like a toplevel. A cell holds what one would type at
-``fpl repl``: its lines are grouped into inputs by
+turns it gave, as ``fpl repl`` shows them at a terminal. A cell holds
+what one would type at the REPL: its lines are grouped into inputs by
 :func:`fpl.repl.inputs`, and each input is entered by
 :func:`fpl.session.enter` after the state the cells above it left. So
 the pad and the REPL cannot disagree about a result or a refusal.
@@ -13,32 +13,38 @@ state the cells above it left; the cells above are kept as they are.
 The log is held in memory, as ``fpl repl`` holds it without
 ``--session``, and grows by one event per input, an error included.
 
-A turn is written as the OCaml toplevel writes one, with FPL's effect
-line as the type (:func:`fpl.types.shown`):
+A cell is written as the REPL writes a phrase: the ``;;!`` bar above
+it (:func:`fpl.repl.phrase_bar`), which counts the cell, names the
+head it starts from and carries the fuel and ms of the cell above;
+then a result line per line the input printed
+(:func:`fpl.repl.result_line`), with FPL's effect line in the type
+slot (:func:`fpl.types.shown`) where the elaborator infers it:
 
-    - : -- number = 9
-    sq : number -- number = <word>
-    ERROR: 1:1 unknown word: x
+    ;;! -( 09:05:03 )-< command 2 >-------------{ head: 1; ms: 1.0 }-
+    3 sq
+    |- 9 : -- number
 
-A type the elaborator does not infer is ``...``, as in
-:func:`fpl.repl.result_line`. Goals and other notes follow as ``;;``
-lines.
+A definition prints nothing, as in the REPL; a type the elaborator
+does not infer is ``...``, as in the REPL. A refusal is the REPL's
+``ERROR`` line; goals and other notes follow as ``;;`` lines.
 
-The module does no I/O; :mod:`fpl.pad_web` is its shell.
+The module does no I/O; :mod:`fpl.pad_web` is its shell. The clocks
+come in as the REPL's :class:`fpl.repl.Tty`, so a test can hold them
+still.
 """
 
 from bisect import bisect_left
-from collections.abc import Iterator, Mapping, Sequence
+from collections.abc import Mapping, Sequence
 from contextlib import suppress
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Literal
 
-from fpl.ast_core import Define, Run, Statement
+from fpl.ast_core import Run
 from fpl.driver import FUEL_DEFAULT, checked
 from fpl.errors import FplError
 from fpl.log import Log
 from fpl.parse import parse
-from fpl.repl import EMPTY, inputs, provenance
+from fpl.repl import EMPTY, Tty, inputs, phrase_bar, provenance, result_line
 from fpl.session import Context, Outcome, enter, evaluator, program
 from fpl.types import Arrow, Typing, UntypedError, after, elaborate
 from fpl.types import shown as effect
@@ -47,10 +53,6 @@ from fpl.types import shown as effect
 #: the text goes on after its last line, or the cell holds no input.
 type Status = Literal["ok", "error", "pending", "empty"]
 
-#: The type of a run line the elaborator does not infer.
-UNTYPED = "..."
-#: The value shown for a definition: a word, not a value.
-WORD = "<word>"
 #: The turn of a cell whose input goes on after its last line.
 PENDING = ";; the input goes on"
 
@@ -60,19 +62,27 @@ class Cell:
     """A cell's text and what its last evaluation showed.
 
     *log* is the session as the cell leaves it: the log the cell below
-    starts from.
+    starts from. *spent* and *ms* are what the bar of the cell below
+    reports, as the REPL's next bar reports a phrase; both are None for
+    a cell that ran nothing, or failed.
     """
 
     #: The text, as typed; tabs are kept.
     source: str
     #: What the evaluation came to.
     status: Status
+    #: The phrase bar above the cell.
+    bar: str
     #: The turn lines, in the order the inputs gave them.
     turns: tuple[str, ...]
     #: The cells above, by index, whose output this cell changed.
     changes: tuple[int, ...]
     #: The session after the cell.
     log: Log
+    #: The steps the cell's inputs took; None when none ran.
+    spent: int | None = None
+    #: The wall time of the cell's evaluation; None when none ran.
+    ms: float | None = None
 
 
 def context(env: Mapping[str, str], fuel: int = FUEL_DEFAULT) -> Context:
@@ -87,7 +97,7 @@ def context(env: Mapping[str, str], fuel: int = FUEL_DEFAULT) -> Context:
 
 
 def run(
-    cells: Sequence[Cell], index: int, source: str, ctx: Context
+    cells: Sequence[Cell], index: int, source: str, ctx: Context, tty: Tty
 ) -> tuple[Cell, ...]:
     """Set the text of a cell and evaluate it and every cell below.
 
@@ -96,6 +106,7 @@ def run(
         index: The cell to set; ``len(cells)`` appends a cell.
         source: Its new text.
         ctx: What each input is entered with.
+        tty: The clocks of the bars.
 
     Returns:
         The pad after: the cells above *index* as they were, then the
@@ -105,19 +116,19 @@ def run(
         IndexError: *index* is beyond the end of the pad.
 
     Examples:
-        >>> pad = run((), 0, "1 | 2 +", context({}))
+        >>> pad = run((), 0, "1 | 2 +", context({}), Tty())
         >>> pad[0].turns
-        ('- : -- number = 3',)
+        ('|- 3 : -- number',)
     """
     if not 0 <= index <= len(cells):
         raise IndexError(index)
     sources = [cell.source for cell in cells]
     sources[index : index + 1] = [source]
-    return replayed(cells[:index], sources[index:], ctx)
+    return replayed(cells[:index], sources[index:], ctx, tty)
 
 
 def removed(
-    cells: Sequence[Cell], index: int, ctx: Context
+    cells: Sequence[Cell], index: int, ctx: Context, tty: Tty
 ) -> tuple[Cell, ...]:
     """Remove a cell and evaluate every cell below it again.
 
@@ -127,54 +138,104 @@ def removed(
     if not 0 <= index < len(cells):
         raise IndexError(index)
     sources = [cell.source for cell in cells[index + 1 :]]
-    return replayed(cells[:index], sources, ctx)
+    return replayed(cells[:index], sources, ctx, tty)
 
 
 def replayed(
-    above: Sequence[Cell], sources: Sequence[str], ctx: Context
+    above: Sequence[Cell], sources: Sequence[str], ctx: Context, tty: Tty
 ) -> tuple[Cell, ...]:
     """Evaluate *sources* in order below the cells *above*."""
     pad = list(above)
     for source in sources:
-        pad.append(evaluated(source, pad, ctx))
+        pad.append(evaluated(source, pad, ctx, tty))
     return tuple(pad)
 
 
-def evaluated(source: str, above: Sequence[Cell], ctx: Context) -> Cell:
+def bar(above: Sequence[Cell], tty: Tty) -> str:
+    """Return the phrase bar of the cell that follows *above*.
+
+    It is the REPL's: the cell's number, the head it starts from, the
+    time now, and the fuel and ms of the cell above it.
+
+    Examples:
+        >>> from datetime import datetime
+        >>> at = datetime(2026, 1, 1, 9, 5, 3)
+        >>> bar((), Tty(now=lambda: at))  # doctest: +ELLIPSIS
+        ';;! -( 09:05:03 )-< command 1 >-...-{ head: 0 }-'
+    """
+    last = above[-1] if above else None
+    return phrase_bar(
+        len(above) + 1,
+        len(last.log.events) if last else 0,
+        tty.now(),
+        fuel=last.spent if last else None,
+        ms=last.ms if last else None,
+    )
+
+
+def evaluated(
+    source: str, above: Sequence[Cell], ctx: Context, tty: Tty
+) -> Cell:
     """Evaluate one cell after the state the cells *above* left.
 
     An input that fails does not stop the inputs after it, as in the
     REPL; its event joins the log, but not the program.
     """
     log = above[-1].log if above else EMPTY
+    head = bar(above, tty)
     lines = iter(source.splitlines())
     texts = list(inputs(lambda _on: next(lines, None)))
     if not texts:
-        return Cell(source, "empty", (), (), log)
+        return Cell(source, "empty", head, (), (), log)
     if _open(texts[-1]):
-        return Cell(source, "pending", (PENDING,), (), log)
-    return _entered(source, texts, above, ctx)
+        return Cell(source, "pending", head, (PENDING,), (), log)
+    started = tty.timer()
+    cell = _entered(source, head, texts, above, ctx)
+    ms = (tty.timer() - started) * 1000.0
+    return cell if cell.status == "error" else replace(cell, ms=ms)
 
 
 def _entered(
-    source: str, texts: Sequence[str], above: Sequence[Cell], ctx: Context
+    source: str,
+    head: str,
+    texts: Sequence[str],
+    above: Sequence[Cell],
+    ctx: Context,
 ) -> Cell:
     """Enter the inputs *texts* of a cell, one after another."""
     log = above[-1].log if above else EMPTY
+    outcomes: list[Outcome] = []
     turns: list[str] = []
     changes: list[int] = []
-    failed = False
     for text in texts:
         outcome = enter(log, text, ctx, log.head)
+        outcomes.append(outcome)
         ok = outcome.event.status == "ok"
-        failed = failed or not ok
         turns.extend(_turned(log, text, outcome) if ok else _refused(outcome))
         for note in outcome.notes if ok else ():
             changes.extend(_owner(above, note))
             turns.append(_noted(above, note))
         log = log.grown(outcome.event, outcome.bodies, log.size)
-    status: Status = "error" if failed else "ok"
-    return Cell(source, status, tuple(turns), tuple(sorted(set(changes))), log)
+    status: Status = "ok" if _ran_all(outcomes) else "error"
+    changed = tuple(sorted(set(changes)))
+    fuel = _spent(outcomes)
+    return Cell(source, status, head, tuple(turns), changed, log, fuel)
+
+
+def _ran_all(outcomes: Sequence[Outcome]) -> bool:
+    """Tell whether every input of a cell ran."""
+    return all(outcome.event.status == "ok" for outcome in outcomes)
+
+
+def _spent(outcomes: Sequence[Outcome]) -> int | None:
+    """Return the steps a cell's inputs took, for the bar below it.
+
+    It is the sum of what the inputs report, as the REPL sums a phrase;
+    None when an input failed or none reports steps, as the REPL's bar
+    then shows no fuel.
+    """
+    steps = [o.spent for o in outcomes if o.spent is not None]
+    return sum(steps) if steps and _ran_all(outcomes) else None
 
 
 def _open(text: str) -> bool:
@@ -203,11 +264,12 @@ def _refused(outcome: Outcome) -> list[str]:
 
 
 def _turned(log: Log, text: str, outcome: Outcome) -> list[str]:
-    """Return the typed turn lines of an input that ran.
+    """Return the result lines of an input that ran.
 
-    Each statement of the input gives one line: a definition its name
-    and inferred effect, a run line ``-`` with the effect it has from
-    an empty stack and the stack it printed.
+    Each run line of the input gives the REPL's result line for the
+    stack it printed, with the effect it has from an empty stack in the
+    type slot; a definition gives no line. A line printed beyond the
+    run lines keeps the REPL's ``...``.
     """
     before = "".join(part.text for part in program(log, log.head))
     entered = text if text.endswith("\n") else text + "\n"
@@ -217,39 +279,31 @@ def _turned(log: Log, text: str, outcome: Outcome) -> list[str]:
     values = iter(outcome.out.splitlines())
     turns: list[str] = []
     for statement in statements:
-        if statement.span.line >= first:
-            turns.extend(_typed(statement, arrows, values))
-    return [*turns, *(f"- : {UNTYPED} = {value}" for value in values)]
+        if statement.span.line >= first and isinstance(statement, Run):
+            turns.append(_resulted(next(values, ""), _ran(statement, arrows)))
+    return [*turns, *(_resulted(value) for value in values)]
 
 
-def _typed(
-    statement: Statement, arrows: Mapping[str, Arrow], values: Iterator[str]
-) -> list[str]:
-    """Return the turn line of one statement of an input.
+def _resulted(value: str, typ: str = "...") -> str:
+    """Return the result line of *value*; an empty stack, a blank line.
 
-    A clause of a dispatched word shows no line of its own; its
-    dispatcher shows the word.
+    The REPL leaves the blank line a run with nothing on the stack
+    prints as it is (:func:`fpl.repl.transcript`).
     """
-    if isinstance(statement, Define):
-        if len(statement.clause) > 1:
-            return []
-        return [
-            f"{statement.name} : {effect(arrows[statement.word])} = {WORD}"
-        ]
-    return [f"- : {_ran(statement, arrows)} = {next(values, '')}".rstrip()]
+    return result_line(value, typ) if value else ""
 
 
 def _ran(run_line: Run, arrows: Mapping[str, Arrow]) -> str:
     """Return the effect a run line has from an empty stack.
 
     Returns:
-        ``-- <sorts>``, or :data:`UNTYPED` when the elaborator does not
-        infer the line.
+        ``-- <sorts>``, or ``...`` when the elaborator does not infer
+        the line, as :func:`fpl.repl.result_line` writes one.
     """
     with suppress(UntypedError, FplError):
         end = after(Typing((), {}, {}), run_line.code, arrows)
         return effect(Arrow((), end.stack))
-    return UNTYPED
+    return "..."
 
 
 def _owner(above: Sequence[Cell], note: str) -> list[int]:

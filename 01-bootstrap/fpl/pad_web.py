@@ -8,7 +8,8 @@ memory and changes it only through :mod:`fpl.pad`; it is a WSGI
 application (:func:`app`) on :mod:`wsgiref`, which serves one request
 at a time, so turns never overlap.
 
-Routes, all answered with the pad as JSON (:func:`shown`):
+Routes, all answered with the pad as JSON (:func:`shown`: the cells,
+each with its bar and turns, and the bar of the cell to come):
 
 - ``GET /`` the page, ``GET /pad.js`` and ``/pad.css`` its parts;
   ``GET /pad`` the pad.
@@ -25,14 +26,14 @@ import json
 import sys
 import webbrowser
 from argparse import ArgumentParser
-from collections.abc import Mapping, Sequence
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 from wsgiref.simple_server import make_server
 from wsgiref.types import StartResponse, WSGIApplication, WSGIEnvironment
 
-from fpl.pad import Cell, context, removed, replayed, run
-from fpl.repl import inputs
+from fpl.pad import Cell, bar, context, removed, replayed, run
+from fpl.repl import Tty, inputs
 from fpl.session import Context
 
 #: The files of the page by path, and their content types.
@@ -43,35 +44,26 @@ PAGE = {
 }
 
 
-def shown(cells: Sequence[Cell]) -> dict[str, Any]:
-    """Return the pad as the page reads it: the cells without logs."""
-    return {
-        "cells": [
-            {
-                "source": cell.source,
-                "status": cell.status,
-                "turns": list(cell.turns),
-                "changes": list(cell.changes),
-            }
-            for cell in cells
-        ]
-    }
-
-
-def seeded(text: str, ctx: Context) -> tuple[Cell, ...]:
+def seeded(text: str, ctx: Context, tty: Tty) -> tuple[Cell, ...]:
     """Return the pad whose cells are the inputs of *text*."""
     lines = iter(text.splitlines())
     sources = [t.rstrip("\n") for t in inputs(lambda _on: next(lines, None))]
-    return replayed((), sources, ctx)
+    return replayed((), sources, ctx, tty)
 
 
 class Pad:
     """The pad a server holds, and the changes a request can ask for."""
 
-    def __init__(self, cells: tuple[Cell, ...], ctx: Context) -> None:
-        """Hold *cells*, changed later under *ctx*."""
+    def __init__(
+        self, cells: tuple[Cell, ...], ctx: Context, tty: Tty | None = None
+    ) -> None:
+        """Hold *cells*, changed later under *ctx*.
+
+        *tty* gives the clocks of the bars; the wall clock when None.
+        """
         self.cells = cells
         self.ctx = ctx
+        self.tty = tty if tty is not None else Tty()
 
     def change(self, route: str, body: Mapping[str, Any]) -> bool:
         """Carry out a ``POST`` route; False when there is none.
@@ -84,15 +76,42 @@ class Pad:
         match route:
             case "/run":
                 self.cells = run(
-                    self.cells, body["index"], str(body["source"]), self.ctx
+                    self.cells,
+                    body["index"],
+                    str(body["source"]),
+                    self.ctx,
+                    self.tty,
                 )
             case "/remove":
-                self.cells = removed(self.cells, body["index"], self.ctx)
+                self.cells = removed(
+                    self.cells, body["index"], self.ctx, self.tty
+                )
             case "/reset":
                 self.cells = ()
             case _:
                 return False
         return True
+
+
+def shown(pad: Pad) -> dict[str, Any]:
+    """Return the pad as the page reads it: the cells without logs.
+
+    ``bar`` is the phrase bar of the cell the page offers next, as the
+    REPL prints a bar before it reads.
+    """
+    return {
+        "cells": [
+            {
+                "source": cell.source,
+                "status": cell.status,
+                "bar": cell.bar,
+                "turns": list(cell.turns),
+                "changes": list(cell.changes),
+            }
+            for cell in pad.cells
+        ],
+        "bar": bar(pad.cells, pad.tty),
+    }
 
 
 #: An answer: the HTTP status line, the content type, the body.
@@ -115,7 +134,7 @@ def answered(pad: Pad, method: str, path: str, body: bytes) -> Answer:
             return MISSING
     elif path != "/pad":
         return MISSING
-    return "200 OK", "application/json", json.dumps(shown(pad.cells)).encode()
+    return "200 OK", "application/json", json.dumps(shown(pad)).encode()
 
 
 def app(pad: Pad) -> WSGIApplication:
@@ -156,9 +175,9 @@ def main(argv: list[str], env: Mapping[str, str]) -> int:
     parser.add_argument("--port", type=int, default=8765)
     parser.add_argument("--no-browser", action="store_true")
     args = parser.parse_args(argv)
-    ctx = context(env)
-    cells = seeded(args.file.read_text(), ctx) if args.file else ()
-    server = make_server("127.0.0.1", args.port, app(Pad(cells, ctx)))
+    ctx, tty = context(env), Tty()
+    cells = seeded(args.file.read_text(), ctx, tty) if args.file else ()
+    server = make_server("127.0.0.1", args.port, app(Pad(cells, ctx, tty)))
     url = f"http://127.0.0.1:{server.server_address[1]}/"
     print(f"fpl pad: {url} (Ctrl-C stops)", file=sys.stderr)
     try:

@@ -27,17 +27,17 @@ header button {
 	border: 1px solid var(--rule); border-radius: 3px; padding: 0 0.5rem;
 }
 main { max-width: 60rem; margin: 0 auto; padding: 1rem 1rem 40vh; }
-.cell { display: grid; grid-template-columns: 3.5rem 1fr; margin: 0 0 0.4rem; }
-.gutter { color: var(--dim); text-align: right; padding-right: 0.75rem; user-select: none; }
-.cell.edited .gutter::after { content: "*"; color: var(--warn); }
+.cell { margin: 0 0 0.6rem; }
+.bar { color: var(--dim); white-space: pre; user-select: none; }
+.cell.edited .bar::after { content: " *"; color: var(--warn); }
 textarea, pre { font: inherit; tab-size: 4; margin: 0; }
 textarea {
-	width: 100%; resize: none; overflow: hidden; border: 0; outline: 0;
-	padding: 0 0 0 2ch; background: transparent; color: var(--fg);
+	display: block; width: 100%; resize: none; overflow: hidden; border: 0; outline: 0;
+	padding: 0; margin-left: -2px; background: transparent; color: var(--fg);
 	border-left: 2px solid transparent; white-space: pre; overflow-x: auto;
 }
 textarea:focus { border-left-color: var(--mark); }
-pre.turns { grid-column: 2; white-space: pre-wrap; color: var(--fg); }
+pre.turns { white-space: pre-wrap; color: var(--fg); }
 pre.turns:empty { display: none; }
 .cell[data-status="error"] pre.turns { color: var(--err); }
 .cell[data-status="pending"] pre.turns, .note { color: var(--dim); }

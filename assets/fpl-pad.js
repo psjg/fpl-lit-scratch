@@ -31,7 +31,7 @@ async def _pad_load(url):
     def change(route, body):
         if not pad.change(route, json.loads(body)):
             raise KeyError(route)
-        return json.dumps(shown(pad.cells))
+        return json.dumps(shown(pad))
     return change
 `;
 
