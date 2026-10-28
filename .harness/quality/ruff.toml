@@ -22,14 +22,24 @@ select = [
   "PL",            # pylint's rules that ruff has
   "RUF",
   "PGH",           # blanket `# type: ignore` and `# noqa`
+  "D",             # pydocstyle: docstring layout, Google convention below
 ]
 ignore = [
   "PLR2004",       # magic numbers: tests are made of them
 ]
+# FPL writes these in its own text: ´ in a name (fpl.lex), ′ in a
+# generated name (fpl.desugar). RUF001-003 would read them as a backtick.
+allowed-confusables = ["´", "′"]
 
 [lint.mccabe]
 # CRAP <= 8 at the 100% coverage the gate demands is complexity <= 8 (.harness/quality/crap.toml).
 max-complexity = 8
 
+[lint.pydocstyle]
+convention = "google"
+
 [lint.per-file-ignores]
-"tests/**" = ["PLR0913"]
+"tests/**" = ["PLR0913", "D"]  # D: tests are not an API
+
+[format]
+docstring-code-format = true
