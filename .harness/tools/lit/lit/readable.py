@@ -89,7 +89,7 @@ def chapter(page: Page, text: str, examples: bool = True) -> str:
     return "\n".join(out)
 
 
-def _rows(fn: ast.FunctionDef) -> list[dict[str, ast.expr]]:
+def rows(fn: ast.FunctionDef) -> list[dict[str, ast.expr]]:
     """The parameter rows of a test, one empty row if not a table."""
     tables: list[list[dict[str, ast.expr]]] = []
     for deco in fn.decorator_list:
@@ -106,14 +106,14 @@ def _rows(fn: ast.FunctionDef) -> list[dict[str, ast.expr]]:
                 params = [ast.literal_eval(e) for e in elts]
             case _:
                 continue
-        tables.append(_table(params, values))
+        tables.append(table(params, values))
     return [
         {k: v for row in combo for k, v in row.items()}
         for combo in itertools.product(*tables)
     ]
 
 
-def _table(params: list[str], values: ast.expr) -> list[dict[str, ast.expr]]:
+def table(params: list[str], values: ast.expr) -> list[dict[str, ast.expr]]:
     """One parametrize table's rows, each a name to its value's tree."""
     if not isinstance(values, ast.List | ast.Tuple):
         return []
@@ -204,7 +204,7 @@ def facts(path: str, source: str, known: set[str]) -> list[Fact]:
             continue
         local = _locals(fn)
         for line, left, right in _assertions(fn):
-            for row in _rows(fn):
+            for row in rows(fn):
                 usable = allowed - (local - set(row))
                 fact = _fact(row, left, right, usable, helpers)
                 if fact is not None:
