@@ -74,13 +74,29 @@ export function tokenized(definition, text) {
 	});
 }
 
+/** A line the loop wrote (fpl.repl.written): a result, a bar or a note, an ERROR. */
+const LOOP = /^(\|-|;;!|ERROR:)( |$)/;
+
+/** The class of a loop line, by what it is. */
+function kind(line) {
+	return line.startsWith("ERROR:") ? "error" : line.startsWith("|-") ? "result" : "note";
+}
+
 /**
- * Paint `text` into `pre` as coloured spans, one line per text line.
+ * Paint `text` into `pre` as coloured spans, one line per text line. A line
+ * the loop wrote is one span with its kind as class, not FPL tokens.
  * @param {Record<string, {color: string, style?: string, weight?: string}>} palette by token prefix
  */
 export function painted(pre, definition, text, palette) {
 	const lines = tokenized(definition, text);
 	pre.replaceChildren(...lines.flatMap((tokens, i) => {
+		const line = tokens.map(([hit]) => hit).join("");
+		if (LOOP.test(line)) {
+			const span = document.createElement("span");
+			span.className = kind(line);
+			span.textContent = line;
+			return i < lines.length - 1 ? [span, "\n"] : [span];
+		}
 		const spans = tokens.map(([hit, token]) => {
 			const span = document.createElement("span");
 			span.textContent = hit;

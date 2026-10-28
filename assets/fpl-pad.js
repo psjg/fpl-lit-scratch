@@ -52,8 +52,8 @@ function loaded() {
 
 export const pyodide = {
   async load() {
-    await loaded();
-    return [];
+    const call = await loaded();
+    return JSON.parse(call("/reset", "{}"));
   },
   async change(route, body) {
     const call = await loaded();

@@ -1,37 +1,27 @@
 /**
- * The pad's page: cells stacked top to bottom, the draft cell last.
+ * The pad's page: one buffer, the session as text.
  *
- * The page holds only what is typed and not yet run; the pad itself lives
- * behind a backend, which takes the routes of fpl/pad_web.py and answers
- * with the pad, {cells: [{source, status, bar, turns, changes}], bar,
- * transcript}: each cell under its REPL phrase bar, the bar of the cell to
- * come, and the pad as text, which `copy` puts on the clipboard: pasted into
- * `fpl repl` it is the same program, as the bars, results and notes are the
- * loop's own lines and its reader drops them.
+ * The buffer is the transcript the REPL would print: a `;;!` phrase bar, the
+ * input under it, its `|-` result lines and `;;!` notes, the next bar, and so
+ * on, with the bar of the cell to come at the end. One composes in it as in
+ * an editor. Shift+Enter (or Ctrl+Enter, Cmd+Enter) hands the whole buffer
+ * to the backend, which reads it as the REPL reads a paste (the loop's own
+ * lines drop away, fpl.repl.written), evaluates what changed and every cell
+ * below it, and answers with the buffer written anew and where the caret
+ * goes: the start of the cell after the one it was in.
+ *
+ * The backend takes the routes of fpl/pad_web.py and answers with the pad,
+ * {cells: [{source, status, bar, turns, changes}], buffer, caret}:
  *
  *   load()               the pad as it stands
- *   change(route, body)  "/run" {index, source}, "/remove" {index}, "/reset"
+ *   change(route, body)  "/buffer" {text, cursor}, "/reset"
  *
  * `http` is the backend of `python -m fpl pad`; the site's /pad/ page passes
- * one that runs fpl.pad under Pyodide (assets/fpl-pad.js). Both pages share
- * this file, so they share the keys, which the cell editor (editors.js, or
- * monaco.js when the page is opened with ?editor=monaco) turns into the
- * hooks below:
- *
- *   Shift+Enter, Ctrl+Enter, Cmd+Enter  evaluate the cell, and every cell below
- *   Enter                               a newline, with the line's tabs
- *   Tab, Shift+Tab                      a tab in, one leading tab out
- *   ArrowUp / ArrowDown at the edge     the cell above / below
- *   Backspace in an empty cell          remove the cell
+ * one that runs fpl.pad under Pyodide (assets/fpl-pad.js). The keys are the
+ * editor's (editors.js): Enter a newline with the line's tabs, Tab a tab.
  */
 
 import {plain} from "./editors.js";
-
-/** The cell editor the page's URL asks for: `?editor=monaco`, else plain. */
-export async function chosen(search) {
-	const name = new URLSearchParams(search).get("editor");
-	return name === "monaco" ? (await import("./monaco.js")).monaco : plain;
-}
 
 /** The backend of `python -m fpl pad`: the routes over HTTP. */
 export const http = {
@@ -53,104 +43,46 @@ async function answer(response) {
 }
 
 /**
- * Draw the pad into `root`, with `said` for messages, on `backend`, each
- * cell typed in an `editor` of editors.js.
+ * Put the buffer into `root`, with `said` for messages, on `backend`.
  * @param {{load(): Promise<object>, change(route: string, body: object): Promise<object>}} backend
  */
-export async function mount(backend, root, said, editor = plain) {
+export async function mount(backend, root, said) {
 	let cells = [];
-	let next = "";
-	let transcript = "";
-	let editors = [];
+	const host = document.createElement("div");
+	root.replaceChildren(host);
+	const editor = plain.make(host, "", {
+		input: () => {},
+		evaluate: () => sync("/buffer", {text: editor.value(), cursor: editor.cursor()}),
+		up: () => false,
+		down: () => false,
+		remove: () => false,
+	});
 
-	function texts() {
-		return editors.map(each => each.value());
-	}
-
-	function render(typed, focus, caret) {
-		const staleBy = {};
-		cells.forEach((cell, j) => cell.changes.forEach(i => (staleBy[i] = j)));
-		const drafted = {source: "", status: "draft", bar: next, turns: [], changes: []};
-		editors.forEach(each => each.dispose?.());
-		editors = [];
-		root.replaceChildren(...[...cells, drafted].map(
-			(cell, i) => drawn(cell, i, typed[i] ?? cell.source, staleBy[i])));
-		move(Math.min(focus, cells.length), caret);
-	}
-
-	function drawn(cell, i, text, staleBy) {
-		const section = document.createElement("section");
-		section.className = "cell";
-		section.dataset.status = cell.status;
-		const bar = document.createElement("div");
-		bar.className = "bar";
-		bar.textContent = cell.bar;
-		const host = document.createElement("div");
-		const typed = editor.make(host, text, {
-			input: () => section.classList.toggle(
-				"edited", i < cells.length && typed.value() !== cell.source),
-			evaluate: () => evaluate(i, typed.value()),
-			up: () => i > 0 && move(i - 1, "end"),
-			down: () => i < cells.length && move(i + 1, "start"),
-			remove: () => i < cells.length && remove(i),
-		});
-		editors[i] = typed;
-		const turns = document.createElement("pre");
-		turns.className = "turns";
-		const lines = cell.turns.map(line => [line, line.startsWith(";;!") ? "note" : ""]);
-		if (staleBy !== undefined) {
-			lines.push([`;;! cell ${staleBy + 1} changed this result`, "stale"]);
-		}
-		for (const [line, kind] of lines) {
-			const span = document.createElement("span");
-			span.className = kind;
-			span.textContent = line + "\n";
-			turns.append(span);
-		}
-		section.append(bar, host, turns);
-		return section;
-	}
-
-	async function changed(route, body, typed, focus, caret) {
+	async function sync(route, body) {
+		let buffer;
+		let caret;
 		try {
-			({cells, bar: next, transcript} = await backend.change(route, body));
+			({cells, buffer, caret} = await backend.change(route, body));
 		} catch (error) {
 			said.textContent = String(error);
 			return;
 		}
 		said.textContent = "";
-		render(typed, focus, caret);
+		editor.set(buffer, caret);
 	}
 
-	function evaluate(i, source) {
-		const typed = texts();
-		const appended = i === cells.length;
-		if (appended && !source.trim()) return;
-		changed("/run", {index: i, source}, appended ? [...typed, ""] : typed, i + 1, "end");
-	}
-
-	function remove(i) {
-		const typed = texts();
-		typed.splice(i, 1);
-		changed("/remove", {index: i}, typed, Math.max(0, i - 1), "end");
-		return true;
-	}
-
-	function move(i, caret) {
-		editors[i].focus(caret);
-		return true;
-	}
-
-	await editor.ready();
+	await plain.ready();
 	return {
-		reset: () => changed("/reset", {}, [""], 0, "end"),
+		reset: () => sync("/reset", {}),
 		copy: async () => {
-			await navigator.clipboard.writeText(transcript);
+			await navigator.clipboard.writeText(editor.value());
 			said.textContent = `copied ${cells.length} cells`;
 		},
 		ready: (async () => {
-			({cells, bar: next, transcript} = await backend.load());
-			render([], cells.length, "end");
+			let buffer;
+			let caret;
+			({cells, buffer, caret} = await backend.load());
+			editor.set(buffer, caret);
 		})(),
 	};
 }

@@ -14,14 +14,12 @@ application (:func:`app`) on :mod:`wsgiref`, which serves one request
 at a time, so turns never overlap.
 
 Routes, all answered with the pad as JSON (:func:`shown`: the cells,
-each with its bar and turns, the bar of the cell to come, and the
-transcript):
+each with its bar and turns, the buffer, and where the caret goes):
 
 - ``GET /`` the page, ``GET /<file>`` for each file of :data:`PAGE`;
   ``GET /pad`` the pad.
-- ``POST /run`` with ``{"index": i, "source": text}``:
-  :func:`fpl.pad.run`.
-- ``POST /remove`` with ``{"index": i}``: :func:`fpl.pad.removed`.
+- ``POST /buffer`` with ``{"text": buffer, "cursor": offset}``:
+  :func:`fpl.pad.synced`, the caret as :func:`fpl.pad.caret` puts it.
 - ``POST /reset``: an empty pad.
 
 A ``FILE`` seeds the pad: each input :func:`fpl.repl.inputs` finds in
@@ -38,7 +36,7 @@ from typing import Any
 from wsgiref.simple_server import make_server
 from wsgiref.types import StartResponse, WSGIApplication, WSGIEnvironment
 
-from fpl.pad import Cell, bar, context, removed, replayed, run, transcript
+from fpl.pad import Cell, buffer, caret, context, replayed, synced
 from fpl.repl import Tty, inputs
 from fpl.session import Context
 
@@ -83,40 +81,37 @@ class Pad:
         self.ctx = ctx
         self.tty = tty if tty is not None else Tty()
 
-    def change(self, route: str, body: Mapping[str, Any]) -> bool:
-        """Carry out a ``POST`` route; False when there is none.
+    def change(self, route: str, body: Mapping[str, Any]) -> int | None:
+        """Carry out a ``POST`` route; None when there is none.
+
+        Returns:
+            Where the caret goes in the buffer after the change.
 
         Raises:
             KeyError: The body lacks a field the route needs.
-            IndexError: The index names no cell.
             TypeError: A field has the wrong type.
         """
         match route:
-            case "/run":
-                self.cells = run(
-                    self.cells,
-                    body["index"],
-                    str(body["source"]),
-                    self.ctx,
-                    self.tty,
-                )
-            case "/remove":
-                self.cells = removed(
-                    self.cells, body["index"], self.ctx, self.tty
-                )
+            case "/buffer":
+                text, cursor = str(body["text"]), int(body["cursor"])
+                self.cells = synced(self.cells, text, self.ctx, self.tty)
+                return caret(text, cursor, self.cells, self.tty)
             case "/reset":
                 self.cells = ()
+                return len(buffer((), self.tty))
             case _:
-                return False
-        return True
+                return None
+
+    def end(self) -> int:
+        """Return the end of the buffer, where the caret rests first."""
+        return len(buffer(self.cells, self.tty))
 
 
-def shown(pad: Pad) -> dict[str, Any]:
+def shown(pad: Pad, at: int) -> dict[str, Any]:
     """Return the pad as the page reads it: the cells without logs.
 
-    ``bar`` is the phrase bar of the cell the page offers next, as the
-    REPL prints a bar before it reads; ``transcript`` is the pad as
-    text (:func:`fpl.pad.transcript`), for the page's copy button.
+    ``buffer`` is the pad as text (:func:`fpl.pad.buffer`), ``caret``
+    where the page puts the caret in it, *at*.
     """
     return {
         "cells": [
@@ -129,8 +124,8 @@ def shown(pad: Pad) -> dict[str, Any]:
             }
             for cell in pad.cells
         ],
-        "bar": bar(pad.cells, pad.tty),
-        "transcript": transcript(pad.cells),
+        "buffer": buffer(pad.cells, pad.tty),
+        "caret": at,
     }
 
 
@@ -145,16 +140,19 @@ def answered(pad: Pad, method: str, path: str, body: bytes) -> Answer:
     if method == "GET" and path in PAGE:
         name, kind = PAGE[path]
         return "200 OK", kind, (Path(__file__).parent / name).read_bytes()
+    at = pad.end()
     if method == "POST":
         try:
-            found = pad.change(path, json.loads(body or b"{}"))
-        except (ValueError, KeyError, IndexError, TypeError) as error:
+            moved = pad.change(path, json.loads(body or b"{}"))
+        except (ValueError, KeyError, TypeError) as error:
             return "400 Bad Request", "text/plain", f"{error!r}\n".encode()
-        if not found:
+        if moved is None:
             return MISSING
+        at = moved
     elif path != "/pad":
         return MISSING
-    return "200 OK", "application/json", json.dumps(shown(pad)).encode()
+    data = json.dumps(shown(pad, at)).encode()
+    return "200 OK", "application/json", data
 
 
 def app(pad: Pad) -> WSGIApplication:

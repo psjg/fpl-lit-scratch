@@ -27,9 +27,6 @@ header button {
 	border: 1px solid var(--rule); border-radius: 3px; padding: 0 0.5rem;
 }
 main { max-width: 60rem; margin: 0 auto; padding: 1rem 1rem 40vh; }
-.cell { margin: 0 0 0.6rem; }
-.bar { color: var(--dim); white-space: pre; user-select: none; }
-.cell.edited .bar::after { content: " *"; color: var(--warn); }
 textarea, pre { font: inherit; tab-size: 4; margin: 0; }
 /* The plain editor: the painted text sits behind a textarea whose own text
    is transparent, so both must lay out the same. */
@@ -44,13 +41,7 @@ textarea, pre { font: inherit; tab-size: 4; margin: 0; }
 	border: 0; outline: 0; padding: 0; background: transparent;
 	color: transparent; caret-color: var(--fg); white-space: pre;
 }
-/* The Monaco editor: one per cell, sized by monaco.js, on the page's own
-   background, with the same left mark as the plain editor. */
-.monaco { margin-left: -2px; border-left: 2px solid transparent; }
-.monaco:focus-within { border-left-color: var(--mark); }
-pre.turns { white-space: pre-wrap; color: var(--fg); }
-pre.turns:empty { display: none; }
-.cell[data-status="error"] pre.turns { color: var(--err); }
-.cell[data-status="pending"] pre.turns, .note { color: var(--dim); }
-.stale, #said { color: var(--warn); }
-.cell.edited pre.turns { opacity: 0.45; }
+/* The loop's lines in the buffer: bars and notes dim, errors red. */
+.paint .note { color: var(--dim); }
+.paint .error { color: var(--err); }
+#said { color: var(--warn); }

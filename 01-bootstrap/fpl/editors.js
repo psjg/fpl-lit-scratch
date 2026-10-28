@@ -12,6 +12,8 @@
  * `plain` is a textarea with the tokens of fpl-language.js painted behind it
  * (highlight.js), so it needs nothing beyond this page. The palette is the
  * playground's dark theme (assets/fpl-playground.js), with a light twin.
+ * The editor also gives cursor() and set(text, caret), for a page that
+ * rewrites the buffer and puts the caret where the evaluation went.
  */
 
 import {fplMonarch} from "./fpl-language.js";
@@ -114,6 +116,13 @@ export const plain = {
 		fit();
 		return {
 			value: () => area.value,
+			cursor: () => area.selectionStart,
+			set(text, caret) {
+				area.value = text;
+				fit();
+				area.focus();
+				area.setSelectionRange(caret, caret);
+			},
 			focus(caret) {
 				area.focus();
 				const at = caret === "start" ? 0 : area.value.length;

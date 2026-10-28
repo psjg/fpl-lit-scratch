@@ -9,18 +9,16 @@
 <body>
 <header>
 	<b>FPL pad</b>
-	<span>Shift+Enter evaluates · Enter newline · Tab indents · ↑↓ move between cells · Backspace in an empty cell removes it</span>
+	<span>Shift+Enter evaluates · Enter newline · Tab indents · the buffer is the session: copy it, paste it into fpl repl</span>
 	<button id="copy" type="button" title="the pad as text: paste it into fpl repl">copy</button>
 	<button id="reset" type="button">reset</button>
-	<span>editor: <a href="./">plain</a> · <a href="./?editor=monaco">monaco</a></span>
 	<span id="said" role="status"></span>
 </header>
 <main id="pad"></main>
 <script type="module">
-import {chosen, http, mount} from "./pad.js";
+import {http, mount} from "./pad.js";
 const said = document.getElementById("said");
-const editor = await chosen(location.search);
-const pad = await mount(http, document.getElementById("pad"), said, editor);
+const pad = await mount(http, document.getElementById("pad"), said);
 document.getElementById("reset").addEventListener("click", pad.reset);
 document.getElementById("copy").addEventListener("click", pad.copy);
 </script>

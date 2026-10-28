@@ -1,7 +1,12 @@
-"""A pad: one FPL program written as a column of cells.
+"""A pad: one FPL program written as a column of cells, held as text.
 
 The pad is read top to bottom, like a file, and every cell shows the
-turns it gave, as ``fpl repl`` shows them at a terminal. A cell holds
+turns it gave, as ``fpl repl`` shows them at a terminal. The page shows
+the pad as one buffer, the :func:`transcript` with the bar of the cell
+to come under it (:func:`buffer`), and hands the buffer back after an
+edit: :func:`synced` reads it as the REPL reads a paste, keeps the
+cells whose text stands, and evaluates the first that differs and every
+cell below it. A cell holds
 what one would type at the REPL: its lines are grouped into inputs by
 :func:`fpl.repl.inputs`, and each input is entered by
 :func:`fpl.session.enter` after the state the cells above it left. So
@@ -37,7 +42,7 @@ come in as the REPL's :class:`fpl.repl.Tty`, so a test can hold them
 still.
 """
 
-from bisect import bisect_left
+from bisect import bisect_left, bisect_right
 from collections.abc import Mapping, Sequence
 from contextlib import suppress
 from dataclasses import dataclass, replace
@@ -56,6 +61,7 @@ from fpl.repl import (
     phrase_bar,
     provenance,
     result_line,
+    written,
 )
 from fpl.session import Context, Outcome, enter, evaluator, program
 from fpl.types import Arrow, Typing, UntypedError, after, elaborate
@@ -67,6 +73,8 @@ type Status = Literal["ok", "error", "pending", "empty"]
 
 #: The turn of a cell whose input goes on after its last line.
 PENDING = f"{BAR} the input goes on"
+#: What a phrase bar opens with; a cell of the buffer starts at one.
+BAR_HEAD = f"{BAR} -("
 
 
 @dataclass(frozen=True)
@@ -139,20 +147,6 @@ def run(
     return replayed(cells[:index], sources[index:], ctx, tty)
 
 
-def removed(
-    cells: Sequence[Cell], index: int, ctx: Context, tty: Tty
-) -> tuple[Cell, ...]:
-    """Remove a cell and evaluate every cell below it again.
-
-    Raises:
-        IndexError: No cell has *index*.
-    """
-    if not 0 <= index < len(cells):
-        raise IndexError(index)
-    sources = [cell.source for cell in cells[index + 1 :]]
-    return replayed(cells[:index], sources, ctx, tty)
-
-
 def replayed(
     above: Sequence[Cell], sources: Sequence[str], ctx: Context, tty: Tty
 ) -> tuple[Cell, ...]:
@@ -161,6 +155,80 @@ def replayed(
     for source in sources:
         pad.append(evaluated(source, pad, ctx, tty))
     return tuple(pad)
+
+
+def chunks(text: str) -> list[str]:
+    r"""Split a buffer into the texts of its cells.
+
+    A cell starts at a phrase bar; text before the first bar is a cell
+    too. In each, the lines the loop wrote drop away
+    (:func:`fpl.repl.written`) and blank lines at the edges go. A cell
+    left with no text is no cell.
+
+    Examples:
+        >>> chunks(";;! -( 9 )-\n1 2 +\n|- 3 : ...\n\n;;! -( 9 )-\n")
+        ['1 2 +']
+    """
+    cells: list[list[str]] = [[]]
+    for line in text.splitlines():
+        if line.startswith(BAR_HEAD):
+            cells.append([])
+        elif not written(line):
+            cells[-1].append(line)
+    texts = ("\n".join(lines).strip("\n") for lines in cells)
+    return [text for text in texts if text]
+
+
+def synced(
+    cells: Sequence[Cell], text: str, ctx: Context, tty: Tty
+) -> tuple[Cell, ...]:
+    """Bring the pad to the buffer *text*.
+
+    A cell whose text stands as it was is kept, with its bar and turns;
+    the first cell that differs, and every cell below it, is evaluated
+    again, from the state the cells above it left.
+    """
+    sources = chunks(text)
+    kept = 0
+    for cell, source in zip(cells, sources, strict=False):
+        if cell.source.rstrip("\n") != source:
+            break
+        kept += 1
+    return replayed(cells[:kept], sources[kept:], ctx, tty)
+
+
+def buffer(cells: Sequence[Cell], tty: Tty) -> str:
+    """Return the pad as the page edits it.
+
+    It is the :func:`transcript`, then the bar of the cell to come on a
+    line of its own, for the text typed under it.
+    """
+    return transcript(cells) + bar(cells, tty) + "\n"
+
+
+def caret(text: str, cursor: int, cells: Sequence[Cell], tty: Tty) -> int:
+    """Return where the caret goes once *text* is synced to *cells*.
+
+    *cursor* is an offset into *text*. The caret goes to the start of
+    the text of the cell after the one the cursor was in, as the REPL
+    reads on under the next bar; past the last cell, to the end of the
+    :func:`buffer`.
+    """
+    starts = [0]
+    filled = [False]
+    at = 0
+    for line in text.splitlines(keepends=True):
+        if line.startswith(BAR_HEAD):
+            starts.append(at)
+            filled.append(False)
+        elif line.strip() and not written(line.rstrip("\n")):
+            filled[-1] = True
+        at += len(line)
+    here = bisect_right(starts, cursor)
+    target = sum(filled[:here])
+    if target < len(cells):
+        return len(transcript(cells[:target])) + len(cells[target].bar) + 1
+    return len(buffer(cells, tty))
 
 
 def bar(above: Sequence[Cell], tty: Tty) -> str:

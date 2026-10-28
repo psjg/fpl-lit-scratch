@@ -23,7 +23,18 @@ from hypothesis import strategies as st
 
 from fpl import pad_web
 from fpl.__main__ import main
-from fpl.pad import Cell, bar, context, removed, replayed, run, transcript
+from fpl.pad import (
+    Cell,
+    bar,
+    buffer,
+    caret,
+    chunks,
+    context,
+    replayed,
+    run,
+    synced,
+    transcript,
+)
 from fpl.pad_web import Pad, app, seeded
 from fpl.repl import Tty, phrase_bar
 from fpl.repl import main as repl
@@ -151,17 +162,39 @@ def test_a_goal_and_a_redefinition_are_noted() -> None:
     assert cells[3].turns == (";;! GOAL 2:2 ? : t0 -- value",)
 
 
-def test_removing_a_cell_runs_the_cells_below_without_it() -> None:
-    cells = removed(pad(SQ, "x", "3 sq"), 0, CTX, TTY)
-    assert [cell.source for cell in cells] == ["x", "3 sq"]
-    assert cells[1].status == "error"
-
-
 def test_an_index_past_the_end_is_refused() -> None:
     with pytest.raises(IndexError):
         run((), 1, "1", CTX, TTY)
-    with pytest.raises(IndexError):
-        removed((), 0, CTX, TTY)
+
+
+def test_a_buffer_is_read_as_cells_and_synced_from_the_first_change() -> None:
+    """
+    The buffer parts at its bars; the loop's lines and the blank edges
+    of a cell go. A cell whose text stands is kept as it was; the first
+    that differs and every cell below run again.
+    """
+    before = pad(SQ.rstrip("\n"), "3 sq", "x")
+    text = buffer(before, TTY)
+    assert chunks(text) == ["sq : n -- n\n\tdup times", "3 sq", "x"]
+    assert synced(before, text, CTX, TTY) == before
+    edited = text.replace("3 sq", "4 sq").replace("\nx\n", "\n\nx\n\n")
+    after = synced(before, edited, CTX, TTY)
+    assert after[0] is before[0]
+    assert turns(after[1:]) == [("|- 16 : -- number",), before[2].turns]
+    assert chunks("1 2 +\n;;! -( 9 )-< command 2 >-\n\n") == ["1 2 +"]
+    assert synced(before, "", CTX, TTY) == ()
+
+
+def test_the_caret_goes_to_the_cell_after_the_one_it_was_in() -> None:
+    cells = pad("1 | 2 +", "3 sq")
+    text = buffer(cells, TTY)
+    first = text.index("1 | 2 +")
+    second = text.index("3 sq")
+    assert text[caret(text, first + 3, cells, TTY) :].startswith("3 sq")
+    assert caret(text, second, cells, TTY) == len(text)
+    assert caret(text, 0, cells, TTY) == second
+    typed = text + "9"
+    assert caret(typed, len(typed), cells, TTY) == len(text)
 
 
 @given(st.lists(st.sampled_from(POOL), max_size=5), st.data())
@@ -242,8 +275,14 @@ def test_the_page_drives_the_pad_over_http() -> None:
             assert response.headers["Content-Type"].startswith("text/java")
         with pytest.raises(urllib.error.HTTPError):
             urllib.request.urlopen(url + "/nope")
-        posted(url + "/run", {"index": 0, "source": SQ})
-        state = posted(url + "/run", {"index": 1, "source": "3 sq"})
+        empty: dict[str, Any] = {
+            "cells": [],
+            "buffer": phrase_bar(1, 0, AT) + "\n",
+            "caret": len(phrase_bar(1, 0, AT)) + 1,
+        }
+        assert posted(url + "/pad", None) == empty
+        text = empty["buffer"] + SQ + "\n" + phrase_bar(2, 1, AT) + "\n3 sq"
+        state = posted(url + "/buffer", {"text": text, "cursor": len(text)})
         assert state["cells"][1] == {
             "source": "3 sq",
             "status": "ok",
@@ -251,22 +290,18 @@ def test_the_page_drives_the_pad_over_http() -> None:
             "turns": ["|- 9 : -- number"],
             "changes": [],
         }
-        assert state["bar"] == phrase_bar(3, 2, AT, fuel=4, ms=1000.0)
-        assert state["transcript"].endswith("3 sq\n|- 9 : -- number\n\n")
-        state = posted(url + "/remove", {"index": 0})
-        assert state["cells"][0]["status"] == "error"
-        empty: dict[str, Any] = {
-            "cells": [],
-            "bar": phrase_bar(1, 0, AT),
-            "transcript": "",
-        }
+        assert state["buffer"].endswith(
+            "3 sq\n|- 9 : -- number\n\n"
+            + phrase_bar(3, 2, AT, fuel=4, ms=1000.0)
+            + "\n"
+        )
+        assert state["caret"] == len(state["buffer"])
         assert posted(url + "/reset", {}) == empty
-        assert posted(url + "/pad", None) == empty
 
 
 @pytest.mark.parametrize(
     ("route", "body", "code"),
-    [("/run", {"index": 5, "source": "1"}, 400), ("/nope", {}, 404)],
+    [("/buffer", {"text": "1"}, 400), ("/nope", {}, 404)],
 )
 def test_a_bad_request_is_refused(
     route: str, body: dict[str, Any], code: int
