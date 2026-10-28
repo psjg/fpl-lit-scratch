@@ -30,8 +30,7 @@ main { max-width: 60rem; margin: 0 auto; padding: 1rem 1rem 40vh; }
 textarea, pre { font: inherit; tab-size: 4; margin: 0; }
 /* The plain editor: the painted text sits behind a textarea whose own text
    is transparent, so both must lay out the same. */
-.plain { position: relative; margin-left: -2px; border-left: 2px solid transparent; }
-.plain:focus-within { border-left-color: var(--mark); }
+.plain { position: relative; }
 .plain .paint {
 	position: absolute; inset: 0; pointer-events: none; overflow: hidden;
 	white-space: pre; color: var(--fg);
