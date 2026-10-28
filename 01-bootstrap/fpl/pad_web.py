@@ -4,7 +4,9 @@ The page (``pad.html`` and the files :data:`PAGE` names beside this
 module) is the whole interface; it needs no network beyond this
 server. ``fpl-language.js`` is the playground's tokenizer, a copy of
 ``assets/fpl-language.js`` that a test keeps equal; the pad colours
-its cells with it (``editors.js``). The site's ``/pad/`` page runs
+its cells with it (``editors.js``), or with Monaco from its CDN when
+the page is opened as ``/?editor=monaco`` (``monaco.js``, the one
+route that needs the network). The site's ``/pad/`` page runs
 the same files on :mod:`fpl.pad` under Pyodide instead
 (``assets/fpl-pad.js``). The server holds one pad in
 memory and changes it only through :mod:`fpl.pad`; it is a WSGI
@@ -52,6 +54,7 @@ PAGE = {"/": ("pad.html", KINDS["html"])} | {
         "pad.js",
         "pad.css",
         "editors.js",
+        "monaco.js",
         "highlight.js",
         "fpl-language.js",
     )

@@ -11,8 +11,9 @@
  *
  * `http` is the backend of `python -m fpl pad`; the site's /pad/ page passes
  * one that runs fpl.pad under Pyodide (assets/fpl-pad.js). Both pages share
- * this file, so they share the keys, which the cell editor (editors.js)
- * turns into the hooks below:
+ * this file, so they share the keys, which the cell editor (editors.js, or
+ * monaco.js when the page is opened with ?editor=monaco) turns into the
+ * hooks below:
  *
  *   Shift+Enter, Ctrl+Enter, Cmd+Enter  evaluate the cell, and every cell below
  *   Enter                               a newline, with the line's tabs
@@ -22,6 +23,12 @@
  */
 
 import {plain} from "./editors.js";
+
+/** The cell editor the page's URL asks for: `?editor=monaco`, else plain. */
+export async function chosen(search) {
+	const name = new URLSearchParams(search).get("editor");
+	return name === "monaco" ? (await import("./monaco.js")).monaco : plain;
+}
 
 /** The backend of `python -m fpl pad`: the routes over HTTP. */
 export const http = {
@@ -60,6 +67,7 @@ export async function mount(backend, root, said, editor = plain) {
 		const staleBy = {};
 		cells.forEach((cell, j) => cell.changes.forEach(i => (staleBy[i] = j)));
 		const drafted = {source: "", status: "draft", bar: next, turns: [], changes: []};
+		editors.forEach(each => each.dispose?.());
 		editors = [];
 		root.replaceChildren(...[...cells, drafted].map(
 			(cell, i) => drawn(cell, i, typed[i] ?? cell.source, staleBy[i])));

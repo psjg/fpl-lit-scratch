@@ -13,14 +13,16 @@
 	<span>Shift+Enter evaluates · Enter newline · Tab indents · ↑↓ move between cells · Backspace in an empty cell removes it</span>
 	<a href="../try/index.html">Playground</a>
 	<button id="reset" type="button">reset</button>
+	<span>editor: <a href="./">plain</a> · <a href="./?editor=monaco">monaco</a></span>
 	<span id="said" role="status">loading Pyodide…</span>
 </header>
 <main id="pad"></main>
 <script type="module">
-import {mount} from "./pad.js";
+import {chosen, mount} from "./pad.js";
 import {pyodide} from "../assets/fpl-pad.js";
 const said = document.getElementById("said");
-const pad = await mount(pyodide, document.getElementById("pad"), said);
+const editor = await chosen(location.search);
+const pad = await mount(pyodide, document.getElementById("pad"), said, editor);
 said.textContent = "";
 document.getElementById("reset").addEventListener("click", pad.reset);
 </script>
