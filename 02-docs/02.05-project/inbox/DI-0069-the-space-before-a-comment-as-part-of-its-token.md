@@ -17,11 +17,13 @@ related: []
 
 > oh misschien moet de ene whitespace voor de comment token onderdeel worden van de token... hmmm....
 
+> oh en voeg dan `<whitespace>;<space>` in
+
 ## Context
 
 Said while the pad (the one-buffer front end on the REPL session) was being shaped. The pad is to end every non-blank line of its buffer in ` ;`: bars, inputs and result lines alike. In the grammar a NOTE is `(;(?!;)|⍝)[^\n]*` and `;` is not a TOKEN character, so `1 | 1 + ;` and `1 | 1 +;` both read as the code and an empty note; the program is the same with or without the terminator, which is what lets a pad buffer round-trip.
 
-The thought: the one space before `;` could belong to the NOTE token itself.
+The thought: the one space before `;` could belong to the NOTE token itself. The terminator the pad writes is then the token in full, `<whitespace>;<space>`: each non-blank line of the buffer ends in ` ; `.
 
 ## Options and outcome
 
