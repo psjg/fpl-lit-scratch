@@ -12,6 +12,7 @@
 	<a href="../index.html"><b>FPL</b></a> <b>pad</b>
 	<span>Shift+Enter evaluates · Enter newline · Tab indents · ↑↓ move between cells · Backspace in an empty cell removes it</span>
 	<a href="../try/index.html">Playground</a>
+	<button id="copy" type="button" title="the pad as text: paste it into fpl repl">copy</button>
 	<button id="reset" type="button">reset</button>
 	<span>editor: <a href="./">plain</a> · <a href="./?editor=monaco">monaco</a></span>
 	<span id="said" role="status">loading Pyodide…</span>
@@ -25,6 +26,7 @@ const editor = await chosen(location.search);
 const pad = await mount(pyodide, document.getElementById("pad"), said, editor);
 said.textContent = "";
 document.getElementById("reset").addEventListener("click", pad.reset);
+document.getElementById("copy").addEventListener("click", pad.copy);
 </script>
 </body>
 </html>

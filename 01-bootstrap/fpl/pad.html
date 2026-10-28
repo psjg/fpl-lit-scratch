@@ -10,6 +10,7 @@
 <header>
 	<b>FPL pad</b>
 	<span>Shift+Enter evaluates · Enter newline · Tab indents · ↑↓ move between cells · Backspace in an empty cell removes it</span>
+	<button id="copy" type="button" title="the pad as text: paste it into fpl repl">copy</button>
 	<button id="reset" type="button">reset</button>
 	<span>editor: <a href="./">plain</a> · <a href="./?editor=monaco">monaco</a></span>
 	<span id="said" role="status"></span>
@@ -21,6 +22,7 @@ const said = document.getElementById("said");
 const editor = await chosen(location.search);
 const pad = await mount(http, document.getElementById("pad"), said, editor);
 document.getElementById("reset").addEventListener("click", pad.reset);
+document.getElementById("copy").addEventListener("click", pad.copy);
 </script>
 </body>
 </html>

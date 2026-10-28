@@ -3,8 +3,11 @@
  *
  * The page holds only what is typed and not yet run; the pad itself lives
  * behind a backend, which takes the routes of fpl/pad_web.py and answers
- * with the pad, {cells: [{source, status, bar, turns, changes}], bar}: each
- * cell under its REPL phrase bar, and the bar of the cell to come.
+ * with the pad, {cells: [{source, status, bar, turns, changes}], bar,
+ * transcript}: each cell under its REPL phrase bar, the bar of the cell to
+ * come, and the pad as text, which `copy` puts on the clipboard: pasted into
+ * `fpl repl` it is the same program, as the bars, results and notes are the
+ * loop's own lines and its reader drops them.
  *
  *   load()               the pad as it stands
  *   change(route, body)  "/run" {index, source}, "/remove" {index}, "/reset"
@@ -57,6 +60,7 @@ async function answer(response) {
 export async function mount(backend, root, said, editor = plain) {
 	let cells = [];
 	let next = "";
+	let transcript = "";
 	let editors = [];
 
 	function texts() {
@@ -93,9 +97,9 @@ export async function mount(backend, root, said, editor = plain) {
 		editors[i] = typed;
 		const turns = document.createElement("pre");
 		turns.className = "turns";
-		const lines = cell.turns.map(line => [line, line.startsWith(";;") ? "note" : ""]);
+		const lines = cell.turns.map(line => [line, line.startsWith(";;!") ? "note" : ""]);
 		if (staleBy !== undefined) {
-			lines.push([`;; cell ${staleBy + 1} changed this result`, "stale"]);
+			lines.push([`;;! cell ${staleBy + 1} changed this result`, "stale"]);
 		}
 		for (const [line, kind] of lines) {
 			const span = document.createElement("span");
@@ -109,7 +113,7 @@ export async function mount(backend, root, said, editor = plain) {
 
 	async function changed(route, body, typed, focus, caret) {
 		try {
-			({cells, bar: next} = await backend.change(route, body));
+			({cells, bar: next, transcript} = await backend.change(route, body));
 		} catch (error) {
 			said.textContent = String(error);
 			return;
@@ -140,8 +144,12 @@ export async function mount(backend, root, said, editor = plain) {
 	await editor.ready();
 	return {
 		reset: () => changed("/reset", {}, [""], 0, "end"),
+		copy: async () => {
+			await navigator.clipboard.writeText(transcript);
+			said.textContent = `copied ${cells.length} cells`;
+		},
 		ready: (async () => {
-			({cells, bar: next} = await backend.load());
+			({cells, bar: next, transcript} = await backend.load());
 			render([], cells.length, "end");
 		})(),
 	};

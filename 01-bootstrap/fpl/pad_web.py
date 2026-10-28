@@ -14,7 +14,8 @@ application (:func:`app`) on :mod:`wsgiref`, which serves one request
 at a time, so turns never overlap.
 
 Routes, all answered with the pad as JSON (:func:`shown`: the cells,
-each with its bar and turns, and the bar of the cell to come):
+each with its bar and turns, the bar of the cell to come, and the
+transcript):
 
 - ``GET /`` the page, ``GET /<file>`` for each file of :data:`PAGE`;
   ``GET /pad`` the pad.
@@ -37,7 +38,7 @@ from typing import Any
 from wsgiref.simple_server import make_server
 from wsgiref.types import StartResponse, WSGIApplication, WSGIEnvironment
 
-from fpl.pad import Cell, bar, context, removed, replayed, run
+from fpl.pad import Cell, bar, context, removed, replayed, run, transcript
 from fpl.repl import Tty, inputs
 from fpl.session import Context
 
@@ -114,7 +115,8 @@ def shown(pad: Pad) -> dict[str, Any]:
     """Return the pad as the page reads it: the cells without logs.
 
     ``bar`` is the phrase bar of the cell the page offers next, as the
-    REPL prints a bar before it reads.
+    REPL prints a bar before it reads; ``transcript`` is the pad as
+    text (:func:`fpl.pad.transcript`), for the page's copy button.
     """
     return {
         "cells": [
@@ -128,6 +130,7 @@ def shown(pad: Pad) -> dict[str, Any]:
             for cell in pad.cells
         ],
         "bar": bar(pad.cells, pad.tty),
+        "transcript": transcript(pad.cells),
     }
 
 

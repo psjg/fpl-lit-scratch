@@ -26,7 +26,11 @@ slot (:func:`fpl.types.shown`) where the elaborator infers it:
 
 A definition prints nothing, as in the REPL; a type the elaborator
 does not infer is ``...``, as in the REPL. A refusal is the REPL's
-``ERROR`` line; goals and other notes follow as ``;;`` lines.
+``ERROR`` line; goals and other notes follow under the bar's mark, as
+``;;!`` lines. So everything a cell shows beside its text is what the
+loop writes, and :func:`fpl.repl.written` drops it on the way back in:
+the :func:`transcript` of a pad, pasted into ``fpl repl`` or seeded
+into a pad, is the program the cells hold.
 
 The module does no I/O; :mod:`fpl.pad_web` is its shell. The clocks
 come in as the REPL's :class:`fpl.repl.Tty`, so a test can hold them
@@ -44,7 +48,15 @@ from fpl.driver import FUEL_DEFAULT, checked
 from fpl.errors import FplError
 from fpl.log import Log
 from fpl.parse import parse
-from fpl.repl import EMPTY, Tty, inputs, phrase_bar, provenance, result_line
+from fpl.repl import (
+    BAR,
+    EMPTY,
+    Tty,
+    inputs,
+    phrase_bar,
+    provenance,
+    result_line,
+)
 from fpl.session import Context, Outcome, enter, evaluator, program
 from fpl.types import Arrow, Typing, UntypedError, after, elaborate
 from fpl.types import shown as effect
@@ -54,7 +66,7 @@ from fpl.types import shown as effect
 type Status = Literal["ok", "error", "pending", "empty"]
 
 #: The turn of a cell whose input goes on after its last line.
-PENDING = ";; the input goes on"
+PENDING = f"{BAR} the input goes on"
 
 
 @dataclass(frozen=True)
@@ -173,6 +185,30 @@ def bar(above: Sequence[Cell], tty: Tty) -> str:
     )
 
 
+def transcript(cells: Sequence[Cell]) -> str:
+    """Return the pad as text, as the page shows it.
+
+    Each cell is its bar, its text and its turns; a blank line parts the
+    cells. Everything but the text is what the loop writes, so the
+    reader of ``fpl repl`` and of ``fpl pad FILE`` drops it
+    (:func:`fpl.repl.written`) and reads the program the cells hold.
+
+    Examples:
+        >>> from datetime import datetime
+        >>> still = Tty(now=lambda: datetime(2026, 1, 1, 9, 5, 3))
+        >>> pad = run((), 0, "1 | 2 +", context({}), still)
+        >>> print(transcript(pad))  # doctest: +ELLIPSIS
+        ;;! -( 09:05:03 )-< command 1 >-...-{ head: 0 }-
+        1 | 2 +
+        |- 3 : -- number
+        <BLANKLINE>
+    """
+    return "".join(
+        "\n".join([cell.bar, cell.source.rstrip("\n"), *cell.turns]) + "\n\n"
+        for cell in cells
+    )
+
+
 def evaluated(
     source: str, above: Sequence[Cell], ctx: Context, tty: Tty
 ) -> Cell:
@@ -257,10 +293,10 @@ def _refused(outcome: Outcome) -> list[str]:
     """Return the turn of an input that failed.
 
     It is the REPL's ``ERROR`` line, then the caret under the error and
-    any goal, as ``;;`` lines.
+    any goal, as ``;;!`` lines.
     """
     notes = "\n".join(outcome.notes).split("\n") if outcome.notes else []
-    return [*outcome.out.splitlines(), *(f";; {line}" for line in notes)]
+    return [*outcome.out.splitlines(), *(f"{BAR} {line}" for line in notes)]
 
 
 def _turned(log: Log, text: str, outcome: Outcome) -> list[str]:
@@ -320,5 +356,5 @@ def _noted(above: Sequence[Cell], note: str) -> str:
     """Return a note as a turn line, a changed event as its cell."""
     owner = _owner(above, note)
     if owner:
-        return f";; CHANGED cell {owner[0] + 1}"
-    return ";; " + note.replace("\n", "\n;; ")
+        return f"{BAR} CHANGED cell {owner[0] + 1}"
+    return f"{BAR} " + note.replace("\n", f"\n{BAR} ")

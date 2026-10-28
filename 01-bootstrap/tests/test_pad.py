@@ -4,6 +4,7 @@ evaluates the cell and every cell below it again, from the state the
 cells above left; an error stops nothing; an open pair waits.
 """
 
+import io
 import json
 import threading
 import urllib.error
@@ -22,9 +23,10 @@ from hypothesis import strategies as st
 
 from fpl import pad_web
 from fpl.__main__ import main
-from fpl.pad import Cell, bar, context, removed, replayed, run
+from fpl.pad import Cell, bar, context, removed, replayed, run, transcript
 from fpl.pad_web import Pad, app, seeded
 from fpl.repl import Tty, phrase_bar
+from fpl.repl import main as repl
 
 CTX = context({})
 AT = datetime(2026, 1, 1, 9, 5, 3)
@@ -95,7 +97,7 @@ def test_cells_are_read_top_to_bottom() -> None:
 def test_an_error_stops_no_cell_and_adds_nothing_to_the_state() -> None:
     cells = pad("x", "1 | 2 +", "sq : n -- n\n\tdup nope", "3 sq")
     assert [cell.status for cell in cells] == ["error", "ok", "error", "error"]
-    assert cells[0].turns == ("ERROR: 1:1 unknown word: x", ";; x", ";; ^")
+    assert cells[0].turns == ("ERROR: 1:1 unknown word: x", ";;! x", ";;! ^")
     assert cells[1].turns == ("|- 3 : -- number",)
     assert cells[3].turns[0] == "ERROR: 1:3 unknown word: sq"
 
@@ -135,8 +137,8 @@ def test_a_cell_holds_the_inputs_the_repl_would_group() -> None:
     assert cell.turns == (
         "|- 2 : -- number",
         "ERROR: 1:1 unknown word: x",
-        ";; x",
-        ";; ^",
+        ";;! x",
+        ";;! ^",
         "|- 2 : -- number",
     )
     assert len(cell.log.events) == 4
@@ -144,9 +146,9 @@ def test_a_cell_holds_the_inputs_the_repl_would_group() -> None:
 
 def test_a_goal_and_a_redefinition_are_noted() -> None:
     cells = pad("f : -- x\n\t2", "f", "f : -- x\n\t3", "g : x -- y\n\t?")
-    assert cells[2].turns == (";; CHANGED cell 2",)
+    assert cells[2].turns == (";;! CHANGED cell 2",)
     assert cells[2].changes == (1,)
-    assert cells[3].turns == (";; GOAL 2:2 ? : t0 -- value",)
+    assert cells[3].turns == (";;! GOAL 2:2 ? : t0 -- value",)
 
 
 def test_removing_a_cell_runs_the_cells_below_without_it() -> None:
@@ -175,6 +177,41 @@ def test_an_edit_to_its_own_text_changes_nothing(
         index = data.draw(st.integers(0, len(cells) - 1))
         again = run(cells, index, cells[index].source, CTX, TTY)
         assert again == cells
+
+
+def values(text: str) -> list[str]:
+    """
+    The values of the result lines in a transcript, in order.
+    """
+    return [
+        line.removeprefix("|- ").rsplit(" : ", 1)[0]
+        for line in text.splitlines()
+        if line.startswith("|- ")
+    ]
+
+
+def test_a_transcript_reads_back_as_the_pad_and_as_a_repl_session() -> None:
+    """
+    [law: transcript-round-trip] the pad as text, seeded into a pad
+    again, is the same pad (a cell's text without its final newline);
+    fed to the REPL loop, it prints the same values and appends one
+    event per input, a cell the pad holds open included: the bars,
+    results and notes are the loop's lines, and its reader drops them.
+    """
+    sources = (SQ.rstrip("\n"), "3 sq", "x", "1 [", "f : -- x\n\t2", "f")
+    cells = pad(*sources, "1 drop")
+    text = transcript(cells)
+    assert seeded(text, CTX, TTY) == cells
+    out, err = io.StringIO(), io.StringIO()
+    ticks = count()
+    still = Tty(now=lambda: AT, timer=lambda: float(next(ticks)))
+    code = repl([], io.StringIO(text), out, err, {}, tty=still)
+    assert code == 0
+    assert values(out.getvalue()) == values(text)
+    held = sum(cell.status == "pending" for cell in cells)
+    phrases = len(cells[-1].log.events) + held
+    assert out.getvalue().count("< command ") == phrases + 1
+    assert "ERROR: 1:1 unknown word: x" in out.getvalue()
 
 
 @contextmanager
@@ -215,9 +252,14 @@ def test_the_page_drives_the_pad_over_http() -> None:
             "changes": [],
         }
         assert state["bar"] == phrase_bar(3, 2, AT, fuel=4, ms=1000.0)
+        assert state["transcript"].endswith("3 sq\n|- 9 : -- number\n\n")
         state = posted(url + "/remove", {"index": 0})
         assert state["cells"][0]["status"] == "error"
-        empty: dict[str, Any] = {"cells": [], "bar": phrase_bar(1, 0, AT)}
+        empty: dict[str, Any] = {
+            "cells": [],
+            "bar": phrase_bar(1, 0, AT),
+            "transcript": "",
+        }
         assert posted(url + "/reset", {}) == empty
         assert posted(url + "/pad", None) == empty
 

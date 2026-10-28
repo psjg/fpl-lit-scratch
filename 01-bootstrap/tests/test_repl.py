@@ -411,6 +411,32 @@ def fed(lines: Sequence[str]) -> list[str]:
     return list(inputs(lambda _: next(feed, None)))
 
 
+def test_what_the_loop_wrote_reads_back_as_the_program() -> None:
+    """
+    [law: transcript-round-trip] a result line, a phrase bar and an
+    ERROR line at the margin are the loop's, not the program's: the
+    reader drops each and ends the input there, as at a blank line.
+    """
+    pasted = [
+        ";;! -( 09:05:03 )-< command 1 >-----{ head: 0 }-",
+        "1 | 1 +",
+        "|- 2 : ...",
+        "|-",
+        ";;! -( 09:05:04 )-< command 2 >-----{ head: 1; fuel: 3 }-",
+        "x",
+        "ERROR: 1:1 unknown word: x",
+        ";;! x",
+        ";;! ^",
+        "f : -- x",
+        "\t2",
+        ";;!",
+        "f",
+        "|-x",
+    ]
+    made = ["1 | 1 +\n", "x\n", "f : -- x\n\t2\n", "f\n", "|-x\n"]
+    assert fed(pasted) == made
+
+
 @pytest.mark.parametrize(
     ("lines", "made"),
     [

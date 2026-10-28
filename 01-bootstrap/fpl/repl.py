@@ -62,6 +62,10 @@ ACTIONS = ("source", "rewind", "log", "show")
 NUMERAL = re.compile(r"0|[1-9][0-9]*")
 #: The empty log, which a call without ``--session`` starts from.
 EMPTY = Log((), {}, 0)
+#: The mark a phrase bar opens with: a DOC line, so a paste skips it.
+BAR = ";;!"
+#: The mark a result line opens with: a turnstile.
+RESULT = "|-"
 
 
 class UsageError(Exception):
@@ -510,14 +514,37 @@ def _taken(text: str, line: str) -> str:
     return line if line[:1] in ("", " ", "\t") else _body(text) + line
 
 
+#: What the loop writes at the margin beside the program: a result
+#: line, a phrase bar (the pad and the kernel write their notes under
+#: the same mark) and an ``ERROR`` line. :func:`written` knows them.
+WRITTEN = (RESULT, BAR, "ERROR:")
+
+
+def written(line: str) -> bool:
+    """Tell whether *line* is the loop's, not the program's.
+
+    The reader drops such a line, so a transcript pasted back is the
+    program it came from: read(print(session)) = session. A line is the
+    loop's when it is one of :data:`WRITTEN` or starts with one and a
+    space.
+
+    Examples:
+        >>> [written(l) for l in ("|- 2 : ...", ";;! -( 9 )-", "|-x")]
+        [True, True, False]
+    """
+    return any(line == mark or line.startswith(mark + " ") for mark in WRITTEN)
+
+
 def inputs(read: Callable[[bool], str | None]) -> Iterator[str]:
     r"""Group physical lines into inputs.
 
     An input ends at a blank line or at a line after which
     :func:`pending` is false; blank lines between inputs are skipped. A
-    line at the margin right after a definition head is taken as the
-    body's first, as if it were written one tab deeper. A line that
-    starts with a space or a tab is left as written.
+    line the loop wrote (:func:`written`) counts as a blank line: it is
+    dropped and ends the input. A line at the margin right after a
+    definition head is taken as the body's first, as if it were written
+    one tab deeper. A line that starts with a space or a tab is left as
+    written.
 
     Args:
         read: Called with whether an input is in progress; returns the
@@ -533,7 +560,7 @@ def inputs(read: Callable[[bool], str | None]) -> Iterator[str]:
     """
     text = ""
     while (line := read(bool(text))) is not None:
-        line = _taken(text, line)
+        line = _taken(text, "" if written(line) else line)
         blank = not line.strip()
         if not blank:
             text += line + "\n"
@@ -815,7 +842,7 @@ def phrase_bar(  # noqa: PLR0913 -- bar fields are the chrome, not a bag type
         >>> phrase_bar(1, 0, at)  # doctest: +ELLIPSIS
         ';;! -( 09:05:03 )-< command 1 >-...-{ head: 0 }-'
     """
-    left = f";;! -( {when.strftime('%H:%M:%S')} )-< command {n} >-"
+    left = f"{BAR} -( {when.strftime('%H:%M:%S')} )-< command {n} >-"
     fields = [f"head: {head}"]
     if state_id is not None:
         fields.append(f"&{state_id}")
@@ -840,7 +867,7 @@ def result_line(value: str, typ: str = "...") -> str:
         >>> result_line("3")
         '|- 3 : ...'
     """
-    return f"|- {value} : {typ}"
+    return f"{RESULT} {value} : {typ}"
 
 
 def _commanded(call: _Call, text: str) -> _Call:
