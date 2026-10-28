@@ -29,3 +29,9 @@ Open. A design decision, not taken.
 ## Related
 
 - related:: [02.05.15 One source form](../notes/02.05.15-one-source-form.md)
+
+## Decision 2026-10-28
+
+The maintainer chose to add short escapes (`\n`, `\t`, `\\` and a fixed small set) beside
+`\u{XXXX}`. The pre-lexer and the string reader change accordingly. The spec change itself is
+his and still to come; this item stays open until it lands.
