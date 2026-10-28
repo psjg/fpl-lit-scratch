@@ -2,13 +2,16 @@
 
 The entry point is :func:`main`, which reads the file, calls
 :func:`fpl.driver.run` and reports an :exc:`fpl.errors.FplError` as one
-line.
+line. ``python -m fpl pad [FILE]`` serves the pad instead
+(:mod:`fpl.pad_web`).
 """
 
+import os
 import sys
 from functools import partial
 from pathlib import Path
 
+from fpl import pad_web
 from fpl.driver import run
 from fpl.errors import FplError
 
@@ -21,12 +24,13 @@ def main(argv: list[str]) -> int:
     the caret under the column go to stderr.
 
     Args:
-        argv: The command-line arguments after the program name; exactly
-            one is expected, the path of the ``.fpl`` file.
+        argv: The command-line arguments after the program name; the
+            path of the ``.fpl`` file, or ``pad`` and its arguments.
 
     Returns:
         ``0`` if the file ran, ``1`` if it raised :exc:`FplError`, ``2``
-        if *argv* does not hold exactly one path.
+        if *argv* does not hold exactly one path; for ``pad``, what
+        :func:`fpl.pad_web.main` returns.
 
     Raises:
         OSError: The file cannot be read, raised by
@@ -34,6 +38,8 @@ def main(argv: list[str]) -> int:
         UnicodeDecodeError: The file is not valid in the default
             encoding.
     """
+    if argv[:1] == ["pad"]:
+        return pad_web.main(argv[1:], os.environ)
     if len(argv) != 1:
         print("usage: python -m fpl <file.fpl>", file=sys.stderr)
         return 2

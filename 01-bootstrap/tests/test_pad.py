@@ -10,9 +10,9 @@ import urllib.error
 import urllib.request
 from collections.abc import Generator, Sequence
 from contextlib import contextmanager
-from http.server import HTTPServer
 from pathlib import Path
 from typing import Any
+from wsgiref.simple_server import WSGIServer, make_server
 
 import pytest
 from hypothesis import given
@@ -20,7 +20,7 @@ from hypothesis import strategies as st
 
 from fpl.__main__ import main
 from fpl.pad import Cell, context, removed, replayed, run
-from fpl.pad_web import Pad, handler, seeded
+from fpl.pad_web import Pad, app, seeded
 
 CTX = context({})
 SQ = "sq : n -- n\n\tdup times\n"
@@ -42,6 +42,14 @@ def test_a_turn_is_written_as_the_toplevel_writes_one() -> None:
         ("- : -- number = 3", "- : -- number = 16"),
         ("- : -- =",),
         ("- : -- value = [ 1 2 ]",),
+    ]
+
+
+def test_a_dispatched_word_shows_once_and_an_untyped_line_as_dots() -> None:
+    clauses = "f : x: Int -- y\n\tdrop #int\nf : x: Text -- y\n\tdrop #text"
+    assert turns(pad(clauses, "5 f\n1 [2] [3] if")) == [
+        ("f : t0 -- value = <word>",),
+        ("- : -- symbol = #int", "- : ... = 2"),
     ]
 
 
@@ -143,7 +151,7 @@ def test_an_edit_to_its_own_text_changes_nothing(
 
 @contextmanager
 def served(cells: tuple[Cell, ...] = ()) -> Generator[str]:
-    server = HTTPServer(("127.0.0.1", 0), handler(Pad(cells, CTX)))
+    server = make_server("127.0.0.1", 0, app(Pad(cells, CTX)))
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     try:
@@ -163,6 +171,10 @@ def test_the_page_drives_the_pad_over_http() -> None:
     with served() as url:
         with urllib.request.urlopen(url + "/") as response:
             assert b"<title>FPL pad</title>" in response.read()
+        with urllib.request.urlopen(url + "/pad.js") as response:
+            assert b"export async function mount" in response.read()
+        with pytest.raises(urllib.error.HTTPError):
+            urllib.request.urlopen(url + "/nope")
         posted(url + "/run", {"index": 0, "source": SQ})
         state = posted(url + "/run", {"index": 1, "source": "3 sq"})
         assert state["cells"][1] == {
@@ -187,6 +199,38 @@ def test_a_bad_request_is_refused(
     with served() as url, pytest.raises(urllib.error.HTTPError) as caught:
         posted(url + route, body)
     assert caught.value.code == code
+
+
+def test_the_command_serves_until_interrupted(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """
+    `python -m fpl pad FILE` binds, opens the page, and stops cleanly at
+    Ctrl-C (here raised where the browser would open).
+    """
+    opened: list[str] = []
+
+    def browse(url: str) -> bool:
+        opened.append(url)
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr("webbrowser.open", browse)
+    (tmp_path / "p.fpl").write_text(SQ)
+    assert main(["pad", str(tmp_path / "p.fpl"), "--port", "0"]) == 0
+    assert opened[0].startswith("http://127.0.0.1:")
+    assert opened[0] in capsys.readouterr().err
+
+
+def test_without_a_browser_it_serves_until_interrupted(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def interrupted(_self: WSGIServer) -> None:
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(WSGIServer, "serve_forever", interrupted)
+    assert main(["pad", "--port", "0", "--no-browser"]) == 0
 
 
 def test_a_file_seeds_one_cell_per_input(tmp_path: Path) -> None:

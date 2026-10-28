@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FPL pad</title>
+<link rel="stylesheet" href="pad.css">
+</head>
+<body>
+<header>
+	<b>FPL pad</b>
+	<span>Shift+Enter evaluates · Enter newline · Tab indents · ↑↓ move between cells · Backspace in an empty cell removes it</span>
+	<button id="reset" type="button">reset</button>
+	<span id="said" role="status"></span>
+</header>
+<main id="pad"></main>
+<script type="module">
+import {http, mount} from "./pad.js";
+const pad = await mount(http, document.getElementById("pad"), document.getElementById("said"));
+document.getElementById("reset").addEventListener("click", pad.reset);
+</script>
+</body>
+</html>

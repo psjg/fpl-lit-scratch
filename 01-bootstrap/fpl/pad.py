@@ -40,7 +40,7 @@ from fpl.log import Log
 from fpl.parse import parse
 from fpl.repl import EMPTY, inputs, provenance
 from fpl.session import Context, Outcome, enter, evaluator, program
-from fpl.types import Arrow, Input, Typing, UntypedError, after, elaborate
+from fpl.types import Arrow, Typing, UntypedError, after, elaborate
 from fpl.types import shown as effect
 
 #: What a cell's last evaluation came to: every input ran, one failed,
@@ -153,6 +153,14 @@ def evaluated(source: str, above: Sequence[Cell], ctx: Context) -> Cell:
         return Cell(source, "empty", (), (), log)
     if _open(texts[-1]):
         return Cell(source, "pending", (PENDING,), (), log)
+    return _entered(source, texts, above, ctx)
+
+
+def _entered(
+    source: str, texts: Sequence[str], above: Sequence[Cell], ctx: Context
+) -> Cell:
+    """Enter the inputs *texts* of a cell, one after another."""
+    log = above[-1].log if above else EMPTY
     turns: list[str] = []
     changes: list[int] = []
     failed = False
@@ -240,11 +248,7 @@ def _ran(run_line: Run, arrows: Mapping[str, Arrow]) -> str:
     """
     with suppress(UntypedError, FplError):
         end = after(Typing((), {}, {}), run_line.code, arrows)
-        names = (
-            f"t{s.index}" if isinstance(s, Input) else s.value
-            for s in end.stack
-        )
-        return " ".join(("--", *names))
+        return effect(Arrow((), end.stack))
     return UNTYPED
 
 

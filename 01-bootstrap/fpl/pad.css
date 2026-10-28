@@ -1,0 +1,45 @@
+/* The pad's page, local (fpl/pad.html) and on the site (assets/pad/). */
+:root {
+	--bg: #fbfaf7; --fg: #1d1d1b; --dim: #8a877f; --rule: #e4e1d9;
+	--err: #b3261e; --warn: #8a6100; --mark: #2f5d8a;
+	color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+	:root {
+		--bg: #17181a; --fg: #e6e3dc; --dim: #7d7a73; --rule: #2a2b2e;
+		--err: #ff8a80; --warn: #e0b45c; --mark: #8ab4e0;
+		color-scheme: dark;
+	}
+}
+* { box-sizing: border-box; }
+body {
+	margin: 0; background: var(--bg); color: var(--fg);
+	font: 15px/1.45 ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+header {
+	position: sticky; top: 0; z-index: 1; background: var(--bg);
+	display: flex; flex-wrap: wrap; gap: 0.5rem 1.5rem; align-items: baseline;
+	padding: 0.6rem 1rem; border-bottom: 1px solid var(--rule); color: var(--dim);
+}
+header b { color: var(--fg); }
+header button {
+	font: inherit; color: var(--dim); background: none; cursor: pointer;
+	border: 1px solid var(--rule); border-radius: 3px; padding: 0 0.5rem;
+}
+main { max-width: 60rem; margin: 0 auto; padding: 1rem 1rem 40vh; }
+.cell { display: grid; grid-template-columns: 3.5rem 1fr; margin: 0 0 0.4rem; }
+.gutter { color: var(--dim); text-align: right; padding-right: 0.75rem; user-select: none; }
+.cell.edited .gutter::after { content: "*"; color: var(--warn); }
+textarea, pre { font: inherit; tab-size: 4; margin: 0; }
+textarea {
+	width: 100%; resize: none; overflow: hidden; border: 0; outline: 0;
+	padding: 0 0 0 2ch; background: transparent; color: var(--fg);
+	border-left: 2px solid transparent; white-space: pre; overflow-x: auto;
+}
+textarea:focus { border-left-color: var(--mark); }
+pre.turns { grid-column: 2; white-space: pre-wrap; color: var(--fg); }
+pre.turns:empty { display: none; }
+.cell[data-status="error"] pre.turns { color: var(--err); }
+.cell[data-status="pending"] pre.turns, .note { color: var(--dim); }
+.stale, #said { color: var(--warn); }
+.cell.edited pre.turns { opacity: 0.45; }
