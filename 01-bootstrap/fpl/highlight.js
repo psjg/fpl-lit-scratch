@@ -83,20 +83,32 @@ function kind(line) {
 	return bare.startsWith("ERROR:") ? "error" : bare.startsWith("|-") ? "result" : "note";
 }
 
+/** The faded span of a ghost (fpl.pad.Ghost), set off by two spaces. */
+function shadow(ghost) {
+	const span = document.createElement("span");
+	span.className = `ghost ghost-${ghost.kind}`;
+	span.textContent = "  " + ghost.text;
+	return span;
+}
+
 /**
  * Paint `text` into `pre` as coloured spans, one line per text line. A line
- * the loop wrote is one span with its kind as class, not FPL tokens.
+ * the loop wrote is one span with its kind as class, not FPL tokens. A
+ * `ghost`, {line, kind, text}, is a faded span at the end of its line: it
+ * adds no line, so the paint stays under the textarea's text.
  * @param {Record<string, {color: string, style?: string, weight?: string}>} palette by token prefix
+ * @param {{line: number, kind: string, text: string} | null} ghost
  */
-export function painted(pre, definition, text, palette) {
+export function painted(pre, definition, text, palette, ghost = null) {
 	const lines = tokenized(definition, text);
 	pre.replaceChildren(...lines.flatMap((tokens, i) => {
 		const line = tokens.map(([hit]) => hit).join("");
+		const shade = ghost && ghost.line === i ? [shadow(ghost)] : [];
 		if (LOOP.test(line)) {
 			const span = document.createElement("span");
 			span.className = kind(line);
 			span.textContent = line;
-			return i < lines.length - 1 ? [span, "\n"] : [span];
+			return i < lines.length - 1 ? [span, ...shade, "\n"] : [span, ...shade];
 		}
 		const spans = tokens.map(([hit, token]) => {
 			const span = document.createElement("span");
@@ -109,6 +121,6 @@ export function painted(pre, definition, text, palette) {
 			}
 			return span;
 		});
-		return i < lines.length - 1 ? [...spans, "\n"] : spans;
+		return i < lines.length - 1 ? [...spans, ...shade, "\n"] : [...spans, ...shade];
 	}), "\n");
 }

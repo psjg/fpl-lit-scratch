@@ -37,13 +37,32 @@ loop writes, and :func:`fpl.repl.written` drops it on the way back in:
 the :func:`transcript` of a pad, pasted into ``fpl repl`` or seeded
 into a pad, is the program the cells hold.
 
+A :func:`preview` evaluates the cell under the cursor before it is
+committed, on the cells above it, and keeps nothing. Its
+:class:`Ghost` is the line a commit would show (:func:`shaded`), which
+the page paints faded after the cell's text. It is bounded twice, as
+the server answers one request at a time and a commit waits behind it:
+
+- each run line gets :data:`PREVIEW_FUEL` steps, so a line without end
+  shows as ``out of fuel``, as a commit would show it, only sooner;
+- the whole preview gets :data:`PREVIEW_SECONDS`, read between inputs
+  on the :class:`fpl.repl.Tty` timer, so no number of such lines, nor
+  of edited cells above, adds up. Past it, no input is entered and the
+  ghost ends in :data:`CUT`; it overruns by one input at most.
+
+Steps alone would not do for the second bound: an input runs the whole
+program again (:func:`fpl.session.enter`), and its count of steps
+leaves those out. The history runs under the fuel of a line too, so a
+committed line heavier than :data:`PREVIEW_FUEL` gives every cell below
+it an ``ERROR: @N ... out of fuel`` ghost.
+
 The module does no I/O; :mod:`fpl.pad_web` is its shell. The clocks
 come in as the REPL's :class:`fpl.repl.Tty`, so a test can hold them
 still.
 """
 
 from bisect import bisect_left, bisect_right
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from contextlib import suppress
 from dataclasses import dataclass, replace
 from typing import Literal
@@ -56,6 +75,7 @@ from fpl.parse import parse
 from fpl.repl import (
     BAR,
     EMPTY,
+    RESULT,
     Tty,
     inputs,
     phrase_bar,
@@ -75,6 +95,14 @@ type Status = Literal["ok", "error", "pending", "empty"]
 PENDING = f"{BAR} the input goes on"
 #: What a phrase bar opens with; a cell of the buffer starts at one.
 BAR_HEAD = f"{BAR} -("
+#: The steps each run line of a preview may take: an endless loop
+#: stops in about 85 ms, at some 2.1 us a step on a laptop.
+PREVIEW_FUEL = 40_000
+#: The time a whole preview may take before it enters no more inputs:
+#: some two such loops, under the page's pause of 300 ms in typing.
+PREVIEW_SECONDS = 0.2
+#: The last turn of a cell its preview stopped in, or never reached.
+CUT = "ERROR: preview out of time"
 
 
 @dataclass(frozen=True)
@@ -103,6 +131,45 @@ class Cell:
     spent: int | None = None
     #: The wall time of the cell's evaluation; None when none ran.
     ms: float | None = None
+
+
+@dataclass(frozen=True)
+class Ghost:
+    """What a cell not yet committed would show, as one faded line.
+
+    The page paints it after the cell's last text line, beside the
+    text, so the buffer and its lines stay as typed.
+    """
+
+    #: The line of the buffer it follows, counted from 0.
+    line: int
+    #: A result, a refusal, or a run cut short by the preview's fuel
+    #: or its time.
+    kind: Literal["ok", "error", "fuel"]
+    #: The cell's result and ``ERROR`` lines, parted by two spaces; it
+    #: never holds a newline.
+    text: str
+
+
+@dataclass(frozen=True)
+class _Part:
+    """The lines of one cell of a buffer, as the reader keeps them."""
+
+    #: The offset in the buffer of the part's first line.
+    start: int
+    #: Each line the loop did not write, by its number counted from 0;
+    #: empty lines at both ends are trimmed.
+    lines: tuple[tuple[int, str], ...]
+
+    @property
+    def text(self) -> str:
+        """The cell's text; empty when the part holds none."""
+        return "\n".join(line for _, line in self.lines)
+
+
+def _never() -> bool:
+    """Tell a commit it is never late: it enters every input."""
+    return False
 
 
 def context(env: Mapping[str, str], fuel: int = FUEL_DEFAULT) -> Context:
@@ -148,12 +215,20 @@ def run(
 
 
 def replayed(
-    above: Sequence[Cell], sources: Sequence[str], ctx: Context, tty: Tty
+    above: Sequence[Cell],
+    sources: Sequence[str],
+    ctx: Context,
+    tty: Tty,
+    late: Callable[[], bool] = _never,
 ) -> tuple[Cell, ...]:
-    """Evaluate *sources* in order below the cells *above*."""
+    """Evaluate *sources* in order below the cells *above*.
+
+    Once *late* holds, as it is asked before each input, no input is
+    entered any more (:func:`evaluated`).
+    """
     pad = list(above)
     for source in sources:
-        pad.append(evaluated(source, pad, ctx, tty))
+        pad.append(evaluated(source, pad, ctx, tty, late))
     return tuple(pad)
 
 
@@ -169,14 +244,36 @@ def chunks(text: str) -> list[str]:
         >>> chunks(";;! -( 9 )-\n1 2 +\n|- 3 : ...\n\n;;! -( 9 )-\n")
         ['1 2 +']
     """
-    cells: list[list[str]] = [[]]
-    for line in text.splitlines():
+    return [part.text for part in _parts(text) if part.text]
+
+
+def _parts(text: str) -> list[_Part]:
+    r"""Part a buffer at its phrase bars, keeping the program's lines.
+
+    The lines are those of ``text.split("\n")``, numbered as the page
+    numbers the lines it paints; a part opens at offset 0 and at every
+    bar, and a line the loop wrote (:func:`fpl.repl.written`) is left
+    out of it.
+    """
+    starts: list[int] = [0]
+    kept: list[list[tuple[int, str]]] = [[]]
+    at = 0
+    for number, line in enumerate(text.split("\n")):
         if line.startswith(BAR_HEAD):
-            cells.append([])
+            starts.append(at)
+            kept.append([])
         elif not written(line):
-            cells[-1].append(line)
-    texts = ("\n".join(lines).strip("\n") for lines in cells)
-    return [text for text in texts if text]
+            kept[-1].append((number, line))
+        at += len(line) + 1
+    return [_Part(s, _trimmed(k)) for s, k in zip(starts, kept, strict=True)]
+
+
+def _trimmed(
+    lines: list[tuple[int, str]],
+) -> tuple[tuple[int, str], ...]:
+    """Drop the empty lines at both ends of a part."""
+    filled = [i for i, (_, line) in enumerate(lines) if line]
+    return tuple(lines[filled[0] : filled[-1] + 1]) if filled else ()
 
 
 def synced(
@@ -189,12 +286,18 @@ def synced(
     again, from the state the cells above it left.
     """
     sources = chunks(text)
+    kept = _kept(cells, sources)
+    return replayed(cells[:kept], sources[kept:], ctx, tty)
+
+
+def _kept(cells: Sequence[Cell], sources: Sequence[str]) -> int:
+    """Count the cells, from the top, whose text *sources* leaves be."""
     kept = 0
     for cell, source in zip(cells, sources, strict=False):
         if cell.source.rstrip("\n") != source:
             break
         kept += 1
-    return replayed(cells[:kept], sources[kept:], ctx, tty)
+    return kept
 
 
 def buffer(cells: Sequence[Cell], tty: Tty, indent: str = "") -> str:
@@ -220,22 +323,108 @@ def caret(
     reads on under the next bar; past the last cell, to the end of the
     :func:`buffer`, written with *indent*.
     """
-    starts = [0]
-    filled = [False]
-    at = 0
-    for line in text.splitlines(keepends=True):
-        if line.startswith(BAR_HEAD):
-            starts.append(at)
-            filled.append(False)
-        elif line.strip() and not written(line.rstrip("\n")):
-            filled[-1] = True
-        at += len(line)
-    here = bisect_right(starts, cursor)
-    target = sum(filled[:here])
+    parts = _parts(text)
+    here = bisect_right([part.start for part in parts], cursor)
+    target = sum(bool(part.text) for part in parts[:here])
     if target < len(cells):
         before = transcript(cells[:target], indent)
         return len(before) + len(cells[target].bar) + 1
     return len(buffer(cells, tty, indent))
+
+
+def preview(  # noqa: PLR0913 -- the pad's arguments and a budget
+    cells: Sequence[Cell],
+    text: str,
+    cursor: int,
+    ctx: Context,
+    tty: Tty,
+    *,
+    fuel: int = PREVIEW_FUEL,
+    seconds: float = PREVIEW_SECONDS,
+) -> Ghost | None:
+    """Return what the cell under the cursor would show; keep nothing.
+
+    The cell is evaluated as :func:`synced` would evaluate it, from the
+    state the cells above it leave, but under at most *fuel* steps per
+    run line and *seconds* in all, so neither a line that never ends
+    nor many of them hold up the typing; the cells stay as they were.
+
+    Args:
+        cells: The pad as it stands.
+        text: The buffer as typed, not yet committed.
+        cursor: An offset into *text*; on a bar or a result line, it is
+            in that bar's cell.
+        ctx: What each input is entered with.
+        tty: The clocks of the bars.
+        fuel: The budget of each run line, if below *ctx*'s.
+        seconds: The budget of the whole preview, on *tty*'s timer.
+
+    Returns:
+        The ghost after the cell's last text line, or None when the
+        cell is empty, defines only, waits for a closer, or stands as
+        committed, with every cell above it. Past *seconds*, the ghost
+        holds the turns of the inputs entered and ends in :data:`CUT`,
+        a cell that only defines included.
+    """
+    found = _under(text, cursor)
+    if found is None:
+        return None
+    index, part = found
+    sources = chunks(text)
+    kept = _kept(cells, sources)
+    if index < kept:
+        return None
+    small = replace(ctx, fuel=min(ctx.fuel, fuel))
+    until = tty.timer() + seconds
+
+    def late() -> bool:
+        return tty.timer() > until
+
+    todo = sources[kept : index + 1]
+    cell = replayed(cells[:kept], todo, small, tty, late)[-1]
+    return shaded(cell, part.lines[-1][0])
+
+
+def _under(text: str, cursor: int) -> tuple[int, _Part] | None:
+    """Return the cell the cursor is in, and how many cells precede it.
+
+    None when the part under the cursor holds no text.
+    """
+    parts = _parts(text)
+    i = bisect_right([part.start for part in parts], cursor) - 1
+    if not parts[i].text:
+        return None
+    return sum(bool(part.text) for part in parts[:i]), parts[i]
+
+
+def shaded(cell: Cell, line: int) -> Ghost | None:
+    """Return a cell's turns as a ghost after the buffer line *line*.
+
+    It keeps the result lines and the ``ERROR`` lines, the turns that
+    say what the cell came to; the carets and notes under a bar, the
+    blank line of an empty stack and the turn of an open pair go.
+
+    Returns:
+        The ghost, of kind ``fuel`` when a run ran out of fuel or the
+        preview out of time (:data:`CUT`); None when no turn is kept,
+        as for a definition.
+
+    Examples:
+        >>> (cell,) = run((), 0, "1 | 2 +", context({}), Tty())
+        >>> shaded(cell, 3)
+        Ghost(line=3, kind='ok', text='|- 3 : number')
+    """
+    shown = [t for t in cell.turns if t.startswith((RESULT + " ", "ERROR:"))]
+    if not shown:
+        return None
+    ran_out = any(turn.endswith(("out of fuel", CUT)) for turn in shown)
+    kind = "fuel" if ran_out else _kind(cell.status)
+    return Ghost(line, kind, "  ".join(shown))
+
+
+def _kind(status: Status) -> Literal["ok", "error"]:
+    """Narrow the status of a cell that kept a turn: ran or failed."""
+    return "error" if status == "error" else "ok"
 
 
 def bar(above: Sequence[Cell], tty: Tty) -> str:
@@ -294,40 +483,52 @@ def transcript(cells: Sequence[Cell], indent: str = "") -> str:
 
 
 def evaluated(
-    source: str, above: Sequence[Cell], ctx: Context, tty: Tty
+    source: str,
+    above: Sequence[Cell],
+    ctx: Context,
+    tty: Tty,
+    late: Callable[[], bool] = _never,
 ) -> Cell:
     """Evaluate one cell after the state the cells *above* left.
 
     An input that fails does not stop the inputs after it, as in the
-    REPL; its event joins the log, but not the program.
+    REPL; its event joins the log, but not the program. *late* is asked
+    before each input: once it holds, the cell enters no more and its
+    last turn is :data:`CUT` (a :func:`preview`'s deadline).
     """
     log = above[-1].log if above else EMPTY
-    head = bar(above, tty)
+    blank = Cell(source, "empty", bar(above, tty), (), (), log)
     lines = iter(source.splitlines())
     texts = list(inputs(lambda _on: next(lines, None)))
     if not texts:
-        return Cell(source, "empty", head, (), (), log)
+        return blank
     if _open(texts[-1]):
-        return Cell(source, "pending", head, (PENDING,), (), log)
+        return replace(blank, status="pending", turns=(PENDING,))
     started = tty.timer()
-    cell = _entered(source, head, texts, above, ctx)
+    cell = _entered(blank, texts, above, ctx, late)
     ms = (tty.timer() - started) * 1000.0
     return cell if cell.status == "error" else replace(cell, ms=ms)
 
 
 def _entered(
-    source: str,
-    head: str,
+    blank: Cell,
     texts: Sequence[str],
     above: Sequence[Cell],
     ctx: Context,
+    late: Callable[[], bool],
 ) -> Cell:
-    """Enter the inputs *texts* of a cell, one after another."""
-    log = above[-1].log if above else EMPTY
+    """Enter the inputs *texts* of the cell *blank*, in time, in turn.
+
+    *blank* holds the cell's text and bar and the log it starts from.
+    """
+    log = blank.log
     outcomes: list[Outcome] = []
     turns: list[str] = []
     changes: list[int] = []
     for text in texts:
+        if late():
+            turns.append(CUT)
+            break
         outcome = enter(log, text, ctx, log.head)
         outcomes.append(outcome)
         ok = outcome.event.status == "ok"
@@ -339,7 +540,14 @@ def _entered(
     status: Status = "ok" if _ran_all(outcomes) else "error"
     changed = tuple(sorted(set(changes)))
     fuel = _spent(outcomes)
-    return Cell(source, status, head, tuple(turns), changed, log, fuel)
+    return replace(
+        blank,
+        status=status,
+        turns=tuple(turns),
+        changes=changed,
+        log=log,
+        spent=fuel,
+    )
 
 
 def _ran_all(outcomes: Sequence[Outcome]) -> bool:

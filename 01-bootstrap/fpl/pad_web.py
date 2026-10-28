@@ -13,18 +13,22 @@ memory and changes it only through :mod:`fpl.pad`; it is a WSGI
 application (:func:`app`) on :mod:`wsgiref`, which serves one request
 at a time, so turns never overlap.
 
-Routes, all answered with the pad as JSON (:func:`shown`: the cells,
-each with its bar and turns, the buffer, and where the caret goes):
+Routes, answered with the pad as JSON (:func:`shown`: the cells, each
+with its bar and turns, the buffer, and where the caret goes), but for
+``/preview``:
 
 - ``GET /`` the page, ``GET /<file>`` for each file of :data:`PAGE`;
   ``GET /pad`` the pad.
 - ``POST /buffer`` with ``{"text": buffer, "cursor": offset}``:
   :func:`fpl.pad.synced`, the caret as :func:`fpl.pad.caret` puts it.
 - ``POST /reset``: an empty pad; ``POST /pad``: the pad as it is.
+- ``POST /preview`` with ``{"text": buffer, "cursor": offset}``:
+  :func:`fpl.pad.preview`, answered ``{"ghost": {"line", "kind",
+  "text"}}``, or ``{"ghost": null}``; the pad is unchanged.
 
 A ``POST`` body may carry ``"indent"``, the string each result line is
 set in by (:func:`fpl.pad.transcript`); the page asks for a tab when
-opened as ``/?results=indented``.
+opened as ``/?results=indented``. A preview leaves the indent be.
 
 A ``FILE`` seeds the pad: each input :func:`fpl.repl.inputs` finds in
 it becomes a cell, evaluated before the page opens.
@@ -40,7 +44,15 @@ from typing import Any
 from wsgiref.simple_server import make_server
 from wsgiref.types import StartResponse, WSGIApplication, WSGIEnvironment
 
-from fpl.pad import Cell, buffer, caret, context, replayed, synced
+from fpl.pad import (
+    Cell,
+    buffer,
+    caret,
+    context,
+    preview,
+    replayed,
+    synced,
+)
 from fpl.repl import Tty, inputs
 from fpl.session import Context
 
@@ -87,29 +99,47 @@ class Pad:
         #: What the page sets result lines in by; the last request's.
         self.indent = ""
 
-    def change(self, route: str, body: Mapping[str, Any]) -> int | None:
+    def change(
+        self, route: str, body: Mapping[str, Any]
+    ) -> dict[str, Any] | None:
         """Carry out a ``POST`` route; None when there is none.
 
+        A preview leaves the pad, its indent included, as it was.
+
         Returns:
-            Where the caret goes in the buffer after the change.
+            The answer: the pad as :func:`shown` gives it, the caret
+            where it goes after the change; for ``/preview``, the
+            ghost.
 
         Raises:
             KeyError: The body lacks a field the route needs.
             TypeError: A field has the wrong type.
+            ValueError: A cursor is not a number.
         """
+        if route == "/preview":
+            return self._previewed(body)
         self.indent = str(body.get("indent", ""))
         match route:
             case "/buffer":
                 text, cursor = str(body["text"]), int(body["cursor"])
                 self.cells = synced(self.cells, text, self.ctx, self.tty)
-                return caret(text, cursor, self.cells, self.tty, self.indent)
+                at = caret(text, cursor, self.cells, self.tty, self.indent)
+                return shown(self, at)
             case "/reset":
                 self.cells = ()
-                return self.end()
+                return shown(self, self.end())
             case "/pad":
-                return self.end()
+                return shown(self, self.end())
             case _:
                 return None
+
+    def _previewed(self, body: Mapping[str, Any]) -> dict[str, Any]:
+        """Answer ``/preview``: the ghost of the cell at the cursor."""
+        text, cursor = str(body["text"]), int(body["cursor"])
+        g = preview(self.cells, text, cursor, self.ctx, self.tty)
+        if g is None:
+            return {"ghost": None}
+        return {"ghost": {"line": g.line, "kind": g.kind, "text": g.text}}
 
     def end(self) -> int:
         """Return the end of the buffer, where the caret rests first."""
@@ -149,19 +179,18 @@ def answered(pad: Pad, method: str, path: str, body: bytes) -> Answer:
     if method == "GET" and path in PAGE:
         name, kind = PAGE[path]
         return "200 OK", kind, (Path(__file__).parent / name).read_bytes()
-    at = pad.end()
-    if method == "POST":
-        try:
-            moved = pad.change(path, json.loads(body or b"{}"))
-        except (ValueError, KeyError, TypeError) as error:
-            return "400 Bad Request", "text/plain", f"{error!r}\n".encode()
-        if moved is None:
-            return MISSING
-        at = moved
-    elif path != "/pad":
-        return MISSING
-    data = json.dumps(shown(pad, at)).encode()
-    return "200 OK", "application/json", data
+    if method != "POST":
+        return _json(shown(pad, pad.end())) if path == "/pad" else MISSING
+    try:
+        answer = pad.change(path, json.loads(body or b"{}"))
+    except (ValueError, KeyError, TypeError) as error:
+        return "400 Bad Request", "text/plain", f"{error!r}\n".encode()
+    return MISSING if answer is None else _json(answer)
+
+
+def _json(answer: dict[str, Any]) -> Answer:
+    """Return *answer* as the body of a ``200`` answer."""
+    return "200 OK", "application/json", json.dumps(answer).encode()
 
 
 def app(pad: Pad) -> WSGIApplication:

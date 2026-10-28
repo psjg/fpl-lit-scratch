@@ -7,10 +7,13 @@ cells above left; an error stops nothing; an open pair waits.
 import io
 import json
 import threading
+import time
 import urllib.error
 import urllib.request
 from collections.abc import Generator, Sequence
 from contextlib import contextmanager
+from copy import deepcopy
+from dataclasses import replace
 from datetime import datetime
 from itertools import count
 from pathlib import Path
@@ -18,20 +21,24 @@ from typing import Any
 from wsgiref.simple_server import WSGIServer, make_server
 
 import pytest
-from hypothesis import given
+from hypothesis import assume, given
 from hypothesis import strategies as st
 
 from fpl import pad_web
 from fpl.__main__ import main
 from fpl.pad import (
+    CUT,
     Cell,
+    Ghost,
     bar,
     buffer,
     caret,
     chunks,
     context,
+    preview,
     replayed,
     run,
+    shaded,
     synced,
     transcript,
 )
@@ -44,8 +51,13 @@ AT = datetime(2026, 1, 1, 9, 5, 3)
 TICKS = count()
 #: A clock that stands still and a timer that gives every cell 1000 ms.
 TTY = Tty(now=lambda: AT, timer=lambda: float(next(TICKS)))
+#: A timer that stands still too, so no preview runs out of time.
+STILL = Tty(now=lambda: AT, timer=lambda: 0.0)
 SQ = "sq : n -- n\n\tdup times\n"
 POOL = (SQ, "3 sq", "x", "1 [", "f : -- x\n\t2", "f", "1 | 2 +", "", "\t5")
+#: The cells a buffer keeps one part for each: an empty cell writes a
+#: bar with no text, which the reader drops.
+FILLED = tuple(source for source in POOL if source)
 
 
 def pad(*sources: str) -> tuple[Cell, ...]:
@@ -200,6 +212,173 @@ def test_the_caret_goes_to_the_cell_after_the_one_it_was_in() -> None:
     assert caret(typed, len(typed), cells, TTY) == len(text)
 
 
+def test_a_cell_of_only_whitespace_counts_for_the_caret() -> None:
+    """
+    The caret and the reader part a buffer alike: a cell that holds only
+    a tab is a cell to both, so the caret leaves it for the next.
+    """
+    cells = pad("1 | 2 +", "\t", "3 sq")
+    text = buffer(cells, TTY)
+    tab = len(transcript(cells[:1])) + len(cells[1].bar) + 1
+    assert text[tab : tab + 2] == "\t\n"
+    assert text[caret(text, tab, cells, TTY) :].startswith("3 sq")
+
+
+def line_of(text: str, line: str) -> int:
+    """
+    The number, counted from 0, of the first line of *text* that is
+    *line*.
+    """
+    return text.split("\n").index(line)
+
+
+def test_a_preview_evaluates_the_cursor_s_cell_on_the_state_above() -> None:
+    """
+    The ghost is what a commit would show, from the state the cells
+    above leave, on the last text line of the cell; the pad is left as
+    it was.
+    """
+    cells = pad(SQ, "3 sq")
+    kept = deepcopy(cells)
+    text = buffer(cells, TTY) + "4 sq"
+    four = Ghost(line_of(text, "4 sq"), "ok", "|- 16 : number")
+    assert preview(cells, text, len(text), CTX, STILL) == four
+    edited = buffer(cells, TTY).replace("\n3 sq\n", "\n5 sq\n")
+    five = Ghost(line_of(edited, "5 sq"), "ok", "|- 25 : number")
+    for spot in ("5 sq", "< command 2 >", "|- 9 : number"):
+        assert preview(cells, edited, edited.index(spot), CTX, STILL) == five
+    both = f"{buffer(cells, TTY)}f : -- x\n\t7\n\n{bar(cells, TTY)}\nf"
+    seven = Ghost(len(both.split("\n")) - 1, "ok", "|- 7 : number")
+    assert preview(cells, both, len(both), CTX, STILL) == seven
+    assert cells == kept
+
+
+def test_no_ghost_for_a_standing_empty_pending_or_defining_cell() -> None:
+    cells = pad(SQ, "3 sq")
+    text = buffer(cells, TTY)
+    assert preview(cells, text, text.index("3 sq"), CTX, STILL) is None
+    assert preview(cells, text, len(text), CTX, STILL) is None
+    for typed in ("\t", "1 [", SQ):
+        after = text + typed
+        assert preview(cells, after, len(after), CTX, STILL) is None
+
+
+def test_the_ghost_follows_the_last_text_line_of_its_cell() -> None:
+    cells = pad(SQ)
+    text = buffer(cells, TTY) + "1 | 2 +\n4 sq\n\n"
+    at = text.index("1 | 2 +")
+    assert preview(cells, text, at, CTX, STILL) == Ghost(
+        line_of(text, "4 sq"), "ok", "|- 3 : number  |- 16 : number"
+    )
+
+
+def test_a_preview_is_bounded_by_its_fuel() -> None:
+    """
+    A run line that never ends shows as out of fuel, faded, long before
+    the pad's own budget would stop it; a heavy line above the cell is
+    run again under the same bound, and a smaller budget of the pad's
+    own is kept.
+    """
+    loop = pad("f : -- x\n\tf")
+    text = buffer(loop, TTY) + "f"
+    out = Ghost(line_of(text, "f"), "fuel", "ERROR: 1:1 out of fuel")
+    assert preview(loop, text, len(text), CTX, STILL, fuel=1000) == out
+    started = time.perf_counter()
+    assert preview(loop, text, len(text), CTX, Tty(now=lambda: AT)) == out
+    assert time.perf_counter() - started < 1.0
+    heavy = pad(SQ, "100 sq sq sq")
+    one = buffer(heavy, TTY) + "1"
+    ghost = preview(heavy, one, len(one), CTX, STILL, fuel=3)
+    assert ghost is not None
+    assert ghost.kind == "fuel"
+    assert ghost.text.startswith("ERROR: @")
+    tight = replace(CTX, fuel=3)
+    assert preview(heavy, one, len(one), tight, STILL, fuel=1000) == ghost
+
+
+def test_a_preview_is_bounded_in_time() -> None:
+    """
+    The whole preview has a deadline, read between inputs: past it, no
+    input is entered, of the cell or of an edited cell above it, and
+    the ghost ends in the cut, faded as out of fuel. The test's timer
+    gains a second a read; the preview reads it once to set its
+    deadline, a cell once as it starts and once as it ends, and once
+    before each input.
+    """
+    loop = pad("f : -- x\n\tf")
+    many = buffer(loop, TTY) + "1 | 2 +\nf\nf\nf"
+    first = Ghost(line_of(many, "f") + 2, "fuel", "|- 3 : number  " + CUT)
+    assert preview(loop, many, len(many), CTX, TTY, seconds=2.5) == first
+    cut = Ghost(first.line, "fuel", CUT)
+    assert preview(loop, many, len(many), CTX, TTY, seconds=0.5) == cut
+    cells = pad(SQ, "3 sq")
+    text = buffer(cells, TTY).replace("\n3 sq\n", "\n1\n2\n") + "4 sq"
+    kept = deepcopy(cells)
+    four = Ghost(line_of(text, "4 sq"), "fuel", CUT)
+    assert preview(cells, text, len(text), CTX, TTY, seconds=3.5) == four
+    assert cells == kept
+    lines = buffer(loop, TTY) + "\n".join(["f"] * 40)
+    started = time.perf_counter()
+    ghost = preview(loop, lines, len(lines), CTX, Tty(now=lambda: AT))
+    assert time.perf_counter() - started < 1.0
+    assert ghost is not None
+    assert ghost.text.endswith(CUT)
+
+
+def test_shaded_keeps_results_and_errors() -> None:
+    """
+    A ghost is one line: the results and the ERROR line of the cell,
+    without its carets, notes and blank empty stacks.
+    """
+    (ok,) = pad("1 | 2 +")
+    assert shaded(ok, 4) == Ghost(4, "ok", "|- 3 : number")
+    (error,) = pad("x")
+    assert shaded(error, 0) == Ghost(0, "error", "ERROR: 1:1 unknown word: x")
+    changed = pad("f : -- x\n\t2", "f", "f : -- x\n\t3")[2]
+    assert changed.turns == (";;! CHANGED cell 2",)
+    assert shaded(changed, 0) is None
+    (blank,) = pad("1 drop\n2")
+    assert blank.turns == ("", "|- 2 : number")
+    assert shaded(blank, 1) == Ghost(1, "ok", "|- 2 : number")
+
+
+@given(st.lists(st.sampled_from(FILLED), max_size=4))
+def test_a_standing_buffer_shows_no_ghost(sources: list[str]) -> None:
+    """
+    [law: standing-no-ghost] wherever the cursor is in the buffer of a
+    pad, nothing differs from what was committed, so nothing is
+    previewed.
+    """
+    cells = pad(*sources)
+    text = buffer(cells, TTY)
+    for cursor in range(len(text) + 1):
+        assert preview(cells, text, cursor, CTX, STILL) is None
+
+
+@given(st.lists(st.sampled_from(FILLED), max_size=4), st.data())
+def test_a_ghost_is_what_a_commit_shows(
+    sources: list[str], data: st.DataObject
+) -> None:
+    """
+    [law: ghost-is-commit] a cell typed in place of a cell, or after the
+    last, previews as the cell a commit of the buffer gives, shaded on
+    its last text line; the ghost is one line.
+    """
+    cells = pad(*sources)
+    index = data.draw(st.integers(0, len(cells)))
+    typed = data.draw(st.sampled_from(FILLED))
+    if index < len(cells):
+        assume(typed.rstrip("\n") != cells[index].source.rstrip("\n"))
+    head = transcript(cells[:index]) + bar(cells[:index], TTY) + "\n"
+    below = transcript(cells[index + 1 :]) + bar(cells, TTY) + "\n"
+    text = f"{head}{typed}\n\n{below}"
+    cursor = len(head) + data.draw(st.integers(0, len(typed)))
+    line = head.count("\n") + typed.rstrip("\n").count("\n")
+    ghost = preview(cells, text, cursor, CTX, STILL)
+    assert ghost == shaded(synced(cells, text, CTX, TTY)[index], line)
+    assert ghost is None or "\n" not in ghost.text
+
+
 @given(st.lists(st.sampled_from(POOL), max_size=5), st.data())
 def test_an_edit_to_its_own_text_changes_nothing(
     sources: list[str], data: st.DataObject
@@ -253,8 +432,8 @@ def test_a_transcript_reads_back_as_the_pad_and_as_a_repl_session() -> None:
 
 
 @contextmanager
-def served(cells: tuple[Cell, ...] = ()) -> Generator[str]:
-    server = make_server("127.0.0.1", 0, app(Pad(cells, CTX, TTY)))
+def served(cells: tuple[Cell, ...] = (), tty: Tty = TTY) -> Generator[str]:
+    server = make_server("127.0.0.1", 0, app(Pad(cells, CTX, tty)))
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     try:
@@ -307,9 +486,40 @@ def test_the_page_drives_the_pad_over_http() -> None:
         assert posted(url + "/reset", {}) == empty
 
 
+def test_a_preview_route_answers_the_ghost_and_changes_nothing() -> None:
+    """
+    ``/preview`` answers the ghost of the cell under the cursor, or
+    null; neither the cells nor the indent of the pad change. Past its
+    deadline (on the ticking timer, at once) the ghost is the cut.
+    """
+    cells = pad(SQ, "3 sq")
+    text = buffer(cells, TTY) + "4 sq"
+    line = line_of(text, "4 sq")
+    ghost = {"line": line, "kind": "ok", "text": "|- 16 : number"}
+    held = Pad(cells, CTX, STILL)
+    held.indent = "\t"
+    body = {"text": text, "cursor": len(text)}
+    assert held.change("/preview", body) == {"ghost": ghost}
+    assert held.cells is cells
+    assert held.indent == "\t"
+    late = Pad(cells, CTX, TTY).change("/preview", body)
+    assert late == {"ghost": {"line": line, "kind": "fuel", "text": CUT}}
+    with served(cells, STILL) as url:
+        before = posted(url + "/pad", None)
+        assert posted(url + "/preview", body) == {"ghost": ghost}
+        standing = {"text": before["buffer"], "cursor": 0}
+        assert posted(url + "/preview", standing) == {"ghost": None}
+        assert posted(url + "/pad", None) == before
+
+
 @pytest.mark.parametrize(
     ("route", "body", "code"),
-    [("/buffer", {"text": "1"}, 400), ("/nope", {}, 404)],
+    [
+        ("/buffer", {"text": "1"}, 400),
+        ("/preview", {"text": "1"}, 400),
+        ("/preview", {"text": "1", "cursor": "x"}, 400),
+        ("/nope", {}, 404),
+    ],
 )
 def test_a_bad_request_is_refused(
     route: str, body: dict[str, Any], code: int

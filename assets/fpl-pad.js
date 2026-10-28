@@ -21,7 +21,7 @@ async def _pad_load(url):
     sys.path.insert(0, "/bs")
     try:
         from fpl.pad import context
-        from fpl.pad_web import Pad, shown
+        from fpl.pad_web import Pad
     finally:
         sys.path.remove("/bs")
         for k in [k for k in sys.modules if mine(k)]:
@@ -29,9 +29,10 @@ async def _pad_load(url):
         sys.modules.update(saved)
     pad = Pad((), context({}))
     def change(route, body):
-        if not pad.change(route, json.loads(body)):
+        answer = pad.change(route, json.loads(body))
+        if answer is None:
             raise KeyError(route)
-        return json.dumps(shown(pad))
+        return json.dumps(answer)
     return change
 `;
 
@@ -56,6 +57,6 @@ export const pyodide = {
   },
   async change(route, body) {
     const call = await loaded();
-    return JSON.parse(call(route, JSON.stringify(body))).cells;
+    return JSON.parse(call(route, JSON.stringify(body)));
   },
 };

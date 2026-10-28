@@ -13,7 +13,10 @@
  * (highlight.js), so it needs nothing beyond this page. The palette is the
  * playground's dark theme (assets/fpl-playground.js), with a light twin.
  * The editor also gives cursor() and set(text, caret), for a page that
- * rewrites the buffer and puts the caret where the evaluation went.
+ * rewrites the buffer and puts the caret where the evaluation went, and
+ * shade(ghost), which paints a ghost ({line, kind, text}, fpl.pad.Ghost) at
+ * the end of its line, faded, in the painted layer only: the textarea's text
+ * and rows stay as typed. Any change to the text clears the ghost.
  */
 
 import {fplMonarch} from "./fpl-language.js";
@@ -69,10 +72,17 @@ export const plain = {
 		area.spellcheck = false;
 		area.value = text;
 		host.append(paint, area);
+		let ghost = null;
 
-		function fit() {
+		function draw() {
 			area.rows = Math.max(1, area.value.split("\n").length);
-			painted(paint, fplMonarch, area.value, PALETTE[scheme()]);
+			painted(paint, fplMonarch, area.value, PALETTE[scheme()], ghost);
+		}
+
+		/** The text changed: the ghost, of the text before, goes. */
+		function fit() {
+			ghost = null;
+			draw();
 		}
 
 		function insert(snippet) {
@@ -101,6 +111,7 @@ export const plain = {
 				if (area.value[start] === "\t") {
 					area.setRangeText("", start, start + 1, "preserve");
 					fit();
+					hooks.input();
 				}
 			} else if (event.key === "ArrowUp" && !before.includes("\n")) {
 				if (hooks.up()) event.preventDefault();
@@ -128,6 +139,10 @@ export const plain = {
 				const at = caret === "start" ? 0 : area.value.length;
 				area.setSelectionRange(at, at);
 				area.scrollIntoView({block: "nearest"});
+			},
+			shade(g) {
+				ghost = g;
+				draw();
 			},
 		};
 	},

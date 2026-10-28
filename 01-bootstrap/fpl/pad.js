@@ -20,12 +20,27 @@
  * REPL writes, "\t" set in as BQNPad does; the page opened as
  * `?results=indented` asks for the tab.
  *
+ * While one types, the page asks for a ghost, a preview of the cell under
+ * the cursor on the state the cells above leave, which the pad keeps nothing
+ * of; it is answered {ghost: {line, kind, text} | null}:
+ *
+ *   change("/preview", {text, cursor})
+ *
+ * The editor paints it faded at the end of the cell's last text line, beside
+ * the text; the page never sets the buffer from a preview. One preview is in
+ * flight at a time, the latest text wins, and an answer to text that has
+ * changed since, or to a buffer a commit has set, is dropped. Shift+Enter
+ * commits as before, and the real result lines take the ghost's place.
+ *
  * `http` is the backend of `python -m fpl pad`; the site's /pad/ page passes
  * one that runs fpl.pad under Pyodide (assets/fpl-pad.js). The keys are the
  * editor's (editors.js): Enter a newline with the line's tabs, Tab a tab.
  */
 
 import {plain} from "./editors.js";
+
+/** The quiet after a keystroke before a preview is asked, as the playground waits. */
+const QUIET_MS = 300;
 
 /** The backend of `python -m fpl pad`: the routes over HTTP. */
 export const http = {
@@ -58,17 +73,47 @@ export function indented(search) {
  */
 export async function mount(backend, root, said, indent = "") {
 	let cells = [];
+	let timer = 0, flying = false, dirty = false, epoch = 0;
 	const host = document.createElement("div");
 	root.replaceChildren(host);
 	const editor = plain.make(host, "", {
-		input: () => {},
+		input: () => {
+			clearTimeout(timer);
+			timer = setTimeout(ask, QUIET_MS);
+		},
 		evaluate: () => sync("/buffer", {text: editor.value(), cursor: editor.cursor(), indent}),
 		up: () => false,
 		down: () => false,
 		remove: () => false,
 	});
 
+	/** Ask for the ghost of the cell under the cursor; paint it if it still holds. */
+	async function ask() {
+		if (flying) {
+			dirty = true;
+			return;
+		}
+		flying = true;
+		const asked = epoch, text = editor.value();
+		let ghost;
+		try {
+			({ghost} = await backend.change("/preview", {text, cursor: editor.cursor()}));
+		} catch {
+			ghost = null;
+		}
+		flying = false;
+		if (dirty) {
+			dirty = false;
+			ask();
+			return;
+		}
+		if (asked === epoch && text === editor.value()) editor.shade(ghost);
+	}
+
 	async function sync(route, body) {
+		clearTimeout(timer);
+		dirty = false;
+		epoch += 1;
 		let buffer;
 		let caret;
 		try {

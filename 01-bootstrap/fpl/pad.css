@@ -43,4 +43,8 @@ textarea, pre { font: inherit; tab-size: 4; margin: 0; }
 /* The loop's lines in the buffer: bars and notes dim, errors red. */
 .paint .note { color: var(--dim); }
 .paint .error { color: var(--err); }
+/* A ghost: what the cell under the cursor would show, not yet committed. */
+.paint .ghost { color: var(--dim); opacity: 0.6; }
+.paint .ghost-error { color: var(--err); opacity: 0.5; }
+.paint .ghost-fuel { color: var(--warn); opacity: 0.5; }
 #said { color: var(--warn); }
