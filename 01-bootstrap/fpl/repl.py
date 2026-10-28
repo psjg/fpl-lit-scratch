@@ -66,6 +66,9 @@ EMPTY = Log((), {}, 0)
 BAR = ";;!"
 #: The mark a result line opens with: a turnstile.
 RESULT = "|-"
+#: What the pad ends each line it writes in: the note sign set off by
+#: a space on each side, an empty note. The reader takes it off again.
+TERMINATOR = " ; "
 
 
 class UsageError(Exception):
@@ -526,14 +529,14 @@ def written(line: str) -> bool:
     The reader drops such a line, so a transcript pasted back is the
     program it came from: read(print(session)) = session. A line is the
     loop's when, after any tabs and spaces (the pad may indent what it
-    writes), it is one of :data:`WRITTEN` or starts with one and a
-    space.
+    writes) and before the pad's :data:`TERMINATOR`, it is one of
+    :data:`WRITTEN` or starts with one and a space.
 
     Examples:
         >>> [written(l) for l in ("|- 2 : ...", "\t;;! -( 9 )-", "|-x")]
         [True, True, False]
     """
-    bare = line.lstrip("\t ")
+    bare = line.lstrip("\t ").removesuffix(TERMINATOR)
     return any(bare == mark or bare.startswith(mark + " ") for mark in WRITTEN)
 
 
@@ -543,7 +546,8 @@ def inputs(read: Callable[[bool], str | None]) -> Iterator[str]:
     An input ends at a blank line or at a line after which
     :func:`pending` is false; blank lines between inputs are skipped. A
     line the loop wrote (:func:`written`) counts as a blank line: it is
-    dropped and ends the input. A line at the margin right after a
+    dropped and ends the input; the pad's :data:`TERMINATOR` at the end
+    of a line comes off. A line at the margin right after a
     definition head is taken as the body's first, as if it were written
     one tab deeper. A line that starts with a space or a tab is left as
     written.
@@ -562,7 +566,8 @@ def inputs(read: Callable[[bool], str | None]) -> Iterator[str]:
     """
     text = ""
     while (line := read(bool(text))) is not None:
-        line = _taken(text, "" if written(line) else line)
+        line = "" if written(line) else line.removesuffix(TERMINATOR)
+        line = _taken(text, line)
         blank = not line.strip()
         if not blank:
             text += line + "\n"

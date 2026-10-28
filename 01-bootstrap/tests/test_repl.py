@@ -433,8 +433,10 @@ def test_what_the_loop_wrote_reads_back_as_the_program() -> None:
         "f",
         "\t|- 2 : number",
         "|-x",
+        "2 | 2 + ; ",
+        "|- 4 : number ; ",
     ]
-    made = ["1 | 1 +\n", "x\n", "f : -- x\n\t2\n", "f\n", "|-x\n"]
+    made = ["1 | 1 +\n", "x\n", "f : -- x\n\t2\n", "f\n", "|-x\n", "2 | 2 +\n"]
     assert fed(pasted) == made
 
 

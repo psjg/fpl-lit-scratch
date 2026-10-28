@@ -76,6 +76,7 @@ from fpl.repl import (
     BAR,
     EMPTY,
     RESULT,
+    TERMINATOR,
     Tty,
     inputs,
     phrase_bar,
@@ -252,8 +253,8 @@ def _parts(text: str) -> list[_Part]:
 
     The lines are those of ``text.split("\n")``, numbered as the page
     numbers the lines it paints; a part opens at offset 0 and at every
-    bar, and a line the loop wrote (:func:`fpl.repl.written`) is left
-    out of it.
+    bar, a line the loop wrote (:func:`fpl.repl.written`) is left out
+    of it, and the pad's terminator comes off the end of a line.
     """
     starts: list[int] = [0]
     kept: list[list[tuple[int, str]]] = [[]]
@@ -263,7 +264,7 @@ def _parts(text: str) -> list[_Part]:
             starts.append(at)
             kept.append([])
         elif not written(line):
-            kept[-1].append((number, line))
+            kept[-1].append((number, line.removesuffix(TERMINATOR)))
         at += len(line) + 1
     return [_Part(s, _trimmed(k)) for s, k in zip(starts, kept, strict=True)]
 
@@ -304,9 +305,10 @@ def buffer(cells: Sequence[Cell], tty: Tty, indent: str = "") -> str:
     """Return the pad as the page edits it.
 
     It is the :func:`transcript`, then the bar of the cell to come on a
-    line of its own, for the text typed under it.
+    line of its own, terminated as every line, for the text typed
+    under it.
     """
-    return transcript(cells, indent) + bar(cells, tty) + "\n"
+    return transcript(cells, indent) + _ended(bar(cells, tty))
 
 
 def caret(
@@ -328,7 +330,7 @@ def caret(
     target = sum(bool(part.text) for part in parts[:here])
     if target < len(cells):
         before = transcript(cells[:target], indent)
-        return len(before) + len(cells[target].bar) + 1
+        return len(before) + len(_ended(cells[target].bar))
     return len(buffer(cells, tty, indent))
 
 
@@ -454,32 +456,40 @@ def transcript(cells: Sequence[Cell], indent: str = "") -> str:
 
     Each cell is its bar, its text and its turns, each turn under
     *indent* (a tab sets the results in from the text, as BQNPad does;
-    the REPL writes none); a blank line parts the cells. Everything but
-    the text is what the loop writes, so the reader of ``fpl repl`` and
-    of ``fpl pad FILE`` drops it (:func:`fpl.repl.written`), indented
-    or not, and reads the program the cells hold.
+    the REPL writes none); a blank line parts the cells. Every line
+    that is not blank ends in :data:`fpl.repl.TERMINATOR`, an empty
+    note, which the reader takes off again. Everything but the text is
+    what the loop writes, so the reader of ``fpl repl`` and of ``fpl
+    pad FILE`` drops it (:func:`fpl.repl.written`), indented or not,
+    and reads the program the cells hold.
 
     Examples:
         >>> from datetime import datetime
         >>> still = Tty(now=lambda: datetime(2026, 1, 1, 9, 5, 3))
         >>> pad = run((), 0, "1 | 2 +", context({}), still)
         >>> print(transcript(pad))  # doctest: +ELLIPSIS
-        ;;! -( 09:05:03 )-< command 1 >-...-{ head: 0 }-
-        1 | 2 +
-        |- 3 : number
+        ;;! -( 09:05:03 )-< command 1 >-...-{ head: 0 }- ;
+        1 | 2 + ;
+        |- 3 : number ;
         <BLANKLINE>
     """
     return "".join(
-        "\n".join(
-            [
+        "".join(
+            _ended(line)
+            for line in [
                 cell.bar,
-                cell.source.rstrip("\n"),
+                *cell.source.rstrip("\n").split("\n"),
                 *(indent + turn if turn else turn for turn in cell.turns),
             ]
         )
-        + "\n\n"
+        + "\n"
         for cell in cells
     )
+
+
+def _ended(line: str) -> str:
+    """Return *line* with its newline, terminated when not blank."""
+    return (line + TERMINATOR if line.strip() else line) + "\n"
 
 
 def evaluated(

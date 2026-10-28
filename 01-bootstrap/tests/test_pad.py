@@ -189,7 +189,7 @@ def test_a_buffer_is_read_as_cells_and_synced_from_the_first_change() -> None:
     text = buffer(before, TTY)
     assert chunks(text) == ["sq : n -- n\n\tdup times", "3 sq", "x"]
     assert synced(before, text, CTX, TTY) == before
-    edited = text.replace("3 sq", "4 sq").replace("\nx\n", "\n\nx\n\n")
+    edited = text.replace("3 sq", "4 sq").replace("\nx ; \n", "\n\nx\n\n")
     after = synced(before, edited, CTX, TTY)
     assert after[0] is before[0]
     assert turns(after[1:]) == [("|- 16 : number",), before[2].turns]
@@ -219,7 +219,7 @@ def test_a_cell_of_only_whitespace_counts_for_the_caret() -> None:
     """
     cells = pad("1 | 2 +", "\t", "3 sq")
     text = buffer(cells, TTY)
-    tab = len(transcript(cells[:1])) + len(cells[1].bar) + 1
+    tab = len(transcript(cells[:1])) + len(cells[1].bar + " ; ") + 1
     assert text[tab : tab + 2] == "\t\n"
     assert text[caret(text, tab, cells, TTY) :].startswith("3 sq")
 
@@ -227,9 +227,9 @@ def test_a_cell_of_only_whitespace_counts_for_the_caret() -> None:
 def line_of(text: str, line: str) -> int:
     """
     The number, counted from 0, of the first line of *text* that is
-    *line*.
+    *line*, the pad's terminator not counted.
     """
-    return text.split("\n").index(line)
+    return [t.removesuffix(" ; ") for t in text.split("\n")].index(line)
 
 
 def test_a_preview_evaluates_the_cursor_s_cell_on_the_state_above() -> None:
@@ -243,7 +243,7 @@ def test_a_preview_evaluates_the_cursor_s_cell_on_the_state_above() -> None:
     text = buffer(cells, TTY) + "4 sq"
     four = Ghost(line_of(text, "4 sq"), "ok", "|- 16 : number")
     assert preview(cells, text, len(text), CTX, STILL) == four
-    edited = buffer(cells, TTY).replace("\n3 sq\n", "\n5 sq\n")
+    edited = buffer(cells, TTY).replace("\n3 sq ; \n", "\n5 sq\n")
     five = Ghost(line_of(edited, "5 sq"), "ok", "|- 25 : number")
     for spot in ("5 sq", "< command 2 >", "|- 9 : number"):
         assert preview(cells, edited, edited.index(spot), CTX, STILL) == five
@@ -312,7 +312,7 @@ def test_a_preview_is_bounded_in_time() -> None:
     cut = Ghost(first.line, "fuel", CUT)
     assert preview(loop, many, len(many), CTX, TTY, seconds=0.5) == cut
     cells = pad(SQ, "3 sq")
-    text = buffer(cells, TTY).replace("\n3 sq\n", "\n1\n2\n") + "4 sq"
+    text = buffer(cells, TTY).replace("\n3 sq ; \n", "\n1\n2\n") + "4 sq"
     kept = deepcopy(cells)
     four = Ghost(line_of(text, "4 sq"), "fuel", CUT)
     assert preview(cells, text, len(text), CTX, TTY, seconds=3.5) == four
@@ -418,7 +418,10 @@ def test_a_transcript_reads_back_as_the_pad_and_as_a_repl_session() -> None:
     text = transcript(cells)
     assert seeded(text, CTX, TTY) == cells
     assert seeded(transcript(cells, "\t"), CTX, TTY) == cells
-    assert "\n\t|- 9 : number\n" in transcript(cells, "\t")
+    assert "\n\t|- 9 : number ; \n" in transcript(cells, "\t")
+    assert all(
+        line.endswith(" ; ") for line in text.splitlines() if line.strip()
+    )
     out, err = io.StringIO(), io.StringIO()
     ticks = count()
     still = Tty(now=lambda: AT, timer=lambda: float(next(ticks)))
@@ -461,14 +464,14 @@ def test_the_page_drives_the_pad_over_http() -> None:
             urllib.request.urlopen(url + "/nope")
         empty: dict[str, Any] = {
             "cells": [],
-            "buffer": phrase_bar(1, 0, AT) + "\n",
-            "caret": len(phrase_bar(1, 0, AT)) + 1,
+            "buffer": phrase_bar(1, 0, AT) + " ; \n",
+            "caret": len(phrase_bar(1, 0, AT)) + 4,
         }
         assert posted(url + "/pad", None) == empty
         text = empty["buffer"] + SQ + "\n" + phrase_bar(2, 1, AT) + "\n3 sq"
         state = posted(url + "/buffer", {"text": text, "cursor": len(text)})
         set_in = posted(url + "/pad", {"indent": "\t"})
-        assert "\n\t|- 9 : number\n" in set_in["buffer"]
+        assert "\n\t|- 9 : number ; \n" in set_in["buffer"]
         assert set_in["caret"] == len(set_in["buffer"])
         assert state["cells"][1] == {
             "source": "3 sq",
@@ -478,9 +481,9 @@ def test_the_page_drives_the_pad_over_http() -> None:
             "changes": [],
         }
         assert state["buffer"].endswith(
-            "3 sq\n|- 9 : number\n\n"
+            "3 sq ; \n|- 9 : number ; \n\n"
             + phrase_bar(3, 2, AT, fuel=4, ms=1000.0)
-            + "\n"
+            + " ; \n"
         )
         assert state["caret"] == len(state["buffer"])
         assert posted(url + "/reset", {}) == empty
