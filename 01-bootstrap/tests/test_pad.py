@@ -20,6 +20,7 @@ import pytest
 from hypothesis import given
 from hypothesis import strategies as st
 
+from fpl import pad_web
 from fpl.__main__ import main
 from fpl.pad import Cell, bar, context, removed, replayed, run
 from fpl.pad_web import Pad, app, seeded
@@ -200,6 +201,8 @@ def test_the_page_drives_the_pad_over_http() -> None:
             assert b"<title>FPL pad</title>" in response.read()
         with urllib.request.urlopen(url + "/pad.js") as response:
             assert b"export async function mount" in response.read()
+        with urllib.request.urlopen(url + "/fpl-language.js") as response:
+            assert response.headers["Content-Type"].startswith("text/java")
         with pytest.raises(urllib.error.HTTPError):
             urllib.request.urlopen(url + "/nope")
         posted(url + "/run", {"index": 0, "source": SQ})
@@ -261,6 +264,17 @@ def test_without_a_browser_it_serves_until_interrupted(
 
     monkeypatch.setattr(WSGIServer, "serve_forever", interrupted)
     assert main(["pad", "--port", "0", "--no-browser"]) == 0
+
+
+def test_the_pad_colours_with_the_playground_s_tokenizer() -> None:
+    """
+    fpl/fpl-language.js is a copy of assets/fpl-language.js, which
+    ide/gen_highlight.py writes; the pad serves its own copy so that it
+    needs nothing outside the package. The two must not drift.
+    """
+    mine = Path(pad_web.__file__).with_name("fpl-language.js")
+    theirs = Path(__file__).parents[2] / "assets" / "fpl-language.js"
+    assert mine.read_bytes() == theirs.read_bytes()
 
 
 def test_a_file_seeds_one_cell_per_input(tmp_path: Path) -> None:

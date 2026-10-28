@@ -1,9 +1,12 @@
 """Serve a pad as one local web page: ``python -m fpl pad [FILE]``.
 
-The page (``pad.html``, ``pad.js`` and ``pad.css`` beside this module)
-is the whole interface; it needs no network beyond this server. The
-site's ``/pad/`` page runs the same ``pad.js`` on :mod:`fpl.pad` under
-Pyodide instead (``assets/fpl-pad.js``). The server holds one pad in
+The page (``pad.html`` and the files :data:`PAGE` names beside this
+module) is the whole interface; it needs no network beyond this
+server. ``fpl-language.js`` is the playground's tokenizer, a copy of
+``assets/fpl-language.js`` that a test keeps equal; the pad colours
+its cells with it (``editors.js``). The site's ``/pad/`` page runs
+the same files on :mod:`fpl.pad` under Pyodide instead
+(``assets/fpl-pad.js``). The server holds one pad in
 memory and changes it only through :mod:`fpl.pad`; it is a WSGI
 application (:func:`app`) on :mod:`wsgiref`, which serves one request
 at a time, so turns never overlap.
@@ -11,7 +14,7 @@ at a time, so turns never overlap.
 Routes, all answered with the pad as JSON (:func:`shown`: the cells,
 each with its bar and turns, and the bar of the cell to come):
 
-- ``GET /`` the page, ``GET /pad.js`` and ``/pad.css`` its parts;
+- ``GET /`` the page, ``GET /<file>`` for each file of :data:`PAGE`;
   ``GET /pad`` the pad.
 - ``POST /run`` with ``{"index": i, "source": text}``:
   :func:`fpl.pad.run`.
@@ -36,11 +39,22 @@ from fpl.pad import Cell, bar, context, removed, replayed, run
 from fpl.repl import Tty, inputs
 from fpl.session import Context
 
+#: The content type of each kind of file the page is made of.
+KINDS = {
+    "html": "text/html; charset=utf-8",
+    "js": "text/javascript; charset=utf-8",
+    "css": "text/css; charset=utf-8",
+}
 #: The files of the page by path, and their content types.
-PAGE = {
-    "/": ("pad.html", "text/html; charset=utf-8"),
-    "/pad.js": ("pad.js", "text/javascript; charset=utf-8"),
-    "/pad.css": ("pad.css", "text/css; charset=utf-8"),
+PAGE = {"/": ("pad.html", KINDS["html"])} | {
+    f"/{name}": (name, KINDS[name.rsplit(".", 1)[1]])
+    for name in (
+        "pad.js",
+        "pad.css",
+        "editors.js",
+        "highlight.js",
+        "fpl-language.js",
+    )
 }
 
 

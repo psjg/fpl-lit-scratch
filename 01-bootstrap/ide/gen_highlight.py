@@ -11,6 +11,7 @@ are written by hand, because Monarch and TextMate are regex state
 machines and the grammar is a context-free one.
 
     python ide/gen_highlight.py monarch  > ../assets/fpl-language.js
+    cp ../assets/fpl-language.js fpl/fpl-language.js  # the pad's copy
     python ide/gen_highlight.py textmate > ide/fpl.tmLanguage.json
 """
 

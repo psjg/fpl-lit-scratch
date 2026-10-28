@@ -11,7 +11,8 @@
  *
  * `http` is the backend of `python -m fpl pad`; the site's /pad/ page passes
  * one that runs fpl.pad under Pyodide (assets/fpl-pad.js). Both pages share
- * this file, so they share the keys:
+ * this file, so they share the keys, which the cell editor (editors.js)
+ * turns into the hooks below:
  *
  *   Shift+Enter, Ctrl+Enter, Cmd+Enter  evaluate the cell, and every cell below
  *   Enter                               a newline, with the line's tabs
@@ -19,6 +20,8 @@
  *   ArrowUp / ArrowDown at the edge     the cell above / below
  *   Backspace in an empty cell          remove the cell
  */
+
+import {plain} from "./editors.js";
 
 /** The backend of `python -m fpl pad`: the routes over HTTP. */
 export const http = {
@@ -40,25 +43,24 @@ async function answer(response) {
 }
 
 /**
- * Draw the pad into `root`, with `said` for messages, on `backend`.
+ * Draw the pad into `root`, with `said` for messages, on `backend`, each
+ * cell typed in an `editor` of editors.js.
  * @param {{load(): Promise<object>, change(route: string, body: object): Promise<object>}} backend
  */
-export async function mount(backend, root, said) {
+export async function mount(backend, root, said, editor = plain) {
 	let cells = [];
 	let next = "";
+	let editors = [];
 
 	function texts() {
-		return [...root.querySelectorAll("textarea")].map(area => area.value);
-	}
-
-	function fit(area) {
-		area.rows = Math.max(1, area.value.split("\n").length);
+		return editors.map(each => each.value());
 	}
 
 	function render(typed, focus, caret) {
 		const staleBy = {};
 		cells.forEach((cell, j) => cell.changes.forEach(i => (staleBy[i] = j)));
 		const drafted = {source: "", status: "draft", bar: next, turns: [], changes: []};
+		editors = [];
 		root.replaceChildren(...[...cells, drafted].map(
 			(cell, i) => drawn(cell, i, typed[i] ?? cell.source, staleBy[i])));
 		move(Math.min(focus, cells.length), caret);
@@ -71,15 +73,16 @@ export async function mount(backend, root, said) {
 		const bar = document.createElement("div");
 		bar.className = "bar";
 		bar.textContent = cell.bar;
-		const area = document.createElement("textarea");
-		area.spellcheck = false;
-		area.value = text;
-		const edited = () => section.classList.toggle(
-			"edited", i < cells.length && area.value !== cell.source);
-		area.addEventListener("input", () => { fit(area); edited(); });
-		area.addEventListener("keydown", event => keyed(event, area, i));
-		fit(area);
-		edited();
+		const host = document.createElement("div");
+		const typed = editor.make(host, text, {
+			input: () => section.classList.toggle(
+				"edited", i < cells.length && typed.value() !== cell.source),
+			evaluate: () => evaluate(i, typed.value()),
+			up: () => i > 0 && move(i - 1, "end"),
+			down: () => i < cells.length && move(i + 1, "start"),
+			remove: () => i < cells.length && remove(i),
+		});
+		editors[i] = typed;
 		const turns = document.createElement("pre");
 		turns.className = "turns";
 		const lines = cell.turns.map(line => [line, line.startsWith(";;") ? "note" : ""]);
@@ -92,15 +95,8 @@ export async function mount(backend, root, said) {
 			span.textContent = line + "\n";
 			turns.append(span);
 		}
-		section.append(bar, area, turns);
+		section.append(bar, host, turns);
 		return section;
-	}
-
-	function insert(area, text) {
-		if (!document.execCommand("insertText", false, text)) {
-			area.setRangeText(text, area.selectionStart, area.selectionEnd, "end");
-		}
-		fit(area);
 	}
 
 	async function changed(route, body, typed, focus, caret) {
@@ -121,48 +117,19 @@ export async function mount(backend, root, said) {
 		changed("/run", {index: i, source}, appended ? [...typed, ""] : typed, i + 1, "end");
 	}
 
-	function keyed(event, area, i) {
-		const before = area.value.slice(0, area.selectionStart);
-		const after = area.value.slice(area.selectionEnd);
-		const line = before.slice(before.lastIndexOf("\n") + 1);
-		if (event.key === "Enter" && (event.shiftKey || event.ctrlKey || event.metaKey)) {
-			event.preventDefault();
-			evaluate(i, area.value);
-		} else if (event.key === "Enter") {
-			event.preventDefault();
-			insert(area, "\n" + line.match(/^\t*/)[0]);
-		} else if (event.key === "Tab" && !event.shiftKey) {
-			event.preventDefault();
-			insert(area, "\t");
-		} else if (event.key === "Tab") {
-			event.preventDefault();
-			const start = before.length - line.length;
-			if (area.value[start] === "\t") {
-				area.setRangeText("", start, start + 1, "preserve");
-				fit(area);
-			}
-		} else if (event.key === "ArrowUp" && !before.includes("\n") && i > 0) {
-			event.preventDefault();
-			move(i - 1, "end");
-		} else if (event.key === "ArrowDown" && !after.includes("\n") && i < cells.length) {
-			event.preventDefault();
-			move(i + 1, "start");
-		} else if (event.key === "Backspace" && area.value === "" && i < cells.length) {
-			event.preventDefault();
-			const typed = texts();
-			typed.splice(i, 1);
-			changed("/remove", {index: i}, typed, Math.max(0, i - 1), "end");
-		}
+	function remove(i) {
+		const typed = texts();
+		typed.splice(i, 1);
+		changed("/remove", {index: i}, typed, Math.max(0, i - 1), "end");
+		return true;
 	}
 
 	function move(i, caret) {
-		const area = root.querySelectorAll("textarea")[i];
-		area.focus();
-		const at = caret === "start" ? 0 : area.value.length;
-		area.setSelectionRange(at, at);
-		area.scrollIntoView({block: "nearest"});
+		editors[i].focus(caret);
+		return true;
 	}
 
+	await editor.ready();
 	return {
 		reset: () => changed("/reset", {}, [""], 0, "end"),
 		ready: (async () => {

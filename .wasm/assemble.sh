@@ -65,7 +65,8 @@ rm -rf .site/try .site/ide .site/learn .site/pad
 cp -R assets/try .site/try
 # The pad: the shell is the site's, the page itself 01-bootstrap/fpl's (fpl/pad_web.py).
 cp -R assets/pad .site/pad
-cp 01-bootstrap/fpl/pad.js 01-bootstrap/fpl/pad.css .site/pad/
+cp 01-bootstrap/fpl/pad.js 01-bootstrap/fpl/pad.css 01-bootstrap/fpl/editors.js \
+  01-bootstrap/fpl/highlight.js 01-bootstrap/fpl/fpl-language.js .site/pad/
 cp -R assets/try .site/ide  # the IDE alias of the playground page
 # Telemetry is off unless a Sentry DSN is given at build time; none is committed.
 if [ -n "${FPL_SENTRY_DSN:-}" ]; then
