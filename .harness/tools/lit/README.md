@@ -130,6 +130,12 @@ with its old text struck through. The right margin is free because `assets/fpl-n
 the page's own sections under its entry in the left sidebar, and `essay.lua` nests the
 headings' anchors (`#strings-and-comments/counted`), so a URL reads `page#scope/subscope`.
 
+The control at the top of the margin (or, narrow, at the top right) has three stands,
+also cycled with the key `a`: *Lezen* shows nothing; *Spans* underlines the spans whose labels
+pass the filter, a row of label chips under the control (a struck chip hides its spans, "alles"
+shows them all); *Kantlijn* adds the cards, the lines and the editor. The stand and the filter
+are remembered in that browser for the whole site, and a page opens in Lezen.
+
 A reader selects text, writes a note and picks labels (chips; type `label/sub` for one
 more) in a card at that height, and saves it (⌘↩) as a quote row: `{id, item, commit,
 text, prefix, suffix, labels, note, targets, createdAt, updatedAt}`, the text as shown and

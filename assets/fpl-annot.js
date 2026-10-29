@@ -46,6 +46,13 @@
  * once fpl-nav.js has moved the page's sections to the left, and holds
  * the cards; where the column is hidden (a narrow window) each card
  * folds under the block its span is in, and the editor is a popover.
+ *
+ * Three stands, chosen with the control at the top of the column (or,
+ * narrow, fixed at the top right) and with the key "a": lezen shows
+ * nothing; spans underlines the spans whose labels pass the filter, a
+ * row of label chips under the control; kantlijn adds the cards, the
+ * lines and the editor. localStorage["fpl-annot:mode"] keeps the stand
+ * and "fpl-annot:hide" the labels switched off, for the whole site.
  */
 (() => {
   "use strict";
@@ -70,6 +77,22 @@
   const column = document.getElementById("quarto-margin-sidebar");
 
   let sidecar = [];
+
+  const MODES = ["lezen", "spans", "kantlijn"];
+  const NONE = "zonder label";
+  const mode = (set) => {
+    try {
+      if (set) localStorage.setItem("fpl-annot:mode", set);
+      const m = localStorage.getItem("fpl-annot:mode");
+      return MODES.includes(m) ? m : "lezen";
+    } catch { return set ?? "lezen"; }
+  };
+  const hidden = (set) => {
+    try {
+      if (set) localStorage.setItem("fpl-annot:hide", JSON.stringify([...set]));
+      return new Set(JSON.parse(localStorage.getItem("fpl-annot:hide") || "[]"));
+    } catch { return set ?? new Set(); }
+  };
 
   /** This browser's rows for the page; [] when none or unreadable. */
   const local = () => {
@@ -157,7 +180,17 @@
   const rows = () => [...sidecar, ...local().map((r) => ({ ...r, mine: true }))];
   let all = [], state = {};
 
-  /** Remove the marks, draw every row again, and lay the margin out. */
+  /** The labels a span is filtered by: its own and those of the facts about it. */
+  function labelsOf(row) {
+    const got = new Set(row.labels ?? []);
+    const walk = (id) => { for (const r of all.filter((x) => typeof x.text !== "string" && x.targets?.[0] === id)) {
+      for (const l of r.labels ?? []) got.add(l); walk(r.id); } };
+    walk(row.id);
+    return got.size ? got : new Set([NONE]);
+  }
+  const passes = (row) => { const off = hidden(); return [...labelsOf(row)].some((l) => !off.has(l)); };
+
+  /** Remove the marks, draw every row the stand and the filter allow, and lay the margin out. */
   function draw() {
     for (const m of body.querySelectorAll("mark.fact")) m.replaceWith(...m.childNodes);
     body.normalize();
@@ -167,9 +200,29 @@
       if (typeof row.text !== "string" || !row.text.trim()) continue;
       const ix = shown(), at = find(ix, row);
       state[row.id] = typeof at === "string" ? at : "vers";
-      if (typeof at !== "string") wrap(ix, at[0], at[1], row);
+      if (typeof at !== "string" && mode() !== "lezen" && passes(row)) wrap(ix, at[0], at[1], row);
     }
     layout();
+  }
+
+  /** The control: three stands, and under it the labels to show. */
+  const control = el("div", { className: "fpl-annot-ui fpl-mode" });
+  function drawControl() {
+    const spans = all.filter((r) => typeof r.text === "string"), cur = mode();
+    const seg = el("div", { className: "fpl-seg", role: "radiogroup" },
+      ...MODES.map((m) => button(m === "lezen" ? "Lezen" : m === "spans" ? `Spans · ${spans.length}` : "Kantlijn",
+        () => { mode(m); draw(); }, m === cur ? "is-on" : "")));
+    control.replaceChildren(seg);
+    if (cur === "lezen") return;
+    const off = hidden();
+    const labels = [...new Set(spans.flatMap((r) => [...labelsOf(r)]))].sort((a, b) => a === NONE ? 1 : b === NONE ? -1 : a.localeCompare(b));
+    const row = el("div", { className: "fpl-chips fpl-filter" },
+      ...labels.map((l) => { const c = chip(l, off.has(l) ? "is-off" : "is-on"); c.tabIndex = 0;
+        c.onclick = () => { const o = hidden(); o.has(l) ? o.delete(l) : o.add(l); hidden(o); draw(); };
+        c.onkeydown = (e) => { if (e.key === " " || e.key === "Enter") { e.preventDefault(); c.onclick(); } };
+        return c; }),
+      off.size ? button("alles", () => { hidden(new Set()); draw(); }, "fpl-link") : null);
+    control.append(row);
   }
 
   /* ---- what a card shows ---- */
@@ -370,17 +423,30 @@
   /** Lay every card out: the head, the lost rows, then one card per span in page order. */
   function layout() {
     closeEditor();
+    drawControl();
     for (const c of body.querySelectorAll(".fpl-inline")) c.remove();
-    margin.replaceChildren(head());
+    margin.replaceChildren();
     lines.replaceChildren();
-    const spans = all.filter((r) => typeof r.text === "string");
+    margin.style.minHeight = "";
+    const full = mode() === "kantlijn";
+    if (wide()) {
+      column.classList.add("fpl-column");
+      if (control.parentElement !== column) column.prepend(control);
+      if (margin.parentElement !== column) column.append(margin);
+      if (lines.parentElement !== document.body) document.body.append(lines);
+    } else {
+      column?.classList.remove("fpl-column");
+      lines.remove();
+      if (control.parentElement !== document.body) document.body.append(control);
+      if (margin.parentElement !== body) body.prepend(margin);
+    }
+    if (!full) return;
+    margin.append(head());
+    const spans = all.filter((r) => typeof r.text === "string" && passes(r));
     const lost = spans.filter((r) => state[r.id] !== "vers");
     const found = spans.map((r) => ({ r, m: marksOf(r.id)[0] })).filter((x) => x.m)
       .sort((a, b) => a.m.getBoundingClientRect().top - b.m.getBoundingClientRect().top);
     if (wide()) {
-      column.classList.add("fpl-column");
-      if (margin.parentElement !== column) column.append(margin);
-      if (lines.parentElement !== document.body) document.body.append(lines);
       let y = margin.firstElementChild.offsetHeight + GAP;
       for (const r of lost) {
         const c = cardOf(r);
@@ -400,9 +466,6 @@
       margin.style.minHeight = `${y}px`;
       drawLines();
     } else {
-      column?.classList.remove("fpl-column");
-      lines.remove();
-      if (margin.parentElement !== body) body.prepend(margin);
       for (const r of lost) margin.append(cardOf(r));
       for (const { r, m } of found) {
         const c = cardOf(r);
@@ -467,12 +530,14 @@
       const m = target?.closest("mark.fact");
       if (!m) { if (editing) { closeEditor(); layout(); } return; }
       const row = all.find((r) => r.id === m.dataset.id);
+      if (mode() !== "kantlijn") { mode("kantlijn"); draw(); hot(row.id); return; }
       hot(row.id);
       const card = margin.querySelector(`.fpl-card[data-id="${CSS.escape(row.id)}"]`);
       if (row.mine) edit(row, card, m.getBoundingClientRect());
       else if (card && wide()) card.scrollIntoView({ block: "nearest", behavior: "smooth" });
       return;
     }
+    if (mode() !== "kantlijn") return;
     const range = sel.getRangeAt(0);
     if (!body.contains(range.commonAncestorContainer)) return;
     const ix = shown(), [s, e] = bounds(ix, range);
@@ -484,7 +549,14 @@
   document.addEventListener("touchend", (ev) => setTimeout(() => pointerDone(ev), 0));
   body.addEventListener("mouseover", (ev) => { const m = ev.target.closest?.("mark.fact"); if (m) hot(m.dataset.id); });
   body.addEventListener("mouseout", (ev) => { if (ev.target.closest?.("mark.fact") && !editing) hot(null); });
-  document.addEventListener("keydown", (ev) => { if (ev.key === "Escape" && editing) { closeEditor(); layout(); } });
+  document.addEventListener("keydown", (ev) => {
+    if (ev.key === "Escape" && editing) { closeEditor(); layout(); return; }
+    if (ev.key === "a" && !ev.metaKey && !ev.ctrlKey && !ev.altKey
+      && !ev.target.closest?.("input, textarea, [contenteditable]")) {
+      mode(MODES[(MODES.indexOf(mode()) + 1) % MODES.length]);
+      draw();
+    }
+  });
 
   let timer = 0;
   // not while editing: a phone's keyboard resizes the window, and the draft would go

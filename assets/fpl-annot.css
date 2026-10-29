@@ -36,7 +36,6 @@ mark.fact-mine:hover, mark.fact-mine.is-hot { background: var(--fpl-mine-wash); 
 #quarto-margin-sidebar.fpl-column { position: relative; top: auto; height: auto; max-height: none;
   overflow: visible; align-self: stretch; }
 .fpl-margin { position: relative; font-size: .86rem; line-height: 1.4; color: var(--fpl-fg); }
-.fpl-column .fpl-margin { min-height: 100%; }
 .fpl-lines { position: absolute; top: 0; left: 0; pointer-events: none; z-index: 1; }
 .fpl-line { fill: none; stroke: var(--fpl-vers); stroke-width: 1; opacity: .35; transition: opacity .12s; }
 .fpl-line.mine { stroke: var(--fpl-mine); }
@@ -74,6 +73,24 @@ mark.fact-mine:hover, mark.fact-mine.is-hot { background: var(--fpl-mine-wash); 
 .fpl-rel b { color: var(--fpl-fg); }
 .fpl-rel code { font-size: .76rem; background: none; padding: 0; color: inherit; }
 
+/* the control: three stands and the label filter */
+.fpl-mode { font-size: .8rem; }
+.fpl-column .fpl-mode { padding-bottom: .6rem; }
+body > .fpl-mode { position: fixed; top: 3.6rem; right: .6rem; z-index: 1000; max-width: min(20rem, calc(100vw - 1.2rem));
+  padding: .4rem .5rem; background: var(--fpl-bg); border: 1px solid var(--fpl-rule); border-radius: 8px; box-shadow: 0 4px 16px rgba(0, 0, 0, .12); }
+.fpl-seg { display: inline-flex; padding: 2px; border-radius: 999px; border: 1px solid var(--fpl-rule); background: var(--fpl-wash); }
+.fpl-seg button { font: inherit; font-size: .76rem; font-weight: 600; padding: .25rem .65rem; border: 0; border-radius: 999px;
+  background: none; color: var(--fpl-mute); cursor: pointer; }
+.fpl-seg button.is-on { background: var(--fpl-bg); color: var(--fpl-vers); box-shadow: 0 1px 2px rgba(0, 0, 0, .12); }
+.fpl-seg button:focus-visible { outline: 2px solid var(--fpl-mine); outline-offset: 1px; }
+.fpl-filter { margin-top: .45rem; }
+.fpl-filter .fpl-chip { cursor: pointer; }
+.fpl-filter .fpl-chip.is-on { background: var(--fpl-vers-wash); border-color: transparent; color: var(--fpl-vers); }
+.fpl-filter .fpl-chip.is-off { background: none; color: var(--fpl-mute); text-decoration: line-through; }
+.fpl-link { font: inherit; font-size: .74rem; font-weight: 600; border: 0; background: none; color: var(--bs-link-color, #2b6cb0); cursor: pointer; padding: 0; }
+.fpl-card, .fpl-line { animation: fpl-in .12s ease-out; }
+@keyframes fpl-in { from { opacity: 0; } }
+
 /* the head of the margin */
 .fpl-head { padding-bottom: .5rem; border-bottom: 1px solid var(--fpl-rule); }
 .fpl-column .fpl-head { position: absolute; left: 0; right: 0; top: 0; }
@@ -101,4 +118,4 @@ mark.fact-mine:hover, mark.fact-mine.is-hot { background: var(--fpl-mine-wash); 
 .fpl-pop[hidden] { display: none; }
 .fpl-toast { position: fixed; bottom: 1rem; left: 50%; transform: translateX(-50%); z-index: 1002;
   padding: .4rem .8rem; border-radius: 999px; background: var(--fpl-fg); color: var(--fpl-bg); font-size: .8rem; }
-@media (prefers-reduced-motion: reduce) { mark.fact, .fpl-card, .fpl-line { transition: none; } }
+@media (prefers-reduced-motion: reduce) { mark.fact, .fpl-card, .fpl-line { transition: none; animation: none; } }
