@@ -224,7 +224,8 @@ judgements appart? is er misschien een ander symbool dat we kunnen gebruiken voo
 unicode? of ascii liever ascii natuurlijk", and on `within` for the success line: "dat".
 Decided: two judgments, `|- ! err/<scope>* <line>:<col> “msg” @ n` (a point, the failing
 step) and `|- value : sort within n` (a bound); no third sign for time; the input number
-of `ERROR: @N` moves to `#N`.
+of `ERROR: @N` moves to `#N`. His go (10-29, through the pad session) on the first form
+with `#N` and on flipping the printers: "beide ja".
 
 On rank (10-29, verbatim): "uh krijgen we straks conflicten met het box model stel we
 willen een box model... willen we een box model? net zoals J en UIuia ik heb ook de
