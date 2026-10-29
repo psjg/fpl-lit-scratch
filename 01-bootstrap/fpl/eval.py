@@ -39,6 +39,7 @@ from fpl.ast_core import (
     Run,
     Statement,
     Strand,
+    Stuck,
     Symbol,
     Value,
     Var,
@@ -833,21 +834,33 @@ def truncated(a: int, d: int) -> tuple[int, int]:
     return q, a - d * q
 
 
-def divided(
-    rule: Callable[[int, int], tuple[int, int]],
-    part: int,
-    span: Span,
-    a: Value,
-    d: Value,
+#: How a pair of integers divides: the quotient and the remainder.
+type Rule = Callable[[int, int], tuple[int, int]]
+
+
+def total(rule: Rule) -> Rule:
+    """Extend a rule to a zero divisor: ``a`` by 0 is ``(0, a)``.
+
+    So ``a = d q + r`` holds for every ``d``; ``pdiv`` and ``pmod`` are
+    :func:`euclidean` made total.
+
+    Examples:
+        >>> total(euclidean)(-7, 0), total(euclidean)(-7, 2)
+        ((0, -7), (-4, 1))
+    """
+    return lambda a, d: rule(a, d) if d else (0, a)
+
+
+def parted(
+    rule: Rule, part: int, span: Span, a: Value, d: Value
 ) -> tuple[Value, ...]:
     """Leave the quotient (*part* 0) or remainder (1) of integers.
 
-    ``a d kdiv`` leaves the quotient of *a* by *d*, ``a d kmod`` the
-    remainder; strands map item by item as in :func:`arithmetic`.
+    Strands map item by item as in :func:`arithmetic`. The rule must
+    take a zero divisor (:func:`total`).
 
     Args:
-        rule: How the pair divides: :func:`floored`, :func:`euclidean`
-            or :func:`truncated`.
+        rule: How the pair divides.
         part: 0 for the quotient, 1 for the remainder.
         span: The word's position, for errors.
         a: The dividend.
@@ -855,22 +868,65 @@ def divided(
 
     Raises:
         :exc:`FplError`: An operand is not an integer (``arithmetic on a
-            non-number``, the text of :func:`operands`), or a divisor
-            is 0 (``division by zero``).
+            non-number``, the text of :func:`operands`), or as
+            :func:`arithmetic`.
 
     Examples:
-        >>> divided(floored, 1, Span(1, 1), Strand((7, 8)), 2)
-        (Strand(items=(1, 0)),)
+        >>> parted(total(euclidean), 1, Span(1, 1), Strand((7, 8)), 0)
+        (Strand(items=(7, 8)),)
     """
 
     def op(x: Number, y: Number) -> Number:
         if isinstance(x, Decimal) or isinstance(y, Decimal):
             raise FplError(span, "arithmetic on a non-number")
-        if y == 0:
-            raise FplError(span, "division by zero")
         return rule(x, y)[part]
 
     return arithmetic(op, span, a, d)
+
+
+#: The words a zero divisor sticks, each with its rule and the part it
+#: leaves: 0 for the quotient, 1 for the remainder.
+STICKING: dict[str, tuple[Rule, int]] = {
+    "kdiv": (floored, 0),
+    "kmod": (floored, 1),
+    "bdiv": (euclidean, 0),
+    "bmod": (euclidean, 1),
+    "tdiv": (truncated, 0),
+    "tmod": (truncated, 1),
+}
+
+
+def divided(word: str, span: Span, a: Value, d: Value) -> tuple[Value, ...]:
+    """Divide as :func:`parted` does, or stick by a zero divisor.
+
+    ``a d kdiv`` leaves the quotient of *a* by *d*, ``a d kmod`` the
+    remainder, by the word's rule in :data:`STICKING`. By 0 the word
+    does not fire: it leaves one :class:`~fpl.ast_core.Stuck` value
+    holding *a*, *d* and the word. A strand with a 0 among its items
+    sticks the whole application, so the one value holds both operands
+    as they were; this is the simplest rule, with no partly divided
+    strand. The operands are checked first, so a decimal 0 is refused,
+    not stuck.
+
+    Args:
+        word: The word, a key of :data:`STICKING`.
+        span: The word's position, for errors and a stuck term.
+        a: The dividend.
+        d: The divisor.
+
+    Raises:
+        :exc:`FplError`: As :func:`parted`.
+
+    Examples:
+        >>> divided("kmod", Span(1, 1), Strand((7, 8)), 2)
+        (Strand(items=(1, 0)),)
+        >>> (stuck,) = divided("kdiv", Span(1, 1), 7, 0)
+        >>> stuck.operands, stuck.word
+        ((7, 0), 'kdiv')
+    """
+    rule, part = STICKING[word]
+    result = parted(total(rule), part, span, a, d)
+    return (Stuck((a, d), word, span),) if 0 in operands(d, span) else result
 
 
 def operands(value: Value, span: Span) -> tuple[Number, ...]:
@@ -1047,12 +1103,9 @@ BUILTINS: dict[str, Builtin] = {
     "times": partial(arithmetic, lambda x, y: x * y),
     "succ": partial(stepped, 1),
     "pred": partial(stepped, -1),
-    "kdiv": partial(divided, floored, 0),
-    "kmod": partial(divided, floored, 1),
-    "bdiv": partial(divided, euclidean, 0),
-    "bmod": partial(divided, euclidean, 1),
-    "tdiv": partial(divided, truncated, 0),
-    "tmod": partial(divided, truncated, 1),
+    **{word: partial(divided, word) for word in STICKING},
+    "pdiv": partial(parted, total(euclidean), 0),
+    "pmod": partial(parted, total(euclidean), 1),
     "swap": swap,
     "dup": dup,
     "?": unfilled,

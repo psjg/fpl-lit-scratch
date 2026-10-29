@@ -22,6 +22,8 @@ from fpl.ast_core import (
     Push,
     Row,
     Run,
+    Strand,
+    Stuck,
     Symbol,
     Value,
     Wild,
@@ -56,7 +58,7 @@ HERE = Span(1, 1)
 AT = Span(2, 3)
 BUILTINS = (
     *("+", "-", "times", "succ", "pred", "dup", "swap", "drop"),
-    *("kdiv", "kmod", "bdiv", "bmod", "tdiv", "tmod"),
+    *("kdiv", "kmod", "bdiv", "bmod", "tdiv", "tmod", "pdiv", "pmod"),
 )
 
 
@@ -758,24 +760,29 @@ QUOTIENT = {
     ("Nat0", "Int"): "Int",
     ("Int", "Int"): "Int",
 }
+#: The sort bmod and pmod leave by a divisor that is not 0.
+BMOD = {
+    ("Int", "Nat1"): "Nat0",
+    ("Int", "Neg1"): "Nat0",
+    ("Neg1", "Neg1"): "Nat0",
+    ("Int", "Int"): "Int",
+}
+#: A Zero divisor sticks the six words: the term left is a Value.
+STICKS = {("Int", "Zero"): "Value", ("Zero", "Zero"): "Value"}
 #: The sort of each word that leaves a remainder, as above.
 DIVISIONS = {
-    "kdiv": QUOTIENT,
-    "bdiv": QUOTIENT,
-    "tdiv": QUOTIENT,
+    "kdiv": QUOTIENT | STICKS,
+    "bdiv": QUOTIENT | STICKS,
+    "tdiv": QUOTIENT | STICKS,
     "kmod": {
         ("Int", "Nat1"): "Nat0",
         ("Int", "Neg1"): "Neg0",
         ("Nat1", "Nat1"): "Nat0",
         ("Int", "Nat0"): "Int",
         ("Int", "Int"): "Int",
-    },
-    "bmod": {
-        ("Int", "Nat1"): "Nat0",
-        ("Int", "Neg1"): "Nat0",
-        ("Neg1", "Neg1"): "Nat0",
-        ("Int", "Int"): "Int",
-    },
+    }
+    | STICKS,
+    "bmod": BMOD | STICKS,
     "tmod": {
         ("Zero", "Int"): "Zero",
         ("Nat0", "Int"): "Nat0",
@@ -783,19 +790,32 @@ DIVISIONS = {
         ("Neg1", "Nat1"): "Neg0",
         ("Int", "Nat1"): "Int",
         ("Int", "Int"): "Int",
+    }
+    | STICKS,
+    "pdiv": QUOTIENT | {("Int", "Zero"): "Zero", ("Nat1", "Zero"): "Zero"},
+    "pmod": BMOD
+    | {
+        ("Zero", "Zero"): "Zero",
+        ("Nat1", "Zero"): "Nat1",
+        ("Neg1", "Zero"): "Neg1",
+        ("Nat0", "Zero"): "Nat0",
+        ("Neg0", "Zero"): "Neg0",
+        ("Int", "Zero"): "Int",
     },
 }
-SIX = list(DIVISIONS)
+WORDS = list(DIVISIONS)
+#: The words a zero divisor sticks.
+SIX = WORDS[:6]
 GRID = (-7, -1, 0, 1, 7)
-DIVISORS = (-2, -1, 1, 2)
+DIVISORS = (-2, -1, 0, 1, 2)
 
 
-@pytest.mark.parametrize("word", SIX)
+@pytest.mark.parametrize("word", WORDS)
 def test_the_division_words_take_two_integers_and_leave_one(
     word: str,
 ) -> None:
     """
-    The general arrow of the six division words is Int Int to Int.
+    The general arrow of the eight division words is Int Int to Int.
     """
     arrow = ARROWS[word]
     assert (arrow.ins, arrow.outs) == ((Kind.INT, Kind.INT), (Kind.INT,))
@@ -833,7 +853,15 @@ def test_division_leaves_a_sort_that_depends_on_both_inputs(
         ("7 | -2 bmod", "Nat0"),
         ("-7 | 2 tmod", "Neg0"),
         ("0 | 2 tmod", "Zero"),
+        ("7 | 0 pdiv", "Zero"),
+        ("7 | 0 pmod", "Nat1"),
+        ("-7 | 0 pmod", "Neg1"),
+        ("0 | 0 pmod", "Zero"),
+        ("-7 | 2 pmod", "Nat0"),
+        ("-7 | 2 pdiv", "Neg0"),
+        ("0 | 0 tmod", "Value"),
         ("1.5 | 2 kdiv", None),
+        ("1.5 | 0 kdiv", None),
     ],
 )
 def test_a_division_goal_shows_the_sort_it_leaves(
@@ -841,14 +869,15 @@ def test_a_division_goal_shows_the_sort_it_leaves(
 ) -> None:
     """
     A goal after a division of literals shows the sort of its table row;
-    a decimal is refused before any goal is met.
+    a decimal is refused before any goal is met, by 0 as by any other
+    divisor.
     """
     column = len(source) + 2
     expected = [] if left is None else [f"GOAL 1:{column} ? : {left} --"]
     assert goals(f"{source} ?\n") == expected
 
 
-@pytest.mark.parametrize("word", SIX)
+@pytest.mark.parametrize("word", WORDS)
 @pytest.mark.parametrize("have", [Input(0), Kind.VALUE])
 def test_an_unknown_division_input_keeps_the_general_arrow(
     word: str, have: Sort
@@ -863,20 +892,31 @@ def test_an_unknown_division_input_keeps_the_general_arrow(
 
 
 @pytest.mark.parametrize("word", SIX)
-def test_a_known_zero_divisor_is_refused_statically(word: str) -> None:
+def test_a_known_zero_divisor_leaves_a_value(word: str) -> None:
     """
-    A divisor known to be Zero is refused at the word before any line
-    runs, as it is at run time.
+    A divisor known to be Zero is no refusal: the word leaves a Value,
+    the stuck term the run leaves.
     """
-    with pytest.raises(FplError) as caught:
-        run(f"7 | 0 {word}\n")
-    assert str(caught.value) == "ERROR: 1:7 division by zero"
-    with pytest.raises(FplError) as caught:
-        elaborate((Run((Push(7), Push(0), Call(word, AT))),))
-    assert str(caught.value) == "ERROR: 2:3 division by zero"
+    assert goals(f"7 | 0 {word} ?\n") == ["GOAL 1:12 ? : Value --"]
+    arrows, found = elaborate((Run((Push(7), Push(0), Call(word, AT))),))
+    assert (arrows[word], found) == (ARROWS[word], ())
+    assert RUN[word](AT, 7, 0) == (Stuck((7, 0), word, AT),)
 
 
-@pytest.mark.parametrize("word", SIX)
+def test_a_stuck_term_is_a_value_of_its_operands_and_word() -> None:
+    """
+    A stuck term is of no number sort, and two are equal when their
+    operands and word are, wherever they stuck.
+    """
+    stuck = Stuck((7, 0), "kdiv", AT)
+    assert sort(stuck) is Kind.VALUE
+    assert stuck == Stuck((7, 0), "kdiv", HERE)
+    assert stuck != Stuck((7, 0), "kmod", AT)
+    strands = (Strand((7, 8)), Strand((0, 2)))
+    assert RUN["bmod"](AT, *strands) == (Stuck(strands, "bmod", AT),)
+
+
+@pytest.mark.parametrize("word", WORDS)
 def test_a_decimal_is_refused_by_division(word: str) -> None:
     """
     A Decimal is no integer: elaboration refuses it at the word.
@@ -890,21 +930,27 @@ def test_a_decimal_is_refused_by_division(word: str) -> None:
         )
 
 
-@pytest.mark.parametrize("word", SIX)
+@pytest.mark.parametrize("word", WORDS)
 def test_a_decimal_that_elaboration_missed_is_refused_at_run_time(
     word: str,
 ) -> None:
     """
     A value of no known sort reaches a division unchecked: the run
-    refuses a Decimal there, in either place, as elaboration does.
+    refuses a Decimal there, in either place, as elaboration does; a
+    decimal 0 is refused before it could stick the term.
     """
-    for a, d in ((Decimal("1.5"), 2), (7, Decimal("2"))):
+    for a, d in (
+        (Decimal("1.5"), 2),
+        (7, Decimal("2")),
+        (7, Decimal("0")),
+        (Decimal("1.5"), 0),
+    ):
         with pytest.raises(FplError) as caught:
             RUN[word](AT, a, d)
         assert str(caught.value) == "ERROR: 2:3 arithmetic on a non-number"
 
 
-@pytest.mark.parametrize("word", SIX)
+@pytest.mark.parametrize("word", WORDS)
 @pytest.mark.parametrize("a", GRID)
 @pytest.mark.parametrize("d", DIVISORS)
 def test_the_result_of_division_fits_the_sort_found_for_it(

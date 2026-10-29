@@ -83,6 +83,17 @@ def test_a_turn_is_written_as_the_repl_writes_one() -> None:
     ]
 
 
+def test_a_stuck_division_is_one_value_on_the_result_line() -> None:
+    """
+    By a zero divisor the term stays: one value, written as its source,
+    of the sort Value.
+    """
+    assert turns(pad("7 | 0 kdiv", "1 | 7 | 0 kmod")) == [
+        ("|- 7 0 kdiv : Value",),
+        ("|- 1 | 7 0 kmod : Nat1 Value",),
+    ]
+
+
 def test_an_untyped_line_keeps_the_repl_s_dots() -> None:
     clauses = "f : x: Int -- y\n\tdrop #int\nf : x: Text -- y\n\tdrop #text"
     assert turns(pad(clauses, "5 f\n1 [2] [3] if")) == [

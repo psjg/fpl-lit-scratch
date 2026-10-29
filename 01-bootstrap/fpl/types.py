@@ -196,10 +196,6 @@ class Cases(Arrow):
 
     #: The arrows of the same count of ins, most specific first.
     cases: tuple[Arrow, ...]
-    #: Whether the last input is a divisor: a ``Zero`` there is refused
-    #: by :func:`called`, since no case takes it and the general arrow
-    #: would wrongly let it by.
-    divisor: bool = False
 
 
 @dataclass(frozen=True)
@@ -287,6 +283,10 @@ def stepping(table: tuple[tuple[Kind, Kind], ...]) -> Cases:
 
 type Rows = tuple[tuple[Kind, Kind, Kind], ...]
 
+#: A ``Zero`` divisor sticks the six division words: the term stays as
+#: a value of no number sort (:class:`~fpl.ast_core.Stuck`). The row
+#: comes first, before a row whose divisor a ``Zero`` rises to.
+STUCK: Rows = ((Kind.INT, Kind.ZERO, Kind.VALUE),)
 #: The sort of the quotient of ``kdiv``, ``bdiv`` and ``tdiv`` alike, as
 #: (dividend, divisor, result), most specific first. Any other pair
 #: leaves an ``Int``. A floored, Euclidean or truncated quotient has
@@ -315,19 +315,37 @@ TMOD: Rows = (
     (Kind.NAT0, Kind.INT, Kind.NAT0),
     (Kind.NEG0, Kind.INT, Kind.NEG0),
 )
+#: The sort of ``pdiv``: a quotient by 0 is 0, else as ``bdiv``.
+PDIV: Rows = ((Kind.INT, Kind.ZERO, Kind.ZERO), *QUOTIENT)
+#: The sort of ``pmod``: a remainder by 0 is the dividend, of its own
+#: sort; else as ``bmod``.
+PMOD: Rows = (
+    *(
+        (have, Kind.ZERO, have)
+        for have in (
+            Kind.ZERO,
+            Kind.NAT1,
+            Kind.NEG1,
+            Kind.NAT0,
+            Kind.NEG0,
+            Kind.INT,
+        )
+    ),
+    *BMOD,
+)
 
 
 def dividing(table: Rows) -> Cases:
     """Return the arrow of a division word from its table.
 
-    The general arrow takes two integers and leaves one; a ``Zero``
-    divisor is refused (:attr:`Cases.divisor`).
+    The general arrow takes two integers and leaves one. It is taken
+    for a divisor that may be 0 but is not known to be, so a stuck term
+    can stand where it said ``Int`` (an open question).
     """
     return Cases(
         (Kind.INT, Kind.INT),
         (Kind.INT,),
         tuple(Arrow((a, d), (left,)) for a, d, left in table),
-        divisor=True,
     )
 
 
@@ -345,12 +363,14 @@ ARROWS: dict[str, Arrow] = {
     "times": NUMBERS,
     "succ": stepping(SUCC),
     "pred": stepping(PRED),
-    "kdiv": dividing(QUOTIENT),
-    "kmod": dividing(KMOD),
-    "bdiv": dividing(QUOTIENT),
-    "bmod": dividing(BMOD),
-    "tdiv": dividing(QUOTIENT),
-    "tmod": dividing(TMOD),
+    "kdiv": dividing(STUCK + QUOTIENT),
+    "kmod": dividing(STUCK + KMOD),
+    "bdiv": dividing(STUCK + QUOTIENT),
+    "bmod": dividing(STUCK + BMOD),
+    "tdiv": dividing(STUCK + QUOTIENT),
+    "tmod": dividing(STUCK + TMOD),
+    "pdiv": dividing(PDIV),
+    "pmod": dividing(PMOD),
     "swap": Arrow((Input(0), Input(1)), (Input(1), Input(0))),
     "dup": Arrow((Input(0),), (Input(0), Input(0))),
     "drop": Arrow((Input(0),), ()),
@@ -797,14 +817,9 @@ def called(typing: Typing, node: Call, arrows: Mapping[str, Arrow]) -> Typing:
         return replace(typing, stack=(*typing.stack, typing.env[node.name]))
     if node.name not in arrows:
         raise UntypedError
-    arrow = arrows[node.name]
-    if (
-        isinstance(arrow, Cases)
-        and arrow.divisor
-        and resolved(typing.stack[-1:], typing) == (Kind.ZERO,)
-    ):
-        raise FplError(node.span, "division by zero")
-    return applied(typing, chosen(typing, arrow, arrows), node.span)
+    return applied(
+        typing, chosen(typing, arrows[node.name], arrows), node.span
+    )
 
 
 def chosen(typing: Typing, arrow: Arrow, arrows: Mapping[str, Arrow]) -> Arrow:
