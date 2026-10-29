@@ -57,14 +57,22 @@ OKFG := $(CURDIR)/.harness/tools/okfgraph
 OKFGRAPH = UV_PROJECT_ENVIRONMENT=$(OKFG)/.venv uv run --quiet --frozen --project $(OKFG) okfgraph
 OKF_BASELINE := $(wildcard $(OKFG)/baseline)
 
-graph:
+# The generated fact layer (.harness/tools/lit/README.md): the spans of every literate page,
+# written to build/facts/ for okfgraph to load beside the hand-written sidecars. Nothing in it
+# is committed; it is a function of the pages, their tests and their decisions tables.
+facts:
+	$(VENV)
+	@cd 01-bootstrap && PYTHONPATH=$(LITG) $(CURDIR)/.harness/.venv/bin/python -m lit facts \
+	  --out $(CURDIR)/build/facts
+
+graph: facts
 	@$(OKFGRAPH) graph --root $(CURDIR) --out $(CURDIR)/build/okf.ttl
 
 # The gate judges the bundle before the walker: a note without a type, or an edge into
 # nothing, fails `make check` as a type error does.
 check: okf-check
 
-okf-check:
+okf-check: facts
 	@$(OKFGRAPH) check --root $(CURDIR) $(if $(OKF_BASELINE),--baseline $(OKF_BASELINE))
 
 # A second, independent judge of OKF §11. It reads the working tree, not the index, and skips
