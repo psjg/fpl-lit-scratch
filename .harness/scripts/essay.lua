@@ -92,7 +92,7 @@ end
 -- class, so the theme sets it like a section number.
 --
 -- Below the headings the paragraphs count too, and their sentences: the
--- fourth paragraph under 1.2.1.3 is §4, its second sentence §4.2. Each
+-- fourth paragraph under 1.2.1.3 is ¶4, its second sentence ¶4.2. Each
 -- paragraph is a div (class fpl-p, data-n, id <heading>/p4) and each
 -- sentence a span (class fpl-s, data-n, id <heading>/p4s2) and, where a
 -- sentence has more than one, each clause a span (fpl-c, id ...s2c3),

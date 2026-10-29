@@ -490,24 +490,27 @@
       if (!ms.length) continue;
       const rects = [...ms].flatMap((m) => [...m.getClientRects()]);
       const last = rects[rects.length - 1], cr = c.getBoundingClientRect();
-      // out of the text first, along the line of the span, then down to the card
-      const x1 = last.right + scrollX + 2, y1 = last.bottom + scrollY - 1;
+      // from the end of the span down into the gap under its line, along that
+      // gap out of the text, then to the card; the type sits in the gutter
+      const x1 = last.right + scrollX + 2, y1 = last.bottom + scrollY - 1, yb = y1 + 4;
       const x2 = cr.left + scrollX - 1, y2 = cr.top + scrollY + 10;
       const gx = Math.max(x1 + 8, body.getBoundingClientRect().right + scrollX + 6);
       const dx = Math.max(16, (x2 - gx) / 2);
       const p = document.createElementNS("http://www.w3.org/2000/svg", "path");
-      p.setAttribute("d", `M${x1},${y1} H${gx} C${gx + dx},${y1} ${x2 - dx},${y2} ${x2},${y2}`);
+      p.setAttribute("d", `M${x1},${y1} Q${x1 + 3},${yb} ${x1 + 6},${yb} H${gx} C${gx + dx},${yb} ${x2 - dx},${y2} ${x2},${y2}`);
       p.setAttribute("class", `fpl-line ${c.classList.contains("mine") ? "mine" : ""}`);
       p.dataset.id = c.dataset.id;
       lines.append(p);
       const type = edgeType(c.dataset.id);
-      if (type) {
+      if (type) {   // in the line, halfway, with a halo that breaks the line: ---[type>---
+        const run = p.getTotalLength(), gutter = Math.hypot(gx - x1, yb - y1) + 2;
+        const mid = p.getPointAtLength(gutter + (run - gutter) / 2);
         const t = document.createElementNS("http://www.w3.org/2000/svg", "text");
-        t.setAttribute("x", gx + 4);
-        t.setAttribute("y", y1 - 4);
+        t.setAttribute("x", mid.x);
+        t.setAttribute("y", mid.y);
         t.setAttribute("class", `fpl-edge ${c.classList.contains("mine") ? "mine" : ""}`);
         t.dataset.id = c.dataset.id;
-        t.textContent = type;
+        t.textContent = type + " ›";
         lines.append(t);
       }
     }

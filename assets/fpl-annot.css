@@ -40,13 +40,15 @@ mark.fact-mine:hover, mark.fact-mine.is-hot { background: var(--fpl-mine-wash); 
 .fpl-line { fill: none; stroke: var(--fpl-vers); stroke-width: 1; opacity: .35; transition: opacity .12s; }
 .fpl-line.mine { stroke: var(--fpl-mine); }
 .fpl-line.is-hot { opacity: 1; stroke-width: 1.5; }
-.fpl-edge { font: 600 .66rem var(--bs-font-sans-serif, sans-serif); fill: var(--fpl-vers); opacity: .55; transition: opacity .12s; }
+.fpl-edge { font: 600 .62rem var(--bs-font-sans-serif, sans-serif); fill: var(--fpl-vers); opacity: .7; transition: opacity .12s;
+  text-anchor: middle; dominant-baseline: middle; paint-order: stroke; stroke: var(--fpl-bg); stroke-width: 6px; stroke-linejoin: round; }
 .fpl-edge.mine { fill: var(--fpl-mine); }
 .fpl-edge.is-hot { opacity: 1; }
+.fpl-column .fpl-card { left: 4.5rem; }   /* room for the edge and its type */
 
 /* paragraph and sentence numbers, outside the reading stand */
 .fpl-p { position: relative; }
-.fpl-p::before { content: "§" attr(data-n); position: absolute; right: 100%; margin-right: .6rem; top: .35em;
+.fpl-p::before { content: "¶" attr(data-n); position: absolute; right: 100%; margin-right: .6rem; top: .35em;
   font-size: .68rem; color: var(--fpl-mute); opacity: 0; transition: opacity .12s; user-select: none; }
 .fpl-s::before { content: attr(data-n); font-size: .6em; color: var(--fpl-mute); vertical-align: super; margin-right: .15em;
   display: none; user-select: none; }
