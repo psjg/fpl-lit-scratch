@@ -22,6 +22,9 @@
  *     prefix, suffix,  32 characters of shown text either side of it
  *     labels: [], note, targets: [], createdAt, updatedAt }  (times in ms)
  *
+ * A reply is a row without text whose first target is the fact it
+ * answers; it shows nested under that fact, as deep as the thread goes.
+ *
  * A quote row has no offsets: lit finds it in the raw page by text, and
  * prefix and suffix choose among several hits. Rows of the sidecar keep
  * their own shape and are drawn by their text the same way. A row without
@@ -260,8 +263,13 @@
   const facts = (id) => all.filter((r) => typeof r.text !== "string" && r.targets?.[0] === id);
 
   /** A fact about something: a relation line or labels, its note, and the facts about it. */
+  const reply = (id, at) => button("Reageer", (ev) => {
+    ev.stopPropagation();
+    edit({ targets: [id] }, null, (at ?? ev.target).getBoundingClientRect());
+  }, "fpl-reply");
   function factView(r, cls) {
     const f = el("div", { className: "fpl-fact" });
+    f.dataset.fact = r.id;
     const rest = (r.targets ?? []).slice(1);
     if (rest.length)
       f.append(el("div", { className: "fpl-rel" }, el("b", {}, (r.labels ?? []).join(" ") || "→"), " ",
@@ -269,6 +277,7 @@
     else if (r.labels?.length)
       f.append(el("div", { className: "fpl-chips" }, ...r.labels.map((l) => chip(l, cls))));
     if (r.note) f.append(el("p", { className: "fpl-note" }, r.note));
+    f.append(reply(r.id));
     for (const sub of facts(r.id)) f.append(Object.assign(factView(sub, cls), { className: "fpl-fact fpl-sub" }));
     return f;
   }
@@ -287,6 +296,7 @@
     if (row.labels?.length) card.append(el("div", { className: "fpl-chips" }, ...row.labels.map((l) => chip(l, cls))));
     if (row.note) card.append(el("p", { className: "fpl-note" }, row.note));
     for (const r of facts(row.id)) card.append(factView(r, cls));
+    card.append(reply(row.id, card));
     card.onmouseenter = () => hot(row.id);
     card.onmouseleave = () => hot(null);
     card.onclick = (ev) => {
@@ -386,8 +396,10 @@
       el("span", { className: "fpl-space" }),
       button("Annuleer", () => onDone(null)),
       el("button", { type: "submit", className: "fpl-go" }, "Bewaar ", el("kbd", {}, "⌘↩")));
+    const t0 = row.targets?.[0] ?? "", parent = all.find((r) => r.id === t0);
     const about = typeof row.text === "string" ? row.text
-      : `${row.targets?.[0] ?? ""}: ${document.getElementById(row.targets?.[0] ?? "")?.textContent.replace(/\s+/g, " ").trim().slice(0, 140) ?? ""}`;
+      : parent ? `Reactie op ${t0}: ${(parent.note || parent.text || (parent.labels ?? []).join(" ")).replace(/\s+/g, " ").slice(0, 140)}`
+      : `${t0}: ${document.getElementById(t0)?.textContent.replace(/\s+/g, " ").trim().slice(0, 140) ?? ""}`;
     form.append(el("div", { className: "fpl-excerpt" }, about), note, chips, keys);
     form.onsubmit = (ev) => { ev.preventDefault(); onDone({ note: note.value.trim(), labels: [...on] }); };
     form.onkeydown = (e) => {

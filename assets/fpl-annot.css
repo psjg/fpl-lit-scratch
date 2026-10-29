@@ -96,6 +96,11 @@ body.fpl-numbered .fpl-s:hover .fpl-c::before { opacity: 1; }
 .fpl-chip.is-on { background: var(--fpl-mine-wash); border-color: var(--fpl-mine); color: var(--fpl-mine); }
 .fpl-editor .fpl-chip { cursor: pointer; }
 .fpl-note { margin: .3rem 0 0; }
+.fpl-fact > .fpl-who { margin-top: .35rem; }
+.fpl-reply { display: block; font: 600 .72rem var(--bs-font-sans-serif, sans-serif); color: var(--bs-link-color, #2b6cb0);
+  background: none; border: 0; padding: .15rem 0 0; cursor: pointer; opacity: 0; transition: opacity .12s; }
+.fpl-card:hover .fpl-reply, .fpl-reply:focus-visible { opacity: 1; }
+
 .fpl-fact { margin-top: .4rem; }
 .fpl-sub { margin-left: .5rem; padding-left: .5rem; border-left: 1px solid var(--fpl-rule); }
 .fpl-rel { font-size: .78rem; color: var(--fpl-mute); }
