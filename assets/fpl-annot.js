@@ -524,12 +524,10 @@
       p.dataset.id = c.dataset.id;
       lines.append(p);
       const type = edgeType(c.dataset.id);
-      if (type) {   // in the line, halfway, with a halo that breaks the line: ---[type>---
-        const run = p.getTotalLength(), gutter = Math.hypot(gx - x1, yb - y1) + 2;
-        const mid = p.getPointAtLength(gutter + (run - gutter) / 2);
+      if (type) {   // just before the card, where the line arrives, in a halo that breaks the line
         const t = document.createElementNS("http://www.w3.org/2000/svg", "text");
-        t.setAttribute("x", mid.x);
-        t.setAttribute("y", mid.y);
+        t.setAttribute("x", x2 - 6);
+        t.setAttribute("y", y2);
         t.setAttribute("class", `fpl-edge ${c.classList.contains("mine") ? "mine" : ""}`);
         t.dataset.id = c.dataset.id;
         t.textContent = type + " ›";

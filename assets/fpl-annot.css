@@ -41,7 +41,7 @@ mark.fact-mine:hover, mark.fact-mine.is-hot { background: var(--fpl-mine-wash); 
 .fpl-line.mine { stroke: var(--fpl-mine); }
 .fpl-line.is-hot { opacity: 1; stroke-width: 1.5; }
 .fpl-edge { font: 600 .62rem var(--bs-font-sans-serif, sans-serif); fill: var(--fpl-vers); opacity: .7; transition: opacity .12s;
-  text-anchor: middle; dominant-baseline: middle; paint-order: stroke; stroke: var(--fpl-bg); stroke-width: 6px; stroke-linejoin: round; }
+  text-anchor: end; dominant-baseline: middle; paint-order: stroke; stroke: var(--fpl-bg); stroke-width: 6px; stroke-linejoin: round; }
 .fpl-edge.mine { fill: var(--fpl-mine); }
 .fpl-edge.is-hot { opacity: 1; }
 .fpl-column .fpl-card { left: 4.5rem; }   /* room for the edge and its type */
