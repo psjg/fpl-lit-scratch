@@ -17,13 +17,16 @@
  *
  * A row, as lit facts --import reads it:
  *
- *   { id: "a-" + base36 time + random, item, commit,
+ *   { id: "a-" + base36 time + random, item, commit, by,
  *     text,            the selection as shown, whitespace made one space
  *     prefix, suffix,  32 characters of shown text either side of it
  *     labels: [], note, targets: [], createdAt, updatedAt }  (times in ms)
  *
- * A reply is a row without text whose first target is the fact it
- * answers; it shows nested under that fact, as deep as the thread goes.
+ * by is who wrote the row: the name this browser was given in the head
+ * of the margin (localStorage["fpl-annot:by"]), or, for a row an agent
+ * imported with lit, that agent's model id. A reply is a row without
+ * text whose first target is the fact it answers; it shows nested under
+ * that fact, with its author, as deep as the thread goes.
  *
  * A quote row has no offsets: lit finds it in the raw page by text, and
  * prefix and suffix choose among several hits. Rows of the sidecar keep
@@ -118,6 +121,10 @@
     catch { return []; }
   };
   const keep = (rows) => localStorage.setItem(key, JSON.stringify(rows));
+  const by = (set) => {
+    try { if (set != null) localStorage.setItem("fpl-annot:by", set); return localStorage.getItem("fpl-annot:by") || ""; }
+    catch { return set ?? ""; }
+  };
 
   /** A markdown text as lit's plain() shows it (facts.py MARKUP). */
   const plain = (s) => s
@@ -270,6 +277,7 @@
   function factView(r, cls) {
     const f = el("div", { className: "fpl-fact" });
     f.dataset.fact = r.id;
+    if (r.by || r.mine) f.append(el("div", { className: "fpl-who" }, el("span", {}, r.by || "?")));
     const rest = (r.targets ?? []).slice(1);
     if (rest.length)
       f.append(el("div", { className: "fpl-rel" }, el("b", {}, (r.labels ?? []).join(" ") || "→"), " ",
@@ -288,6 +296,7 @@
     const card = el("div", { className: `fpl-card ${row.mine ? "mine" : ""} ${st !== "vers" ? "lost" : ""}` });
     card.dataset.id = row.id;
     card.append(el("div", { className: "fpl-who" }, el("span", { className: "fpl-dot" }), el("span", {}, row.id),
+      row.by ? el("span", { className: "fpl-by" }, row.by) : null,
       st === "stale" ? el("span", { className: "fpl-lost" }, "niet meer gevonden")
         : st === "dubbel" ? el("span", { className: "fpl-lost" }, "meer dan één keer gevonden") : null));
     if (st !== "vers") card.append(el("div", { className: "fpl-excerpt" }, plain(row.text)));
@@ -321,6 +330,8 @@
         lost ? el("span", { className: "fpl-lost" }, ` · ${lost} kwijt`) : null,
         mine ? el("span", { className: "fpl-mine" }, ` · ${mine} lokaal`) : null),
       el("div", { className: "fpl-bar" },
+        el("input", { className: "fpl-byme", value: by(), placeholder: "jij", title: "Wie schrijft: komt als by op elke rij",
+          onchange: (ev) => by(ev.target.value.trim()) }),
         button("Export", () => { exportRows(); cmd.hidden = false; }),
         button("Import", () => file.click()),
         mine ? button("Clear", () => clear(h)) : null, file),
@@ -419,7 +430,7 @@
     delete done.mine;
     if (row.id) mine[mine.findIndex((r) => r.id === row.id)] = done;
     else mine.push({ id: `a-${now.toString(36)}${Math.random().toString(36).slice(2, 6)}`,
-      item, commit, targets: [], ...done, createdAt: now });
+      item, commit, by: by() || undefined, targets: [], ...done, createdAt: now });
     keep(mine);
   }
 
