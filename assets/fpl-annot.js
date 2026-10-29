@@ -427,6 +427,7 @@
   function layout() {
     closeEditor();
     drawControl();
+    document.body.classList.toggle("fpl-numbered", mode() !== "lezen");
     for (const c of body.querySelectorAll(".fpl-inline")) c.remove();
     margin.replaceChildren();
     lines.replaceChildren();

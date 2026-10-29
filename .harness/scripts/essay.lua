@@ -90,9 +90,83 @@ end
 -- the second h2 is 1.2.1.2, its first h3 1.2.1.2.1, so the sidebar and
 -- the page count all the way down. The number is a span of Quarto's own
 -- class, so the theme sets it like a section number.
+--
+-- Below the headings the paragraphs count too, and their sentences: the
+-- fourth paragraph under 1.2.1.3 is §4, its second sentence §4.2. Each
+-- paragraph is a div (class fpl-p, data-n, id <heading>/p4) and each
+-- sentence a span (class fpl-s, data-n, id <heading>/p4s2) and, where a
+-- sentence has more than one, each clause a span (fpl-c, id ...s2c3),
+-- so a URL can name a clause; the overlay shows the numbers outside the
+-- reading stand, the clauses' only while the sentence is hovered. A sentence ends at a word ending in . ? or ! (closing quotes
+-- or brackets after it) that is not a one-letter or known abbreviation.
+local ABBR = { ["e.g."] = true, ["i.e."] = true, ["vs."] = true, ["cf."] = true,
+  ["etc."] = true, ["Mr."] = true, ["Dr."] = true, ["St."] = true, ["No."] = true }
+
+local function ends_sentence(word)
+  local core = word:gsub("[%)%]'\"\u{2019}\u{201D}]+$", "")
+  if not core:match("[%.%?!]$") then
+    return false
+  end
+  if ABBR[core] or core:match("^%a%.$") or core:match("^%d+%.$") then
+    return false
+  end
+  return true
+end
+
+-- Inlines cut into spans at the words `stop` says, numbered from 1 with
+-- the class and id suffix given; the space after a cut stays outside.
+local function cut(inlines, id, suffix, class, stop)
+  local out, cur, n = pandoc.Inlines({}), pandoc.Inlines({}), 0
+  local function flush()
+    if #cur == 0 then
+      return
+    end
+    n = n + 1
+    out:insert(pandoc.Span(cur, pandoc.Attr(id .. suffix .. n, { class }, { ["data-n"] = tostring(n) })))
+    cur = pandoc.Inlines({})
+  end
+  local skip = false
+  for i, x in ipairs(inlines) do
+    if skip then
+      skip = false
+    else
+      cur:insert(x)
+      local nxt = inlines[i + 1]
+      if x.t == "Str" and nxt and (nxt.t == "Space" or nxt.t == "SoftBreak") and stop(x.text) then
+        flush()
+        out:insert(nxt)
+        skip = true
+      end
+    end
+  end
+  flush()
+  return out, n
+end
+
+-- A clause, for the address only (shown while the sentence is hovered),
+-- ends at a word ending in , ; : or a dash: the segments a reader points
+-- at, not what a parser would call a clause.
+local function ends_clause(word)
+  return word:match("[,;:\u{2014}\u{2013}]$") ~= nil or word == "-" or word == "--"
+end
+
+local function sentences(inlines, id)
+  local out, n = cut(inlines, id, "s", "fpl-s", ends_sentence)
+  for _, span in ipairs(out) do
+    if span.t == "Span" then
+      local parts, m = cut(span.content, span.identifier, "c", "fpl-c", ends_clause)
+      if m > 1 then
+        span.content = parts
+      end
+    end
+  end
+  return out, n
+end
+
 function number(doc, addr)
   local base = addr:gsub("%f[%d]0+(%d)", "%1")
-  local count = {}
+  local count, head, para = {}, "", 0
+  local blocks = pandoc.List({})
   for _, block in ipairs(doc.blocks) do
     if block.t == "Header" and block.level >= 2 then
       for level = block.level + 1, #count do
@@ -109,8 +183,19 @@ function number(doc, addr)
       )
       block.content:insert(1, pandoc.Space())
       block.content:insert(1, num)
+      head, para = block.identifier, 0
+      blocks:insert(block)
+    elseif block.t == "Para" and head ~= "" then
+      para = para + 1
+      local id = head .. "/p" .. para
+      local inl, n = sentences(block.content, id)
+      blocks:insert(pandoc.Div({ pandoc.Para(inl) },
+        pandoc.Attr(id, { "fpl-p" }, { ["data-n"] = tostring(para), ["data-s"] = tostring(n) })))
+    else
+      blocks:insert(block)
     end
   end
+  doc.blocks = blocks
 end
 
 -- A heading's anchor is its path: an h3 under "Strings and comments"

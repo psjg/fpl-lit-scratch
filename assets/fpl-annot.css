@@ -44,6 +44,19 @@ mark.fact-mine:hover, mark.fact-mine.is-hot { background: var(--fpl-mine-wash); 
 .fpl-edge.mine { fill: var(--fpl-mine); }
 .fpl-edge.is-hot { opacity: 1; }
 
+/* paragraph and sentence numbers, outside the reading stand */
+.fpl-p { position: relative; }
+.fpl-p::before { content: "§" attr(data-n); position: absolute; right: 100%; margin-right: .6rem; top: .35em;
+  font-size: .68rem; color: var(--fpl-mute); opacity: 0; transition: opacity .12s; user-select: none; }
+.fpl-s::before { content: attr(data-n); font-size: .6em; color: var(--fpl-mute); vertical-align: super; margin-right: .15em;
+  display: none; user-select: none; }
+body.fpl-numbered .fpl-p::before { opacity: .8; }
+body.fpl-numbered .fpl-s::before { display: inline; }
+.fpl-c::before { content: attr(data-n); font-size: .55em; color: var(--fpl-mute); vertical-align: sub; margin-right: .1em;
+  display: none; user-select: none; }
+body.fpl-numbered .fpl-s:hover .fpl-c::before { display: inline; }
+.fpl-s:target, .fpl-p:target > p { background: var(--fpl-vers-wash); }
+
 /* cards */
 .fpl-card { padding: 0 0 0 .7rem; border-left: 2px solid var(--fpl-vers); cursor: pointer; }
 .fpl-column .fpl-card { position: absolute; left: 0; right: 0; transition: opacity .12s; }
