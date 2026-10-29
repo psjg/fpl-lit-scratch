@@ -51,6 +51,13 @@ A hand row's span is immutable, ``item@commit[start, end) = text``;
 whether its text is still on the page is computed each time
 (`locate'), never written back. Items are paths from the repository.
 
+A hand row may name its span by a quote instead of offsets: ``item``,
+``text`` and, beside them, a ``prefix`` and a ``suffix`` (the W3C Web
+Annotation's text quote), as a selection on the published page gives
+them. That page is the markdown rendered, and shows text the markdown
+writes otherwise; `plain' reads both as the same text, and `by_quote'
+finds the quote's raw offsets through it.
+
 The annotation program keeps its rows elsewhere, each ``item`` a label
 it knows (``A``, ``lex``) rather than a path. `imported' turns its
 rows for one label into hand rows on one page at one commit, `merged'
@@ -75,6 +82,7 @@ from collections.abc import (
 )
 from contextlib import suppress
 from dataclasses import dataclass
+from functools import cache
 from itertools import takewhile
 from pathlib import Path
 from textwrap import dedent
@@ -521,6 +529,8 @@ FIELDS: dict[str, type] = {
     "start": int,
     "end": int,
     "text": str,
+    "prefix": str,
+    "suffix": str,
     "labels": list,
     "note": str,
     "targets": list,
@@ -529,6 +539,7 @@ FIELDS: dict[str, type] = {
     "updatedAt": int,
 }
 SPAN = ("item", "start", "end", "text")
+QUOTE = ("prefix", "suffix")
 COLUMNS = ("id", "topic", "date", "who", "decision", "reason")
 VERS, MOVED, TWICE, STALE = "vers", "verplaatst", "dubbel", "stale"
 
@@ -663,7 +674,11 @@ def locate(
     text twice or more          dubbel
     text nowhere                stale
     ==========================  ====================================
+
+    A quote row (no offsets) is found by `by_quote'.
     """
+    if "start" not in row:
+        return by_quote(row, text)
     start, end = cast("int", row["start"]), cast("int", row["end"])
     want = cast("str", row["text"])
     if text[start:end] == want:
@@ -681,6 +696,104 @@ def by_text(want: str, text: str) -> Located:
     if text.find(want, first + 1) >= 0:
         return Located(TWICE)
     return Located(MOVED, first, first + len(want))
+
+
+# What the published page writes otherwise than its markdown, one
+# group per difference (see `plain'); the alias is the one rewrite the
+# site's ``.qmd`` copy of a page makes before it is rendered.
+MARKUP = re.compile(
+    r"`(?P<alias>[A-Za-z_][\w.]*)'"
+    r"|(?P<tick>`)"
+    r"|(?P<curly>\u2019)"
+    r"|(?P<open>\[)(?=[^\]\n]*\]\()"
+    r"|(?P<url>\]\([^)\s]*\))"
+    r"|(?m:^)(?P<head>#+[ \t]+)"
+    r"|(?P<space>[\s|]+)"
+)
+# The text each group leaves; one not named here leaves nothing.
+SHOWN = {"curly": "'", "space": " "}
+
+
+@cache
+def plain(text: str) -> tuple[str, tuple[int, ...]]:
+    """A text as the published page shows it, and where each char was.
+
+    Markdown and the page it renders write the same sentence apart in
+    a few ways; both sides read through this one function become the
+    same string:
+
+    =========================  ===========================
+    written                    read as
+    =========================  ===========================
+    `` `name' `` (an alias)    ``name``
+    a backtick                 nothing
+    U+2019 (Pandoc's ``'``)    ``'``
+    ``[text](url)``            ``text``
+    ``#`` opening a heading    nothing, with its spaces
+    spaces, newlines, ``|``    one space
+    =========================  ===========================
+
+    Returns:
+        The plain text, and for each of its characters the code point
+        of ``text`` it was read from: a run of space at its first, an
+        alias's name at its own. The map strictly increases, so a hit
+        at ``[i, j)`` is ``text[at[i] : at[j - 1] + 1]``.
+    """
+    out: list[str] = []
+    at: list[int] = []
+    last = 0
+    for m in MARKUP.finditer(text):
+        out.append(text[last : m.start()])
+        at += range(last, m.start())
+        last = m.end()
+        kind = cast("str", m.lastgroup)
+        if kind == "alias":
+            shown, first = m["alias"], m.start("alias")
+        else:
+            shown, first = SHOWN.get(kind, ""), m.start()
+        out.append(shown)
+        at += range(first, first + len(shown))
+    out.append(text[last:])
+    at += range(last, len(text))
+    return "".join(out), tuple(at)
+
+
+def hits(page: str, want: str) -> Iterator[int]:
+    """Every place ``want`` starts in ``page``, overlaps included."""
+    i = page.find(want)
+    while i >= 0:
+        yield i
+        i = page.find(want, i + 1)
+
+
+def by_quote(row: Row, text: str) -> Located:
+    """A quote row found in the page as it is shown (`plain').
+
+    The quote's ``text`` is searched for in the plain page. Of several
+    hits, those stay that its ``prefix`` ends right before and its
+    ``suffix`` starts right after, each as plain text, whichever the
+    row carries. There are no written offsets to compare, so a quote
+    found once is vers, at the raw offsets of its first and last
+    character; found more than once it is dubbel, and nowhere stale.
+    """
+    page, at = plain(text)
+    want = plain(cast("str", row["text"]))[0]
+    found = list(hits(page, want))
+    if len(found) > 1:
+        before = plain(cast("str", row.get("prefix", "")))[0]
+        after = plain(cast("str", row.get("suffix", "")))[0]
+        found = [
+            i
+            for i in found
+            if page.endswith(before, 0, i)
+            and page.startswith(after, i + len(want))
+        ]
+    if not found:
+        return Located(STALE)
+    if len(found) > 1:
+        return Located(TWICE)
+    i = found[0]
+    return Located(VERS, at[i], at[i + len(want) - 1] + 1)
 
 
 def by_tokens(
@@ -772,7 +885,7 @@ def field_faults(row: Row) -> Iterator[str]:
             yield f"{key!r} is no key of a row"
         elif key in {"labels", "targets"} and not strings(value):
             yield f"{key} must be a list of strings"
-        elif key in {"note", "commit", "createdAt", "updatedAt"} and (
+        elif key in {"note", "commit", *QUOTE, "createdAt", "updatedAt"} and (
             type(value) is not want
         ):
             yield f"{key} must be a {want.__name__}"
@@ -781,7 +894,30 @@ def field_faults(row: Row) -> Iterator[str]:
 
 
 def span_shape(row: Row) -> str:
-    """What makes a row's span no span, or ``""``."""
+    """What makes a row's span no span, or ``""``.
+
+    A span is written one way of two: by offsets, or by a quote (no
+    offsets, a ``prefix`` or ``suffix`` beside its text if need be).
+    """
+    if "start" not in row and "end" not in row:
+        return quote_shape(row)
+    if any(k in row for k in QUOTE):
+        return "a span has offsets or a prefix and suffix, not both"
+    return offset_shape(row)
+
+
+def quote_shape(row: Row) -> str:
+    """What makes a quote no quote, or ``""``."""
+    item, text = row.get("item"), row.get("text")
+    if not isinstance(item, str) or not isinstance(text, str):
+        return "a span needs a string item and text, or offsets too"
+    if not plain(text)[0].strip():
+        return "a quote must show more than markup and space"
+    return ""
+
+
+def offset_shape(row: Row) -> str:
+    """What makes a span by offsets no span, or ``""``."""
     if not all(k in row for k in SPAN):
         return "a span needs item, start, end and text together"
     start, end = row["start"], row["end"]
@@ -798,9 +934,10 @@ def span_faults(row: Row, texts: Mapping[str, str]) -> Iterator[str]:
     """What is wrong with a row's span; nothing for a row without one.
 
     A row with a commit is grounded there, and `lit anchor --verify'
-    checks it; one without is grounded in the current text.
+    checks it; one without is grounded in the current text. A quote has
+    no offsets to hold there: whether it is found is `locate's.
     """
-    if not any(k in row for k in SPAN):
+    if not any(k in row for k in (*SPAN, *QUOTE)):
         return
     if shape := span_shape(row):
         yield shape
@@ -808,7 +945,7 @@ def span_faults(row: Row, texts: Mapping[str, str]) -> Iterator[str]:
     item = cast("str", row["item"])
     if item not in texts:
         yield f"item {item!r} is neither the page nor a file of the repo"
-    elif "commit" not in row:
+    elif "commit" not in row and "start" in row:
         start, end = cast("int", row["start"]), cast("int", row["end"])
         if texts[item][start:end] != row["text"]:
             yield f"text is not at [{start}, {end}) of {item}"
@@ -1048,12 +1185,13 @@ def ground(
     """Each valid row with a commit whose text was not at its place.
 
     ``held(commit, item)`` is the item's text at the commit, or None
-    when the commit does not hold it; the shell asks git.
+    when the commit does not hold it; the shell asks git. A quote row
+    has no place to check, and is passed over.
     """
     out: list[web.Finding] = []
     for n, row in enumerate(rows, 1):
         commit = row.get("commit")
-        if not isinstance(commit, str) or "item" not in row:
+        if not isinstance(commit, str) or "start" not in row:
             continue
         item = cast("str", row["item"])
         start, end = cast("int", row["start"]), cast("int", row["end"])
@@ -1131,16 +1269,16 @@ def tool_rows(where: str, text: str, *, array: bool) -> list[Tool]:
 def import_faults(row: Row, seen: set[str]) -> Iterator[str]:
     """Why a row of the program cannot become a hand row, if it can't.
 
-    Its id must be a new string, its offsets integers, its text one
-    without astral code points (JavaScript counts those as two, so the
-    program's offsets would not be lit's), and its times integers,
-    since the new rows are ordered by them.
+    Its id must be a new string, its offsets both there and integers
+    or both away (a quote), its ``prefix`` and ``suffix`` strings, its
+    text one without astral code points (JavaScript counts those as
+    two, so the program's offsets would not be lit's), and its times
+    integers, since the new rows are ordered by them.
     """
     rid, text = row.get("id"), row["text"]
     if not isinstance(rid, str) or rid in seen:
         yield f"id {rid!r} is no new string"
-    if type(row["start"]) is not int or type(row["end"]) is not int:
-        yield "start and end must be integers"
+    yield from place_faults(row)
     if not isinstance(text, str):
         yield "text must be a string"
     elif m := ASTRAL.search(text):
@@ -1150,18 +1288,31 @@ def import_faults(row: Row, seen: set[str]) -> Iterator[str]:
             yield f"{key} must be an integer"
 
 
+def place_faults(row: Row) -> Iterator[str]:
+    """Both offsets as integers or neither; prefix, suffix strings."""
+    have = [k for k in ("start", "end") if k in row]
+    if len(have) == 1:
+        yield "start and end come together"
+    elif have and any(type(row[k]) is not int for k in have):
+        yield "start and end must be integers"
+    for key in QUOTE:
+        if key in row and not isinstance(row[key], str):
+            yield f"{key} must be a string"
+
+
 def imported(
     rows: Sequence[Tool], label: str, page: str, commit: str
 ) -> tuple[list[Row], list[web.Finding]]:
     """The program's rows for one label as hand rows on a page.
 
-    A row is the label's when its ``item`` is ``label`` and it holds
-    ``start``, ``end`` and ``text``; every other row (another item,
-    the program's own records of labels and items) is passed over. A
-    row of the label becomes ``{id, item: page, start, end, text,
-    labels, note, targets, commit, createdAt, updatedAt}``: its
-    ``targets`` are ``[]`` when it has none, and ``labels``, ``note``
-    and the times are carried only when it has them.
+    A row is the label's when its ``item`` is ``label`` and it holds a
+    ``text``; every other row (another item, the program's own records
+    of labels and items) is passed over. A row of the label becomes
+    ``{id, item: page, start, end, text, prefix, suffix, labels, note,
+    targets, commit, createdAt, updatedAt}``: its ``targets`` are
+    ``[]`` when it has none, and the offsets (a quote has none), the
+    prefix and suffix, ``labels``, ``note`` and the times are carried
+    only when it has them.
 
     Returns:
         The hand rows, and a ``lit-facts-import`` finding for each row
@@ -1172,7 +1323,7 @@ def imported(
     seen: set[str] = set()
     for t in rows:
         d = t.row
-        if d.get("item") != label or not all(k in d for k in SPAN[1:]):
+        if d.get("item") != label or "text" not in d:
             continue
         if faults := list(import_faults(d, seen)):
             bad += [
@@ -1183,8 +1334,7 @@ def imported(
         rid = cast("str", d["id"])
         seen.add(rid)
         row: Row = {"id": rid, "item": page}
-        row |= {k: d[k] for k in SPAN[1:]}
-        row |= {k: d[k] for k in TOOL_KEYS[:2] if k in d}
+        row |= {k: d[k] for k in (*SPAN[1:], *QUOTE, *TOOL_KEYS[:2]) if k in d}
         row |= {"targets": d.get("targets", []), "commit": commit}
         row |= {k: d[k] for k in TOOL_KEYS[3:] if k in d}
         out.append(row)
@@ -1221,8 +1371,9 @@ def exported(
 ) -> list[Row]:
     """A sidecar's span rows in the annotation program's shape.
 
-    Each row with a span becomes ``{id, item, start, end, text}`` and
-    whichever of ``labels``, ``note``, ``targets``, ``createdAt`` and
+    Each row with a span becomes ``{id, item, start, end, text}`` (a
+    quote: ``{id, item, text}``) and whichever of ``prefix``,
+    ``suffix``, ``labels``, ``note``, ``targets``, ``createdAt`` and
     ``updatedAt`` it holds; its ``commit`` is dropped. Its ``item`` is
     the program's label for ``(item, commit)`` in ``labels``, or the
     path itself when none is given. Rows without a span (facts,
@@ -1230,10 +1381,10 @@ def exported(
     """
     out: list[Row] = []
     for r in rows:
-        if not all(k in r for k in SPAN):
+        if "text" not in r:
             continue
         at = (cast("str", r["item"]), cast("str", r.get("commit", "")))
         row: Row = {"id": r["id"], "item": labels.get(at, at[0])}
-        row |= {k: r[k] for k in (*SPAN[1:], *TOOL_KEYS) if k in r}
+        row |= {k: r[k] for k in (*SPAN[1:], *QUOTE, *TOOL_KEYS) if k in r}
         out.append(row)
     return out
