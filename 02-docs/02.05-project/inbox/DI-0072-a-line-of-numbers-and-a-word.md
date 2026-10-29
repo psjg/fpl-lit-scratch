@@ -210,6 +210,25 @@ naar de locatie van het ongeluk". Open: where the position goes on the line (aft
 message as `@ 1:5`, before it as the second argument, or as the last path segment
 `err/check/unequal/1:5`, one address per accident, which makes the link literal).
 
+The chats he remembers are mined in
+[02.05.16](../notes/02.05.16-judgment-line-from-the-cursor-chats.md), his words verbatim.
+What they add to the above: fuel on the judgment line was decided there (the night of
+2026-10-18) as `@ n`, the spent steps after everything else, on success and fail lines
+alike, after he refused `/` for it ("het lijk me al zwaar overladen ... een ding dat ik fijn
+vind aan (OCA)ML is dat ze die monomorphic operators hebben"); his ask of 10-29, "net zoals
+ik toen met cursor besproken had zou ik de fuel ook in de judgement regel willen toevoegen",
+is that same wish. Where the chats and the above differ, one line each: the position was
+not on the judgment line in the chat but under it, Rust-style, so `@ 1:5` for the position
+would give `@` the deadline's place (options: `@ n` deadline and the position before the
+message, in the path or under the line; or `@ l:c` position and the deadline as `! n` or a
+word); the chat's fail line carried `: Error` as the sort slot and no message, today's a
+quoted message and no slot (options: drop the slot, or keep `: Error` so every judgment has
+value, sort and cost); the chat planned `@ n` on success lines too, today speaks of the fail
+line (option: both, so a passing `L |- R` prints its cost); `|=` was his first ask that
+night ("|- en |= toevoegen... voor een dit volgt uit en dit bewijst") and was left unwired
+on both days. The `!`, the `err/` path with `/` as namespace, `err/out-of-gas` and `err/no-row`
+with 408 and 404, and the round trip agree.
+
 On rank (10-29, verbatim): "uh krijgen we straks conflicten met het box model stel we
 willen een box model... willen we een box model? net zoals J en UIuia ik heb ook de
 distinctie tussen rank polymorphisme etc nooit begrepen ik wil onze niet weer de hoek in
