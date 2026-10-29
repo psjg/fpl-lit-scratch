@@ -194,7 +194,7 @@ class Cases(Arrow):
     takes the sort of its input.
     """
 
-    #: The one-in one-out arrows, most specific first.
+    #: The arrows of the same count of ins, most specific first.
     cases: tuple[Arrow, ...]
 
 
@@ -281,6 +281,74 @@ def stepping(table: tuple[tuple[Kind, Kind], ...]) -> Cases:
     )
 
 
+type Rows = tuple[tuple[Kind, Kind, Kind], ...]
+
+#: A ``Zero`` divisor sticks the six division words: the term stays as
+#: a value of no number sort (:class:`~fpl.ast_core.Stuck`). The row
+#: comes first, before a row whose divisor a ``Zero`` rises to.
+STUCK: Rows = ((Kind.INT, Kind.ZERO, Kind.VALUE),)
+#: The sort of the quotient of ``kdiv``, ``bdiv`` and ``tdiv`` alike, as
+#: (dividend, divisor, result), most specific first. Any other pair
+#: leaves an ``Int``. A floored, Euclidean or truncated quotient has
+#: the sign of ``a`` times that of ``d``, or is 0 (a floored one of a
+#: negative ``a`` by a positive ``d`` is below 0, never above).
+QUOTIENT: Rows = (
+    (Kind.ZERO, Kind.NAT1, Kind.ZERO),
+    (Kind.NAT0, Kind.NAT1, Kind.NAT0),
+    (Kind.NEG0, Kind.NAT1, Kind.NEG0),
+    (Kind.NAT0, Kind.NEG1, Kind.NEG0),
+    (Kind.NEG0, Kind.NEG1, Kind.NAT0),
+)
+#: The sort of the remainder of ``kmod``: the sign of the divisor.
+KMOD: Rows = (
+    (Kind.INT, Kind.NAT1, Kind.NAT0),
+    (Kind.INT, Kind.NEG1, Kind.NEG0),
+)
+#: The sort of the remainder of ``bmod``: never negative.
+BMOD: Rows = (
+    (Kind.INT, Kind.NAT1, Kind.NAT0),
+    (Kind.INT, Kind.NEG1, Kind.NAT0),
+)
+#: The sort of the remainder of ``tmod``: the sign of the dividend.
+TMOD: Rows = (
+    (Kind.ZERO, Kind.INT, Kind.ZERO),
+    (Kind.NAT0, Kind.INT, Kind.NAT0),
+    (Kind.NEG0, Kind.INT, Kind.NEG0),
+)
+#: The sort of ``pdiv``: a quotient by 0 is 0, else as ``bdiv``.
+PDIV: Rows = ((Kind.INT, Kind.ZERO, Kind.ZERO), *QUOTIENT)
+#: The sort of ``pmod``: a remainder by 0 is the dividend, of its own
+#: sort; else as ``bmod``.
+PMOD: Rows = (
+    *(
+        (have, Kind.ZERO, have)
+        for have in (
+            Kind.ZERO,
+            Kind.NAT1,
+            Kind.NEG1,
+            Kind.NAT0,
+            Kind.NEG0,
+            Kind.INT,
+        )
+    ),
+    *BMOD,
+)
+
+
+def dividing(table: Rows) -> Cases:
+    """Return the arrow of a division word from its table.
+
+    The general arrow takes two integers and leaves one. It is taken
+    for a divisor that may be 0 but is not known to be, so a stuck term
+    can stand where it said ``Int`` (an open question).
+    """
+    return Cases(
+        (Kind.INT, Kind.INT),
+        (Kind.INT,),
+        tuple(Arrow((a, d), (left,)) for a, d, left in table),
+    )
+
+
 #: The arrow of each builtin word, without control words and holes.
 ARROWS: dict[str, Arrow] = {
     **{
@@ -295,6 +363,14 @@ ARROWS: dict[str, Arrow] = {
     "times": NUMBERS,
     "succ": stepping(SUCC),
     "pred": stepping(PRED),
+    "kdiv": dividing(STUCK + QUOTIENT),
+    "kmod": dividing(STUCK + KMOD),
+    "bdiv": dividing(STUCK + QUOTIENT),
+    "bmod": dividing(STUCK + BMOD),
+    "tdiv": dividing(STUCK + QUOTIENT),
+    "tmod": dividing(STUCK + TMOD),
+    "pdiv": dividing(PDIV),
+    "pmod": dividing(PMOD),
     "swap": Arrow((Input(0), Input(1)), (Input(1), Input(0))),
     "dup": Arrow((Input(0),), (Input(0), Input(0))),
     "drop": Arrow((Input(0),), ()),

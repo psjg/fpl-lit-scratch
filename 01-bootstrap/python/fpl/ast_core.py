@@ -67,8 +67,24 @@ class Dict:
     entries: tuple[tuple[str, "Value"], ...]
 
 
+@dataclass(frozen=True)
+class Stuck:
+    """A word that did not fire, kept as a value: ``7 0 kdiv``.
+
+    A division by 0 leaves its term as it stands rather than refusing:
+    the run goes on, and the term shows the operands and the word where
+    it stuck. It is no number, so arithmetic on it is refused. Two are
+    equal when their operands and word are; *span* is where the word
+    was written.
+    """
+
+    operands: tuple["Value", ...]
+    word: str
+    span: Span = field(compare=False)
+
+
 #: Data on the stack: an :data:`Atom` or one of the classes above.
-type Value = Atom | Strand | Listed | Quotation | Symbol | Dict
+type Value = Atom | Strand | Listed | Quotation | Symbol | Dict | Stuck
 
 
 @dataclass(frozen=True)
@@ -315,6 +331,14 @@ EFFECTS: dict[str, Effect] = {
     "times": _BINARY,
     "succ": _UNARY,
     "pred": _UNARY,
+    "kdiv": _BINARY,
+    "kmod": _BINARY,
+    "bdiv": _BINARY,
+    "bmod": _BINARY,
+    "tdiv": _BINARY,
+    "tmod": _BINARY,
+    "pdiv": _BINARY,
+    "pmod": _BINARY,
     "swap": Effect(("x", "y"), ("y", "x")),
     "dup": Effect(("x",), ("x", "x")),
     "drop": Effect(("x",), ()),

@@ -517,6 +517,131 @@ def test_stack_words_and_literals(source: str, printed: str) -> None:
 
 
 @pytest.mark.parametrize(
+    ("source", "printed"),
+    [
+        ("-7 | 2 kdiv\n", "-4\n"),
+        ("-7 | 2 kmod\n", "1\n"),
+        ("-7 | 2 bdiv\n", "-4\n"),
+        ("-7 | 2 bmod\n", "1\n"),
+        ("-7 | 2 tdiv\n", "-3\n"),
+        ("-7 | 2 tmod\n", "-1\n"),
+        ("7 | -2 kdiv\n", "-4\n"),
+        ("7 | -2 kmod\n", "-1\n"),
+        ("7 | -2 bdiv\n", "-3\n"),
+        ("7 | -2 bmod\n", "1\n"),
+        ("7 | -2 tdiv\n", "-3\n"),
+        ("7 | -2 tmod\n", "1\n"),
+        ("-7 | -2 kdiv\n", "3\n"),
+        ("-7 | -2 kmod\n", "-1\n"),
+        ("-7 | -2 bdiv\n", "4\n"),
+        ("-7 | -2 bmod\n", "1\n"),
+        ("-7 | -2 tdiv\n", "3\n"),
+        ("-7 | -2 tmod\n", "-1\n"),
+        ("7 8 | 2 kmod\n", "1 0\n"),
+        ("7 8 | 2 -3 tdiv\n", "3 -2\n"),
+        ("1" + "0" * 30 + " | 7 tmod\n", "1\n"),
+    ],
+)
+def test_division_words_differ_in_the_sign_of_the_remainder(
+    source: str, printed: str
+) -> None:
+    """
+    kdiv/kmod floor, bdiv/bmod keep the remainder in [0, |d|), tdiv/tmod
+    truncate; each pair satisfies a = d q + r.
+    """
+    assert run(source) == printed
+
+
+@pytest.mark.parametrize(
+    ("source", "printed"),
+    [
+        ("7 | 0 pdiv\n", "0\n"),
+        ("7 | 0 pmod\n", "7\n"),
+        ("-7 | 0 pmod\n", "-7\n"),
+        ("-7 | 2 pdiv\n", "-4\n"),
+        ("-7 | 2 pmod\n", "1\n"),
+        ("7 | -2 pdiv\n", "-3\n"),
+        ("7 | -2 pmod\n", "1\n"),
+        ("7 8 | 0 2 pdiv\n", "0 4\n"),
+        ("7 8 | 0 2 pmod\n", "7 0\n"),
+    ],
+)
+def test_pdiv_and_pmod_are_euclidean_and_total_at_zero(
+    source: str, printed: str
+) -> None:
+    """
+    pdiv/pmod divide as bdiv/bmod do; by 0 the quotient is 0 and the
+    remainder the dividend, so a = d q + r holds for every d.
+    """
+    assert run(source) == printed
+
+
+@pytest.mark.parametrize(
+    ("source", "error"),
+    [
+        ("1.5 | 2 kdiv\n", "ERROR: 1:9 arithmetic on a non-number"),
+        ("1.5 | 0 kdiv\n", "ERROR: 1:9 arithmetic on a non-number"),
+        ("“a” | 2 bmod\n", "ERROR: 1:9 arithmetic on a non-number"),
+        ("7 8 | 0 1 2 kdiv\n", "ERROR: 1:13 strands of unequal length"),
+    ],
+)
+def test_division_refuses_at_its_position(source: str, error: str) -> None:
+    """
+    A non-integer operand and strands of unequal length are refused at
+    the word, a zero divisor among them or not.
+    """
+    with pytest.raises(FplError) as caught:
+        run(source)
+    assert str(caught.value) == error
+
+
+@pytest.mark.parametrize(
+    ("source", "printed"),
+    [
+        *(
+            (f"7 | 0 {word}\n", f"7 0 {word}\n")
+            for word in ("kdiv", "kmod", "bdiv", "bmod", "tdiv", "tmod")
+        ),
+        ("-7 | 0 tmod\n", "-7 0 tmod\n"),
+        ("0 7 | 0 1 kmod\n", "0 7 0 1 kmod\n"),
+        ("7 8 | 0 bmod\n", "7 8 0 bmod\n"),
+        ("1 | 7 | 0 kdiv | 2\n", "1 | 7 0 kdiv | 2\n"),
+        ("7 | 0 kdiv | 7 | 0 kmod\n", "7 0 kdiv | 7 0 kmod\n"),
+        ("7 | 0 kdiv enclose\n", "[ 7 0 kdiv ]\n"),
+    ],
+)
+def test_a_zero_divisor_leaves_the_term_as_a_value(
+    source: str, printed: str
+) -> None:
+    """
+    By 0 the word does not fire: the term stays on the stack as one
+    value, written as its operands and then the word, a bar apart from
+    the values beside it. A zero item in a strand sticks the whole
+    application.
+    """
+    assert run(source) == printed
+
+
+@pytest.mark.parametrize(
+    ("source", "error"),
+    [
+        ("7 | 0 kdiv | 1 +\n", "ERROR: 1:16 arithmetic on a non-number"),
+        ("7 | 0 kdiv 1 +\n", "ERROR: 1:14 arithmetic on a non-number"),
+        ("7 | 0 kdiv succ\n", "ERROR: 1:12 arithmetic on a non-number"),
+        ("7 | 0 kdiv | 2 bdiv\n", "ERROR: 1:16 arithmetic on a non-number"),
+        ("1 | 7 | 0 kdiv pdiv\n", "ERROR: 1:16 arithmetic on a non-number"),
+    ],
+)
+def test_a_stuck_term_is_no_number(source: str, error: str) -> None:
+    """
+    Arithmetic on a stuck term is refused at the word that meets it.
+    """
+    with pytest.raises(FplError) as caught:
+        run(source)
+    assert str(caught.value) == error
+
+
+@pytest.mark.parametrize(
     ("source", "error"),
     [
         ("[ ] 1 +\n", "ERROR: 1:7 arithmetic on a non-number"),

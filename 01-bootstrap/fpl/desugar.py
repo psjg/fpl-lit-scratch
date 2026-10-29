@@ -45,6 +45,7 @@ from fpl.ast_core import (
     Slot,
     Statement,
     Strand,
+    Stuck,
     Symbol,
     Value,
     Var,
@@ -1949,9 +1950,13 @@ def spelled(node: Node) -> tuple[Item, ...]:
 
 
 def stranding(node: Node | None) -> bool:
-    """Tell whether a node pushes a number, a string or a strand."""
+    """Tell whether a node pushes a number, a string or a strand.
+
+    A stuck term counts too: it is written starting with a number, so a
+    bar keeps it apart from a literal beside it.
+    """
     return isinstance(node, Push) and isinstance(
-        node.value, int | Decimal | str | Strand
+        node.value, int | Decimal | str | Strand | Stuck
     )
 
 
@@ -1994,12 +1999,17 @@ def named(name: str) -> Word:
 
 
 def shown(value: Value) -> tuple[Item, ...]:
-    """Return a value as the items that push it."""
+    """Return a value as the items that push it.
+
+    A stuck term is written as it stood: its operands, then its word.
+    """
     match value:
         case str():
             return (Text("str", (value,), START),)
         case Strand():
             return spread(value.items)
+        case Stuck():
+            return (*spread(value.operands), named(value.word))
         case Listed() | Quotation() | Dict():
             return (enclosed(value),)
         case Symbol():
