@@ -15,3 +15,4 @@
 * [02.05.13 Playground tracing](02.05.13-playground-tracing.md) - Perfetto traces and optional Sentry spans
 * [02.05.14 The session kernel](02.05.14-session-kernel.md) - one kernel per named session, JSON lines over a unix socket, and repl, tui and pty as frontends on it
 * [02.05.15 One source form: .fpl and .fml](02.05.15-one-source-form.md) - one language with the lexical default inverted; tangle, weave and exports are tooling
+* [02.05.16 Array models](02.05.16-array-models.md) - what rank, box and shape cost: eleven languages read and measured against DI-0072 cluster 4
