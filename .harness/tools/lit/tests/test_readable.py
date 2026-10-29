@@ -7,8 +7,9 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import pytest
-from lit import readable, web
 from support import GOOD, lit, md, page
+
+from lit import readable, web
 
 SRC = '''
 import pytest

@@ -8,8 +8,9 @@ from types import ModuleType
 from typing import cast
 
 import pytest
-from lit import lint, web
 from support import FENCE, GOOD, lit, md, page
+
+from lit import lint, web
 
 
 def run_lint(root: Path, text: str, capsys: pytest.CaptureFixture[str]) -> str:

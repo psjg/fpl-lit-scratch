@@ -5,8 +5,9 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-from lit import web
 from support import GOOD, lit, md, page
+
+from lit import web
 
 
 def read(text: str) -> web.Page:

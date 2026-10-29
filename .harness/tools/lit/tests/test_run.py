@@ -6,8 +6,9 @@ import sys
 from pathlib import Path
 
 import pytest
-from lit import run, web
 from support import GOOD, lit, md, page
+
+from lit import run, web
 
 
 def py(code: str) -> list[str]:
