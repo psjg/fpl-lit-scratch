@@ -54,10 +54,19 @@ def test_a_binder_in_a_body_reaches_the_lines_after_it_and_their_children() -> (
 @pytest.mark.parametrize(
     ("source", "error"),
     [
-        ("1 →x\nx\n", "ERROR: 2:1 unknown word: x"),
-        ("[ 1 →x ] x\n", "ERROR: 1:10 unknown word: x"),
-        ("→x | x\n", "ERROR: 1:6 unknown word: x"),
-        ("1 →a/b\na/b\n", "ERROR: 2:1 unknown word: a/b"),
+        (
+            "1 →x\nx\n",
+            "|- ! err/unresolved/unknown-word 2:1 “unknown word: x”",
+        ),
+        (
+            "[ 1 →x ] x\n",
+            "|- ! err/unresolved/unknown-word 1:10 “unknown word: x”",
+        ),
+        ("→x | x\n", "|- ! err/unresolved/unknown-word 1:6 “unknown word: x”"),
+        (
+            "1 →a/b\na/b\n",
+            "|- ! err/unresolved/unknown-word 2:1 “unknown word: a/b”",
+        ),
     ],
 )
 def test_a_name_dies_with_the_line_or_quotation_that_bound_it(
@@ -96,16 +105,22 @@ def test_symbols_and_dicts_are_values(source: str, printed: str) -> None:
 @pytest.mark.parametrize(
     ("source", "error"),
     [
-        ("{ a 1 a 2 }\n", "ERROR: 1:7 repeated key a"),
-        ("g : -- y\n\t[ ] !\ng →x\n", "ERROR: 3:3 stack underflow"),
+        ("{ a 1 a 2 }\n", "|- ! err/form/dict 1:7 “repeated key a”"),
+        (
+            "g : -- y\n\t[ ] !\ng →x\n",
+            "|- ! err/stack/underflow 3:3 “stack underflow” @ 4",
+        ),
         (
             "g : -- y\n\t[ ] !\n{ a g }\n",
-            "ERROR: 3:1 a dict value is one value",
+            "|- ! err/form/dict 3:1 “a dict value is one value” @ 4",
         ),
-        ("g : -- y\n\t[ ] !\n1 →x | g →y\n", "ERROR: 3:10 stack underflow"),
+        (
+            "g : -- y\n\t[ ] !\n1 →x | g →y\n",
+            "|- ! err/stack/underflow 3:10 “stack underflow” @ 6",
+        ),
         (
             "g : -- y\n\t[ ] !\n1 →x | { a g }\n",
-            "ERROR: 3:8 a dict value is one value",
+            "|- ! err/form/dict 3:8 “a dict value is one value” @ 6",
         ),
     ],
 )
@@ -146,7 +161,10 @@ def test_what_binders_do_not_yet_read_is_refused(source: str) -> None:
     """
     with pytest.raises(FplError) as caught:
         run(source)
-    assert str(caught.value) == "ERROR: 1:1 no evaluator yet"
+    assert (
+        str(caught.value)
+        == "|- ! err/unresolved/no-evaluator 1:1 “no evaluator yet”"
+    )
 
 
 @pytest.mark.parametrize(
@@ -274,4 +292,7 @@ def test_what_directories_do_not_yet_read_is_refused(source: str) -> None:
     """
     with pytest.raises(FplError) as caught:
         run(source)
-    assert str(caught.value) == "ERROR: 1:1 no evaluator yet"
+    assert (
+        str(caught.value)
+        == "|- ! err/unresolved/no-evaluator 1:1 “no evaluator yet”"
+    )

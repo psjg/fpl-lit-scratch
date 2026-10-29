@@ -224,9 +224,13 @@ for error in (UnresolvedError(Span(3, 4), "unknown word x"),
 print(json.dumps(out))
 """
     assert json.loads(child(code)) == [
-        ["UnresolvedError", "ERROR: 3:4 unknown word x", []],
-        ["UnderflowError", "ERROR: 1:2 stack underflow", []],
-        ["FplError", "ERROR: 5:6 plain", []],
+        ["UnresolvedError", "|- ! err/unresolved 3:4 “unknown word x”", []],
+        [
+            "UnderflowError",
+            "|- ! err/stack/underflow 1:2 “stack underflow”",
+            [],
+        ],
+        ["FplError", "|- ! err 5:6 “plain”", []],
     ]
 
 

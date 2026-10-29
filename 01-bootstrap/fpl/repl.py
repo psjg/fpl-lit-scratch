@@ -29,7 +29,7 @@ from typing import Literal, NoReturn, TextIO, override
 from fpl.ast_surface import Line, Program
 from fpl.desugar import plain
 from fpl.driver import FUEL_DEFAULT
-from fpl.errors import FplError
+from fpl.errors import FplError, SessionError, fail_line
 from fpl.lex import Lines, prelex
 from fpl.log import (
     ASCII,
@@ -216,7 +216,8 @@ class Said:
     """What a call prints, and its exit status.
 
     ``entered`` is set when the call ran :func:`fpl.session.enter`;
-    ``spent`` is then the input's own steps.
+    ``spent`` is then the input's own steps, and ``steps`` those of each
+    of its run lines.
     """
 
     #: Text for stdout.
@@ -229,6 +230,8 @@ class Said:
     spent: int | None = None
     #: Whether the call entered an input.
     entered: bool = False
+    #: The steps of each run line of the entered input, in order.
+    steps: tuple[int | None, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -289,6 +292,7 @@ def _entered(
             code,
             outcome.spent,
             entered=True,
+            steps=outcome.steps,
         ),
     )
 
@@ -437,7 +441,7 @@ def once(argv: list[str], env: Mapping[str, str]) -> Said:
 
     Returns:
         What :func:`main` would print, as a :class:`Said`. A refusal
-        comes back as the ``ERROR`` line that :func:`main` writes, with
+        comes back as the fail line that :func:`main` writes, with
         code 2, and bad argv as :data:`USAGE` in ``notes``.
 
     Raises:
@@ -454,7 +458,7 @@ def once(argv: list[str], env: Mapping[str, str]) -> Said:
     except UsageError:
         return Said("", (USAGE,), 2)
     except (RefusedError, OSError) as error:
-        return Said(f"ERROR: {error}\n", (), 2)
+        return Said(_refusal(error), (), 2)
 
 
 def pending(text: str) -> bool:
@@ -518,9 +522,10 @@ def _taken(text: str, line: str) -> str:
 
 
 #: What the loop writes at the margin beside the program: a result
-#: line, a phrase bar (the pad and the kernel write their notes under
-#: the same mark) and an ``ERROR`` line. :func:`written` knows them.
-WRITTEN = (RESULT, BAR, "ERROR:")
+#: line or a fail line (both open with the turnstile) and a phrase bar
+#: (the pad and the kernel write their notes under the same mark).
+#: :func:`written` knows them.
+WRITTEN = (RESULT, BAR)
 
 
 def written(line: str) -> bool:
@@ -862,10 +867,13 @@ def phrase_bar(  # noqa: PLR0913 -- bar fields are the chrome, not a bag type
     return left + ("-" * pad) + right
 
 
-def result_line(value: str, typ: str = "...") -> str:
+def result_line(
+    value: str, typ: str = "...", *, within: int | None = None
+) -> str:
     """Build one TTY result line.
 
-    The line is a turnstile, *value*, and a type slot *typ*.
+    The line is a turnstile, *value*, a type slot *typ* and, where the
+    count is at hand, ``within`` the steps the line spent.
 
     The slot is ``...`` until the walker exposes a type; it is not FPL's
     ``?`` goal or ``_`` hole.
@@ -873,8 +881,20 @@ def result_line(value: str, typ: str = "...") -> str:
     Examples:
         >>> result_line("3")
         '|- 3 : ...'
+        >>> result_line("3", "number", within=4)
+        '|- 3 : number within 4'
     """
-    return f"{RESULT} {value} : {typ}"
+    bound = "" if within is None else f" within {within}"
+    return f"{RESULT} {value} : {typ}{bound}"
+
+
+def _refusal(error: Exception) -> str:
+    """Return the fail line of a refused call, with its newline.
+
+    A refusal lies in no source and at no step, so the line has the
+    ``err/session`` tag and the message alone.
+    """
+    return fail_line(SessionError.tag, str(error)) + "\n"
 
 
 def _commanded(call: _Call, text: str) -> _Call:
@@ -911,20 +931,27 @@ def _told(said: Said, stdout: TextIO, stderr: TextIO) -> None:
     stderr.write("".join(note + "\n" for note in said.notes))
 
 
-def transcript(out: str) -> str:
+def transcript(out: str, steps: tuple[int | None, ...] = ()) -> str:
     r"""Turn the lines of a successful TTY eval into result lines.
 
     Each line becomes a :func:`result_line`; blank lines stay blank. The
-    form is a shell convention, not grammar.
+    form is a shell convention, not grammar. *steps* are those of the
+    run lines that printed the last lines, one each; a line they do not
+    reach, or give none, has no ``within``.
 
     Examples:
         >>> transcript("1\n\n2\n")
         '|- 1 : ...\n\n|- 2 : ...\n'
+        >>> transcript("0\n1\n", (None, 4))
+        '|- 0 : ...\n|- 1 : ... within 4\n'
     """
+    lines = out.splitlines(keepends=True)
+    counts = (*[None] * (len(lines) - len(steps)), *steps)
     parts: list[str] = []
-    for line in out.splitlines(keepends=True):
+    for line, within in zip(lines, counts, strict=False):
         body = line.removesuffix("\n")
-        parts.append(result_line(body) + line[len(body) :] if body else line)
+        shown = result_line(body, within=within) if body else ""
+        parts.append(shown + line[len(body) :])
     return "".join(parts)
 
 
@@ -1009,7 +1036,7 @@ def _turn(  # noqa: PLR0913 -- call/env/log/streams plus optional Tty
             return this, log, None, None
         said, log = _said(this, env, log)
     except RefusedError as error:
-        _told(Said(f"ERROR: {error}\n", (), 2), stdout, stderr)
+        _told(Said(_refusal(error), (), 2), stdout, stderr)
         log = _loaded(call, env, log)
         return _seen(call, log), log, None, None
     said = _transcribed(this, _flagged(text, said), tty)
@@ -1032,7 +1059,7 @@ def _transcribed(this: _Call, said: Said, tty: Tty | None) -> Said:
     """
     if tty is None or this.action != "source" or said.code != 0:
         return said
-    return replace(said, out=transcript(said.out))
+    return replace(said, out=transcript(said.out, said.steps))
 
 
 def _loaded(call: _Call, env: Mapping[str, str], memory: Log) -> Log:
@@ -1130,7 +1157,7 @@ def main(  # noqa: PLR0913 -- argv and stdio/env plus optional Tty
 ) -> int:
     """Carry out *argv* and return the exit status.
 
-    The output, or one ``ERROR`` line, goes to *stdout*; goals, the
+    The output, or one fail line, goes to *stdout*; goals, the
     caret under an error, inputs changed and the new head go to
     *stderr*, all after any append is durable. An :exc:`OSError` is a
     refusal: its line names the path the system refused. Bad argv writes
@@ -1171,7 +1198,7 @@ def main(  # noqa: PLR0913 -- argv and stdio/env plus optional Tty
         stderr.write(USAGE + "\n")
         return 2
     except (RefusedError, OSError) as error:
-        stdout.write(f"ERROR: {error}\n")
+        stdout.write(_refusal(error))
         return 2
     _told(said, stdout, stderr)
     return said.code

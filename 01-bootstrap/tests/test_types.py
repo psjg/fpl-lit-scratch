@@ -50,20 +50,24 @@ BUILTINS = ("+", "-", "times", "dup", "swap", "drop")
     [
         (
             "f : -- y z\n1 | f +\n",
-            "ERROR: 1:1 f leaves 0 values, its effect line 2",
+            "|- ! err/form/effect 1:1 “f leaves 0 values, its effect line 2”",
         ),
         (
             "f : x -- y z\n\tdup dup\n",
-            "ERROR: 1:1 f leaves 3 values, its effect line 2",
+            "|- ! err/form/effect 1:1 “f leaves 3 values, its effect line 2”",
         ),
         (
             "d/\n\tg : x --\n",
-            "ERROR: 2:2 d/g leaves 1 values, its effect line 0",
+            "|- ! err/form/effect 2:2"
+            " “d/g leaves 1 values, its effect line 0”",
         ),
-        ("f : x -- y\n\t“a” +\n", "ERROR: 2:6 arithmetic on a non-number"),
+        (
+            "f : x -- y\n\t“a” +\n",
+            "|- ! err/type/number 2:6 “arithmetic on a non-number”",
+        ),
         (
             "f : x -- y\n\t→a a a “b” swap +\n",
-            "ERROR: 2:18 arithmetic on a non-number",
+            "|- ! err/type/number 2:18 “arithmetic on a non-number”",
         ),
     ],
 )
@@ -108,7 +112,10 @@ def test_calling_a_word_meets_its_inputs() -> None:
     """
     with pytest.raises(FplError) as caught:
         run("t : x y -- z\n\t+\n“a” | 1 t\n")
-    assert str(caught.value) == "ERROR: 3:9 arithmetic on a non-number"
+    assert (
+        str(caught.value)
+        == "|- ! err/type/number 3:9 “arithmetic on a non-number”"
+    )
 
 
 @pytest.mark.parametrize(
@@ -123,7 +130,9 @@ def test_taking_from_nothing_is_refused(node: Node) -> None:
     """
     with pytest.raises(FplError) as caught:
         after(Typing((), {}, {}), (node,), ARROWS)
-    assert str(caught.value) == "ERROR: 2:3 stack underflow"
+    assert (
+        str(caught.value) == "|- ! err/stack/underflow 2:3 “stack underflow”"
+    )
 
 
 def test_a_name_dies_with_its_binder() -> None:
@@ -221,7 +230,9 @@ def test_a_goal_run_is_refused_where_it_stands() -> None:
     """
     with pytest.raises(FplError) as caught:
         run("f : x -- y\n\t?\n1 f\n")
-    assert str(caught.value) == "ERROR: 2:2 unfilled goal"
+    assert (
+        str(caught.value) == "|- ! err/unresolved/goal 2:2 “unfilled goal” @ 3"
+    )
 
 
 def test_a_goal_no_count_fills_is_refused_at_it() -> None:
@@ -234,8 +245,8 @@ def test_a_goal_no_count_fills_is_refused_at_it() -> None:
     with pytest.raises(FplError) as caught:
         run(source)
     assert (
-        str(caught.value)
-        == "ERROR: 2:2 cannot infer ? : no count it leaves ends at 1"
+        str(caught.value) == "|- ! err/unresolved/goal 2:2"
+        " “cannot infer ? : no count it leaves ends at 1”"
     )
 
 
@@ -266,7 +277,10 @@ def test_a_hole_that_is_not_nothing_is_refused_at_its_span() -> None:
     """
     with pytest.raises(FplError) as caught:
         run("f : x -- y z\n\t_\n")
-    assert str(caught.value) == "ERROR: 2:2 cannot infer _ : t0 -- value value"
+    assert (
+        str(caught.value)
+        == "|- ! err/unresolved/goal 2:2 “cannot infer _ : t0 -- value value”"
+    )
 
 
 def test_match_rows_leaving_different_counts_keep_the_effect_line() -> None:
@@ -286,7 +300,10 @@ def test_an_input_a_row_does_arithmetic_on_is_a_number_for_its_word() -> None:
     """
     with pytest.raises(FplError) as caught:
         run("f : x y -- z\n\t→a\n\tmatch\n\t\t_\ta 1 +\n0 | “a” f\n")
-    assert str(caught.value) == "ERROR: 5:9 arithmetic on a non-number"
+    assert (
+        str(caught.value)
+        == "|- ! err/type/number 5:9 “arithmetic on a non-number”"
+    )
 
 
 def test_rows_agree_on_the_sort_a_later_row_finds() -> None:
@@ -322,7 +339,10 @@ def test_a_match_row_is_typed() -> None:
     """
     with pytest.raises(FplError) as caught:
         run("f : x -- y\n\tmatch\n\t\t( pair a b )\ta “s” +\n")
-    assert str(caught.value) == "ERROR: 3:22 arithmetic on a non-number"
+    assert (
+        str(caught.value)
+        == "|- ! err/type/number 3:22 “arithmetic on a non-number”"
+    )
 
 
 @st.composite
@@ -480,4 +500,7 @@ def test_a_symbol_is_no_number() -> None:
     """
     with pytest.raises(FplError) as caught:
         run("f : -- x\n\t#a 1 +\n")
-    assert str(caught.value) == "ERROR: 2:7 arithmetic on a non-number"
+    assert (
+        str(caught.value)
+        == "|- ! err/type/number 2:7 “arithmetic on a non-number”"
+    )

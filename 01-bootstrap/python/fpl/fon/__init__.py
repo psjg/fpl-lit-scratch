@@ -151,6 +151,8 @@ class FonError(FplError):
     character it starts at, and that character's offset in the text.
     """
 
+    tag = "err/fon"
+
     def __init__(self, text: str, offset: int, message: str) -> None:
         line = text.count("\n", 0, offset) + 1
         super().__init__(

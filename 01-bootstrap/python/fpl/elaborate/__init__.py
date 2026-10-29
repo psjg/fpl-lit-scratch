@@ -49,7 +49,13 @@ from fpl.ast_core import (
     Var,
     Wild,
 )
-from fpl.errors import FplError, Span, UnderflowError
+from fpl.errors import (
+    EffectError,
+    GoalError,
+    NotNumberError,
+    Span,
+    UnderflowError,
+)
 from fpl.eval import CONTROLS
 
 
@@ -249,7 +255,7 @@ def inferred(
         return declared(define), ()
     if len(end.stack) != promised:
         message = f"leaves {len(end.stack)} values, its effect line {promised}"
-        raise FplError(define.span, f"{define.word} {message}")
+        raise EffectError(define.span, f"{define.word} {message}")
     return Arrow(
         resolved(start.stack, end), resolved(end.stack, end)
     ), end.goals
@@ -314,7 +320,7 @@ def filled(
             typing, stack=stack, goals=(*typing.goals, Goal(node.span, arrow))
         )
     if len(arrow.outs) != len(arrow.ins):
-        raise FplError(node.span, f"cannot infer _ : {shown(arrow)}")
+        raise GoalError(node.span, f"cannot infer _ : {shown(arrow)}")
     return typing
 
 
@@ -344,7 +350,7 @@ def wanted(
                     Kind.VALUE if isinstance(s, Input) else s for s in found
                 )
     ending = "runs" if need is None else f"ends at {need}"
-    raise FplError(
+    raise GoalError(
         hole.span, f"cannot infer {hole.name} : no count it leaves {ending}"
     )
 
@@ -659,7 +665,7 @@ def met(
         case _ if isinstance(have, Input):
             found[have.index] = need
         case _ if have not in (need, Kind.VALUE):
-            raise FplError(span, "arithmetic on a non-number")
+            raise NotNumberError(span, "arithmetic on a non-number")
         case _:
             pass
 

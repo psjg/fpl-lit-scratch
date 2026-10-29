@@ -50,6 +50,7 @@ from fpl.errors import (
     EachError,
     EmptyFoldError,
     FailError,
+    FplError,
     GoalError,
     NotInvertibleError,
     NotListError,
@@ -260,7 +261,11 @@ def metered(
     Raises:
         :exc:`FplError`: The run fails (from :func:`final`), or recurses
             deeper than the Python stack allows (``recursion too deep``,
-            at the line).
+            at the line). Its ``step`` is what the meter counted when
+            the run failed: the step the failure came at, a step the
+            meter refused (``out of fuel``) not included, so the whole
+            bound; ``None`` without a bound, and for the recursion
+            limit, which is the host's and not the program's.
         :exc:`~fpl.errors.UnequalError`: ``L`` and ``R`` leave
             different stacks, at the line.
 
@@ -269,7 +274,7 @@ def metered(
         >>> metered(check, {}, None, show=str)  # doctest: +ELLIPSIS
         Traceback (most recent call last):
             ...
-        fpl.errors.UnequalError: ERROR: 4:1 check failed: ...
+        fpl.errors.UnequalError: |- ! err/check/unequal 4:1 ...”
     """
     meter = Meter(fuel, run.span)
     token = FUEL.set(meter)
@@ -282,6 +287,9 @@ def metered(
         return stack
     except RecursionError:
         raise RecursionDepthError(run.span, "recursion too deep") from None
+    except FplError as error:
+        error.step = meter.spent()
+        raise
     finally:
         if spent is not None:
             spent.append(meter.spent())

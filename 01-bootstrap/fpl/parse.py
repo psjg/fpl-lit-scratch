@@ -132,10 +132,10 @@ def parse(source: str) -> Program:
     Examples:
         >>> len(parse("a b\n").lines)
         1
-        >>> parse("(x\n")
+        >>> parse("(x\n")  # doctest: +ELLIPSIS
         Traceback (most recent call last):
             ...
-        fpl.errors.UnclosedError: ERROR: 1:1 ( never closed
+        fpl.errors.UnclosedError: |- ! err/read/unclosed 1:1 ...
     """
     try:
         return read(source, Lines(source), 0, len(source))

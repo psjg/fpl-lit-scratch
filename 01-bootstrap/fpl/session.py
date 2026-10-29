@@ -15,7 +15,7 @@ from pathlib import Path
 
 from fpl.ast_core import Run, Statement
 from fpl.driver import Lines, checked, printed, stacks
-from fpl.errors import FplError, SessionError, Span, excerpt
+from fpl.errors import FplError, SessionError, Span, excerpt, fail_line
 from fpl.log import SCHEMA, Event, Log, RefusedError, Status, Who, prefixed
 from fpl.multihash import Multihash, content, hashed
 from fpl.types import Goal, reported
@@ -69,6 +69,9 @@ class Outcome:
     #: Steps the input's own run lines took in this call; not kept on
     #: the event. ``None`` when no run line of the input reported steps.
     spent: int | None = None
+    #: The steps of each of the input's own run lines, in order,
+    #: ``None`` for a line without a count; not kept on the event.
+    steps: tuple[int | None, ...] = ()
 
 
 @cache
@@ -214,9 +217,12 @@ class _Entry:
         out: str,
         notes: tuple[str, ...],
         *,
-        spent: int | None = None,
+        steps: tuple[int | None, ...] = (),
     ) -> Outcome:
-        """Make the input's outcome from status, output and notes."""
+        """Make the input's outcome from status, output and notes.
+
+        *steps* are those of the input's own run lines.
+        """
         body, shown = self.text.encode(), out.encode()
         event = replace(
             _next(self.log, self.context, self.at),
@@ -225,7 +231,12 @@ class _Entry:
             status=status,
         )
         return Outcome(
-            event, {event.body: body, event.out: shown}, out, notes, spent
+            event,
+            {event.body: body, event.out: shown},
+            out,
+            notes,
+            _total(steps),
+            steps,
         )
 
 
@@ -234,50 +245,52 @@ def _failed(
     error: FplError,
     notes: tuple[str, ...],
     *,
-    spent: int | None = None,
+    steps: tuple[int | None, ...] = (),
 ) -> Outcome:
     """Make the outcome of an input that failed.
 
-    The output is one ``ERROR:`` line with the error's place in the
-    input, or ``@<seq>`` and its place in the earlier input it lies in.
-    The caret under the error, drawn in that input, is added to the
-    notes.
+    The output is the error's fail line with its place in the input, or
+    ``#<seq>`` and its place in the earlier input it lies in. The caret
+    under the error, drawn in that input, is added to the notes.
     """
     owner = entry.owner(error.span.line)
     span = entry.local(error.span)
     texts = (*(part.text for part in entry.parts), entry.text)
-    where = (
-        f"@{entry.parts[owner].event.seq} " if owner < len(entry.parts) else ""
+    seq = entry.parts[owner].event.seq if owner < len(entry.parts) else None
+    line = fail_line(
+        error.tag, error.message, span, input_number=seq, step=error.step
     )
-    line = f"ERROR: {where}{span.line}:{span.col} {error.message}"
     caret = excerpt(texts[owner], span)
     return entry.logged(
         "error",
         line + "\n",
         (*notes, caret) if caret else notes,
-        spent=spent,
+        steps=steps,
     )
 
 
-def _phrase_spent(
+def _own_steps(
     entry: _Entry,
     statements: tuple[Statement, ...],
     per_run: list[int | None],
-) -> int | None:
-    """Sum the steps of the input's own run lines, not of history.
+) -> tuple[int | None, ...]:
+    """Take the steps of the input's own run lines, not of history."""
+    runs = (s for s in statements if isinstance(s, Run))
+    return tuple(
+        n
+        for run, n in zip(runs, per_run, strict=False)
+        if entry.owner(run.span.line) == len(entry.parts)
+    )
+
+
+def _total(steps: tuple[int | None, ...]) -> int | None:
+    """Sum the steps of run lines.
 
     Returns:
         ``None`` if none of those lines reported steps.
     """
-    runs = (s for s in statements if isinstance(s, Run))
-    total = 0
-    any_spent = False
-    for run, n in zip(runs, per_run, strict=False):
-        if entry.owner(run.span.line) != len(entry.parts) or n is None:
-            continue
-        total += n
-        any_spent = True
-    return total if any_spent else None
+    known = [n for n in steps if n is not None]
+    return sum(known) if known else None
 
 
 def _by_part(entry: _Entry, lines: Lines) -> list[Lines]:
@@ -351,8 +364,8 @@ def enter(log: Log, text: str, context: Context, at: Event | None) -> Outcome:
         at: The event to extend; ``None`` is the origin.
 
     Returns:
-        The outcome, not yet appended to *log*; its ``spent`` counts the
-        input's own run lines only.
+        The outcome, not yet appended to *log*; its ``steps`` are those
+        of the input's own run lines only, and ``spent`` their sum.
     """
     entry = _Entry(
         log,
@@ -371,14 +384,13 @@ def enter(log: Log, text: str, context: Context, at: Event | None) -> Outcome:
         left = stacks(statements, context.fuel, spent=per_run)
     except FplError as error:
         return _failed(
-            entry,
-            error,
-            notes,
-            spent=_phrase_spent(entry, statements, per_run),
+            entry, error, notes, steps=_own_steps(entry, statements, per_run)
         )
-    cost = _phrase_spent(entry, statements, per_run)
+    steps = _own_steps(entry, statements, per_run)
     return replace(
-        _changed(entry, left, _earlier(entry, left), notes), spent=cost
+        _changed(entry, left, _earlier(entry, left), notes),
+        spent=_total(steps),
+        steps=steps,
     )
 
 

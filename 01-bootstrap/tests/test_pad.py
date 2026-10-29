@@ -76,10 +76,10 @@ def test_a_turn_is_written_as_the_repl_writes_one() -> None:
     """
     assert turns(pad(SQ, "3 sq", "1 | 2 +\n4 sq", "1 drop", "[ 1 2 ]")) == [
         (),
-        ("|- 9 : number",),
-        ("|- 3 : number", "|- 16 : number"),
+        ("|- 9 : number within 4",),
+        ("|- 3 : number within 3", "|- 16 : number within 4"),
         ("",),
-        ("|- [ 1 2 ] : value",),
+        ("|- [ 1 2 ] : value within 1",),
     ]
 
 
@@ -87,7 +87,7 @@ def test_an_untyped_line_keeps_the_repl_s_dots() -> None:
     clauses = "f : x: Int -- y\n\tdrop #int\nf : x: Text -- y\n\tdrop #text"
     assert turns(pad(clauses, "5 f\n1 [2] [3] if")) == [
         (),
-        ("|- #int : symbol", "|- 2 : ..."),
+        ("|- #int : symbol within 9", "|- 2 : ... within 5"),
     ]
 
 
@@ -113,16 +113,26 @@ def test_cells_are_read_top_to_bottom() -> None:
     """
     use, define = pad("3 sq", SQ)
     assert use.status == "error"
-    assert use.turns[0] == "ERROR: 1:3 unknown word: sq"
+    assert (
+        use.turns[0]
+        == "|- ! err/unresolved/unknown-word 1:3 “unknown word: sq”"
+    )
     assert define.status == "ok"
 
 
 def test_an_error_stops_no_cell_and_adds_nothing_to_the_state() -> None:
     cells = pad("x", "1 | 2 +", "sq : n -- n\n\tdup nope", "3 sq")
     assert [cell.status for cell in cells] == ["error", "ok", "error", "error"]
-    assert cells[0].turns == ("ERROR: 1:1 unknown word: x", ";;! x", ";;! ^")
-    assert cells[1].turns == ("|- 3 : number",)
-    assert cells[3].turns[0] == "ERROR: 1:3 unknown word: sq"
+    assert cells[0].turns == (
+        "|- ! err/unresolved/unknown-word 1:1 “unknown word: x”",
+        ";;! x",
+        ";;! ^",
+    )
+    assert cells[1].turns == ("|- 3 : number within 3",)
+    assert (
+        cells[3].turns[0]
+        == "|- ! err/unresolved/unknown-word 1:3 “unknown word: sq”"
+    )
 
 
 def test_an_edit_runs_the_cell_and_every_cell_below_from_its_state() -> None:
@@ -130,8 +140,8 @@ def test_an_edit_runs_the_cell_and_every_cell_below_from_its_state() -> None:
     after = run(before, 1, "f : -- x\n\t3", CTX, TTY)
     assert after[0] is before[0]
     assert turns(after[2:]) == [
-        ("|- 3 : number",),
-        ("|- 3 | 3 : number number",),
+        ("|- 3 : number within 2",),
+        ("|- 3 | 3 : number number within 4",),
     ]
     assert run(after, 1, "f : -- x\n\t2", CTX, TTY)[2:] == before[2:]
 
@@ -139,7 +149,7 @@ def test_an_edit_runs_the_cell_and_every_cell_below_from_its_state() -> None:
 def test_an_edit_can_break_and_mend_the_cells_below() -> None:
     cells = run(pad(SQ, "3 sq"), 0, "", CTX, TTY)
     assert [cell.status for cell in cells] == ["empty", "error"]
-    assert run(cells, 0, SQ, CTX, TTY)[1].turns == ("|- 9 : number",)
+    assert run(cells, 0, SQ, CTX, TTY)[1].turns == ("|- 9 : number within 4",)
 
 
 def test_an_open_pair_waits_and_the_cells_below_still_run() -> None:
@@ -147,7 +157,7 @@ def test_an_open_pair_waits_and_the_cells_below_still_run() -> None:
     assert [cell.status for cell in cells] == ["pending", "ok"]
     assert not cells[0].log.events
     closed = run(cells, 0, "1 [\n2 ]", CTX, TTY)
-    assert closed[0].turns == ("|- 1 [ 2 ] : number value",)
+    assert closed[0].turns == ("|- 1 [ 2 ] : number value within 2",)
 
 
 def test_a_cell_holds_the_inputs_the_repl_would_group() -> None:
@@ -158,11 +168,11 @@ def test_a_cell_holds_the_inputs_the_repl_would_group() -> None:
     (cell,) = pad("f : -- x\n2\n\nf\n\nx\n\n1 | 1 +")
     assert cell.status == "error"
     assert cell.turns == (
-        "|- 2 : number",
-        "ERROR: 1:1 unknown word: x",
+        "|- 2 : number within 2",
+        "|- ! err/unresolved/unknown-word 1:1 “unknown word: x”",
         ";;! x",
         ";;! ^",
-        "|- 2 : number",
+        "|- 2 : number within 3",
     )
     assert len(cell.log.events) == 4
 
@@ -192,7 +202,7 @@ def test_a_buffer_is_read_as_cells_and_synced_from_the_first_change() -> None:
     edited = text.replace("3 sq", "4 sq").replace("\nx ; \n", "\n\nx\n\n")
     after = synced(before, edited, CTX, TTY)
     assert after[0] is before[0]
-    assert turns(after[1:]) == [("|- 16 : number",), before[2].turns]
+    assert turns(after[1:]) == [("|- 16 : number within 4",), before[2].turns]
     assert chunks("1 2 +\n;;! -( 9 )-< command 2 >-\n\n") == ["1 2 +"]
     assert synced(before, "", CTX, TTY) == ()
     set_in = buffer(before, TTY, "\t")
@@ -241,14 +251,14 @@ def test_a_preview_evaluates_the_cursor_s_cell_on_the_state_above() -> None:
     cells = pad(SQ, "3 sq")
     kept = deepcopy(cells)
     text = buffer(cells, TTY) + "4 sq"
-    four = Ghost(line_of(text, "4 sq"), "ok", "|- 16 : number")
+    four = Ghost(line_of(text, "4 sq"), "ok", "|- 16 : number within 4")
     assert preview(cells, text, len(text), CTX, STILL) == four
     edited = buffer(cells, TTY).replace("\n3 sq ; \n", "\n5 sq\n")
-    five = Ghost(line_of(edited, "5 sq"), "ok", "|- 25 : number")
-    for spot in ("5 sq", "< command 2 >", "|- 9 : number"):
+    five = Ghost(line_of(edited, "5 sq"), "ok", "|- 25 : number within 4")
+    for spot in ("5 sq", "< command 2 >", "|- 9 : number within 4"):
         assert preview(cells, edited, edited.index(spot), CTX, STILL) == five
     both = f"{buffer(cells, TTY)}f : -- x\n\t7\n\n{bar(cells, TTY)}\nf"
-    seven = Ghost(len(both.split("\n")) - 1, "ok", "|- 7 : number")
+    seven = Ghost(len(both.split("\n")) - 1, "ok", "|- 7 : number within 2")
     assert preview(cells, both, len(both), CTX, STILL) == seven
     assert cells == kept
 
@@ -268,7 +278,9 @@ def test_the_ghost_follows_the_last_text_line_of_its_cell() -> None:
     text = buffer(cells, TTY) + "1 | 2 +\n4 sq\n\n"
     at = text.index("1 | 2 +")
     assert preview(cells, text, at, CTX, STILL) == Ghost(
-        line_of(text, "4 sq"), "ok", "|- 3 : number  |- 16 : number"
+        line_of(text, "4 sq"),
+        "ok",
+        "|- 3 : number within 3  |- 16 : number within 4",
     )
 
 
@@ -281,17 +293,21 @@ def test_a_preview_is_bounded_by_its_fuel() -> None:
     """
     loop = pad("f : -- x\n\tf")
     text = buffer(loop, TTY) + "f"
-    out = Ghost(line_of(text, "f"), "fuel", "ERROR: 1:1 out of fuel")
+    line = line_of(text, "f")
+    cut = "|- ! err/out-of-gas 1:1 “out of fuel” @ "
+    out = Ghost(line, "fuel", cut + "1000")
     assert preview(loop, text, len(text), CTX, STILL, fuel=1000) == out
     started = time.perf_counter()
-    assert preview(loop, text, len(text), CTX, Tty(now=lambda: AT)) == out
+    assert preview(loop, text, len(text), CTX, Tty(now=lambda: AT)) == (
+        Ghost(line, "fuel", cut + "40000")
+    )
     assert time.perf_counter() - started < 1.0
     heavy = pad(SQ, "100 sq sq sq")
     one = buffer(heavy, TTY) + "1"
     ghost = preview(heavy, one, len(one), CTX, STILL, fuel=3)
     assert ghost is not None
     assert ghost.kind == "fuel"
-    assert ghost.text.startswith("ERROR: @")
+    assert ghost.text.startswith("|- ! err/out-of-gas #")
     tight = replace(CTX, fuel=3)
     assert preview(heavy, one, len(one), tight, STILL, fuel=1000) == ghost
 
@@ -307,7 +323,9 @@ def test_a_preview_is_bounded_in_time() -> None:
     """
     loop = pad("f : -- x\n\tf")
     many = buffer(loop, TTY) + "1 | 2 +\nf\nf\nf"
-    first = Ghost(line_of(many, "f") + 2, "fuel", "|- 3 : number  " + CUT)
+    first = Ghost(
+        line_of(many, "f") + 2, "fuel", "|- 3 : number within 3  " + CUT
+    )
     assert preview(loop, many, len(many), CTX, TTY, seconds=2.5) == first
     cut = Ghost(first.line, "fuel", CUT)
     assert preview(loop, many, len(many), CTX, TTY, seconds=0.5) == cut
@@ -331,15 +349,17 @@ def test_shaded_keeps_results_and_errors() -> None:
     without its carets, notes and blank empty stacks.
     """
     (ok,) = pad("1 | 2 +")
-    assert shaded(ok, 4) == Ghost(4, "ok", "|- 3 : number")
+    assert shaded(ok, 4) == Ghost(4, "ok", "|- 3 : number within 3")
     (error,) = pad("x")
-    assert shaded(error, 0) == Ghost(0, "error", "ERROR: 1:1 unknown word: x")
+    assert shaded(error, 0) == Ghost(
+        0, "error", "|- ! err/unresolved/unknown-word 1:1 “unknown word: x”"
+    )
     changed = pad("f : -- x\n\t2", "f", "f : -- x\n\t3")[2]
     assert changed.turns == (";;! CHANGED cell 2",)
     assert shaded(changed, 0) is None
     (blank,) = pad("1 drop\n2")
-    assert blank.turns == ("", "|- 2 : number")
-    assert shaded(blank, 1) == Ghost(1, "ok", "|- 2 : number")
+    assert blank.turns == ("", "|- 2 : number within 1")
+    assert shaded(blank, 1) == Ghost(1, "ok", "|- 2 : number within 1")
 
 
 @given(st.lists(st.sampled_from(FILLED), max_size=4))
@@ -401,7 +421,7 @@ def values(text: str) -> list[str]:
     return [
         line.removeprefix("|- ").rsplit(" : ", 1)[0]
         for line in text.splitlines()
-        if line.startswith("|- ")
+        if line.startswith("|- ") and not line.startswith("|- !")
     ]
 
 
@@ -418,7 +438,7 @@ def test_a_transcript_reads_back_as_the_pad_and_as_a_repl_session() -> None:
     text = transcript(cells)
     assert seeded(text, CTX, TTY) == cells
     assert seeded(transcript(cells, "\t"), CTX, TTY) == cells
-    assert "\n\t|- 9 : number ; \n" in transcript(cells, "\t")
+    assert "\n\t|- 9 : number within 4 ; \n" in transcript(cells, "\t")
     assert all(
         line.endswith(" ; ") for line in text.splitlines() if line.strip()
     )
@@ -431,7 +451,10 @@ def test_a_transcript_reads_back_as_the_pad_and_as_a_repl_session() -> None:
     held = sum(cell.status == "pending" for cell in cells)
     phrases = len(cells[-1].log.events) + held
     assert out.getvalue().count("< command ") == phrases + 1
-    assert "ERROR: 1:1 unknown word: x" in out.getvalue()
+    assert (
+        "|- ! err/unresolved/unknown-word 1:1 “unknown word: x”"
+        in out.getvalue()
+    )
 
 
 @contextmanager
@@ -471,17 +494,17 @@ def test_the_page_drives_the_pad_over_http() -> None:
         text = empty["buffer"] + SQ + "\n" + phrase_bar(2, 1, AT) + "\n3 sq"
         state = posted(url + "/buffer", {"text": text, "cursor": len(text)})
         set_in = posted(url + "/pad", {"indent": "\t"})
-        assert "\n\t|- 9 : number ; \n" in set_in["buffer"]
+        assert "\n\t|- 9 : number within 4 ; \n" in set_in["buffer"]
         assert set_in["caret"] == len(set_in["buffer"])
         assert state["cells"][1] == {
             "source": "3 sq",
             "status": "ok",
             "bar": phrase_bar(2, 1, AT, ms=1000.0),
-            "turns": ["|- 9 : number"],
+            "turns": ["|- 9 : number within 4"],
             "changes": [],
         }
         assert state["buffer"].endswith(
-            "3 sq ; \n|- 9 : number ; \n"
+            "3 sq ; \n|- 9 : number within 4 ; \n"
             + phrase_bar(3, 2, AT, fuel=4, ms=1000.0)
             + " ; \n"
         )
@@ -498,7 +521,7 @@ def test_a_preview_route_answers_the_ghost_and_changes_nothing() -> None:
     cells = pad(SQ, "3 sq")
     text = buffer(cells, TTY) + "4 sq"
     line = line_of(text, "4 sq")
-    ghost = {"line": line, "kind": "ok", "text": "|- 16 : number"}
+    ghost = {"line": line, "kind": "ok", "text": "|- 16 : number within 4"}
     held = Pad(cells, CTX, STILL)
     held.indent = "\t"
     body = {"text": text, "cursor": len(text)}
@@ -577,6 +600,6 @@ def test_the_pad_colours_with_the_playground_s_tokenizer() -> None:
 
 def test_a_file_seeds_one_cell_per_input(tmp_path: Path) -> None:
     cells = seeded(f"{SQ}\n3 sq\n", CTX, TTY)
-    assert [cell.turns for cell in cells] == [(), ("|- 9 : number",)]
+    assert [cell.turns for cell in cells] == [(), ("|- 9 : number within 4",)]
     with pytest.raises(FileNotFoundError):
         main(["pad", str(tmp_path / "missing.fpl"), "--no-browser"])

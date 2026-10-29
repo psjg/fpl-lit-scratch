@@ -74,13 +74,13 @@ export function tokenized(definition, text) {
 	});
 }
 
-/** A line the loop wrote (fpl.repl.written): a result, a bar or a note, an ERROR. */
-const LOOP = /^[\t ]*(\|-|;;!|ERROR:)( |$)/;
+/** A line the loop wrote (fpl.repl.written): a result or a fail line (`|- !`), a bar or a note. */
+const LOOP = /^[\t ]*(\|-|;;!)( |$)/;
 
 /** The class of a loop line, by what it is. */
 function kind(line) {
 	const bare = line.trimStart();
-	return bare.startsWith("ERROR:") ? "error" : bare.startsWith("|-") ? "result" : "note";
+	return bare.startsWith("|- !") ? "error" : bare.startsWith("|-") ? "result" : "note";
 }
 
 /**

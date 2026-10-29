@@ -565,11 +565,28 @@ def test_stack_words_and_literals(source: str, printed: str) -> None:
 @pytest.mark.parametrize(
     ("source", "error"),
     [
-        ("[ ] 1 +\n", "ERROR: 1:7 arithmetic on a non-number"),
-        ("1 | [ ] +\n", "ERROR: 1:9 arithmetic on a non-number"),
-        ("1 2 | 1 2 3 +\n", "ERROR: 1:13 strands of unequal length"),
-        ("1 | 2 ,\n", "ERROR: 1:7 , joins two quotations or two lists"),
-        ("f : -- y z\n\t[ ] ! [ ] !\n1 | f +\n", "ERROR: 3:7 stack underflow"),
+        (
+            "[ ] 1 +\n",
+            "|- ! err/type/number 1:7 “arithmetic on a non-number” @ 3",
+        ),
+        (
+            "1 | [ ] +\n",
+            "|- ! err/type/number 1:9 “arithmetic on a non-number” @ 3",
+        ),
+        (
+            "1 2 | 1 2 3 +\n",
+            "|- ! err/shape/unequal-strands 1:13"
+            " “strands of unequal length” @ 3",
+        ),
+        (
+            "1 | 2 ,\n",
+            "|- ! err/type/quotation 1:7"
+            " “, joins two quotations or two lists” @ 3",
+        ),
+        (
+            "f : -- y z\n\t[ ] ! [ ] !\n1 | f +\n",
+            "|- ! err/stack/underflow 3:7 “stack underflow” @ 7",
+        ),
     ],
 )
 def test_a_word_refuses_at_its_position(source: str, error: str) -> None:
@@ -585,9 +602,18 @@ def test_a_word_refuses_at_its_position(source: str, error: str) -> None:
 @pytest.mark.parametrize(
     ("source", "error"),
     [
-        ("1 | " + "9" * 4097 + " +\n", "ERROR: 1:5 number too long"),
-        ("1 | 9" + "0" * 4300 + "\n", "ERROR: 1:5 number too long"),
-        ("-0." + "1" * 4096 + "\n", "ERROR: 1:1 number too long"),
+        (
+            "1 | " + "9" * 4097 + " +\n",
+            "|- ! err/read/number/too-long 1:5 “number too long”",
+        ),
+        (
+            "1 | 9" + "0" * 4300 + "\n",
+            "|- ! err/read/number/too-long 1:5 “number too long”",
+        ),
+        (
+            "-0." + "1" * 4096 + "\n",
+            "|- ! err/read/number/too-long 1:1 “number too long”",
+        ),
     ],
     ids=["4097 nines", "4301 digits", "a decimal"],
 )
@@ -607,10 +633,22 @@ def test_a_numeral_longer_than_digits_is_refused_at_its_position(
 @pytest.mark.parametrize(
     ("source", "error"),
     [
-        ("9" * 4096 + " | 1 +\n", "ERROR: 1:4102 number too large"),
-        ("-" + "9" * 4096 + " | 1 -\n", "ERROR: 1:4103 number too large"),
-        ("10" + " dup times" * 12 + "\n", "ERROR: 1:118 number too large"),
-        ("9.9" + " dup times" * 13 + "\n", "ERROR: 1:129 number too large"),
+        (
+            "9" * 4096 + " | 1 +\n",
+            "|- ! err/too-large 1:4102 “number too large” @ 3",
+        ),
+        (
+            "-" + "9" * 4096 + " | 1 -\n",
+            "|- ! err/too-large 1:4103 “number too large” @ 3",
+        ),
+        (
+            "10" + " dup times" * 12 + "\n",
+            "|- ! err/too-large 1:118 “number too large” @ 25",
+        ),
+        (
+            "9.9" + " dup times" * 13 + "\n",
+            "|- ! err/too-large 1:129 “number too large” @ 27",
+        ),
     ],
     ids=["10^4096", "-10^4096", "squared", "a decimal squared"],
 )
@@ -671,42 +709,66 @@ def test_what_no_part_implements_is_refused_before_running(
     """
     with pytest.raises(FplError) as caught:
         run(source)
-    assert str(caught.value) == "ERROR: 1:1 no evaluator yet"
+    assert (
+        str(caught.value)
+        == "|- ! err/unresolved/no-evaluator 1:1 “no evaluator yet”"
+    )
 
 
 @pytest.mark.parametrize(
     ("source", "error"),
     [
-        ("foo\n", "ERROR: 1:1 unknown word: foo"),
-        ("1 2 3 sqrt\n", "ERROR: 1:7 unknown word: sqrt"),
-        ("2 | 3 +\nfoo\n", "ERROR: 2:1 unknown word: foo"),
-        ("a/b\n", "ERROR: 1:1 unknown word: a/b"),
+        ("foo\n", "|- ! err/unresolved/unknown-word 1:1 “unknown word: foo”"),
+        (
+            "1 2 3 sqrt\n",
+            "|- ! err/unresolved/unknown-word 1:7 “unknown word: sqrt”",
+        ),
+        (
+            "2 | 3 +\nfoo\n",
+            "|- ! err/unresolved/unknown-word 2:1 “unknown word: foo”",
+        ),
+        ("a/b\n", "|- ! err/unresolved/unknown-word 1:1 “unknown word: a/b”"),
         (
             "f : -- y\n\t1\nf/history/x\n",
-            "ERROR: 3:1 unknown word: f/history/x",
+            "|- ! err/unresolved/unknown-word 3:1 “unknown word: f/history/x”",
         ),
-        ("f : -- y\n\t../g\n", "ERROR: 2:2 unknown word: ../g"),
-        ("1 debug\n", "ERROR: 1:3 no evaluator yet: debug"),
-        ("[ 1 newline ] !\n", "ERROR: 1:5 no evaluator yet: newline"),
-        ("#m bind\n", "ERROR: 1:4 no evaluator yet: bind"),
-        ("m/\n\tk : -- y\n\t\t1\nm\n", "ERROR: 4:1 no evaluator yet: m"),
+        (
+            "f : -- y\n\t../g\n",
+            "|- ! err/unresolved/unknown-word 2:2 “unknown word: ../g”",
+        ),
+        (
+            "1 debug\n",
+            "|- ! err/unresolved/no-evaluator 1:3 “no evaluator yet: debug”",
+        ),
+        (
+            "[ 1 newline ] !\n",
+            "|- ! err/unresolved/no-evaluator 1:5 “no evaluator yet: newline”",
+        ),
+        (
+            "#m bind\n",
+            "|- ! err/unresolved/no-evaluator 1:4 “no evaluator yet: bind”",
+        ),
+        (
+            "m/\n\tk : -- y\n\t\t1\nm\n",
+            "|- ! err/unresolved/no-evaluator 4:1 “no evaluator yet: m”",
+        ),
         (
             "m/\n\tn/\n\t\tk : -- y\n\t\t\t1\n\tf : -- y\n\t\tn\n",
-            "ERROR: 6:3 no evaluator yet: n",
+            "|- ! err/unresolved/no-evaluator 6:3 “no evaluator yet: n”",
         ),
         (
             "m/\n\tn/\n\t\tk : -- y\n\t\t\t1\na/\n\t#m bind\n\tf : -- "
             "y\n\t\tn\n",
-            "ERROR: 8:3 no evaluator yet: n",
+            "|- ! err/unresolved/no-evaluator 8:3 “no evaluator yet: n”",
         ),
         (
             "m/\n\tn/\n\t\tp/\n\t\t\tk : -- y\n\t\t\t\t1\n"
             "a/\n\t#m bind\n\tf : -- y\n\t\tn/p\n",
-            "ERROR: 9:3 no evaluator yet: n/p",
+            "|- ! err/unresolved/no-evaluator 9:3 “no evaluator yet: n/p”",
         ),
         (
             "m/\n\tk : -- y\n\t\t1\na/\n\t#m bind\n\tf : -- y\n\t\tn\n",
-            "ERROR: 7:3 unknown word: n",
+            "|- ! err/unresolved/unknown-word 7:3 “unknown word: n”",
         ),
     ],
 )
@@ -775,7 +837,10 @@ def test_a_typed_head_is_read_as_the_slice_reads_it() -> None:
     clause of its own word; `x: Int` is a value slot of type Int,
     written back as it is written.
     """
-    with pytest.raises(FplError, match=r"^ERROR: 1:1 no evaluator yet$"):
+    with pytest.raises(
+        FplError,
+        match=r"^\|- ! err/unresolved/no-evaluator 1:1 “no evaluator yet”$",
+    ):
         desugar(parse("f : x ∈ number -- y\n"))
     circle = "circle : r -- shape\n\t#circle swap pair\n"
     grouped = desugar(parse(circle + "f : ( circle r ) -- y\n\tr\n"))
@@ -794,7 +859,9 @@ def test_a_slot_kind_disagreeing_within_an_arity_is_refused() -> None:
     key shadows as before.
     """
     with pytest.raises(
-        FplError, match=r"^ERROR: 3:1 f/1/2 takes a thunk at 1, f/1/1 a value$"
+        FplError,
+        match=r"^\|- ! err/form/clause 3:1 “f/1/2 takes a thunk at 1,"
+        r" f/1/1 a value”$",
     ):
         run("f : x -- y\n\t1\nf : t: [ ] -- y\n\t2\n")
     assert run("f : x -- y\n\tdrop 1\nf : x -- y\n\tdrop 2\n5 f\n") == "2\n"
@@ -808,4 +875,6 @@ def test_a_value_nested_too_deep_to_print_is_refused() -> None:
     """
     with pytest.raises(FplError) as caught:
         run("1" + " enclose" * 3000 + "\n")
-    assert str(caught.value) == "ERROR: 1:1 nesting too deep to print"
+    assert (
+        str(caught.value) == "|- ! err/print 1:1 “nesting too deep to print”"
+    )

@@ -3,6 +3,7 @@ Typed dispatch (design 09): the type words, the types of an effect's
 slots and the words of a definition's clauses.
 """
 
+import re
 from collections.abc import Iterator
 from dataclasses import fields, replace
 from itertools import combinations
@@ -61,6 +62,15 @@ ATOMS = [
     ("“a”", "Text"),
 ]
 atoms = st.sampled_from(ATOMS)
+
+
+def fail(tag: str, where: str, message: str) -> str:
+    """
+    The pattern of a fail line, whatever step it ends in; `where` is
+    a pattern too.
+    """
+    head, tail = re.escape(f"|- ! {tag} "), re.escape(f" “{message}”")
+    return rf"^{head}{where}{tail}( @ \d+)?$"
 
 
 @given(st.sampled_from([*ATOMS, ("#a", "Symbol")]), st.sampled_from(TYPES))
@@ -192,7 +202,11 @@ def test_a_clause_is_named_by_its_word_and_a_dispatcher_lists_its_clauses() -> (
     """
     with pytest.raises(
         FplError,
-        match=r"^ERROR: 1:1 f/1/1 leaves 0 values, its effect line 1$",
+        match=fail(
+            "err/form/effect",
+            "1:1",
+            "f/1/1 leaves 0 values, its effect line 1",
+        ),
     ):
         elaborate((Define("f", LINE, (), clause=(1, 1)),))
     dispatcher = Define("f", LINE, (), clause=(1,), clauses=("f/1/1", "f/1/2"))
@@ -243,7 +257,10 @@ def test_a_guard_or_compound_type_on_an_effect_line_is_refused(
     """
     prefix = " ".join(["f", ":", *before, "x ∈" if guard else "x: ⟨"])
     source = f"{prefix} Int{'' if guard else ' ⟩'} -- y\n"
-    with pytest.raises(FplError, match=r"^ERROR: 1:1 no evaluator yet$"):
+    with pytest.raises(
+        FplError,
+        match=r"^\|- ! err/unresolved/no-evaluator 1:1 “no evaluator yet”$",
+    ):
         desugar(parse(source))
 
 
@@ -256,7 +273,9 @@ def test_a_lone_typed_clause_is_guarded() -> None:
     with `no row matches` at its head, and runs its body on 5.
     """
     assert run(LONE + "5 f\n") == "#int\n"
-    with pytest.raises(FplError, match=r"^ERROR: 1:1 no row matches$"):
+    with pytest.raises(
+        FplError, match=fail("err/no-row", "1:1", "no row matches")
+    ):
         run(LONE + "“a” f\n")
 
 
@@ -292,7 +311,8 @@ def test_an_error_in_a_guard_propagates() -> None:
     clauses = "f : x: Text -- y\n\tdrop #text\nf : x: two -- y\n\tdrop #two\n"
     assert run(TWO + clauses + "2 f\n") == "#two\n"
     with pytest.raises(
-        FplError, match=r"^ERROR: 2:4 arithmetic on a non-number$"
+        FplError,
+        match=r"^\|- ! err/type/number 2:4 “arithmetic on a non-number” @ 6$",
     ):
         run(TWO + clauses + "“a” f\n")
 
@@ -394,8 +414,8 @@ def test_a_dispatched_word_has_a_path_per_group_and_clause(
             desugar(parse(source + f"f/{min(groups)}/effect\n"))
         at = source.count("\n") + 1
         assert (
-            str(caught.value)
-            == f"ERROR: {at}:1 unknown word: f/{min(groups)}/effect"
+            str(caught.value) == f"|- ! err/unresolved/unknown-word {at}:1"
+            f" “unknown word: f/{min(groups)}/effect”"
         )
         return
     for n in groups:
@@ -418,7 +438,11 @@ def test_a_dispatched_word_has_a_path_per_group_and_clause(
         return
     names = " ".join(f"f/{n}" for n in sorted(groups))
     at = source.count("\n") + 1
-    refusal = rf"^ERROR: {at}:1 f/effect names more than one group: {names}$"
+    refusal = fail(
+        "err/ambiguous/query",
+        f"{at}:1",
+        f"f/effect names more than one group: {names}",
+    )
     with pytest.raises(FplError, match=refusal):
         desugar(parse(source + "f/effect\n"))
 
@@ -432,7 +456,11 @@ def test_p4_has_its_paths() -> None:
     assert sorted(d.word for d in defines) == ["f/1", "f/1/1", "f/2", "f/2/1"]
     with pytest.raises(
         FplError,
-        match=r"^ERROR: 5:1 f/effect names more than one group: f/1 f/2$",
+        match=fail(
+            "err/ambiguous/query",
+            "5:1",
+            "f/effect names more than one group: f/1 f/2",
+        ),
     ):
         run(P4 + "f/effect\n")
 
@@ -524,7 +552,8 @@ def test_a_call_no_row_fits_fails_at_the_dispatcher(
         assert run(source + f"{written} f\n") == "#ok\n"
         return
     with pytest.raises(
-        FplError, match=rf"^ERROR: {2 * above + 1}:1 no row matches$"
+        FplError,
+        match=fail("err/no-row", f"{2 * above + 1}:1", "no row matches"),
     ):
         run(source + f"{written} f\n")
 
@@ -590,7 +619,10 @@ def test_an_empty_group_is_refused(head: bool) -> None:
     source = (
         "f : ( ) -- y\n\t1\n" if head else "f : x -- y\n\tmatch\n\t\t( )\t1\n"
     )
-    with pytest.raises(FplError, match=r"^ERROR: 1:1 no evaluator yet$"):
+    with pytest.raises(
+        FplError,
+        match=r"^\|- ! err/unresolved/no-evaluator 1:1 “no evaluator yet”$",
+    ):
         run(source)
 
 
@@ -619,7 +651,9 @@ def test_a_head_group_binds_its_names_in_the_clause(radius: int) -> None:
         value = top(SHAPES + shape + "\n")
         tested = Run((Push(value), Call("area/1/1\N{PRIME}1", Span(1, 1))))
         assert evaluate((*defines, tested))[-1] == (fits,)
-    with pytest.raises(FplError, match=r"^ERROR: 5:1 no row matches$"):
+    with pytest.raises(
+        FplError, match=fail("err/no-row", "5:1", "no row matches")
+    ):
         run(SHAPES + AREA + f"{radius} area\n")
 
 
@@ -642,7 +676,10 @@ def test_a_pin_in_a_head_group_is_refused() -> None:
     bound by fresh names, so the pin could not resolve (hole
     head-group-pin).
     """
-    with pytest.raises(FplError, match=r"^ERROR: 1:1 no evaluator yet$"):
+    with pytest.raises(
+        FplError,
+        match=r"^\|- ! err/unresolved/no-evaluator 1:1 “no evaluator yet”$",
+    ):
         run(SHAPES + "area : y  ( circle $y ) -- n\n\tdrop 1\n")
 
 
@@ -660,7 +697,9 @@ def test_a_head_group_looks_its_constructor_up_from_its_own_definition() -> (
         "\tarea : ( circle r ) -- n\n\t\tr dup times\n"
     )
     assert run(nested + "3 b/circle b/area\n") == "9\n"
-    with pytest.raises(FplError, match=r"^ERROR: 7:2 no row matches$"):
+    with pytest.raises(
+        FplError, match=r"^\|- ! err/no-row 7:2 “no row matches” @ 10$"
+    ):
         run(nested + "3 b/c/circle b/area\n")
 
 
@@ -672,7 +711,9 @@ def test_a_thunk_slot_is_not_a_head_group() -> None:
     """
     thunked = "f : t: [ ]  ( circle r ) -- y\n\tdrop r\n"
     assert run(SHAPES + thunked + "[ ] 3 circle f\n") == "3\n"
-    with pytest.raises(FplError, match=r"^ERROR: 5:1 no row matches$"):
+    with pytest.raises(
+        FplError, match=fail("err/no-row", "5:1", "no row matches")
+    ):
         run(SHAPES + thunked + "[ ] [ ] f\n")
 
 
@@ -689,7 +730,9 @@ def test_two_typed_clauses_of_one_arity_are_dispatched() -> None:
     """
     assert run(F + G + "5 f\n“a” f\n5 g\n“a” g\n") == "6\n#text\n6\n#text\n"
     for call in ("#s g", "#s f"):
-        with pytest.raises(FplError, match=r"^ERROR: 1:1 no row matches$"):
+        with pytest.raises(
+            FplError, match=fail("err/no-row", "1:1", "no row matches")
+        ):
             run(F + G + call + "\n")
     assert top(F + "f/1/1/effect\n") == Listed(("x:", "Int", "--", "y"))
     assert top(F + "f/1/2/effect\n") == Listed(("x:", "Text", "--", "y"))
@@ -764,8 +807,10 @@ def test_clauses_of_one_arity_agree_on_slot_kinds(
         assert run(source) == ""
         return
     j, earlier, later = differ[0]
-    refusal = (
-        rf"^ERROR: 3:1 f/{n}/2 takes a {later} at {j}, f/{n}/1 a {earlier}$"
+    refusal = fail(
+        "err/form/clause",
+        "3:1",
+        f"f/{n}/2 takes a {later} at {j}, f/{n}/1 a {earlier}",
     )
     with pytest.raises(FplError, match=refusal):
         run(source)
@@ -789,7 +834,10 @@ def test_clauses_of_one_arity_leave_as_many_values(
         assert run(source) == run("1" + " dup" * (first - 1) + "\n")
         return
     with pytest.raises(
-        FplError, match=rf"^ERROR: 3:1 f/1/2 leaves {second}, f/1/1 {first}$"
+        FplError,
+        match=fail(
+            "err/form/clause", "3:1", f"f/1/2 leaves {second}, f/1/1 {first}"
+        ),
     ):
         run(source)
 
@@ -869,7 +917,9 @@ def test_the_most_specific_then_the_newest_fitting_clause_wins(
     written = ["one", "int"] if one_first else ["int", "one"]
     winner = next((word for word in reversed(written) if fits[word]), None)
     if winner is None:
-        with pytest.raises(FplError, match=r"^ERROR: 5:1 no row matches$"):
+        with pytest.raises(
+            FplError, match=fail("err/no-row", "5:1", "no row matches")
+        ):
             run(ONE + clauses + f"{value} f\n")
         return
     assert run(ONE + clauses + f"{value} f\n") == f"#{winner}\n"
@@ -990,7 +1040,10 @@ def test_a_redefined_type_word_is_disjoint_from_nothing(
     )
     assert run(prelude + h) == ""
     if redefined:
-        refusal = r"^ERROR: 3:1 ambiguous call to h: h/3/1 and h/3/2 both fit$"
+        refusal = (
+            r"^\|- ! err/ambiguous/call 3:1 “ambiguous call to h: "
+            r"h/3/1 and h/3/2 both fit” @ 12$"
+        )
         with pytest.raises(FplError, match=refusal):
             run(prelude + h + "1 | 2 | 3 h\n")
 
@@ -1048,7 +1101,11 @@ def test_p3_is_refused_until_its_meet_is_a_clause(at: int) -> None:
     prints `#both #left #right`.
     """
     runs = "1 | 2 g\n1 | “a” g\n“a” | 2 g\n"
-    refusal = r"^ERROR: 3:1 g/2/2 is ambiguous with g/2/1 at x: Int  y: Int$"
+    refusal = fail(
+        "err/ambiguous/clause",
+        "3:1",
+        "g/2/2 is ambiguous with g/2/1 at x: Int  y: Int",
+    )
     with pytest.raises(FplError, match=refusal):
         run(P3 + runs)
     lines = P3.splitlines(keepends=True)
@@ -1091,9 +1148,10 @@ def test_crossing_clauses_are_refused_unless_their_meet_is_a_clause(
     if clash or meet:
         assert run(source) == ""
     else:
-        refusal = (
-            "^ERROR: 5:1 h/3/2 is ambiguous with h/3/1 at "
-            f"{'  '.join(keys[2])}$"
+        refusal = fail(
+            "err/ambiguous/clause",
+            "5:1",
+            f"h/3/2 is ambiguous with h/3/1 at {'  '.join(keys[2])}",
         )
         with pytest.raises(FplError, match=refusal):
             desugar(parse(source))
@@ -1104,7 +1162,10 @@ H = (
     "h : a: Int  b  c: Int -- o\n\tdrop drop drop #second\n"
 )
 COVER = "h : a: one  b: Int  c: Int -- o\n\tdrop drop drop #both\n"
-AMBIGUOUS = r"^ERROR: 5:1 ambiguous call to h: h/3/1 and h/3/2 both fit$"
+AMBIGUOUS = (
+    r"^\|- ! err/ambiguous/call 5:1 “ambiguous call to h: "
+    r"h/3/1 and h/3/2 both fit” @ 12$"
+)
 
 
 @given(st.booleans())
@@ -1179,9 +1240,9 @@ CHOICES = st.integers(1, 2).flatmap(
 )
 ANSWERS = {
     "refused": r" is ambiguous with f/",
-    "none": r"^ERROR: 9:1 no row matches$",
-    "ambiguous": r"^ERROR: 9:1 ambiguous call to f: f/\d/\d and f/\d/\d both "
-    "fit$",
+    "none": fail("err/no-row", "9:1", "no row matches"),
+    "ambiguous": r"^\|- ! err/ambiguous/call 9:1 “ambiguous call to f: "
+    r"f/\d/\d and f/\d/\d both fit”( @ \d+)?$",
 }
 
 
@@ -1354,7 +1415,9 @@ def test_a_call_types_leaves_unresolved_fails_at_run_time(
     call is `no row matches` at run time.
     """
     clauses, line = case
-    with pytest.raises(FailError, match=r"^ERROR: \d+:1 no row matches$"):
+    with pytest.raises(
+        FailError, match=fail("err/no-row", r"\d+:1", "no row matches")
+    ):
         run(clauses + line + "\n")
 
 
@@ -1365,7 +1428,8 @@ def test_the_witness_refuses_at_run_time() -> None:
     refuses it.
     """
     with pytest.raises(
-        FplError, match=r"ambiguous call to f: f/3/1 and f/3/2 both fit$"
+        FplError,
+        match=r"ambiguous call to f: f/3/1 and f/3/2 both fit”( @ \d+)?$",
     ):
         run(WITNESS + "1 | #s | #s f\n")
 

@@ -151,9 +151,11 @@ def test_a_brace_anywhere_outside_a_string_is_refused(
     """
     written = write(v)
     reason = f"{bracket} refused: FON is postfix, not braced"
-    assert refusal(f"{bracket} {written}") == f"ERROR: 1:1 {reason}"
+    assert refusal(f"{bracket} {written}") == f"|- ! err/fon 1:1 “{reason}”"
     end = len(written) + 2
-    assert refusal(f"{written} {bracket}") == f"ERROR: 1:{end} {reason}"
+    assert refusal(f"{written} {bracket}") == (
+        f"|- ! err/fon 1:{end} “{reason}”"
+    )
 
 
 def test_the_braced_documents_of_old_are_refused() -> None:
@@ -163,11 +165,13 @@ def test_the_braced_documents_of_old_are_refused() -> None:
     """
     assert refusal(
         "{ 「source」 「1」 「tokens」 ⟨ ( 「TOKEN」 「1」 0 1 ) ⟩ }"
-    ) == ("ERROR: 1:1 { refused: FON is postfix, not braced")
+    ) == ("|- ! err/fon 1:1 “{ refused: FON is postfix, not braced”")
     assert refusal("1 ⟨ 2 ⟩") == (
-        "ERROR: 1:3 ⟨ refused: FON is postfix, not braced"
+        "|- ! err/fon 1:3 “⟨ refused: FON is postfix, not braced”"
     )
-    assert refusal("“x”") == "ERROR: 1:1 “ refused: FON is postfix, not braced"
+    assert refusal("“x”") == (
+        "|- ! err/fon 1:1 ““ refused: FON is postfix, not braced”"
+    )
 
 
 @given(json)
@@ -250,64 +254,84 @@ def test_each_value_has_one_postfix_spelling(v: Value, spelled: str) -> None:
 @pytest.mark.parametrize(
     ("document", "error"),
     [
-        ("#a 1 #a 2 dict/2", "ERROR: 1:6 repeated key #a"),
-        ("1 list/0 2 dict/1", "ERROR: 1:3 a dict key is a leaf"),
-        ("dict/0 1 dict/1", "ERROR: 1:1 a dict key is a leaf"),
-        ("1 list/2", "ERROR: 1:3 list/2 takes 2 values, the stack holds 1"),
-        ("#k dict/1", "ERROR: 1:4 dict/1 takes 2 values, the stack holds 1"),
-        ("Add/1", "ERROR: 1:1 Add/1 takes 1 values, the stack holds 0"),
-        ("#Add 1 tuple/2", "ERROR: 1:8 non-canonical spelling tuple/2"),
-        ('#"a"', "ERROR: 1:1 non-canonical spelling"),
-        ('$"a"', "ERROR: 1:1 non-canonical spelling"),
-        (r'"\u{41}"', "ERROR: 1:1 non-canonical spelling"),
-        (r'"\u{0e9}"', "ERROR: 1:1 non-canonical spelling"),
-        (r'"\'"', "ERROR: 1:1 non-canonical spelling"),
-        (r'"\q"', "ERROR: 1:2 malformed escape"),
-        (r'"\u{E9}"', "ERROR: 1:2 malformed escape"),
-        (r'"\u{110000}"', "ERROR: 1:2 malformed escape"),
-        ('"\\', "ERROR: 1:2 malformed escape"),
-        ('"a', 'ERROR: 1:1 " never closed'),
-        ("1 'a", "ERROR: 1:3 ' never closed"),
-        ('"a"X', "ERROR: 1:4 a string ends its token"),
-        ('"é"', "ERROR: 1:2 U+00E9 refused in a string: escape it"),
-        ('"a\nb"', "ERROR: 1:3 U+000A refused in a string: escape it"),
-        ("#é", "ERROR: 1:2 U+00E9 refused: FON is printable ASCII"),
-        ("#a\x0c", "ERROR: 1:3 U+000C refused: FON is printable ASCII"),
-        ('x"y', 'ERROR: 1:2 " refused inside a word'),
-        ("#a]", "ERROR: 1:3 ] refused: FON is postfix, not braced"),
-        ("x", "ERROR: 1:1 unknown word x"),
-        ("a/01", "ERROR: 1:1 unknown word a/01"),
-        ("/0", "ERROR: 1:1 unknown word /0"),
-        ("a/", "ERROR: 1:1 unknown word a/"),
-        ("#", "ERROR: 1:1 unknown word #"),
-        ("$", "ERROR: 1:1 unknown word $"),
-        ("&", "ERROR: 1:1 unknown word &"),
-        ("&zz", "ERROR: 1:1 malformed hash reference &zz"),
-        ("&abcdef", "ERROR: 1:1 malformed hash reference &abcdef"),
-        ("&45600:01", "ERROR: 1:1 malformed hash reference &45600:01"),
+        ("#a 1 #a 2 dict/2", "|- ! err/fon 1:6 “repeated key #a”"),
+        ("1 list/0 2 dict/1", "|- ! err/fon 1:3 “a dict key is a leaf”"),
+        ("dict/0 1 dict/1", "|- ! err/fon 1:1 “a dict key is a leaf”"),
+        (
+            "1 list/2",
+            "|- ! err/fon 1:3 “list/2 takes 2 values, the stack holds 1”",
+        ),
+        (
+            "#k dict/1",
+            "|- ! err/fon 1:4 “dict/1 takes 2 values, the stack holds 1”",
+        ),
+        (
+            "Add/1",
+            "|- ! err/fon 1:1 “Add/1 takes 1 values, the stack holds 0”",
+        ),
+        (
+            "#Add 1 tuple/2",
+            "|- ! err/fon 1:8 “non-canonical spelling tuple/2”",
+        ),
+        ('#"a"', "|- ! err/fon 1:1 “non-canonical spelling”"),
+        ('$"a"', "|- ! err/fon 1:1 “non-canonical spelling”"),
+        (r'"\u{41}"', "|- ! err/fon 1:1 “non-canonical spelling”"),
+        (r'"\u{0e9}"', "|- ! err/fon 1:1 “non-canonical spelling”"),
+        (r'"\'"', "|- ! err/fon 1:1 “non-canonical spelling”"),
+        (r'"\q"', "|- ! err/fon 1:2 “malformed escape”"),
+        (r'"\u{E9}"', "|- ! err/fon 1:2 “malformed escape”"),
+        (r'"\u{110000}"', "|- ! err/fon 1:2 “malformed escape”"),
+        ('"\\', "|- ! err/fon 1:2 “malformed escape”"),
+        ('"a', '|- ! err/fon 1:1 “" never closed”'),
+        ("1 'a", "|- ! err/fon 1:3 “' never closed”"),
+        ('"a"X', "|- ! err/fon 1:4 “a string ends its token”"),
+        ('"é"', "|- ! err/fon 1:2 “U+00E9 refused in a string: escape it”"),
+        ('"a\nb"', "|- ! err/fon 1:3 “U+000A refused in a string: escape it”"),
+        ("#é", "|- ! err/fon 1:2 “U+00E9 refused: FON is printable ASCII”"),
+        (
+            "#a\x0c",
+            "|- ! err/fon 1:3 “U+000C refused: FON is printable ASCII”",
+        ),
+        ('x"y', '|- ! err/fon 1:2 “" refused inside a word”'),
+        ("#a]", "|- ! err/fon 1:3 “] refused: FON is postfix, not braced”"),
+        ("x", "|- ! err/fon 1:1 “unknown word x”"),
+        ("a/01", "|- ! err/fon 1:1 “unknown word a/01”"),
+        ("/0", "|- ! err/fon 1:1 “unknown word /0”"),
+        ("a/", "|- ! err/fon 1:1 “unknown word a/”"),
+        ("#", "|- ! err/fon 1:1 “unknown word #”"),
+        ("$", "|- ! err/fon 1:1 “unknown word $”"),
+        ("&", "|- ! err/fon 1:1 “unknown word &”"),
+        ("&zz", "|- ! err/fon 1:1 “malformed hash reference &zz”"),
+        ("&abcdef", "|- ! err/fon 1:1 “malformed hash reference &abcdef”"),
+        ("&45600:01", "|- ! err/fon 1:1 “malformed hash reference &45600:01”"),
         (
             "&b22020" + "0" * 64,
-            "ERROR: 1:1 malformed hash reference &b22020" + "0" * 64,
+            "|- ! err/fon 1:1 “malformed hash reference &b22020"
+            + "0" * 64
+            + "”",
         ),
-        ("&7:1", "ERROR: 1:1 malformed hash reference &7:1"),
-        ("&0:33:0", "ERROR: 1:1 malformed hash reference &0:33:0"),
-        ("&0:1:256", "ERROR: 1:1 malformed hash reference &0:1:256"),
-        ("$0:0:0", "ERROR: 1:1 malformed identity $0:0:0"),
-        ("$1x", "ERROR: 1:1 malformed identity $1x"),
-        ("_ $45600:01 list/2", "ERROR: 1:3 malformed identity $45600:01"),
-        ("01", "ERROR: 1:1 non-canonical number 01"),
-        ("1e5", "ERROR: 1:1 non-canonical number 1e5"),
-        ("1/2", "ERROR: 1:1 non-canonical number 1/2"),
-        ("0x0.8p0", "ERROR: 1:1 non-canonical number 0x0.8p0"),
-        ("0x1p-2000", "ERROR: 1:1 non-canonical number 0x1p-2000"),
-        ("0x0p5", "ERROR: 1:1 non-canonical number 0x0p5"),
-        ("-0x0p-0", "ERROR: 1:1 non-canonical number -0x0p-0"),
+        ("&7:1", "|- ! err/fon 1:1 “malformed hash reference &7:1”"),
+        ("&0:33:0", "|- ! err/fon 1:1 “malformed hash reference &0:33:0”"),
+        ("&0:1:256", "|- ! err/fon 1:1 “malformed hash reference &0:1:256”"),
+        ("$0:0:0", "|- ! err/fon 1:1 “malformed identity $0:0:0”"),
+        ("$1x", "|- ! err/fon 1:1 “malformed identity $1x”"),
+        (
+            "_ $45600:01 list/2",
+            "|- ! err/fon 1:3 “malformed identity $45600:01”",
+        ),
+        ("01", "|- ! err/fon 1:1 “non-canonical number 01”"),
+        ("1e5", "|- ! err/fon 1:1 “non-canonical number 1e5”"),
+        ("1/2", "|- ! err/fon 1:1 “non-canonical number 1/2”"),
+        ("0x0.8p0", "|- ! err/fon 1:1 “non-canonical number 0x0.8p0”"),
+        ("0x1p-2000", "|- ! err/fon 1:1 “non-canonical number 0x1p-2000”"),
+        ("0x0p5", "|- ! err/fon 1:1 “non-canonical number 0x0p5”"),
+        ("-0x0p-0", "|- ! err/fon 1:1 “non-canonical number -0x0p-0”"),
         (
             "0x0.0000000000001p-1022",
-            "ERROR: 1:1 non-canonical number 0x0.0000000000001p-1022",
+            "|- ! err/fon 1:1 “non-canonical number 0x0.0000000000001p-1022”",
         ),
-        ("_\n0x1p2000", "ERROR: 2:1 float out of range 0x1p2000"),
-        ("a" * 4097, "ERROR: 1:1 token too long"),
+        ("_\n0x1p2000", "|- ! err/fon 2:1 “float out of range 0x1p2000”"),
+        ("a" * 4097, "|- ! err/fon 1:1 “token too long”"),
     ],
 )
 def test_the_profile_refuses_in_place(document: str, error: str) -> None:
@@ -323,7 +347,7 @@ def test_a_refusal_names_its_offset() -> None:
         read("1 2\n3 }")
     assert isinstance(caught.value, FonError)
     assert (str(caught.value), caught.value.offset) == (
-        "ERROR: 2:3 } refused: FON is postfix, not braced",
+        "|- ! err/fon 2:3 “} refused: FON is postfix, not braced”",
         6,
     )
 
@@ -331,9 +355,9 @@ def test_a_refusal_names_its_offset() -> None:
 @pytest.mark.parametrize(
     ("document", "error"),
     [
-        ("\n}", "ERROR: 2:1 }"),
-        ("_\n_\n}", "ERROR: 3:1 }"),
-        ("\n\n _ }", "ERROR: 3:4 }"),
+        ("\n}", "|- ! err/fon 2:1 “}"),
+        ("_\n_\n}", "|- ! err/fon 3:1 “}"),
+        ("\n\n _ }", "|- ! err/fon 3:4 “}"),
     ],
 )
 def test_a_refusal_counts_lines_from_the_start(
@@ -348,16 +372,20 @@ def test_a_refusal_counts_lines_from_the_start(
 
 def test_nesting_is_bounded_at_the_constructor() -> None:
     document = "_" + " list/1" * 70
-    assert refusal(document) == f"ERROR: 1:{2 + 7 * 64 + 1} nesting too deep"
+    assert refusal(document) == (
+        f"|- ! err/fon 1:{2 + 7 * 64 + 1} “nesting too deep”"
+    )
     assert refusal("list/0 list/1", max_depth=1) == (
-        "ERROR: 1:8 nesting too deep"
+        "|- ! err/fon 1:8 “nesting too deep”"
     )
     assert read("list/0", max_depth=1) == List(())
 
 
 def test_the_bounds_are_parameters() -> None:
-    assert refusal("_\nabcd", max_token=3) == "ERROR: 2:1 token too long"
-    assert refusal("abc", max_size=2) == "ERROR: 1:3 input too large"
+    assert (
+        refusal("_\nabcd", max_token=3) == "|- ! err/fon 2:1 “token too long”"
+    )
+    assert refusal("abc", max_size=2) == "|- ! err/fon 1:3 “input too large”"
     assert read("_ _", max_size=3) == List((Absent(), Absent()))
     assert read("#" + "a" * 4095) == Sym("a" * 4095)
     assert read('"' + "a" * 10 + '"', max_token=3) == Str("a" * 10)
@@ -431,8 +459,8 @@ def test_a_hex_float_reads_only_as_it_is_written(spelled: str) -> None:
         outcome = str(refused)
     assert outcome in {
         spelled,
-        f"ERROR: 1:1 non-canonical number {spelled}",
-        f"ERROR: 1:1 float out of range {spelled}",
+        f"|- ! err/fon 1:1 “non-canonical number {spelled}”",
+        f"|- ! err/fon 1:1 “float out of range {spelled}”",
     }
 
 

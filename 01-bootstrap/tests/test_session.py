@@ -194,8 +194,8 @@ def test_a_baseline_runs_under_the_fuel_its_program_was_accepted_with() -> (
         ["f : -- x\n\t1 | 1 +\n", "f\n"], context=replace(CONTEXT, fuel=100)
     )
     low = replace(CONTEXT, fuel=2)
-    assert (
-        enter(log, "f\n", low, log.head).out == "ERROR: @2 1:1 out of fuel\n"
+    assert enter(log, "f\n", low, log.head).out == (
+        "|- ! err/out-of-gas #2 1:1 “out of fuel” @ 2\n"
     )
     outcome = enter(log, "f : -- x\n\t3\n", low, log.head)
     assert (outcome.event.status, outcome.out) == ("ok", "")
@@ -255,7 +255,9 @@ def test_an_error_in_an_earlier_input_names_its_event() -> None:
     ]
     _, outcomes = entered(texts)
     last = outcomes[2]
-    assert last.out == "ERROR: @2 1:1 f leaves 2 values, its effect line 1\n"
+    assert last.out == (
+        "|- ! err/form/effect #2 1:1 “f leaves 2 values, its effect line 1”\n"
+    )
     assert last.notes == ("f : x -- y\n^",)
     assert last.event.status == "error"
     assert last.bodies[last.event.out] == last.out.encode()
@@ -269,9 +271,9 @@ def test_an_unknown_word_is_told_at_the_word_in_the_input_that_holds_it() -> (
     )
     assert [o.out for o in outcomes] == [
         "5\n",
-        "ERROR: 1:1 unknown word: foo\n",
+        "|- ! err/unresolved/unknown-word 1:1 “unknown word: foo”\n",
         "",
-        "ERROR: 1:3 unknown word: gone\n",
+        "|- ! err/unresolved/unknown-word 1:3 “unknown word: gone”\n",
         "2\n",
     ]
     assert [o.notes for o in outcomes] == [
@@ -300,8 +302,8 @@ def test_a_word_the_language_knows_but_no_evaluator_runs_is_told_apart() -> (
 ):
     _, outcomes = entered(["1 2 +\n", "3 debug\n", "3 gone\n"])
     assert [o.out for o in outcomes[1:]] == [
-        "ERROR: 1:3 no evaluator yet: debug\n",
-        "ERROR: 1:3 unknown word: gone\n",
+        "|- ! err/unresolved/no-evaluator 1:3 “no evaluator yet: debug”\n",
+        "|- ! err/unresolved/unknown-word 1:3 “unknown word: gone”\n",
     ]
     assert [o.notes for o in outcomes[1:]] == [
         ("3 debug\n  ^",),
@@ -313,9 +315,9 @@ def test_an_input_after_the_first_starts_at_the_left_margin() -> None:
     _, outcomes = entered(["1\n", "\n\t\n\t3\n", "\n", "\t3\n"])
     assert [o.out for o in outcomes] == [
         "1\n",
-        "ERROR: 3:1 an input starts at the left margin\n",
+        "|- ! err/session 3:1 “an input starts at the left margin”\n",
         "",
-        "ERROR: 1:1 an input starts at the left margin\n",
+        "|- ! err/session 1:1 “an input starts at the left margin”\n",
     ]
     assert outcomes[1].notes == ("\t3\n^",)
 
@@ -328,9 +330,11 @@ def test_the_first_input_is_its_own_file() -> None:
 def test_goals_are_noted_before_the_run_fails() -> None:
     log, outcomes = entered(["g : x -- y\n\t?\n", "1 g\n", "1 [\n"])
     assert outcomes[0].notes == ("GOAL 2:2 ? : t0 -- value",)
-    assert outcomes[1].out == "ERROR: @1 2:2 unfilled goal\n"
+    assert outcomes[1].out == (
+        "|- ! err/unresolved/goal #1 2:2 “unfilled goal” @ 3\n"
+    )
     assert outcomes[1].notes == ("\t?\n ^",)
-    assert outcomes[2].out == "ERROR: 1:3 [ never closed\n"
+    assert outcomes[2].out == "|- ! err/read/unclosed 1:3 “[ never closed”\n"
     assert outcomes[2].notes == ("1 [\n  ^",)
     assert program(log, log.head) == program(log, outcomes[0].event)
 
@@ -343,7 +347,7 @@ def test_an_error_past_the_input_has_no_caret(
 
     monkeypatch.setattr(session, "checked", past)
     outcome = enter(EMPTY, "1", CONTEXT, None)
-    assert (outcome.out, outcome.notes) == ("ERROR: 2:1 cut short\n", ())
+    assert (outcome.out, outcome.notes) == ("|- ! err 2:1 “cut short”\n", ())
 
 
 def test_a_rewind_names_its_target_and_the_head_it_leaves() -> None:

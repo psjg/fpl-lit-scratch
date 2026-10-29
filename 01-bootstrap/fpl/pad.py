@@ -23,15 +23,15 @@ it (:func:`fpl.repl.phrase_bar`), which counts the cell, names the
 head it starts from and carries the fuel and ms of the cell above;
 then a result line per line the input printed
 (:func:`fpl.repl.result_line`), with the sorts the elaborator infers
-on the stack in the type slot:
+on the stack in the type slot and the steps the line spent:
 
     ;;! -( 09:05:03 )-< command 2 >-------------{ head: 1; ms: 1.0 }-
     3 sq
-    |- 9 : number
+    |- 9 : number within 4
 
 A definition prints nothing, as in the REPL; a type the elaborator
 does not infer is ``...``, as in the REPL. A refusal is the REPL's
-``ERROR`` line; goals and other notes follow under the bar's mark, as
+fail line; goals and other notes follow under the bar's mark, as
 ``;;!`` lines. So everything a cell shows beside its text is what the
 loop writes, and :func:`fpl.repl.written` drops it on the way back in:
 the :func:`transcript` of a pad, pasted into ``fpl repl`` or seeded
@@ -54,7 +54,7 @@ Steps alone would not do for the second bound: an input runs the whole
 program again (:func:`fpl.session.enter`), and its count of steps
 leaves those out. The history runs under the fuel of a line too, so a
 committed line heavier than :data:`PREVIEW_FUEL` gives every cell below
-it an ``ERROR: @N ... out of fuel`` ghost.
+it an ``|- ! err/out-of-gas #N ... out of fuel`` ghost.
 
 The module does no I/O; :mod:`fpl.pad_web` is its shell. The clocks
 come in as the REPL's :class:`fpl.repl.Tty`, so a test can hold them
@@ -69,7 +69,7 @@ from typing import Literal
 
 from fpl.ast_core import Run
 from fpl.driver import FUEL_DEFAULT, checked
-from fpl.errors import FplError
+from fpl.errors import FAIL, FplError, OutOfGasError, fail_line
 from fpl.log import Log
 from fpl.parse import parse
 from fpl.repl import (
@@ -102,8 +102,10 @@ PREVIEW_FUEL = 40_000
 #: The time a whole preview may take before it enters no more inputs:
 #: some two such loops, under the page's pause of 300 ms in typing.
 PREVIEW_SECONDS = 0.2
+#: What the fail line of a run out of fuel starts with.
+OUT = f"{FAIL} {OutOfGasError.tag} "
 #: The last turn of a cell its preview stopped in, or never reached.
-CUT = "ERROR: preview out of time"
+CUT = fail_line(OutOfGasError.tag, "preview out of time")
 
 
 @dataclass(frozen=True)
@@ -147,7 +149,7 @@ class Ghost:
     #: A result, a refusal, or a run cut short by the preview's fuel
     #: or its time.
     kind: Literal["ok", "error", "fuel"]
-    #: The cell's result and ``ERROR`` lines, parted by two spaces; it
+    #: The cell's result and fail lines, parted by two spaces; it
     #: never holds a newline.
     text: str
 
@@ -206,7 +208,7 @@ def run(
     Examples:
         >>> pad = run((), 0, "1 | 2 +", context({}), Tty())
         >>> pad[0].turns
-        ('|- 3 : number',)
+        ('|- 3 : number within 3',)
     """
     if not 0 <= index <= len(cells):
         raise IndexError(index)
@@ -402,7 +404,7 @@ def _under(text: str, cursor: int) -> tuple[int, _Part] | None:
 def shaded(cell: Cell, line: int) -> Ghost | None:
     """Return a cell's turns as a ghost after the buffer line *line*.
 
-    It keeps the result lines and the ``ERROR`` lines, the turns that
+    It keeps the result lines and the fail lines, the turns that
     say what the cell came to; the carets and notes under a bar, the
     blank line of an empty stack and the turn of an open pair go.
 
@@ -414,12 +416,12 @@ def shaded(cell: Cell, line: int) -> Ghost | None:
     Examples:
         >>> (cell,) = run((), 0, "1 | 2 +", context({}), Tty())
         >>> shaded(cell, 3)
-        Ghost(line=3, kind='ok', text='|- 3 : number')
+        Ghost(line=3, kind='ok', text='|- 3 : number within 3')
     """
-    shown = [t for t in cell.turns if t.startswith((RESULT + " ", "ERROR:"))]
+    shown = [t for t in cell.turns if t.startswith(RESULT + " ")]
     if not shown:
         return None
-    ran_out = any(turn.endswith(("out of fuel", CUT)) for turn in shown)
+    ran_out = any(turn.startswith(OUT) or turn == CUT for turn in shown)
     kind = "fuel" if ran_out else _kind(cell.status)
     return Ghost(line, kind, "  ".join(shown))
 
@@ -471,7 +473,7 @@ def transcript(cells: Sequence[Cell], indent: str = "") -> str:
         >>> print(transcript(pad))  # doctest: +ELLIPSIS
         ;;! -( 09:05:03 )-< command 1 >-...-{ head: 0 }- ;
         1 | 2 + ;
-        |- 3 : number ;
+        |- 3 : number within 3 ;
     """
     return "".join(
         "".join(
@@ -593,7 +595,7 @@ def _open(text: str) -> bool:
 def _refused(outcome: Outcome) -> list[str]:
     """Return the turn of an input that failed.
 
-    It is the REPL's ``ERROR`` line, then the caret under the error and
+    It is the REPL's fail line, then the caret under the error and
     any goal, as ``;;!`` lines.
     """
     notes = "\n".join(outcome.notes).split("\n") if outcome.notes else []
@@ -605,8 +607,9 @@ def _turned(log: Log, text: str, outcome: Outcome) -> list[str]:
 
     Each run line of the input gives the REPL's result line for the
     stack it printed, with the sorts it leaves on the stack from an
-    empty one in the type slot; a definition gives no line. A line
-    printed beyond the run lines keeps the REPL's ``...``.
+    empty one in the type slot and the steps the line spent after
+    ``within``; a definition gives no line. A line printed beyond the
+    run lines keeps the REPL's ``...`` and has no count.
     """
     before = "".join(part.text for part in program(log, log.head))
     entered = text if text.endswith("\n") else text + "\n"
@@ -614,20 +617,27 @@ def _turned(log: Log, text: str, outcome: Outcome) -> list[str]:
     arrows, _ = elaborate(statements)
     first = before.count("\n") + 1
     values = iter(outcome.out.splitlines())
+    steps = iter(outcome.steps)
     turns: list[str] = []
     for statement in statements:
         if statement.span.line >= first and isinstance(statement, Run):
-            turns.append(_resulted(next(values, ""), _ran(statement, arrows)))
+            turns.append(
+                _resulted(
+                    next(values, ""),
+                    _ran(statement, arrows),
+                    next(steps, None),
+                )
+            )
     return [*turns, *(_resulted(value) for value in values)]
 
 
-def _resulted(value: str, typ: str = "...") -> str:
+def _resulted(value: str, typ: str = "...", within: int | None = None) -> str:
     """Return the result line of *value*; an empty stack, a blank line.
 
     The REPL leaves the blank line a run with nothing on the stack
     prints as it is (:func:`fpl.repl.transcript`).
     """
-    return result_line(value, typ) if value else ""
+    return result_line(value, typ, within=within) if value else ""
 
 
 def _ran(run_line: Run, arrows: Mapping[str, Arrow]) -> str:

@@ -10,7 +10,7 @@ from hypothesis import given
 from hypothesis import strategies as st
 from test_desugar import CURRY, programs
 
-from fpl.driver import checked, printed, run, stacks
+from fpl.driver import FUEL_DEFAULT, checked, printed, run, stacks
 from fpl.errors import FplError
 from fpl.types import reported
 
@@ -30,7 +30,10 @@ def test_only_an_fpl_error_escapes(source: str) -> None:
 def test_a_parse_is_not_yet_a_run() -> None:
     with pytest.raises(FplError) as caught:
         run("$x\n")
-    assert str(caught.value) == "ERROR: 1:1 no evaluator yet"
+    assert (
+        str(caught.value)
+        == "|- ! err/unresolved/no-evaluator 1:1 “no evaluator yet”"
+    )
 
 
 def attempt[T](thunk: Callable[[], T]) -> T | str:
@@ -48,9 +51,9 @@ def test_running_is_checking_then_stacks_then_printing(
     head: str, body: str
 ) -> None:
     """
-    [law: driver-split] run(s) is printed(stacks(checked(s))) with the
-    same goals reported, and each stack is paired with the line of the
-    run that left it.
+    [law: driver-split] run(s) is printed(stacks(checked(s),
+    FUEL_DEFAULT)) with the same goals reported, and each stack is
+    paired with the line of the run that left it.
     """
     source = head + body + "\n"
     said: list[str] = []
@@ -59,7 +62,7 @@ def test_running_is_checking_then_stacks_then_printing(
     def composed() -> str:
         statements, goals = checked(source)
         split.extend(reported(goal) for goal in goals)
-        return printed(stacks(statements))
+        return printed(stacks(statements, FUEL_DEFAULT))
 
     assert attempt(lambda: run(source, said.append)) == attempt(composed)
     assert said == split

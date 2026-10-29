@@ -5,6 +5,7 @@ raises, and no module raises or builds the bare FplError.
 """
 
 import ast
+import re
 from pathlib import Path
 
 import pytest
@@ -14,6 +15,7 @@ import fpl.fon
 import fpl.session
 from fpl.driver import checked, run, stacks
 from fpl.errors import (
+    FAIL,
     AmbiguousCallError,
     AmbiguousClauseError,
     AmbiguousQueryError,
@@ -208,7 +210,9 @@ def test_a_raise_site_raises_its_leaf(error: type[FplError]) -> None:
     with pytest.raises(FplError) as caught:
         run(source)
     assert type(caught.value) is error
-    assert str(caught.value) == f"ERROR: {line}"
+    where, _, message = line.partition(" ")
+    shown = f"{FAIL} {error.tag} {where} “{message}”"
+    assert re.fullmatch(re.escape(shown) + r"( @ \d+)?", str(caught.value))
 
 
 def test_a_run_past_its_fuel_is_out_of_gas() -> None:
@@ -227,7 +231,9 @@ def test_an_indented_session_input_is_a_session_error(
 
     log, _ = entered(["1\n"])
     monkeypatch.setattr(fpl.session, "_failed", reraise)
-    with pytest.raises(SessionError, match=r"^ERROR: 2:1 an input starts"):
+    with pytest.raises(
+        SessionError, match=r"^\|- ! err/session 2:1 “an input starts"
+    ):
         fpl.session.enter(log, "\t3\n", CONTEXT, log.head)
 
 

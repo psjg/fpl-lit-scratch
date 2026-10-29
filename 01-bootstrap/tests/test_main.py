@@ -24,13 +24,13 @@ def test_a_file_that_cannot_run_prints_one_error_line(
 ) -> None:
     """
     A file that does not run exits 1 and prints exactly one line,
-    starting `ERROR: `.
+    starting `|- ! `.
     """
     program = tmp_path / "p.fpl"
     program.write_text(source)
     assert main([str(program)]) == 1
     out = capsys.readouterr().out
-    assert out.startswith("ERROR: ")
+    assert out.startswith("|- ! ")
     assert out.count("\n") == 1
 
 
@@ -113,7 +113,7 @@ def test_a_goal_goes_to_stderr_before_the_program_runs(
     program.write_text("f : x -- y\n\t?\n1 f\n")
     assert main([str(program)]) == 1
     printed = capsys.readouterr()
-    assert printed.out == "ERROR: 2:2 unfilled goal\n"
+    assert printed.out == "|- ! err/unresolved/goal 2:2 “unfilled goal” @ 3\n"
     assert printed.err == "GOAL 2:2 ? : t0 -- value\n\t?\n ^\n"
 
 
@@ -134,7 +134,9 @@ def test_a_recursion_without_end_runs_out_of_fuel(
     program = tmp_path / "p.fpl"
     program.write_text(f"f : --\n\t{body}\nf\n")
     assert main([str(program)]) == 1
-    assert capsys.readouterr().out == "ERROR: 3:1 out of fuel\n"
+    assert capsys.readouterr().out == (
+        "|- ! err/out-of-gas 3:1 “out of fuel” @ 1000\n"
+    )
 
 
 SPAWNED_SECONDS = 60
@@ -168,5 +170,5 @@ def test_a_branching_recursion_runs_out_of_fuel_at_the_real_default(
     )
     assert (spawned.returncode, spawned.stdout) == (
         1,
-        "ERROR: 3:1 out of fuel\n",
+        "|- ! err/out-of-gas 3:1 “out of fuel” @ 1000000\n",
     )

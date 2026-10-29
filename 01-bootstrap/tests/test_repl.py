@@ -49,6 +49,8 @@ from fpl.repl import (
 )
 
 SESSION = ["--session", "s.fon"]
+#: What a refusal starts with, up to the message.
+SESSION_FAIL = "|- ! err/session “"
 SOURCES = programs | st.text(alphabet="ab1 \t\n[]:?-|", max_size=30)
 texts = st.sampled_from(POOL)
 seqs = st.integers(0, 6).map(str)
@@ -147,7 +149,7 @@ def test_a_stale_head_is_refused(
 ) -> None:
     """
     [law: stale-head] an append whose --head is not the head exits 2
-    with one ERROR line and leaves the file bytes unchanged.
+    with one fail line and leaves the file bytes unchanged.
     """
     with session() as (work, env):
         for text in inputs:
@@ -155,7 +157,11 @@ def test_a_stale_head_is_refused(
         stale = str(data.draw(st.integers(0, len(inputs) - 1)))
         action = data.draw(st.sampled_from([["-e", "1"], ["--rewind", "0"]]))
         before = files(work)
-        refused = (2, f"ERROR: head moved: the head is {len(inputs)}\n", "")
+        refused = (
+            2,
+            f"{SESSION_FAIL}head moved: the head is {len(inputs)}”\n",
+            "",
+        )
         assert called([*SESSION, "--head", stale, *action], env) == refused
         assert files(work) == before
         code, _, err = called(
@@ -256,11 +262,11 @@ def test_argv_not_taken(argv: list[str]) -> None:
 )
 def test_refused(argv: list[str], env: dict[str, str], message: str) -> None:
     """
-    A refusal prints one ERROR line to stdout and exits 2.
+    A refusal prints one fail line to stdout and exits 2.
     """
     code, out, err = called(argv, env)
     assert (code, err) == (2, "")
-    assert out.startswith(f"ERROR: {message}")
+    assert out.startswith(f"{SESSION_FAIL}{message}")
     assert out.count("\n") == 1
 
 
@@ -307,17 +313,23 @@ def test_a_session() -> None:
 def test_an_input_that_fails() -> None:
     """
     A failing input is appended as an error, exits 1 and prints its
-    ERROR line; the caret goes to stderr before the head.
+    fail line; the caret goes to stderr before the head.
     """
     with session() as (_, env):
         code, out, err = called(
             [*SESSION, "--canonical", "-e", "1 ["], {**env, "FPL_MODEL": "m"}
         )
-        assert (code, out) == (1, "ERROR: 1:3 [ never closed\n")
+        assert (code, out) == (
+            1,
+            "|- ! err/read/unclosed 1:3 “[ never closed”\n",
+        )
         assert err.splitlines()[-1].startswith("HEAD 1 $")
         assert "#who #agent" in (Path("s.fon")).read_text()
         code, out, _ = called([*SESSION, "--fuel", "0", "-e", "1"], env)
-        assert (code, out) == (1, "ERROR: 1:1 out of fuel\n")
+        assert (code, out) == (
+            1,
+            "|- ! err/out-of-gas 1:1 “out of fuel” @ 0\n",
+        )
 
 
 def test_canonical() -> None:
@@ -342,7 +354,7 @@ def test_the_head_cannot_be_the_rewind_target() -> None:
         before = files(work)
         assert called([*SESSION, "--rewind", "1"], env) == (
             2,
-            "ERROR: cannot rewind to the head\n",
+            f"{SESSION_FAIL}cannot rewind to the head”\n",
             "",
         )
         assert files(work) == before
@@ -355,7 +367,7 @@ def test_a_refused_log() -> None:
     with session() as (work, env):
         (work / "s.fon").write_text("1\n")
         code, out, _ = called([*SESSION, "--log"], env)
-        assert (code, out.startswith("ERROR: s.fon:1 ")) == (2, True)
+        assert (code, out.startswith(f"{SESSION_FAIL}s.fon:1 ")) == (2, True)
 
 
 COMPLETE = [text for text in POOL if text.strip()]
@@ -413,8 +425,8 @@ def fed(lines: Sequence[str]) -> list[str]:
 
 def test_what_the_loop_wrote_reads_back_as_the_program() -> None:
     """
-    [law: transcript-round-trip] a result line, a phrase bar and an
-    ERROR line at the margin are the loop's, not the program's: the
+    [law: transcript-round-trip] a result line, a phrase bar and a
+    fail line at the margin are the loop's, not the program's: the
     reader drops each and ends the input there, as at a blank line.
     """
     pasted = [
@@ -424,7 +436,7 @@ def test_what_the_loop_wrote_reads_back_as_the_program() -> None:
         "|-",
         ";;! -( 09:05:04 )-< command 2 >-----{ head: 1; fuel: 3 }-",
         "x",
-        "ERROR: 1:1 unknown word: x",
+        "|- ! err/unresolved/unknown-word 1:1 “unknown word: x”",
         ";;! x",
         ";;! ^",
         "f : -- x",
@@ -509,7 +521,7 @@ def test_a_definition_without_tabs() -> None:
     typed = "plus-one : n -- n\n1 +\n1 2 3 plus-one\n"
     assert called([], {}, typed) == (0, "2 3 4\n", "")
     assert called([], {}, "plus-one : n -- n\n  1 +\n")[1].startswith(
-        "ERROR: 2:1 indentation"
+        "|- ! err/read/tabs 2:1 “indentation"
     )
 
 
@@ -538,7 +550,7 @@ def test_a_definition_without_a_body_is_noted() -> None:
     assert "NOTE 1:1 area has an empty body\n" in grouped
     assert "identity" not in grouped
     code, out, err = called([], {}, "1 [\n")
-    assert (code, out.startswith("ERROR: ")) == (0, True)
+    assert (code, out.startswith("|- ! ")) == (0, True)
     assert "NOTE" not in err
 
 
@@ -576,8 +588,8 @@ def test_the_loop_in_memory() -> None:
         "1 2",
         "1 2",
         "f",
-        "ERROR: 1:1 unknown word: f",
-        "ERROR: unknown command",
+        "|- ! err/unresolved/unknown-word 1:1 “unknown word: f”",
+        f"{SESSION_FAIL}unknown command”",
     ]
 
 
@@ -590,13 +602,13 @@ def test_the_loop_tells_an_unknown_word_at_the_word_in_its_input() -> None:
     typed = "2 | 3 +\nfoo\n1 debug\n"
     assert called([], {}, typed) == (
         0,
-        "5\nERROR: 1:1 unknown word: foo\nERROR: 1:3 no evaluator yet: "
-        "debug\n",
+        "5\n|- ! err/unresolved/unknown-word 1:1 “unknown word: foo”\n"
+        "|- ! err/unresolved/no-evaluator 1:3 “no evaluator yet: debug”\n",
         "foo\n^\n1 debug\n  ^\n",
     )
     assert called(["-e", "foo"], {}) == (
         1,
-        "ERROR: 1:1 unknown word: foo\n",
+        "|- ! err/unresolved/unknown-word 1:1 “unknown word: foo”\n",
         "foo\n^\n",
     )
 
@@ -634,7 +646,7 @@ def test_a_log_refused_at_start() -> None:
     with session() as (work, env):
         (work / "s.fon").write_text("1\n")
         code, out, _ = called(SESSION, env, "1\n")
-        assert (code, out.startswith("ERROR: s.fon:1 ")) == (2, True)
+        assert (code, out.startswith(f"{SESSION_FAIL}s.fon:1 ")) == (2, True)
 
 
 class Terminal(StringIO):
@@ -773,7 +785,7 @@ def test_the_loop_prints_hello_bye_and_state_id(
     assert "Bye from Clipper." in text
     assert CLIPPER_FACE[2] in text
     assert "&99" in text
-    assert "|- 1 : ..." in text
+    assert "|- 1 : ... within 1" in text
     assert text.index("Hi from Clipper.") < text.index("|- 1")
     assert text.index("|- 1") < text.index("Bye from Clipper.")
 
@@ -797,7 +809,7 @@ def test_a_loop_at_a_terminal_makes_its_own_tty(
     monkeypatch.setattr(readline, "parse_and_bind", _unbound)
     out = StringIO()
     assert main([], Terminal(), out, StringIO(), {}) == 0
-    assert "|- 1 : ..." in out.getvalue()
+    assert "|- 1 : ... within 1" in out.getvalue()
     assert re.search(r"; &\d+;", out.getvalue())
 
 
@@ -884,9 +896,9 @@ def test_the_loop_at_a_terminal(monkeypatch: pytest.MonkeyPatch) -> None:
         bar3 = phrase_bar(3, 2, FIXED)
         bar4 = phrase_bar(4, 3, FIXED, fuel=1, ms=0.4)
         assert out.getvalue() == (
-            f"{bar1}\n|- 1 : ...\n"
-            f"{bar2}\nERROR: head moved: the head is 2\n"
-            f"{bar3}\n|- 4 : ...\n"
+            f"{bar1}\n|- 1 : ... within 1\n"
+            f"{bar2}\n{SESSION_FAIL}head moved: the head is 2”\n"
+            f"{bar3}\n|- 4 : ... within 1\n"
             f"{bar4}\n"
         )
         heads = [row.split(" ", 2)[:2] for row in err.getvalue().splitlines()]
@@ -933,7 +945,7 @@ def test_a_definition_at_a_terminal(monkeypatch: pytest.MonkeyPatch) -> None:
     bar2 = phrase_bar(2, 1, FIXED, ms=1.0)
     bar3 = phrase_bar(3, 2, FIXED, fuel=4, ms=0.4)
     assert (out.getvalue(), err.getvalue()) == (
-        f"{bar1}\n{bar2}\n|- 2 3 4 : ...\n{bar3}\n",
+        f"{bar1}\n{bar2}\n|- 2 3 4 : ... within 4\n{bar3}\n",
         "",
     )
     assert prompts == [""] * 5
@@ -996,7 +1008,11 @@ def test_the_loop_checks_a_given_head() -> None:
     """
     with session() as (_, env):
         called([*SESSION, "-e", "1"], env)
-        refused = (0, "ERROR: head moved: the head is 1\n", "")
+        refused = (
+            0,
+            f"{SESSION_FAIL}head moved: the head is 1”\n",
+            "",
+        )
         assert called([*SESSION, "--head", "0"], env, "5\n") == refused
 
 
@@ -1059,7 +1075,8 @@ def test_the_loop_as_of_an_event_checks_no_head(
         bar2 = phrase_bar(2, 1, FIXED, fuel=2, ms=0.4)
         bar3 = phrase_bar(3, 2, FIXED, fuel=2, ms=0.4)
         assert (out.getvalue(), err.getvalue()) == (
-            f"{bar1}\n|- 2 : ...\n{bar2}\n|- 2 : ...\n{bar3}\n",
+            f"{bar1}\n|- 2 : ... within 2\n"
+            f"{bar2}\n|- 2 : ... within 2\n{bar3}\n",
             "",
         )
 
@@ -1123,7 +1140,7 @@ def test_a_path_refused(
 ) -> None:
     """
     A path the system refuses, or none to find the key by, is a refusal:
-    one ERROR line naming it, exit 2, and nothing written but a lock.
+    one fail line naming it, exit 2, and nothing written but a lock.
     """
     with session() as (work, given):
         env = made(work, given)
@@ -1133,7 +1150,7 @@ def test_a_path_refused(
         finally:
             work.chmod(0o700)
         assert (code, err, out.count("\n")) == (2, "", 1)
-        assert out.startswith("ERROR: ")
+        assert out.startswith(SESSION_FAIL)
         assert named in out
         after = {
             path: data

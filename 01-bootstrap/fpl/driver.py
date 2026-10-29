@@ -165,7 +165,8 @@ def run(source: str, report: Callable[[str], None] = silent) -> str:
     steps, so a program without end stops with ``out of fuel`` at its
     line. A closing fail judgment ``|- ! err/<tag> “message”``
     (:func:`fpl.desugar.closing`) turns the failure it names into
-    output: what the lines before it printed, then its ``ERROR:`` line.
+    output: what the lines before it printed, then its fail line,
+    which pasted back as the closing line is the same judgment.
 
     Args:
         source: The program text.
@@ -184,12 +185,12 @@ def run(source: str, report: Callable[[str], None] = silent) -> str:
         '1 2\n3\n'
         >>> run("$x\n")
         Traceback (most recent call last):
-        fpl.errors.NoEvaluatorError: ERROR: 1:1 no evaluator yet
+        fpl.errors.NoEvaluatorError: |- ! err/unresolved/no-evaluator...
         >>> run("1\n$x\n|- ! err/unresolved/no-evaluator\n")
-        'ERROR: 1:1 no evaluator yet\n'
+        '|- ! err/unresolved/no-evaluator 1:1 “no evaluator yet”\n'
         >>> run("1\n|- ! err/no-row\n")  # doctest: +ELLIPSIS
         Traceback (most recent call last):
-        fpl.errors.NoFailError: ERROR: 2:1 check failed: expected ...
+        fpl.errors.NoFailError: |- ! err/check/no-fail 2:1 ...
     """
     program, judgment = closing(parse(source))
     left: list[Stack] = []
@@ -212,8 +213,8 @@ def run(source: str, report: Callable[[str], None] = silent) -> str:
 def judged(judgment: Judgment, error: FplError, left: list[Stack]) -> str:
     r"""Return the output of a program that failed as judged.
 
-    The error matches when its tag is the judgment's, and its message
-    too where the judgment gives one.
+    The error matches when its tag is the judgment's, and its message,
+    position and step too where the judgment gives them.
 
     Args:
         judgment: The program's closing fail judgment.
@@ -221,7 +222,7 @@ def judged(judgment: Judgment, error: FplError, left: list[Stack]) -> str:
         left: The stacks of the run lines before the failure.
 
     Returns:
-        Their lines, then the error's ``ERROR:`` line.
+        Their lines, then the error's fail line.
 
     Raises:
         :exc:`~fpl.errors.UnmatchedFailError`: The error does not
@@ -231,20 +232,41 @@ def judged(judgment: Judgment, error: FplError, left: list[Stack]) -> str:
         >>> from fpl.errors import FailError, Span
         >>> error = FailError(Span(3, 1), "no row fits")
         >>> judged(Judgment("err/no-row", None), error, [(1,)])
-        '1\nERROR: 3:1 no row fits\n'
+        '1\n|- ! err/no-row 3:1 “no row fits”\n'
         >>> judged(  # doctest: +ELLIPSIS
         ...     Judgment("err/check", None), error, []
         ... )
         Traceback (most recent call last):
-        fpl.errors.UnmatchedFailError: ERROR: 1:1 check failed: ...
+        fpl.errors.UnmatchedFailError: |- ! err/check/unmatched-fail ...
     """
-    if error.tag != judgment.tag:
-        raise UnmatchedFailError(
-            judgment.span, f"expected {judgment.tag}, got {error.tag}"
-        ) from error
-    if judgment.message not in (None, error.message):
-        raise UnmatchedFailError(
-            judgment.span,
-            f"expected “{judgment.message}”, got “{error.message}”",
-        ) from error
+    if (wrong := unmatched(judgment, error)) is not None:
+        raise UnmatchedFailError(judgment.span, wrong) from error
     return output(left) + f"{error}\n"
+
+
+def unmatched(judgment: Judgment, error: FplError) -> str | None:
+    """Say what of a judgment the error does not match, if anything.
+
+    Returns:
+        ``expected <what>, got <what>`` for the first of the tag, the
+        message, the position and the step that the judgment gives and
+        the error has otherwise; None when all match.
+
+    Examples:
+        >>> from fpl.errors import FailError, Span
+        >>> error = FailError(Span(3, 1), "no row fits")
+        >>> there = Judgment("err/no-row", None, at=Span(4, 1))
+        >>> unmatched(there, error)
+        'expected 4:1, got 3:1'
+    """
+    if judgment.tag != error.tag:
+        return f"expected {judgment.tag}, got {error.tag}"
+    if judgment.message not in (None, error.message):
+        return f"expected “{judgment.message}”, got “{error.message}”"
+    at, span = judgment.at, error.span
+    if at is not None and at != span:
+        return f"expected {at.line}:{at.col}, got {span.line}:{span.col}"
+    if judgment.step not in (None, error.step):
+        got = "no step" if error.step is None else f"step {error.step}"
+        return f"expected step {judgment.step}, got {got}"
+    return None

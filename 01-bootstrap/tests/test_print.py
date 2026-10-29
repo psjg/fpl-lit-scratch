@@ -354,4 +354,6 @@ def test_a_tree_nested_too_deep_to_render_is_refused() -> None:
         frame = Frame((Cell((Enclosure("quotation", (frame,), AT),), AT),), AT)
     with pytest.raises(FplError) as caught:
         render(Program((Line((frame,), (), AT),), AT))
-    assert str(caught.value) == "ERROR: 1:1 nesting too deep to print"
+    assert (
+        str(caught.value) == "|- ! err/print 1:1 “nesting too deep to print”"
+    )

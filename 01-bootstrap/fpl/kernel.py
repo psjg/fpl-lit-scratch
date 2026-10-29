@@ -35,6 +35,7 @@ from pathlib import Path
 from typing import Any, cast
 
 from fpl.driver import FUEL_DEFAULT
+from fpl.errors import FAIL
 from fpl.log import U64, Log, keyed, load
 from fpl.repl import Said, inputs, once
 
@@ -59,7 +60,7 @@ Request = Mapping[str, Any]
 
 
 def swallowed(text: str) -> str:
-    r"""Drop the result lines of *text*.
+    r"""Drop the result lines and the fail lines of *text*.
 
     A transcript fed back in is then the program it came from. The
     results are not checked against a run.
@@ -67,18 +68,23 @@ def swallowed(text: str) -> str:
     Examples:
         >>> swallowed("1\n|= 1\n|=\n|=x\n")
         '1\n|=x\n'
+        >>> swallowed("x\n|- ! err/no-row 1:1 “m”\n")
+        'x\n'
     """
     return "".join(
         line
         for line in text.splitlines(keepends=True)
-        if not (line.startswith(RESULT + " ") or line.rstrip("\n") == RESULT)
+        if not (
+            line.startswith((RESULT + " ", FAIL + " "))
+            or line.rstrip("\n") == RESULT
+        )
     )
 
 
 def split(text: str) -> list[str]:
     r"""Split *text* into inputs, grouped as the REPL groups lines.
 
-    Result lines are dropped first, as in :func:`swallowed`.
+    Result and fail lines are dropped first, as in :func:`swallowed`.
 
     Examples:
         >>> split("(a)\n(b)\n|= 3\n")
@@ -110,13 +116,24 @@ class Turn:
 
         Returns:
             The input as entered, its output as ``|=`` lines and its
-            notes as ``;;`` comments, each line ending in a newline.
+            notes as ``;;`` comments, each line ending in a newline. A
+            turn that failed has no output but its fail line, which
+            stands as it is: ``|-`` is the turnstile, ``|=`` before it
+            would be a result of the failure.
 
         Examples:
             >>> Turn("1", " 2\n", ("n",), 0, None, 0.0).block()
             '1\n|=  2\n;; n\n'
+            >>> fail = "|- ! err 1:1 “m”\n"
+            >>> Turn("x", fail, (), 1, None, 0.0).block()
+            'x\n|- ! err 1:1 “m”\n'
         """
-        shown = [f"{RESULT} {line}".rstrip() for line in self.out.splitlines()]
+        lines = self.out.splitlines()
+        shown = (
+            lines
+            if self.code
+            else [f"{RESULT} {line}".rstrip() for line in lines]
+        )
         notes = [
             f";; {line}".rstrip()
             for note in self.notes

@@ -146,46 +146,65 @@ def test_within_names_a_character_or_the_end_of_a_line() -> None:
 @pytest.mark.parametrize(
     ("source", "expected"),
     [
-        ("“a 「b” c」\n", "ERROR: 1:9 」 closes nothing"),
-        ("[ 1 2\n", "ERROR: 1:1 [ never closed"),
-        ("a\n\t\tb\n\tc\n", "ERROR: 3:2 dedent to a level never opened"),
-        ("a\n  b\n", "ERROR: 2:1 indentation must be tabs"),
+        ("“a 「b” c」\n", "|- ! err/read/unopened 1:9 “」 closes nothing”"),
+        ("[ 1 2\n", "|- ! err/read/unclosed 1:1 “[ never closed”"),
+        (
+            "a\n\t\tb\n\tc\n",
+            "|- ! err/read/dedent 3:2 “dedent to a level never opened”",
+        ),
+        ("a\n  b\n", "|- ! err/read/tabs 2:1 “indentation must be tabs”"),
         (
             "\ta [\nb ]\n",
-            "ERROR: 2:1 dedent below line 1, but its [ is still open",
+            "|- ! err/read/dedent 2:1"
+            " “dedent below line 1, but its [ is still open”",
         ),
-        ("x “ab\n", "ERROR: 1:3 “ never closed"),
-        ("a ]\n", "ERROR: 1:3 ] closes nothing"),
-        ("[ a )\n", "ERROR: 1:5 ) does not close ["),
-        ("“⟨a” b\n", "ERROR: 1:2 ⟨ never closed"),
-        ("a\u00b4b\n", "ERROR: 1:1 a modifier ends its word: a\u00b4b"),
-        ("“s”\n| ⟧\n", "ERROR: 2:3 ⟧ closes nothing"),
-        ("a\x0b\n", "ERROR: 1:2 unexpected input"),
-        ("[\n]\t]", "ERROR: 2:3 ] closes nothing"),
-        ("a\n]", "ERROR: 2:1 ] closes nothing"),
-        ("a ;; d\n", "ERROR: 1:3 a ;; comment stands on a line of its own"),
+        ("x “ab\n", "|- ! err/read/unclosed 1:3 ““ never closed”"),
+        ("a ]\n", "|- ! err/read/unopened 1:3 “] closes nothing”"),
+        ("[ a )\n", "|- ! err/read/mismatched 1:5 “) does not close [”"),
+        ("“⟨a” b\n", "|- ! err/read/unclosed 1:2 “⟨ never closed”"),
+        (
+            "a\u00b4b\n",
+            "|- ! err/read/modifier 1:1 “a modifier ends its word: a\u00b4b”",
+        ),
+        ("“s”\n| ⟧\n", "|- ! err/read/unopened 2:3 “⟧ closes nothing”"),
+        ("a\x0b\n", "|- ! err/read/unexpected 1:2 “unexpected input”"),
+        ("[\n]\t]", "|- ! err/read/unopened 2:3 “] closes nothing”"),
+        ("a\n]", "|- ! err/read/unopened 2:1 “] closes nothing”"),
+        (
+            "a ;; d\n",
+            "|- ! err/read/comment 1:3"
+            " “a ;; comment stands on a line of its own”",
+        ),
         (
             "a | ;;; s\n",
-            "ERROR: 1:5 a ;;; comment stands on a line of its own",
+            "|- ! err/read/comment 1:5"
+            " “a ;;; comment stands on a line of its own”",
         ),
         (
             "[ a ; c\n b ]\n",
-            "ERROR: 1:5 a comment cannot stand inside an enclosure",
+            "|- ! err/read/comment 1:5"
+            " “a comment cannot stand inside an enclosure”",
         ),
         (
             "[ ;; x\n]\n",
-            "ERROR: 1:3 a comment cannot stand inside an enclosure",
+            "|- ! err/read/comment 1:3"
+            " “a comment cannot stand inside an enclosure”",
         ),
-        ("| ;; x\n", "ERROR: 1:3 a ;; comment stands on a line of its own"),
-        ("a\t \tb\n", "ERROR: 1:4 unexpected input"),
-        ("\x0ba\n", "ERROR: 1:1 unexpected input"),
-        ("a\n[ a )\n", "ERROR: 2:5 ) does not close ["),
-        ("a\n\t b\n", "ERROR: 2:2 indentation must be tabs"),
+        (
+            "| ;; x\n",
+            "|- ! err/read/comment 1:3"
+            " “a ;; comment stands on a line of its own”",
+        ),
+        ("a\t \tb\n", "|- ! err/read/unexpected 1:4 “unexpected input”"),
+        ("\x0ba\n", "|- ! err/read/unexpected 1:1 “unexpected input”"),
+        ("a\n[ a )\n", "|- ! err/read/mismatched 2:5 “) does not close [”"),
+        ("a\n\t b\n", "|- ! err/read/tabs 2:2 “indentation must be tabs”"),
         (
             "a\n\t\t[\n\tb ]\n",
-            "ERROR: 3:2 dedent below line 2, but its [ is still open",
+            "|- ! err/read/dedent 3:2"
+            " “dedent below line 2, but its [ is still open”",
         ),
-        ("a\n\t[ b\n", "ERROR: 2:2 [ never closed"),
+        ("a\n\t[ b\n", "|- ! err/read/unclosed 2:2 “[ never closed”"),
     ],
 )
 def test_a_refusal_is_one_error_line(source: str, expected: str) -> None:
@@ -359,7 +378,10 @@ def test_nesting_too_deep_to_read_is_refused(opener: str) -> None:
     source = "a\n" + "".join("\t" * k + "a\n" for k in range(1, 1000))
     if closer:
         source = opener * 1000 + closer * 1000 + "\n"
-    assert str(failure(source)) == "ERROR: 1:1 nesting too deep to read"
+    assert (
+        str(failure(source))
+        == "|- ! err/read/too-deep 1:1 “nesting too deep to read”"
+    )
 
 
 def test_a_failure_lark_cannot_place_is_at_the_end_of_the_source() -> None:

@@ -305,10 +305,10 @@ def prelex(source: str, start: int = 0, end: int | None = None) -> Prelexed:
     Examples:
         >>> prelex("a “b” c\n").code
         'a ¶  c\n\n'
-        >>> prelex("x “ab\n")
+        >>> prelex("x “ab\n")  # doctest: +ELLIPSIS
         Traceback (most recent call last):
             ...
-        fpl.errors.UnclosedError: ERROR: 1:3 “ never closed
+        fpl.errors.UnclosedError: |- ! err/read/unclosed 1:3 ...
     """
     lexed = pairs(source, start, end)
     strict(source, lexed.code, lexed.origin)

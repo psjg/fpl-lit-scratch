@@ -301,6 +301,8 @@ class Judgment:
 
     It is no statement: the driver takes it from the last line of a
     file before the rest is desugared, which may itself be the failure.
+    A printed fail line, pasted back, also gives the place and the
+    step the failure must come at.
     """
 
     #: The error's path under ``err/``, as written.
@@ -308,6 +310,10 @@ class Judgment:
     #: The message the error must have, or None for any.
     message: str | None
     span: Span = field(compare=False, default=Span(1, 1))
+    #: The source position the error must be at, or None for any.
+    at: Span | None = None
+    #: The step the error must come at, or None for any.
+    step: int | None = None
 
 
 @dataclass(frozen=True)

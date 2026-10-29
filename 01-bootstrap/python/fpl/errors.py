@@ -1,12 +1,12 @@
 """Define the errors of a running program, each at a source position.
 
 :class:`FplError` carries a :class:`Span` and a message and prints as
-one ``ERROR: line:col message`` line; :meth:`FplError.render` adds the
-source line with a caret. Each subclass names what went wrong by its
-:attr:`~FplError.tag`, a path under ``err/`` that a fail judgment
-``|- ! err/<tag>`` matches; the catalog is
-``02-docs/02.03-reference/02.03.01-errors.md``. The tag is printed
-nowhere yet.
+the fail judgment ``|- ! <tag> <line>:<col> “<message>” @ <n>``
+(:func:`fail_line`); :meth:`FplError.render` adds the source line with
+a caret. Each subclass names what went wrong by its
+:attr:`~FplError.tag`, a path under ``err/`` that a closing fail
+judgment ``|- ! err/<tag>`` matches; the catalog is
+``02-docs/02.03-reference/02.03.01-errors.md``.
 
 Errors are grouped by what went wrong, not by the pass that finds it:
 ``stack underflow`` is :class:`UnderflowError` whether the types or the
@@ -28,6 +28,54 @@ class Span:
     col: int
 
 
+#: What every fail judgment starts with: the turnstile and the fail
+#: mark.
+FAIL = "|- !"
+
+
+def fail_line(
+    tag: str,
+    message: str,
+    span: Span | None = None,
+    *,
+    input_number: int | None = None,
+    step: int | None = None,
+) -> str:
+    """Return the fail judgment of a failure.
+
+    The line is the turnstile ``|-``, ``!``, the *tag*, the position,
+    the *message* in FPL quotes and the step. Each part that is not
+    known is left out: the position of a refusal that lies in no
+    source, the step of a failure before the evaluation or past the
+    meter's reach.
+
+    Args:
+        tag: The path under ``err/`` of what went wrong.
+        message: What failed, without the position; printed as it is.
+        span: Where the failure is, as the line and column.
+        input_number: The session input that *span* lies in, when it
+            is not the input being entered; ``#N`` before the position.
+        step: The step of the evaluation the failure came at, which
+            ``@`` then names.
+
+    Returns:
+        ``|- ! <tag> [#<input_number> ]<line>:<col> “<message>” @
+        <step>``, a part left out with its sign.
+
+    Examples:
+        >>> fail_line("err/no-row", "none fits", Span(2, 3), step=7)
+        '|- ! err/no-row 2:3 “none fits” @ 7'
+        >>> fail_line("err/no-row", "m", Span(2, 3), input_number=4)
+        '|- ! err/no-row #4 2:3 “m”'
+        >>> fail_line("err/session", "gone")
+        '|- ! err/session “gone”'
+    """
+    seen = "" if input_number is None else f" #{input_number}"
+    where = "" if span is None else f" {span.line}:{span.col}"
+    at = "" if step is None else f" @ {step}"
+    return f"{FAIL} {tag}{seen}{where} “{message}”{at}"
+
+
 class FplError(Exception):
     """A failure of the program being run, not of the interpreter."""
 
@@ -47,6 +95,9 @@ class FplError(Exception):
         self.span = span
         #: What failed, without the position.
         self.message = message
+        #: The step of the evaluation the failure came at; ``None``
+        #: before it or without a meter's count.
+        self.step: int | None = None
 
     @override
     def __str__(self) -> str:
@@ -55,13 +106,14 @@ class FplError(Exception):
         The format is fixed by ``.agents/CONVENTIONS.md``.
 
         Returns:
-            ``ERROR: <line>:<col> <message>``.
+            The fail judgment (:func:`fail_line`) of the error's tag,
+            position, message and step.
 
         Examples:
             >>> str(FplError(Span(2, 3), "bad"))
-            'ERROR: 2:3 bad'
+            '|- ! err 2:3 “bad”'
         """
-        return f"ERROR: {self.span.line}:{self.span.col} {self.message}"
+        return fail_line(self.tag, self.message, self.span, step=self.step)
 
     def render(self, source: str) -> str:
         r"""Return the error line, the source line it is in and a caret.
@@ -76,11 +128,11 @@ class FplError(Exception):
 
         Examples:
             >>> print(FplError(Span(2, 3), "bad").render("a\nbcd\n"))
-            ERROR: 2:3 bad
+            |- ! err 2:3 “bad”
             bcd
               ^
             >>> FplError(Span(9, 1), "bad").render("a")
-            'ERROR: 9:1 bad'
+            '|- ! err 9:1 “bad”'
         """
         shown = excerpt(source, self.span)
         return f"{self}\n{shown}" if shown else str(self)
@@ -176,7 +228,7 @@ class UnderflowError(StackError):
 
         Examples:
             >>> str(UnderflowError(Span(1, 3)))
-            'ERROR: 1:3 stack underflow'
+            '|- ! err/stack/underflow 1:3 “stack underflow”'
         """
         super().__init__(span, "stack underflow")
 
@@ -420,7 +472,7 @@ class CheckError(FplError):
 
         Examples:
             >>> str(CheckError(Span(1, 1), "why"))
-            'ERROR: 1:1 check failed: why'
+            '|- ! err/check 1:1 “check failed: why”'
         """
         super().__init__(span, f"check failed: {reason}")
 
@@ -440,7 +492,7 @@ class UnequalError(CheckError):
 
         Examples:
             >>> str(UnequalError(Span(3, 1), "2", "3"))
-            'ERROR: 3:1 check failed: 2 is not 3'
+            '|- ! err/check/unequal 3:1 “check failed: 2 is not 3”'
         """
         super().__init__(span, f"{left} is not {right}")
 

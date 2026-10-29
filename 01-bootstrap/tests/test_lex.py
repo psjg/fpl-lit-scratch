@@ -74,17 +74,18 @@ def refusal(source: str) -> str:
 @pytest.mark.parametrize(
     ("source", "expected"),
     [
-        ("“a 「b” c」\n", "ERROR: 1:9 」 closes nothing"),
-        ("“a”」\n", "ERROR: 1:4 」 closes nothing"),
-        ("x “ab\n", "ERROR: 1:3 “ never closed"),
-        ("⟦ a\n", "ERROR: 1:1 ⟦ never closed"),
-        ("a ]\n", "ERROR: 1:3 ] closes nothing"),
-        ("a\n\t b\n", "ERROR: 2:2 indentation must be tabs"),
+        ("“a 「b” c」\n", "|- ! err/read/unopened 1:9 “」 closes nothing”"),
+        ("“a”」\n", "|- ! err/read/unopened 1:4 “」 closes nothing”"),
+        ("x “ab\n", "|- ! err/read/unclosed 1:3 ““ never closed”"),
+        ("⟦ a\n", "|- ! err/read/unclosed 1:1 “⟦ never closed”"),
+        ("a ]\n", "|- ! err/read/unopened 1:3 “] closes nothing”"),
+        ("a\n\t b\n", "|- ! err/read/tabs 2:2 “indentation must be tabs”"),
         (
             "a\n\t\t[\n\tb ]\n",
-            "ERROR: 3:2 dedent below line 2, but its [ is still open",
+            "|- ! err/read/dedent 3:2"
+            " “dedent below line 2, but its [ is still open”",
         ),
-        ("a\n\t[ b\n", "ERROR: 2:2 [ never closed"),
+        ("a\n\t[ b\n", "|- ! err/read/unclosed 2:2 “[ never closed”"),
         ("[ ⟦ ] ⟧ ]\n", ""),
         ("a ; ( b\n", ""),
         ("[\n  a ]\n", ""),

@@ -71,7 +71,10 @@ def test_the_next_call_joins_the_same_session(home: dict[str, str]) -> None:
     assert second.returncode == 1, second.stderr
     heard = second.stdout
     assert heard.startswith("1 2 +\n|= 3\n3 4 +\n|= 7\n")
-    assert "|= ERROR: 1:1 unknown word: nope" in heard
+    assert (
+        "\n|- ! err/unresolved/unknown-word 1:1 “unknown word: nope”\n"
+        in heard
+    )
     again = pty(home, stdin=heard)
     assert again.returncode == 1
     assert "|= 3" in again.stdout

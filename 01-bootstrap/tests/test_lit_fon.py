@@ -44,8 +44,8 @@ def test_the_tangled_reader_refuses_braced_fon() -> None:
         "except FonError as error:\n"
         "    print(error, error.offset)\n"
     )
-    assert result.stdout == (
-        b"ERROR: 1:1 { refused: FON is postfix, not braced 0\n"
+    assert result.stdout.decode() == (
+        "|- ! err/fon 1:1 “{ refused: FON is postfix, not braced” 0\n"
     )
 
 

@@ -425,7 +425,7 @@ def test_a_wildcard_row_whose_body_is_a_goal_is_reported() -> None:
         run("f : x -- y\n\tmatch\n\t\t0\t1\n\t\t_\t?\n1 f\n", reported.append)
     assert (reported, str(refused.value)) == (
         ["GOAL 4:5 ? : -- value"],
-        "ERROR: 4:5 unfilled goal",
+        "|- ! err/unresolved/goal 4:5 “unfilled goal” @ 4",
     )
 
 

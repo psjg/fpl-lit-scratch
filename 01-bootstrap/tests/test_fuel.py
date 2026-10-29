@@ -43,8 +43,9 @@ def test_fuel_bounds_the_steps_of_a_run_line(
 ) -> None:
     """
     [law: fuel] With fuel n a run line of n steps completes as it does
-    with no fuel, and with n-1 it stops with out of fuel at its line;
-    the steps of the runs nested in it count.
+    with no fuel, or fails as it does but for the step its fail line
+    ends in, and with n-1 it stops with out of fuel at its line; the
+    steps of the runs nested in it count.
     """
     source = head + "\n" * blanks + line + "\n"
     statements = desugar(parse(source))
@@ -60,10 +61,12 @@ def test_fuel_bounds_the_steps_of_a_run_line(
         patch.setattr("fpl.eval.step", counted)
         today = outcome(statements)
     assert steps > 0
-    assert outcome(statements, steps) == today
+    bounded = f"{today} @ {steps}" if isinstance(today, str) else today
+    assert outcome(statements, steps) == bounded
     assert (
         outcome(statements, steps - 1)
-        == f"ERROR: {source.count(chr(10))}:1 out of fuel"
+        == f"|- ! err/out-of-gas {source.count(chr(10))}:1 “out of fuel”"
+        f" @ {steps - 1}"
     )
 
 
@@ -94,7 +97,9 @@ def test_a_nested_run_spends_the_line_fuel() -> None:
     """
     statements = desugar(parse("x : --\n\n" + NESTED + "\n"))
     assert outcome(statements, 10) == ((Strand((2, 3, 4)),),)
-    assert outcome(statements, 9) == "ERROR: 3:1 out of fuel"
+    assert outcome(statements, 9) == (
+        "|- ! err/out-of-gas 3:1 “out of fuel” @ 9"
+    )
 
 
 def test_each_run_line_has_its_fuel() -> None:
@@ -105,10 +110,12 @@ def test_each_run_line_has_its_fuel() -> None:
     """
     both = desugar(parse("x : --\n\n" + NESTED + "\n" + NESTED + "\n"))
     assert outcome(both, 10) == ((Strand((2, 3, 4)),), (Strand((2, 3, 4)),))
-    assert outcome(both, 9) == "ERROR: 3:1 out of fuel"
+    assert outcome(both, 9) == "|- ! err/out-of-gas 3:1 “out of fuel” @ 9"
     second = desugar(parse("1\n" + NESTED + "\n"))
-    assert outcome(second, 9) == "ERROR: 2:1 out of fuel"
-    with pytest.raises(FplError, match=r"^ERROR: 2:1 out of fuel$"):
+    assert outcome(second, 9) == "|- ! err/out-of-gas 2:1 “out of fuel” @ 9"
+    with pytest.raises(
+        FplError, match=r"^\|- ! err/out-of-gas 2:1 “out of fuel” @ 9$"
+    ):
         stacks(second, 9)
 
 
@@ -119,7 +126,7 @@ def test_a_recursion_too_deep_is_an_error_at_its_line() -> None:
     """
     with pytest.raises(FplError) as caught:
         run("f : x -- y\n\t1 2 [f] each\n1 f\n")
-    assert str(caught.value) == "ERROR: 3:1 recursion too deep"
+    assert str(caught.value) == "|- ! err/recursion 3:1 “recursion too deep”"
 
 
 @given(st.integers(max_value=-1), st.sampled_from([evaluate, stacks]))

@@ -1,5 +1,5 @@
 """
-The shape of an error: one `ERROR:` line, and a caret that lands on
+The shape of an error: one fail line, and a caret that lands on
 the column.
 """
 
@@ -19,7 +19,7 @@ def test_the_error_line_is_error_position_message(
     line: int, col: int, message: str
 ) -> None:
     error = FplError(Span(line, col), message)
-    assert str(error) == f"ERROR: {line}:{col} {message}"
+    assert str(error) == f"|- ! err {line}:{col} “{message}”"
     assert error.args == (message,)
 
 

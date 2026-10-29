@@ -9,6 +9,7 @@ source that desugars to the same code, and :func:`listing` writes stacks
 as a program, both for the printer.
 """
 
+import re
 from collections import ChainMap
 from collections.abc import Callable, Iterable, Iterator
 from dataclasses import dataclass, field, replace
@@ -99,6 +100,10 @@ QUERIES = {"history": HISTORY, "doc": DOC, "effect": Effect((), ("e",))}
 PRIME = "\N{PRIME}"
 #: The refusal of a check that starts with ``!`` but is no judgment.
 JUDGMENT = "a fail judgment is ! err/<tag> “message”"
+#: The position of a printed fail line, ``<line>:<col>``, from 1.
+POSITION = re.compile(r"([1-9]\d*):([1-9]\d*)")
+#: A step count as a printed fail line writes it.
+STEP = re.compile(r"0|[1-9]\d*")
 #: The builtin type words, unless the program defines a word of that
 #: name.
 TYPES = frozenset(("Int", "Decimal", "Text", "Symbol"))
@@ -179,10 +184,10 @@ def desugar(program: Program) -> tuple[Statement, ...]:
         >>> program = parse("sq : x -- y\n\tdup +\n")
         >>> [type(s).__name__ for s in desugar(program)]
         ['Define']
-        >>> desugar(parse("frob\n"))
+        >>> desugar(parse("frob\n"))  # doctest: +ELLIPSIS
         Traceback (most recent call last):
             ...
-        fpl.errors.UnknownWordError: ERROR: 1:1 unknown word: frob
+        fpl.errors.UnknownWordError: |- ! err/unresolved/unknown-word...
     """
     lines = coded(program.lines)
     catalog = Catalog({(): list(EFFECTS)}, dict(EFFECTS))
@@ -588,7 +593,7 @@ def unchecked(lines: tuple[Line, ...]) -> None:
         >>> unchecked(parse("1\n\t2 |- 2\n").lines)
         Traceback (most recent call last):
             ...
-        fpl.errors.CheckFormError: ERROR: 2:2 a check is a run line
+        fpl.errors.CheckFormError: |- ! err/form/check 2:2 ...
     """
     for line in lines:
         if line.check is not None:
@@ -671,8 +676,12 @@ def verdict(said: list[Item], span: Span) -> Judgment:
 
     Args:
         said: The items after ``!``: a path under ``err/``, no part of
-            it empty, then at most one string, without islands, that the
-            error's message must equal.
+            it empty; then, each at most once and in this order, the
+            position ``<line>:<col>`` the error must be at, a string,
+            without islands, that its message must equal, and ``@ <n>``,
+            the step it must come at. The position-less ``err/<tag>
+            “message”`` is the corpus's; the whole is a printed fail
+            line (:func:`fpl.errors.fail_line`) pasted back.
         span: The judgment's line.
 
     Raises:
@@ -685,20 +694,80 @@ def verdict(said: list[Item], span: Span) -> Judgment:
         >>> verdict([], Span(1, 1))  # doctest: +ELLIPSIS
         Traceback (most recent call last):
             ...
-        fpl.errors.CheckFormError: ERROR: 1:1 a fail judgment is ...
+        fpl.errors.CheckFormError: |- ! err/form/check 1:1 ...
     """
-    match said:
-        case [
-            Word(prefix="", kind="path", body=("err", *_) as path, mods="")
-        ] if all(path):
-            return Judgment("/".join(path), None, span)
+    tag, rest = read_tag(said)
+    at, rest = read_position(rest)
+    message, rest = read_message(rest)
+    step, rest = read_step(rest)
+    if tag is None or rest:
+        raise CheckFormError(span, JUDGMENT)
+    return Judgment(tag, message, span, at, step)
+
+
+def read_tag(items: list[Item]) -> tuple[str | None, list[Item]]:
+    """Take the leading path under ``err/`` off the items.
+
+    Examples:
+        >>> read_tag([])
+        (None, [])
+    """
+    match items:
         case [
             Word(prefix="", kind="path", body=("err", *_) as path, mods=""),
-            Text(kind="str", parts=(str() as message,)),
+            *rest,
         ] if all(path):
-            return Judgment("/".join(path), message, span)
+            return "/".join(path), rest
         case _:
-            raise CheckFormError(span, JUDGMENT)
+            return None, items
+
+
+def read_position(items: list[Item]) -> tuple[Span | None, list[Item]]:
+    """Take a leading ``<line>:<col>`` off the items of a judgment.
+
+    Examples:
+        >>> read_position([])
+        (None, [])
+    """
+    match items:
+        case [Word(prefix="", kind="name", body=(said,), mods=""), *rest] if (
+            found := POSITION.fullmatch(said)
+        ):
+            return Span(int(found[1]), int(found[2])), rest
+        case _:
+            return None, items
+
+
+def read_message(items: list[Item]) -> tuple[str | None, list[Item]]:
+    """Take a leading string, without islands, off the items.
+
+    Examples:
+        >>> read_message([])
+        (None, [])
+    """
+    match items:
+        case [Text(kind="str", parts=(str() as message,)), *rest]:
+            return message, rest
+        case _:
+            return None, items
+
+
+def read_step(items: list[Item]) -> tuple[int | None, list[Item]]:
+    """Take a closing ``@ <n>`` off the items: the step, from 0.
+
+    Examples:
+        >>> read_step([])
+        (None, [])
+    """
+    match items:
+        case [
+            Word(prefix="", kind="name", body=("@",), mods=""),
+            Word(prefix="", kind="number", body=(said,), mods=""),
+            *rest,
+        ] if STEP.fullmatch(said):
+            return int(said), rest
+        case _:
+            return None, items
 
 
 def definition(line: Line) -> tuple[str, Effect] | None:

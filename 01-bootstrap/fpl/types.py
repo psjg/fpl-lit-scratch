@@ -794,7 +794,7 @@ def met(
         >>> met(Kind.NUMBER, Kind.TEXT, {}, {}, Span(3, 4))
         Traceback (most recent call last):
             ...
-        fpl.errors.NotNumberError: ERROR: 3:4 arithmetic on a non-number
+        fpl.errors.NotNumberError: |- ! err/type/number 3:4 ...
     """
     match need:
         case Input():

@@ -51,15 +51,23 @@ def test_a_check_compares_whole_strands() -> None:
 def test_a_check_that_fails_names_both_stacks() -> None:
     with pytest.raises(UnequalError) as caught:
         run("1 | 1 + |- 3\n")
-    assert str(caught.value) == "ERROR: 1:1 check failed: 2 is not 3"
+    assert str(caught.value) == (
+        "|- ! err/check/unequal 1:1 “check failed: 2 is not 3” @ 4"
+    )
 
 
 def test_a_failed_check_is_told_at_its_own_line() -> None:
-    assert refusal("1\n2 |- 3\n") == "ERROR: 2:1 check failed: 2 is not 3"
+    assert (
+        refusal("1\n2 |- 3\n")
+        == "|- ! err/check/unequal 2:1 “check failed: 2 is not 3” @ 2"
+    )
 
 
 def test_an_empty_stack_is_told_as_nothing() -> None:
-    assert refusal("1 |-\n") == "ERROR: 1:1 check failed: 1 is not nothing"
+    assert (
+        refusal("1 |-\n")
+        == "|- ! err/check/unequal 1:1 “check failed: 1 is not nothing” @ 1"
+    )
     assert run("1 drop |-\n") == ""
 
 
@@ -68,13 +76,15 @@ def test_a_note_may_follow_a_check() -> None:
 
 
 def test_a_doc_comment_may_not_follow_a_check() -> None:
-    message = "ERROR: 1:8 a ;; comment stands on a line of its own"
+    message = (
+        "|- ! err/read/comment 1:8 “a ;; comment stands on a line of its own”"
+    )
     assert refusal("1 |- 1 ;; doc\n") == message
 
 
 @pytest.mark.parametrize("source", ["[ 1 |- 1 ]\n", "( 1 |- 1 )\n"])
 def test_no_enclosure_holds_a_check(source: str) -> None:
-    assert refusal(source) == "ERROR: 1:5 unexpected input"
+    assert refusal(source) == "|- ! err/read/unexpected 1:5 “unexpected input”"
 
 
 def test_a_bar_glued_to_a_word_is_no_check() -> None:
@@ -82,7 +92,10 @@ def test_a_bar_glued_to_a_word_is_no_check() -> None:
 
 
 def test_a_check_heads_no_block() -> None:
-    assert refusal("1 |- 1\n\t2\n") == "ERROR: 1:7 unexpected input"
+    assert (
+        refusal("1 |- 1\n\t2\n")
+        == "|- ! err/read/unexpected 1:7 “unexpected input”"
+    )
 
 
 @pytest.mark.parametrize(
@@ -94,7 +107,7 @@ def test_a_check_heads_no_block() -> None:
     ],
 )
 def test_a_check_is_a_run_line(source: str) -> None:
-    assert refusal(source).endswith(" a check is a run line")
+    assert refusal(source).endswith("“a check is a run line”")
 
 
 def test_the_goals_of_both_sides_are_reported() -> None:
@@ -117,12 +130,18 @@ def test_a_check_prints_as_it_reads(source: str) -> None:
 
 def test_a_closing_judgment_prints_the_failure_it_names() -> None:
     judged = UNRESOLVED + "|- ! err/unresolved/no-evaluator\n"
-    assert run(judged) == "ERROR: 1:1 no evaluator yet\n"
+    assert (
+        run(judged)
+        == "|- ! err/unresolved/no-evaluator 1:1 “no evaluator yet”\n"
+    )
 
 
 def test_a_judgment_may_name_the_message_too() -> None:
     said = UNRESOLVED + "|- ! err/unresolved/no-evaluator “no evaluator yet”\n"
-    assert run(said) == "ERROR: 1:1 no evaluator yet\n"
+    assert (
+        run(said)
+        == "|- ! err/unresolved/no-evaluator 1:1 “no evaluator yet”\n"
+    )
 
 
 def test_a_judgment_with_another_message_fails() -> None:
@@ -130,7 +149,8 @@ def test_a_judgment_with_another_message_fails() -> None:
     with pytest.raises(UnmatchedFailError) as caught:
         run(said)
     assert str(caught.value) == (
-        "ERROR: 2:1 check failed: expected “other”, got “no evaluator yet”"
+        "|- ! err/check/unmatched-fail 2:1 “check failed:"
+        " expected “other”, got “no evaluator yet””"
     )
 
 
@@ -138,8 +158,8 @@ def test_a_judgment_with_another_tag_fails() -> None:
     with pytest.raises(UnmatchedFailError) as caught:
         run(UNRESOLVED + "|- ! err/no-row\n")
     assert str(caught.value) == (
-        "ERROR: 2:1 check failed: expected err/no-row,"
-        " got err/unresolved/no-evaluator"
+        "|- ! err/check/unmatched-fail 2:1 “check failed: expected"
+        " err/no-row, got err/unresolved/no-evaluator”"
     )
 
 
@@ -147,20 +167,24 @@ def test_a_judgment_on_a_program_that_passes_fails() -> None:
     with pytest.raises(NoFailError) as caught:
         run("1\n|- ! err/no-row\n")
     assert str(caught.value) == (
-        "ERROR: 2:1 check failed: expected err/no-row, the program passed"
+        "|- ! err/check/no-fail 2:1 “check failed: expected err/no-row,"
+        " the program passed”"
     )
 
 
 def test_the_lines_before_a_judged_failure_still_print() -> None:
     source = "1\n2 |- 3\n4\n;; done\n|- ! err/check/unequal\n;; after\n"
-    assert run(source) == "1\nERROR: 2:1 check failed: 2 is not 3\n"
+    assert (
+        run(source)
+        == "1\n|- ! err/check/unequal 2:1 “check failed: 2 is not 3” @ 2\n"
+    )
 
 
 @pytest.mark.parametrize(
     "source", ["|- ! err/no-row\n1\n", "1 |- ! err/no-row\n"]
 )
 def test_a_fail_judgment_closes_the_program(source: str) -> None:
-    assert refusal(source).endswith(" a fail judgment closes the program")
+    assert refusal(source).endswith("“a fail judgment closes the program”")
 
 
 @pytest.mark.parametrize(
@@ -176,7 +200,9 @@ def test_a_fail_judgment_closes_the_program(source: str) -> None:
     ],
 )
 def test_a_judgment_is_a_tag_and_a_string(judgment: str) -> None:
-    message = "ERROR: 2:1 a fail judgment is ! err/<tag> “message”"
+    message = (
+        "|- ! err/form/check 2:1 “a fail judgment is ! err/<tag> “message””"
+    )
     assert refusal(f"{UNRESOLVED}{judgment}\n") == message
 
 
@@ -218,5 +244,7 @@ def test_an_unknown_word_is_not_a_planned_one() -> None:
 
 def test_a_failed_check_in_the_repl_is_an_error_line() -> None:
     outcome = enter(Log((), {}, 0), "1 | 1 + |- 3", CONTEXT, None)
-    assert outcome.out == "ERROR: 1:1 check failed: 2 is not 3\n"
+    assert outcome.out == (
+        "|- ! err/check/unequal 1:1 “check failed: 2 is not 3” @ 4\n"
+    )
     assert outcome.event.status == "error"

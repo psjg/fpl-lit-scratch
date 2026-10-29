@@ -55,10 +55,22 @@ def test_the_folds_run_left_or_right(source: str, printed: str) -> None:
 @pytest.mark.parametrize(
     ("source", "message"),
     [
-        ("⟨⟩ [+] foldr\n", "ERROR: 1:8 fold over nothing"),
-        ("3 [+] foldr\n", "ERROR: 1:7 a strand or a list is expected"),
-        ("1 2 [drop drop] foldr\n", "ERROR: 1:17 each step leaves one value"),
-        ("1 2 | 3 foldr\n", "ERROR: 1:9 a quotation is expected"),
+        (
+            "⟨⟩ [+] foldr\n",
+            "|- ! err/shape/empty-fold 1:8 “fold over nothing” @ 3",
+        ),
+        (
+            "3 [+] foldr\n",
+            "|- ! err/type/list 1:7 “a strand or a list is expected” @ 3",
+        ),
+        (
+            "1 2 [drop drop] foldr\n",
+            "|- ! err/shape/each 1:17 “each step leaves one value” @ 5",
+        ),
+        (
+            "1 2 | 3 foldr\n",
+            "|- ! err/type/quotation 1:9 “a quotation is expected” @ 3",
+        ),
     ],
 )
 def test_foldr_refuses_what_fold_refuses(source: str, message: str) -> None:
@@ -165,22 +177,64 @@ def test_control_words_run_the_quotations_they_take(
 @pytest.mark.parametrize(
     ("source", "message"),
     [
-        ("1 !\n", "ERROR: 1:3 a quotation is expected"),
-        ("2 [2] [3] if\n", "ERROR: 1:11 if takes 0 or 1"),
-        ("[1] [2] [3] if\n", "ERROR: 1:13 if takes 0 or 1"),
-        ("1 [2] 3 if\n", "ERROR: 1:9 a quotation is expected"),
-        ("0 [1 +] -1 repeat\n", "ERROR: 1:12 repeat takes a count"),
-        ("[1] [2] repeat\n", "ERROR: 1:9 repeat takes a count"),
-        ("1 2 [dup] each\n", "ERROR: 1:11 each step leaves one value"),
-        ("1 2 [drop drop] fold\n", "ERROR: 1:17 each step leaves one value"),
-        ("3 [1 +] each\n", "ERROR: 1:9 a strand or a list is expected"),
-        ("⟨⟩ [+] fold\n", "ERROR: 1:8 fold over nothing"),
-        ("1 | 2 | 3 swap-args\n", "ERROR: 1:11 a quotation is expected"),
-        ("1 | 2 [3] if\n", "ERROR: 1:11 a quotation is expected"),
-        ("1 2 | 3 each\n", "ERROR: 1:9 a quotation is expected"),
-        ("1 | 3 repeat\n", "ERROR: 1:7 a quotation is expected"),
-        ("1 2 | 3 scan\n", "ERROR: 1:9 a quotation is expected"),
-        ("3 [+] fold\n", "ERROR: 1:7 a strand or a list is expected"),
+        ("1 !\n", "|- ! err/type/quotation 1:3 “a quotation is expected” @ 2"),
+        ("2 [2] [3] if\n", "|- ! err/type/number 1:11 “if takes 0 or 1” @ 4"),
+        (
+            "[1] [2] [3] if\n",
+            "|- ! err/type/number 1:13 “if takes 0 or 1” @ 4",
+        ),
+        (
+            "1 [2] 3 if\n",
+            "|- ! err/type/quotation 1:9 “a quotation is expected” @ 4",
+        ),
+        (
+            "0 [1 +] -1 repeat\n",
+            "|- ! err/type/number 1:12 “repeat takes a count” @ 4",
+        ),
+        (
+            "[1] [2] repeat\n",
+            "|- ! err/type/number 1:9 “repeat takes a count” @ 3",
+        ),
+        (
+            "1 2 [dup] each\n",
+            "|- ! err/shape/each 1:11 “each step leaves one value” @ 4",
+        ),
+        (
+            "1 2 [drop drop] fold\n",
+            "|- ! err/shape/each 1:17 “each step leaves one value” @ 5",
+        ),
+        (
+            "3 [1 +] each\n",
+            "|- ! err/type/list 1:9 “a strand or a list is expected” @ 3",
+        ),
+        (
+            "⟨⟩ [+] fold\n",
+            "|- ! err/shape/empty-fold 1:8 “fold over nothing” @ 3",
+        ),
+        (
+            "1 | 2 | 3 swap-args\n",
+            "|- ! err/type/quotation 1:11 “a quotation is expected” @ 4",
+        ),
+        (
+            "1 | 2 [3] if\n",
+            "|- ! err/type/quotation 1:11 “a quotation is expected” @ 4",
+        ),
+        (
+            "1 2 | 3 each\n",
+            "|- ! err/type/quotation 1:9 “a quotation is expected” @ 3",
+        ),
+        (
+            "1 | 3 repeat\n",
+            "|- ! err/type/quotation 1:7 “a quotation is expected” @ 3",
+        ),
+        (
+            "1 2 | 3 scan\n",
+            "|- ! err/type/quotation 1:9 “a quotation is expected” @ 3",
+        ),
+        (
+            "3 [+] fold\n",
+            "|- ! err/type/list 1:7 “a strand or a list is expected” @ 3",
+        ),
     ],
 )
 def test_control_words_refuse_what_they_cannot_run(
