@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import stat
+import sys
 from pathlib import Path
 
 import pytest
@@ -128,6 +129,79 @@ def test_check_file_emptied_from_the_page(
     (tmp_path / "e.py").write_text("x = 1\n")
     assert lit(tmp_path, "check") == 1
     assert "e.md:1: lit-drift: e.py:1 differs" in capsys.readouterr().out
+
+
+STYLED = """
+    # Demo
+
+    ```python
+    <<1 Functions
+    demo.py>>=
+    import os
+    def add(a: int, b: int) -> int:
+        return a+b
+    ```
+    """
+
+
+def test_check_holds_the_tangle_to_ruff(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Unformatted code and a missing blank line, each at its line."""
+    page(tmp_path, "demo.md", STYLED)
+    lit(tmp_path, "tangle")
+    capsys.readouterr()
+    assert lit(tmp_path, "check") == 1
+    remedy = " -- edit the page, then run lit tangle"
+    assert capsys.readouterr().out.splitlines() == [
+        "demo.md:7: lit-tangle-ruff: demo.py:2 is not as ruff format writes"
+        " it" + remedy,
+        "demo.md:7: lit-tangle-ruff: demo.py:2: E302 Expected 2 blank lines,"
+        " found 0" + remedy,
+        "lit check: 1 page(s), 2 finding(s)",
+    ]
+
+
+def test_check_reports_a_tangle_ruff_cannot_parse(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """ruff's own word, once, at the file's first page line."""
+    page(tmp_path, "demo.md", STYLED.replace("int) -> int:", "int ->"))
+    lit(tmp_path, "tangle")
+    capsys.readouterr()
+    assert lit(tmp_path, "check") == 1
+    out = capsys.readouterr().out
+    assert "demo.md:6: lit-tangle-ruff: error: Failed to parse demo.py" in out
+    assert out.count("lit-tangle-ruff") == 1
+
+
+def test_check_without_ruff_says_so(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """No ruff beside the interpreter or on PATH is a finding."""
+    page(tmp_path, "demo.md", GOOD)
+    lit(tmp_path, "tangle")
+    capsys.readouterr()
+    monkeypatch.setenv("PATH", str(tmp_path))
+    monkeypatch.setattr(sys, "executable", str(tmp_path / "python"))
+    assert lit(tmp_path, "check") == 1
+    out = capsys.readouterr().out
+    assert "demo.md:1: lit-tangle-ruff: ruff is neither beside" in out
+
+
+def test_check_needs_no_ruff_without_python(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A page that tangles no Python file is not held to ruff."""
+    page(tmp_path, "n.md", "```text\n<<1 N\nn.txt>>=\nx=1\n```\n")
+    lit(tmp_path, "tangle")
+    capsys.readouterr()
+    monkeypatch.delenv("PATH")
+    assert lit(tmp_path, "check") == 0
 
 
 def test_usage_error_exits_two() -> None:

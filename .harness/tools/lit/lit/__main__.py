@@ -3,7 +3,9 @@
     lit tangle   [PAGE ...]      write each file a page names, read-only
     lit check    [PAGE ...]      the web's rules, and drift: a file
                                  that differs from its page fails at
-                                 the page's line; a page's hand rows
+                                 the page's line; each tangled Python
+                                 file passes ruff format and the
+                                 blank-line rules; a page's hand rows
                                  (<page stem>.facts.json) are valid
     lit lint     [PAGE ...]      prose and code agree; examples pass
     lit weave OUT [PAGE ...]     each page as OUT/<page>.html, its
@@ -40,10 +42,13 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import shlex
+import shutil
 import subprocess
 import sys
 import time
+from collections.abc import Sequence
 from pathlib import Path
 
 from lit import facts, lint, readable, run, web
@@ -91,32 +96,112 @@ def report(findings: list[web.Finding], verb: str, count: int) -> int:
     return 1 if findings else 0
 
 
+def at(t: web.Tangled, k: int) -> int:
+    """The page line of the file's 0-based line ``k``, or the last's."""
+    return t.origin[min(k, len(t.origin) - 1)] if t.origin else 1
+
+
+def first(held: Sequence[object], fresh: Sequence[object]) -> int:
+    """The first index where two unequal sequences of lines differ."""
+    pairs = enumerate(zip(held, fresh, strict=False))
+    return next(
+        (i for i, (a, b) in pairs if a != b), min(map(len, (held, fresh))) - 1
+    )
+
+
 def drift(t: web.Tangled, root: Path) -> web.Finding | None:
     """Where the file on disk first differs from its tangle, if so."""
     disk = root / t.name
     if not disk.is_file():
         message = f"{t.name} is missing -- run lit tangle"
-        return web.Finding(
-            t.page, t.origin[0] if t.origin else 1, "lit-drift", message
-        )
+        return web.Finding(t.page, at(t, 0), "lit-drift", message)
     held = disk.read_bytes().split(b"\n")
     fresh = t.text.encode().split(b"\n")
     if held == fresh:
         return None
-    k = next(
-        (
-            i
-            for i, (a, b) in enumerate(zip(held, fresh, strict=False))
-            if a != b
-        ),
-        min(len(held), len(fresh)) - 1,
-    )
-    line = t.origin[min(k, len(t.origin) - 1)] if t.origin else 1
+    k = first(held, fresh)
     message = (
         f"{t.name}:{k + 1} differs from the page -- edit the page, not the"
         " file, then run lit tangle"
     )
-    return web.Finding(t.page, line, "lit-drift", message)
+    return web.Finding(t.page, at(t, k), "lit-drift", message)
+
+
+# The ruff settings the lanes format and lint the walker with; lit
+# stands at .harness/tools/lit/lit/. The blank-line rules of
+# pycodestyle, which ruff has in preview only: the tangle's own rule
+# for blank lines between chunks (`web._gap') is held to them.
+RUFF_TOML = Path(__file__).resolve().parents[3] / "quality" / "ruff.toml"
+BLANKS = "E301,E302,E303,E305,E306"
+REMEDY = " -- edit the page, then run lit tangle"
+
+
+def ruff() -> str | None:
+    """The ruff beside the interpreter (the lanes' venv), or on PATH."""
+    path = [str(Path(sys.executable).parent), os.environ.get("PATH", "")]
+    return shutil.which("ruff", path=os.pathsep.join(path))
+
+
+def ruffed(t: web.Tangled, exe: str) -> list[web.Finding]:
+    """A tangled Python file against ruff format and the blank lines.
+
+    The fresh tangle is handed to ruff on stdin under its own name,
+    so the check judges the page, whatever the disk holds (`drift'
+    judges that). A file ruff would format otherwise is one finding,
+    at its first line that would change; each blank-line fault is one,
+    at its line; ruff failing (a file it cannot parse) is one, with
+    ruff's word for it.
+    """
+    own = ["--config", str(RUFF_TOML), "--stdin-filename", t.name]
+    lint = ["check", "--preview", "--select", BLANKS, "--output-format=json"]
+    fmt, e3 = (
+        subprocess.run(
+            [exe, *args, *own, "-"],
+            input=t.text,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            check=False,
+        )
+        for args in (["format"], lint)
+    )
+    out: list[web.Finding] = []
+    for done in (fmt, e3):
+        if done.returncode > 1:
+            said = (done.stderr.strip().splitlines() or ["no message"])[0]
+            out.append(web.Finding(t.page, at(t, 0), "lit-tangle-ruff", said))
+            return out
+    if fmt.stdout != t.text:
+        k = first(t.text.split("\n"), fmt.stdout.split("\n"))
+        message = f"{t.name}:{k + 1} is not as ruff format writes it"
+        out.append(
+            web.Finding(t.page, at(t, k), "lit-tangle-ruff", message + REMEDY)
+        )
+    for v in json.loads(e3.stdout):
+        row = int(v["location"]["row"])
+        message = f"{t.name}:{row}: {v['code']} {v['message']}"
+        out.append(
+            web.Finding(
+                t.page, at(t, row - 1), "lit-tangle-ruff", message + REMEDY
+            )
+        )
+    return out
+
+
+def style(files: list[web.Tangled]) -> list[web.Finding]:
+    """Each tangled Python file against ruff (`ruffed'), if any."""
+    python = [t for t in files if t.name.endswith(".py")]
+    if not python:
+        return []
+    exe = ruff()
+    if exe is None:
+        message = (
+            "ruff is neither beside the interpreter nor on PATH, so the"
+            " tangled files are not checked -- run make venv, or lit in"
+            " nix develop"
+        )
+        return [web.Finding(python[0].page, 1, "lit-tangle-ruff", message)]
+    return [f for t in python for f in ruffed(t, exe)]
 
 
 def write(t: web.Tangled, root: Path) -> bool:
@@ -154,6 +239,7 @@ def cmd_check(args: argparse.Namespace) -> int:
     webs, findings = tangled(found)
     for _, files in webs:
         findings += [d for t in files if (d := drift(t, args.root))]
+    findings += style([t for _, files in webs for t in files])
     for path, (page, text) in zip(
         paths(args.root, args.pages), found, strict=True
     ):

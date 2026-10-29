@@ -12,7 +12,7 @@ reads noweb chunks written in plain Markdown. It replaces the Entangled prototyp
 index is [index.md](index.md).
 
     lit tangle   [PAGE ...]      write each file a page names, read-only
-    lit check    [PAGE ...]      the web's rules, drift, and the hand rows (make check)
+    lit check    [PAGE ...]      the web's rules, drift, ruff, the hand rows (make check)
     lit lint     [PAGE ...]      prose and code agree; examples pass (make check)
     lit weave OUT [PAGE ...]     each page as one HTML page, its facts marked (make lit-weave)
     lit readable PAGE            a model answers the tests from the prose (make lit-readable)
@@ -75,6 +75,17 @@ pages writing one file.
 `lit check` (in `make check`). A file that differs from its page fails at the page line the
 first differing line came from: `page.md:L: lit-drift: fpl/lex.py:K differs from the page`.
 The remedy is to edit the page and run `lit tangle`, never to edit the file.
+
+`lit check` also hands each tangled Python file, as the page tangles it, to ruff on stdin
+with the lanes' `.harness/quality/ruff.toml`: `ruff format` must leave it as it is, and the
+blank-line rules E301, E302, E303, E305 and E306 (preview in ruff) must pass, so the tangle's
+rule for blank lines between chunks is checked against PEP 8, not assumed. A file ruff would
+format otherwise is one `lit-tangle-ruff` finding at its first line that would change, each
+blank-line fault one at its line, both at the page line the file line came from. ruff is
+looked for beside the interpreter (the lanes' `.harness/.venv`), then on PATH; when there is
+none, that is a finding too. `lit tangle` runs no ruff. Measured 2026-10-29: both files of the
+lex page pass with no change, the check adds 24 ms, and a blank line taken out before a `def`
+gives both findings at the page line of that `def`.
 
 `lit lint` (in `make check`). Prose names code in the Emacs docstring form: a backtick, the
 name, an apostrophe, as in `` `prelex' `` or `` `Lines.span' ``. A plain code span, `` `x` ``,
