@@ -47,11 +47,13 @@
  * the cards; where the column is hidden (a narrow window) each card
  * folds under the block its span is in, and the editor is a popover.
  *
- * Three stands, chosen with the control at the top of the column (or,
- * narrow, fixed at the top right) and with the key "a": lezen shows
+ * Three stands, chosen with the control floating at the top right of
+ * the window and with the key "a": lezen shows
  * nothing; spans underlines the spans whose labels pass the filter, a
- * row of label chips under the control; kantlijn adds the cards, the
- * lines and the editor. localStorage["fpl-annot:mode"] keeps the stand
+ * row of label chips under the control, and a click on a span opens
+ * its card alone; kantlijn shows every card, the lines and the editor.
+ * A line carries the type of the edge it draws: the first label of the
+ * first fact about the span, else the span's own. localStorage["fpl-annot:mode"] keeps the stand
  * and "fpl-annot:hide" the labels switched off, for the whole site.
  */
 (() => {
@@ -403,6 +405,7 @@
   }
 
   let editing = null;
+  const open = new Set();   // the spans whose card is open in the spans stand
   function closeEditor() {
     if (!editing) return;
     if (editing === pop) pop.hidden = true;
@@ -429,25 +432,25 @@
     lines.replaceChildren();
     margin.style.minHeight = "";
     const full = mode() === "kantlijn";
+    if (control.parentElement !== document.body) document.body.append(control);
     if (wide()) {
       column.classList.add("fpl-column");
-      if (control.parentElement !== column) column.prepend(control);
       if (margin.parentElement !== column) column.append(margin);
       if (lines.parentElement !== document.body) document.body.append(lines);
     } else {
       column?.classList.remove("fpl-column");
       lines.remove();
-      if (control.parentElement !== document.body) document.body.append(control);
       if (margin.parentElement !== body) body.prepend(margin);
     }
-    if (!full) return;
-    margin.append(head());
-    const spans = all.filter((r) => typeof r.text === "string" && passes(r));
+    if (mode() === "lezen") return;
+    if (full) margin.append(head());
+    const spans = all.filter((r) => typeof r.text === "string" && passes(r) && (full || open.has(r.id)));
+    if (!spans.length) return;
     const lost = spans.filter((r) => state[r.id] !== "vers");
     const found = spans.map((r) => ({ r, m: marksOf(r.id)[0] })).filter((x) => x.m)
       .sort((a, b) => a.m.getBoundingClientRect().top - b.m.getBoundingClientRect().top);
     if (wide()) {
-      let y = margin.firstElementChild.offsetHeight + GAP;
+      let y = full ? margin.firstElementChild.offsetHeight + GAP : 0;
       for (const r of lost) {
         const c = cardOf(r);
         margin.append(c);
@@ -486,15 +489,33 @@
       if (!ms.length) continue;
       const rects = [...ms].flatMap((m) => [...m.getClientRects()]);
       const last = rects[rects.length - 1], cr = c.getBoundingClientRect();
+      // out of the text first, along the line of the span, then down to the card
       const x1 = last.right + scrollX + 2, y1 = last.bottom + scrollY - 1;
       const x2 = cr.left + scrollX - 1, y2 = cr.top + scrollY + 10;
-      const dx = Math.max(24, (x2 - x1) / 2);
+      const gx = Math.max(x1 + 8, body.getBoundingClientRect().right + scrollX + 6);
+      const dx = Math.max(16, (x2 - gx) / 2);
       const p = document.createElementNS("http://www.w3.org/2000/svg", "path");
-      p.setAttribute("d", `M${x1},${y1} C${x1 + dx},${y1} ${x2 - dx},${y2} ${x2},${y2}`);
+      p.setAttribute("d", `M${x1},${y1} H${gx} C${gx + dx},${y1} ${x2 - dx},${y2} ${x2},${y2}`);
       p.setAttribute("class", `fpl-line ${c.classList.contains("mine") ? "mine" : ""}`);
       p.dataset.id = c.dataset.id;
       lines.append(p);
+      const type = edgeType(c.dataset.id);
+      if (type) {
+        const t = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        t.setAttribute("x", gx + 4);
+        t.setAttribute("y", y1 - 4);
+        t.setAttribute("class", `fpl-edge ${c.classList.contains("mine") ? "mine" : ""}`);
+        t.dataset.id = c.dataset.id;
+        t.textContent = type;
+        lines.append(t);
+      }
     }
+  }
+
+  /** The type of the edge from a span to its card: the first fact's first label, else the span's. */
+  function edgeType(id) {
+    const row = all.find((r) => r.id === id), first = facts(id)[0];
+    return first?.labels?.[0] ?? row?.labels?.[0] ?? "";
   }
 
   /** The span, card and line of one row light up together. */
@@ -530,7 +551,12 @@
       const m = target?.closest("mark.fact");
       if (!m) { if (editing) { closeEditor(); layout(); } return; }
       const row = all.find((r) => r.id === m.dataset.id);
-      if (mode() !== "kantlijn") { mode("kantlijn"); draw(); hot(row.id); return; }
+      if (mode() !== "kantlijn") {
+        open.has(row.id) ? open.delete(row.id) : (open.clear(), open.add(row.id));
+        layout();
+        hot(row.id);
+        return;
+      }
       hot(row.id);
       const card = margin.querySelector(`.fpl-card[data-id="${CSS.escape(row.id)}"]`);
       if (row.mine) edit(row, card, m.getBoundingClientRect());

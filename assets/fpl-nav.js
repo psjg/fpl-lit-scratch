@@ -13,9 +13,29 @@
  * A section with subsections gets a chevron like the sidebar's own; its
  * list is open while the section or one of its subsections is current,
  * or when the chevron was clicked.
+ *
+ * The sidebar folds at every width: a button at the top left hides it
+ * (body.fpl-nav-off) and brings it back; the page keeps its columns, so
+ * the text does not move. localStorage["fpl-nav:off"] remembers it.
  */
 (() => {
   "use strict";
+  const fold = document.createElement("button");
+  fold.className = "fpl-fold";
+  fold.type = "button";
+  const setFold = (off) => {
+    document.body.classList.toggle("fpl-nav-off", off);
+    fold.textContent = off ? "☰" : "⟨";
+    fold.title = off ? "Zijbalk tonen" : "Zijbalk verbergen";
+    fold.setAttribute("aria-expanded", String(!off));
+    try { localStorage.setItem("fpl-nav:off", off ? "1" : ""); } catch {}
+  };
+  fold.onclick = () => setFold(!document.body.classList.contains("fpl-nav-off"));
+  let off = false;
+  try { off = localStorage.getItem("fpl-nav:off") === "1"; } catch {}
+  setFold(off);
+  document.body.append(fold);
+
   const toc = document.querySelector("#quarto-margin-sidebar #TOC");
   const here = document.querySelector("#quarto-sidebar .sidebar-link.active");
   const list = toc?.querySelector("ul");
