@@ -203,9 +203,12 @@ path of the class that was raised; the first tree names only the errors that exi
 (underflow, unresolved/unknown-word, unresolved/no-evaluator, fail/no-row, arithmetic/...,
 thunk/expected, fold/empty, out-of-gas, fon). The tree and the `L |- R` check are
 built in the corpus session on his direct order of 09:34; this session takes the printer
-afterwards. Open for him: what a passing check prints,
-whether the position stands on the judgment line or in the caret block under it, and
-whether `err/out-of-gas` keeps that name.
+afterwards. His answers (10-29): a passing check prints the result line ("ja"); `err/out-of-gas`
+stays ("ja"); the position stays on the judgment line, his words on `l:c`: "oh shit deze
+moeten we er in houden als arg voor die error... we kunne het zevels een hyperlink maken
+naar de locatie van het ongeluk". Open: where the position goes on the line (after the
+message as `@ 1:5`, before it as the second argument, or as the last path segment
+`err/check/unequal/1:5`, one address per accident, which makes the link literal).
 
 On rank (10-29, verbatim): "uh krijgen we straks conflicten met het box model stel we
 willen een box model... willen we een box model? net zoals J en UIuia ik heb ook de
