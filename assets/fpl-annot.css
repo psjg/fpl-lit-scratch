@@ -156,6 +156,12 @@ body.fpl-numbered .fpl-s:hover .fpl-c::before { opacity: 1; }
   padding: .4rem .8rem; border-radius: 999px; background: var(--fpl-fg); color: var(--fpl-bg); font-size: .8rem; }
 @media (prefers-reduced-motion: reduce) { mark.fact, .fpl-card, .fpl-line { transition: none; animation: none; } }
 
+/* a chunk's header, split off its code (essay.lua) and joined to it again */
+.fpl-p > pre.fpl-chunk-head { margin-bottom: 0; padding-bottom: 0; border-bottom: 0; border-radius: .25rem .25rem 0 0; }
+.fpl-p > pre.fpl-chunk-head + div.code-copy-outer-scaffold > div > pre, .fpl-p > pre.fpl-chunk-head + div.sourceCode > pre,
+.fpl-p > pre.fpl-chunk-head + pre { margin-top: 0; padding-top: .25rem; border-top: 0; border-radius: 0 0 .25rem .25rem; }
+.fpl-p > pre.fpl-chunk-head code { color: var(--fpl-mute); }
+
 /* the files of a page, an outline at its end (essay.lua files()) */
 .fpl-files .fpl-part { margin: .15rem 0 .15rem calc(1rem + var(--depth, 0) * 1.2rem); }
 .fpl-files .fpl-part[data-depth="1"] { --depth: 1; } .fpl-files .fpl-part[data-depth="2"] { --depth: 2; } .fpl-files .fpl-part[data-depth="3"] { --depth: 3; }

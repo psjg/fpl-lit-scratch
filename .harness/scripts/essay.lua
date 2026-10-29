@@ -203,8 +203,17 @@ function number(doc, addr)
         pandoc.Attr(id, { "fpl-p" }, { ["data-n"] = tostring(para), ["data-kind"] = "P", ["data-s"] = tostring(n), ["data-addr"] = section })))
     elseif block.t == "CodeBlock" then
       para = para + 1
-      local _, lines = block.text:gsub("\n", "")
-      blocks:insert(pandoc.Div({ block },
+      local inner = { block }
+      -- a chunk's header (<<place name / files>>=) is not Python: it goes in a
+      -- block of its own, unhighlighted, so "in" or "for" in a name stay plain,
+      -- and the code's lines count from its first real line
+      local header, rest = block.text:match("^(<<.->>%+?=)\n?(.*)$")
+      if header then
+        inner = { pandoc.CodeBlock(header, pandoc.Attr("", { "fpl-chunk-head" })),
+          pandoc.CodeBlock(rest, block.attr) }
+      end
+      local _, lines = (rest or block.text):gsub("\n", "")
+      blocks:insert(pandoc.Div(inner,
         pandoc.Attr(id_of(para), { "fpl-p" }, { ["data-n"] = tostring(para), ["data-kind"] = "C", ["data-l"] = tostring(lines + 1), ["data-addr"] = section })))
     else
       blocks:insert(block)
