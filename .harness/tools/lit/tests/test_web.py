@@ -196,15 +196,13 @@ def test_parts_that_are_not_python_have_no_def() -> None:
 SECOND = """
     ```python
     <<1 Say what it is
-    m.py
-    lib.py>>=
+    m.py lib.py>>=
     \"\"\"Doc.\"\"\"
     ```
 
     ```python
     <<3 Set x
-    m.py
-    2 lib.py>>=
+    m.py 2:lib.py>>=
     x = 1
     ```
 
@@ -217,7 +215,7 @@ SECOND = """
 
 
 def test_a_header_names_two_files_and_a_place_of_its_own() -> None:
-    """A path line may open with the chunk's place in that file."""
+    """A path may carry its chunk's place there, before a colon."""
     tangled, findings = web.tangle(read(SECOND))
     assert findings == []
     assert [t.name for t in tangled] == ["m.py", "lib.py"]
@@ -232,16 +230,16 @@ def test_a_header_keeps_the_page_lines() -> None:
     [doc, x, show] = got.chunks()
     assert (doc.name, doc.line, doc.head, doc.place) == (
         "Say what it is",
-        4,
         3,
+        2,
         (1,),
     )
     assert doc.files == (("m.py", (1,)), ("lib.py", (1,)))
     assert x.files == (("m.py", (3,)), ("lib.py", (2,)))
     lib = web.tangle(got)[0][1]
-    assert lib.origin == (5, x.line, x.line + 1)
-    assert got.section_of(2) == got.section_of(5) == 1
-    assert got.section_of(1) == got.section_of(6) == 0
+    assert lib.origin == (4, x.line, x.line + 1)
+    assert got.section_of(2) == got.section_of(4) == 1
+    assert got.section_of(1) == got.section_of(5) == 0
     assert got.files() == ["m.py", "lib.py"]
     assert show.place == (2,)
 
@@ -322,19 +320,29 @@ def test_a_header_without_a_place_or_a_path() -> None:
     ]
 
 
-def test_a_path_line_that_does_not_parse() -> None:
-    """A path line is a path, or a place and a path, or wrong."""
+def test_a_path_that_does_not_parse() -> None:
+    """A path is a path, or a place, a colon and a path, or wrong.
+
+    All of a header's paths stand on the line under its name.
+    """
     got = rules("""
         ```python
         <<1 A
-        m.py
-        f.py one>>=
+        m.py one:f.py>>=
         a = 1
+        ```
+
+        ```python
+        <<2 B
+        m.py
+        n.py>>=
+        b = 2
         ```
         """)
     assert got == [
-        "p.md:4: lit-web: <<A>>: 'f.py one' is no path line -- write a"
-        " path, after its own place if it differs, as 2 fpl/lex.py"
+        "p.md:3: lit-web: <<A>>: 'one:f.py' is no path -- write a path, or"
+        " a place, a colon and a path, as 2:fpl/lex.py",
+        "p.md:10: lit-web: <<B>>= names its files on one line, not 2",
     ]
 
 
@@ -420,8 +428,7 @@ def test_a_used_chunk_stands_under_its_user() -> None:
 
         ```python
         <<2 B
-        m.py
-        n.py>>=
+        m.py n.py>>=
         b = 2
         <<C>>
         ```
@@ -446,10 +453,10 @@ def test_a_used_chunk_stands_under_its_user() -> None:
         ```
         """)
     assert got == [
-        "p.md:18: lit-web: <<C>> is used in <<B>>: place it under 2, in m.py"
+        "p.md:17: lit-web: <<C>> is used in <<B>>: place it under 2, in m.py"
         " n.py",
-        "p.md:31: lit-web: <<E>> is used in <<D>>: place it under 1, in n.py",
-        "p.md:31: lit-web: <<D>> and <<E>> both stand at n.py 1",
+        "p.md:30: lit-web: <<E>> is used in <<D>>: place it under 1, in n.py",
+        "p.md:30: lit-web: <<D>> and <<E>> both stand at n.py 1",
     ]
 
 

@@ -33,19 +33,19 @@ every page under it is read. The walker's root is `01-bootstrap/`, so run lit fr
 ## The page
 
 A page is Markdown. A fence opened by exactly ```` ```python ```` is a code chunk. Its
-header gives the chunk's place, its name, and the files it stands in, one path a line:
+header is two lines: the chunk's place and name, then the files it stands in, separated by
+spaces:
 
     ```python
     <<3.8 Count one pair
-    fpl/lex.py
-    python/fpl/lex/__init__.py>>=
+    fpl/lex.py python/fpl/lex/__init__.py>>=
     def counted(text: str, at: int, close: str, end: int) -> int | None:
         ...
     ```
 
 - The place is a dotted number, first on the name line. Places sort by their numbers:
-  3 < 3.1 < 3.2 < 3.10. A path line may open with a place of its own for that file
-  (`2 fpl/lex.py`); otherwise the name line's place holds there too.
+  3 < 3.1 < 3.2 < 3.10. A path may carry a place of its own for that file, before a colon
+  (`2:fpl/lex.py`); otherwise the name line's place holds there too.
 - `<<Name>>+=` adds to the chunk, with no place and no path. Other chunks name it without
   its place.
 - A line holding only `<<Name>>` is a use. The chunk's lines go there, each indented by the
@@ -62,12 +62,13 @@ header gives the chunk's place, its name, and the files it stands in, one path a
 - Prose comes before each chunk. A section is the prose up to and including one chunk.
 
 The reader is strict and guesses nothing. These are findings, each at its page line: a
-python fence without a header, a header without a place or without a path, a path line
-that does not parse, a `+=` with a path, a `+=` before its `=`, a second `=`, a use of a
-chunk never defined, a chunk named like a path (the old file root), a chunk that only uses
-others (give its parts places instead), a used chunk outside a user's place or files, two
-chunks at one place of a file, a chunk no file reaches, a cycle, a `tangle:` key in the
-front matter (gone), a fence that never closes, and two pages writing one file.
+python fence without a header, a header without a place or without a path, a path that
+does not parse, paths on more than one line, a `+=` with a path, a `+=` before its `=`, a
+second `=`, a use of a chunk never defined, a chunk named like a path (the old file root),
+a chunk that only uses others (give its parts places instead), a used chunk outside a
+user's place or files, two chunks at one place of a file, a chunk no file reaches, a
+cycle, a `tangle:` key in the front matter (gone), a fence that never closes, and two
+pages writing one file.
 
 ## The gates
 

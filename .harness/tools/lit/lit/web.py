@@ -1,18 +1,18 @@
 """The web: a literate page read into sections and chunks, and tangled.
 
 A page is Markdown. A fence opened by a line that is exactly
-```` ```python ```` is a code chunk, and its header names it, gives
-its place and the files it stands in, one path a line::
+```` ```python ```` is a code chunk. Its header is two lines: the
+chunk's place and name, then the files it stands in, separated by
+spaces::
 
     <<3.1 Name the characters of the pairs
-    fpl/lex.py
-    python/fpl/lex/__init__.py>>=
+    fpl/lex.py python/fpl/lex/__init__.py>>=
 
 A place is a dotted number; places sort by their numbers, so 3 < 3.1 <
-3.2 < 3.10. A path line may open with a place of its own for that
-file, as ``2 fpl/lex.py``. A
-continuation, ``<<Name the characters of the pairs>>+=``, adds lines to
-the chunk and carries neither. Other chunks name it without its place.
+3.2 < 3.10. A path may carry a place of its own for that file, before
+a colon: ``2:fpl/lex.py``. A continuation,
+``<<Name the characters of the pairs>>+=``, adds lines to the chunk
+and carries neither. Other chunks name it without its place.
 
 A line of a chunk that holds only ``<<Name>>`` is a use: the chunk's
 lines go there, each indented by the use's indentation. A used chunk
@@ -27,7 +27,8 @@ class, as PEP 8 has them; none when their places share a parent, as 3.1
 and 3.2 do; one otherwise.
 
 The reader is strict: a python fence without a header, a header without
-a place or without a path, a path line that does not parse, a ``+=``
+a place or without a path, a path that does not parse, paths on more
+than one line, a ``+=``
 that places, a ``+=`` before its ``=``, a second ``=``, a use of a chunk
 never defined, a chunk named like a path, a chunk that only lists
 others, a used chunk outside its user's place or files, two chunks at
@@ -55,7 +56,7 @@ USE = re.compile(r"(?P<indent>[ \t]*)<<(?P<name>[^<>]+)>>[ \t]*")
 FILE = re.compile(r"[\w.-]+(/[\w.-]+)*\.\w+")
 PLACE = r"(?P<place>[0-9]+(?:\.[0-9]+)*)"
 NAMED = re.compile(rf"{PLACE}[ \t]+(?P<name>.*\S)")
-PATH = re.compile(rf"(?:{PLACE}[ \t]+)?(?P<path>{FILE.pattern})")
+PATH = re.compile(rf"(?:{PLACE}:)?(?P<path>{FILE.pattern})")
 ALLOW = re.compile(r"lit-allow:\s*\[(?P<names>[^\]]*)\]\s*")
 GONE = re.compile(r"tangle:.*")
 CODE = "python"
@@ -291,17 +292,23 @@ class _Reader:
         place = _place(named["place"]) if named else ()
         if not named:
             self.bad(at, f"<<{name}>>= has no place: open its line with one")
-        if not paths:
+        words = [(k, w) for k, t in enumerate(paths, 1) for w in t.split()]
+        if not words:
             self.bad(at, f"<<{name}>>= names no file: put a path under it")
+        if len(paths) > 1:
+            message = (
+                f"<<{name}>>= names its files on one line, not {size - 1}"
+            )
+            self.bad(at + 2, message)
         files: list[tuple[str, Place]] = []
-        for k, text in enumerate(paths, 1):
-            if m := PATH.fullmatch(text.strip()):
+        for k, word in words:
+            if m := PATH.fullmatch(word):
                 own = _place(m["place"]) if m["place"] else place
                 files.append((m["path"], own))
                 continue
             message = (
-                f"<<{name}>>: {text.strip()!r} is no path line -- write a"
-                " path, after its own place if it differs, as 2 fpl/lex.py"
+                f"<<{name}>>: {word!r} is no path -- write a path, or a"
+                " place, a colon and a path, as 2:fpl/lex.py"
             )
             self.bad(at + k, message)
         return Chunk(name, False, line, body, place, tuple(files), size)

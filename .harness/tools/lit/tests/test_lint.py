@@ -134,8 +134,7 @@ def test_two_files_from_one_chunk_owe_once(
 
         ```python
         <<1 Shared
-        a.py
-        b.py>>=
+        a.py b.py>>=
         def twice() -> int:
             return 2
         ```
