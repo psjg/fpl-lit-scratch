@@ -282,8 +282,8 @@ def test_tests_for_finds_only_existing_files(tmp_path: Path) -> None:
     """tests/test_<stem>.py per Python file, when it exists."""
     (tmp_path / "tests").mkdir()
     (tmp_path / "tests" / "test_a.py").write_text("")
-    text = "---\ntangle: b/b.py\n---\n```python\n<<A\na.py 1>>=\n```\n"
-    text += "```python\n<<N\nn.txt 1>>=\n```\n"
+    text = "```python\n<<1 A\na.py\nb/b.py>>=\n```\n"
+    text += "```python\n<<1 N\nn.txt>>=\n```\n"
     got = readable.tests_for(web.read("p.md", text), tmp_path)
     assert got == [tmp_path / "tests" / "test_a.py"]
 

@@ -28,7 +28,7 @@ def test_colon_form(root: Path, capsys: pytest.CaptureFixture[str]) -> None:
     """``file:line:col`` becomes ``page:line:col``."""
     code = "print('demo.py:2:5: E1 oops')"
     assert lit(root, "run", "--", *py(code)) == 0
-    assert capsys.readouterr().out == "demo.md:13:5: E1 oops\n"
+    assert capsys.readouterr().out == "demo.md:14:5: E1 oops\n"
 
 
 def test_traceback_form_and_exit_status(
@@ -38,7 +38,7 @@ def test_traceback_form_and_exit_status(
     code = "import sys; print('File \"demo.py\", line 1', file=sys.stderr);"
     code += " sys.exit(3)"
     assert lit(root, "run", "--page", str(root / "demo.md"), *py(code)) == 3
-    assert capsys.readouterr().err == 'File "demo.md", line 12\n'
+    assert capsys.readouterr().err == 'File "demo.md", line 13\n'
 
 
 def test_absolute_path_and_out_of_range_line(
@@ -49,7 +49,7 @@ def test_absolute_path_and_out_of_range_line(
     code = f"print('{here}:1 {here}:99 demo.py:0 File \"demo.py\", line 9')"
     assert lit(root, "run", "--", *py(code)) == 0
     got = capsys.readouterr().out
-    assert got.startswith("demo.md:12 ")
+    assert got.startswith("demo.md:13 ")
     assert f'{here}:99 demo.py:0 File "demo.py", line 9' in got
 
 

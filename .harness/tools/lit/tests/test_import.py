@@ -14,7 +14,7 @@ SHA = "abc1234def5678abc1234def5678abc1234def56"
 ITEM = f"A=p.md@{SHA}"
 
 
-def tool(rid: str, item: str = "A", at: int = 32, **more: object) -> facts.Row:
+def tool(rid: str, item: str = "A", at: int = 27, **more: object) -> facts.Row:
     """A row of the program over ``The file.`` of the demo page."""
     text = md(GOOD)[at : at + 9]
     return {
@@ -69,8 +69,8 @@ def test_a_directory_export_brings_in_the_label_rows_only(
         {
             "id": "a-1",
             "item": "p.md",
-            "start": 32,
-            "end": 41,
+            "start": 27,
+            "end": 36,
             "text": "The file.",
             "labels": ["good"],
             "note": "",

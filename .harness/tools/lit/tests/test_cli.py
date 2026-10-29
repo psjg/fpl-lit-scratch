@@ -78,14 +78,14 @@ def test_check_missing_file(
     page(tmp_path, "demo.md", GOOD)
     assert lit(tmp_path, "check") == 1
     out = capsys.readouterr().out
-    assert "demo.md:12: lit-drift: demo.py is missing" in out
+    assert "demo.md:13: lit-drift: demo.py is missing" in out
 
 
 def test_check_missing_empty_file(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     """A file with no lines is missing at page line 1."""
-    page(tmp_path, "e.md", "---\ntangle: e.py\n---\n```python\n<<E>>=\n```\n")
+    page(tmp_path, "e.md", "```python\n<<1 E\ne.py>>=\n```\n")
     assert lit(tmp_path, "check") == 1
     assert "e.md:1: lit-drift: e.py is missing" in capsys.readouterr().out
 
@@ -102,7 +102,7 @@ def test_check_differing_line(
     capsys.readouterr()
     assert lit(tmp_path, "check") == 1
     out = capsys.readouterr().out
-    assert "demo.md:13: lit-drift: demo.py:2 differs from the page" in out
+    assert "demo.md:14: lit-drift: demo.py:2 differs from the page" in out
 
 
 def test_check_extra_trailing_lines(
@@ -117,14 +117,14 @@ def test_check_extra_trailing_lines(
     capsys.readouterr()
     assert lit(tmp_path, "check") == 1
     out = capsys.readouterr().out
-    assert "demo.md:13: lit-drift: demo.py:3 differs" in out
+    assert "demo.md:14: lit-drift: demo.py:3 differs" in out
 
 
 def test_check_file_emptied_from_the_page(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     """A file on disk against a page that tangles nothing."""
-    page(tmp_path, "e.md", "---\ntangle: e.py\n---\n```python\n<<E>>=\n```\n")
+    page(tmp_path, "e.md", "```python\n<<1 E\ne.py>>=\n```\n")
     (tmp_path / "e.py").write_text("x = 1\n")
     assert lit(tmp_path, "check") == 1
     assert "e.md:1: lit-drift: e.py:1 differs" in capsys.readouterr().out

@@ -14,14 +14,15 @@ from lit import facts, weave
 
 PAGE = """
     ---
-    tangle: demo.py
+    type: Note
     ---
     # Demo Title
 
     Intro: `add' and `Box.size' but not `ghost' or `a<b'.
 
     ```python
-    <<The demo>>=
+    <<1 The demo
+    demo.py>>=
     <<Functions>>
     class Box:
         <<Methods>>
@@ -31,7 +32,8 @@ PAGE = """
     The adder, `add'.
 
     ```python
-    <<Functions>>=
+    <<1.1 Functions
+    demo.py>>=
     def add(a, b):
         return a + b
     ```
@@ -49,7 +51,8 @@ PAGE = """
     ```
 
     ```python
-    <<Methods>>=
+    <<1.2 Methods
+    demo.py>>=
     def __init__(self):
         self.n = 1
 
@@ -126,7 +129,7 @@ def test_title_falls_back_to_the_page_path(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     """A page without a heading is titled by its path."""
-    text = "---\ntangle: d.txt\n---\n```python\n<<X>>=\nx = 1\n```\n"
+    text = "```python\n<<1 X\nd.txt>>=\nx = 1\n```\n"
     path = page(tmp_path, "d.md", text)
     assert lit(tmp_path, "weave", str(tmp_path / "o"), str(path)) == 0
     got = (tmp_path / "o" / "d.html").read_text(encoding="utf-8")
@@ -136,7 +139,7 @@ def test_title_falls_back_to_the_page_path(
 
 FACTS = """
     ---
-    tangle: f.py
+    type: Note
     ---
     # Facts Demo
 
@@ -156,12 +159,15 @@ FACTS = """
     ```
 
     ```python
-    <<The file>>=
+    <<1 The file
+    f.py>>=
+    \"\"\"The file.\"\"\"
     <<Functions>>
     ```
 
     ```python
-    <<Functions>>=
+    <<1.1 Functions
+    f.py>>=
     def add(a, b):
         return a & b
     ```

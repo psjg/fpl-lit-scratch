@@ -30,7 +30,8 @@ RAW = md(
     The pairs are counted twice, twice again; twice.
 
     ```python
-    <<m.py>>=
+    <<1 Add
+    m.py>>=
     def add(a: int, b: int) -> int:
         return a + b
     ```
@@ -132,8 +133,8 @@ def test_a_quote_on_the_lex_page_lies_in_its_offset_twin(
     assert got.state == "vers"
     assert got.start is not None
     assert got.end is not None
-    assert got.start >= 21895
-    assert got.end <= 22026
+    assert got.start >= 21778
+    assert got.end <= 21909
     assert facts.plain(body[got.start : got.end])[0] == want
 
 
@@ -206,8 +207,8 @@ def test_a_quote_row_goes_in_and_comes_back_out(
     [row] = [r for r in rows if r["id"] == "q"]
     assert (row["state"], row["currentStart"], row["currentEnd"]) == (
         "vers",
-        32,
-        41,
+        27,
+        36,
     )
     assert lit(tmp_path, "anchor", "--verify") == 0
     out = tmp_path / "back.json"

@@ -39,7 +39,7 @@ def test_unknown_reference(
     out = run_lint(
         tmp_path, md(GOOD) + "\nSee `ghost' and `add.nope'.\n", capsys
     )
-    assert "p.md:16: lit-unknown: `ghost' names nothing the code" in out
+    assert "p.md:17: lit-unknown: `ghost' names nothing the code" in out
     assert "`add.nope'" in out
 
 
@@ -53,14 +53,15 @@ def test_reference_inside_a_fence_is_not_read(
 
 MODULE = """
     ---
-    tangle: m.py
+    type: Note
     ---
     # Demo
 
     `Box.size' and `LIMIT' are described; `_hidden' is private.
 
     ```python
-    <<Define the module>>=
+    <<1 Define the module
+    m.py>>=
     import os.path as osp
     from typing import Any
 
@@ -117,7 +118,7 @@ def test_qualified_reference_and_allow_list(
 ) -> None:
     """`Cls.meth' satisfies meth; lit-allow waives a name."""
     allow = "lit-allow: [other, free, _PRIV, a, b]"
-    text = md(MODULE).replace("tangle: m.py", f"tangle: m.py\n{allow}")
+    text = md(MODULE).replace("type: Note", f"type: Note\n{allow}")
     text = text.replace("`LIMIT' are", "`LIMIT' `Box' `count' are")
     text = text.replace("`_hidden'", "`_skip'")
     out = run_lint(tmp_path, text, capsys)
@@ -132,9 +133,9 @@ def test_two_files_from_one_chunk_owe_once(
         # Two
 
         ```python
-        <<Shared
-        a.py 1
-        b.py 1>>=
+        <<1 Shared
+        a.py
+        b.py>>=
         def twice() -> int:
             return 2
         ```
@@ -145,7 +146,7 @@ def test_two_files_from_one_chunk_owe_once(
 
 EX = """
     ---
-    tangle: m.py
+    type: Note
     ---
     # Ex
 
@@ -154,7 +155,8 @@ EX = """
     {prose}
 
     ```python
-    <<Add>>=
+    <<1 Add
+    m.py>>=
     def add(a: int, b: int) -> int:
         return a + b
     ```
@@ -169,7 +171,7 @@ EX = """
     ("example", "message"),
     [
         (">>> add(1, 2)\n3", None),
-        (">>> add(1, 2)\n4", "p.md:17: lit-example: expected '4', got '3'"),
+        (">>> add(1, 2)\n4", "p.md:18: lit-example: expected '4', got '3'"),
         (">>> add(1, None)", "lit-example: raised TypeError"),
     ],
 )
@@ -193,11 +195,9 @@ def test_example_without_python_file(
 ) -> None:
     """An example with no Python file to run in is a finding."""
     text = f"""
-        ---
-        tangle: n.txt
-        ---
         {FENCE}text
-        <<Say hi>>=
+        <<1 Say hi
+        n.txt>>=
         hi
         {FENCE}
 
@@ -215,15 +215,13 @@ def test_module_that_fails_to_load(
 ) -> None:
     """A module that raises on load is one finding at line 1."""
     text = """
-        ---
-        tangle: boom_mod.py
-        ---
         # Boom
 
         `x' is bound.
 
         ```python
-        <<Bind x and fail>>=
+        <<1 Bind x and fail
+        boom_mod.py>>=
         x = 1
         raise RuntimeError("no")
         ```
@@ -281,15 +279,13 @@ def test_load_restores_a_none_entry(tmp_path: Path) -> None:
 
 
 PACKAGE = """
-    ---
-    tangle: pkg/__init__.py
-    ---
     # Pkg
 
     `VALUE' is the helper's.
 
     ```python
-    <<Import the value>>=
+    <<1 Import the value
+    pkg/__init__.py>>=
     from .helper import VALUE
     ```
 

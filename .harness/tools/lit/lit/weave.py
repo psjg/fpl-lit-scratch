@@ -489,7 +489,7 @@ def _notes(page: Page, text: str, rows: Sequence[Row], item: str) -> str:
     }
     for s in page.sections:
         if c := s.chunk:
-            for n in range(c.line - 1, c.line + len(c.body) + 2):
+            for n in range(c.line - c.head, c.line + len(c.body) + 2):
                 sections[n] = s.number
     cited: dict[str, list[str]] = {}
     for r in hand:

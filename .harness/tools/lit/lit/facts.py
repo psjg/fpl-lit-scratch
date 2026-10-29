@@ -302,7 +302,7 @@ class Web:
         for number, c, sid in chunk_ids(page):
             section_chunk[number] = sid
             chunk_at |= dict.fromkeys(
-                range(c.line - 1, c.line + len(c.body) + 2), sid
+                range(c.line - c.head, c.line + len(c.body) + 2), sid
             )
         return cls(
             page,
@@ -335,7 +335,7 @@ def chunks(w: Web) -> Iterator[Span]:
             labels.append("root")
         if all(web.USE.fullmatch(b) for b in c.body if b.strip()):
             labels.append("skeleton")
-        lines = (c.line - 1, c.line + len(c.body) + 1)
+        lines = (c.line - c.head, c.line + len(c.body) + 1)
         yield w.span(sid, lines, tuple(labels))
 
 

@@ -15,7 +15,7 @@ FENCE = "```"
 
 GOOD = """
     ---
-    tangle: demo.py
+    type: Note
     ---
     # Demo
 
@@ -24,7 +24,8 @@ GOOD = """
     `add' sums.
 
     ```python
-    <<Functions>>=
+    <<1 Functions
+    demo.py>>=
     def add(a: int, b: int) -> int:
         return a + b
     ```

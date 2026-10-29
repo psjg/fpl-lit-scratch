@@ -15,17 +15,16 @@ REPO = Path(__file__).resolve().parents[4]
 LEX = "01-bootstrap/01.02-pass/01.02.01-lex.md"
 
 TWO = """
-    ---
-    tangle: m.py
-    ---
     ```python
-    <<Say what the module is>>=
+    <<1 Say what the module is
+    m.py>>=
     \"\"\"The module, {word}.\"\"\"
     <<Functions>>
     ```
 
     ```python
-    <<Functions>>=
+    <<1.1 Functions
+    m.py>>=
     def add(a: int, b: int) -> int:
         \"\"\"Sum a and b, {word}.\"\"\"
         return a {op} b  # {word}
@@ -38,8 +37,8 @@ DEMO = """
     The first file.
 
     ```python
-    <<The first file
-    m.py 1>>=
+    <<1 The first file
+    m.py>>=
     \"\"\"The module.\"\"\"
     <<Functions>>
     ```
@@ -47,13 +46,14 @@ DEMO = """
     `add' sums, and the second file shares it.
 
     ```python
-    <<The second file
-    n.py 1>>=
+    <<1 The second file
+    n.py>>=
     <<Functions>>
     ```
 
     ```python
-    <<Functions>>=
+    <<1.1 Functions
+    m.py>>=
     def add(a: int, b: int) -> int:
         return a + b
     ```
@@ -143,6 +143,15 @@ def test_a_docstring_moves_the_text_and_not_the_hash() -> None:
     assert a[top] == c[top]
 
 
+def test_a_chunk_holds_its_fences_and_its_header() -> None:
+    """Every page line of a chunk, a header of two lines included."""
+    body = md(TWO.format(word="first", op="+"))
+    w = facts.Web.of(web.read("p.md", body), body)
+    top = "chunk:Say%20what%20the%20module%20is:1"
+    assert [w.chunk_at[n] for n in range(1, 7)] == [top] * 6
+    assert 7 not in w.chunk_at
+
+
 def test_every_kind_is_read_and_every_target_resolves(tmp_path: Path) -> None:
     """The demo page holds each kind; no target points at nothing."""
     got = demo(tmp_path)
@@ -170,6 +179,7 @@ def test_the_demo_page_spans_say_what_they_are(tmp_path: Path) -> None:
     by = {s.id: s for s in demo(tmp_path)}
     first, second = "chunk:The%20first%20file:1", "chunk:The%20second%20file:1"
     assert by[first].labels == ("The first file",)
+    assert by[first].text.startswith("```python\n<<1 The first file\nm.py>>=")
     assert by[second].labels == ("The second file", "skeleton")
     assert by[second].code_hash == ""
     assert by["chunk:Functions:2"].text.startswith(
@@ -252,8 +262,8 @@ def test_the_lex_page(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.chdir(REPO)
     got = facts.read(Path(LEX), Path("01-bootstrap"))
     assert Counter(s.kind for s in got) == {
-        "chunk": 32,
-        "paragraph": 52,
+        "chunk": 31,
+        "paragraph": 51,
         "definition": 47,
         "example": 7,
         "refusal": 7,
@@ -267,9 +277,8 @@ def test_the_lex_page(monkeypatch: pytest.MonkeyPatch) -> None:
         "chunk:Name%20the%20marks%20the%20counter%20looks%20for:2"
     ]
     assert len({s.text for s in chunks}) == len(chunks)
-    skeletons = [s for s in chunks if "skeleton" in s.labels]
-    assert [s.id for s in skeletons] == ["chunk:Define%20the%20pre-lexer:1"]
-    assert all(s.code_hash == "" for s in skeletons)
+    assert not [s for s in chunks if "skeleton" in s.labels]
+    assert all(s.text.startswith("```python\n<<") for s in chunks)
 
 
 def test_ids_are_url_safe(monkeypatch: pytest.MonkeyPatch) -> None:

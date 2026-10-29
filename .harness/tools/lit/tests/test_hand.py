@@ -18,15 +18,13 @@ SHA = "abc1234def5678abc1234def5678abc1234def56"
 NONE = "abcdef0abcdef0abcdef0abcdef0abcdef0abcde"
 
 PAGE = """
-    ---
-    tangle: m.py
-    ---
     # Demo
 
     {before}The pairs are counted twice, twice.
 
     ```python
-    <<Functions>>=
+    <<1 Functions
+    m.py>>=
     def add(src: str, a: int, b: int) -> int:
         \"\"\"Sum a and b, {word}.\"\"\"
         return pairs({arg}, a) + b
@@ -337,7 +335,7 @@ def test_check_reports_an_astral_page_without_a_sidecar(
     lit(tmp_path, "tangle")
     capsys.readouterr()
     assert lit(tmp_path, "check") == 1
-    assert "p.md:6: lit-facts-astral" in capsys.readouterr().out
+    assert "p.md:3: lit-facts-astral" in capsys.readouterr().out
 
 
 def git(root: Path, *argv: str) -> str:
@@ -402,11 +400,11 @@ def test_anchor_verify_catches_a_wrong_commit(
 def test_the_lex_page_with_its_sidecar(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """The real page, its sidecar and ledger: 678 rows, no finding."""
+    """The real page, its sidecar and ledger: 676 rows, no finding."""
     monkeypatch.chdir(REPO)
     rows, bad = facts.generate(Path(LEX), Path("01-bootstrap"))
     assert bad == []
-    assert len(rows) == 678
+    assert len(rows) == 676
     assert rows[0]["item"] == LEX
 
 
