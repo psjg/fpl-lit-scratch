@@ -37,14 +37,13 @@ mark.fact-mine:hover, mark.fact-mine.is-hot { background: var(--fpl-mine-wash); 
   overflow: visible; align-self: stretch; }
 .fpl-margin { position: relative; font-size: .86rem; line-height: 1.4; color: var(--fpl-fg); }
 .fpl-lines { position: absolute; top: 0; left: 0; pointer-events: none; z-index: 1; }
-.fpl-line { fill: none; stroke: var(--fpl-vers); stroke-width: 1; opacity: .35; transition: opacity .12s; }
+.fpl-line { fill: none; stroke: var(--fpl-vers); stroke-width: 1; stroke-linecap: round; opacity: .35; transition: opacity .12s; }
 .fpl-line.mine { stroke: var(--fpl-mine); }
 .fpl-line.is-hot { opacity: 1; stroke-width: 1.5; }
 .fpl-edge { font: 600 .62rem var(--bs-font-sans-serif, sans-serif); fill: var(--fpl-vers); opacity: .7; transition: opacity .12s;
   text-anchor: end; dominant-baseline: middle; paint-order: stroke; stroke: var(--fpl-bg); stroke-width: 6px; stroke-linejoin: round; }
 .fpl-edge.mine { fill: var(--fpl-mine); }
 .fpl-edge.is-hot { opacity: 1; }
-.fpl-column .fpl-card { left: 4.5rem; }   /* room for the edge and its type */
 
 /* paragraph and sentence numbers, outside the reading stand */
 .fpl-p { position: relative; }
@@ -68,7 +67,7 @@ body.fpl-numbered .fpl-s:hover .fpl-c::before { opacity: 1; }
 
 /* cards */
 .fpl-card { padding: 0 0 0 .7rem; border-left: 2px solid var(--fpl-vers); cursor: pointer; }
-.fpl-column .fpl-card { position: absolute; left: 0; right: 0; transition: opacity .12s; }
+.fpl-column .fpl-card { position: absolute; left: 4.5rem; right: 0; transition: opacity .12s; }   /* 4.5rem of gutter for the line and its type */
 .fpl-card.mine { border-left-color: var(--fpl-mine); }
 .fpl-card.lost { border-left-style: dotted; border-left-color: var(--fpl-lost); }
 .fpl-card.is-hot { background: var(--fpl-wash); }
