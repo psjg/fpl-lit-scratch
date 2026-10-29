@@ -13,7 +13,24 @@ related: []
 
 > oh ik weet niet of ik dit bij jou of iemand anders moet melden maar... hoe ik het voor me zie is dat `[ ]` de backfix (postfix, afix, reverse polish) notatie is van FPL en dat `( )` de prefix (poolse) notatie is van FPL: we zouden alles met `( )` kunnen schrijven en dan zou het for al intents and purposes moeten lezen als een lisp... want FPL zou op zijn minst een lisp moeten zijn.. ik weet niet wat de noodzakelijke en voldoende voorwaarden daarvoor zijn maar hey
 
+> ja het hele punt is dat FPL ook homoiconisch moet kunnen zijn dat alle syntax als een datastructuur (unison achtige ABT) geadresserd moet kunenn code is data data is code etc etc
+
 ## Context
+
+The condition he names: every piece of syntax addressable as a data structure, a
+Unison-style abstract binding tree (hashed, names bound by structure;
+[DI-0045](DI-0045-editor-and-repl-session-collapse.md) names Unison). Where the walker
+stands, one line each: the surface tree (`fpl/ast_surface.py`: Program, Line, Frame, Cell,
+items, spans left out of equality) and the core tree (`fpl/ast_core.py`: Define, Run,
+nodes, values) are frozen Python dataclasses, not FPL values; a quotation `[ ]` is the one
+piece of code that is an FPL value, run with `!` and built with `enclose` and `,`; the
+log is content-addressed FON (`fpl/fon.py`, `fpl/multihash.py`, `&<multihash>` a reference
+by content, `$name` by identity) but holds inputs and results as text, not the tree.
+Missing for code as data at the REPL: a reader word (source text to a tree value), an
+eval word on that value (`!` runs a quotation only), structural addressing (a hash per
+node, names bound by position as in an ABT, so that `(+ 1 2)` and `[ 1 2 + ]` have one
+address), and the tree itself as an FPL value (list, dict, symbol) rather than a Python
+class.
 
 The grammar already has the half of it: `prefix: "(" frames ")"` is "reader op: rotate
 head to end, bar the arguments" (`01-bootstrap/fpl/grammar.lark`, line 30; the September
