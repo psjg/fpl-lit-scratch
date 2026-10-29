@@ -6,7 +6,8 @@
                                  the page's line; a page's hand rows
                                  (<page stem>.facts.json) are valid
     lit lint     [PAGE ...]      prose and code agree; examples pass
-    lit weave OUT [PAGE ...]     each page as OUT/<page>.html
+    lit weave OUT [PAGE ...]     each page as OUT/<page>.html, its
+                                 hand rows as marks and footnotes
     lit facts --out DIR [PAGE ...]
                                  each page's fact layer as
                                  DIR/<page stem>.json: its generated
@@ -221,13 +222,19 @@ def cmd_weave(args: argparse.Namespace) -> int:
     found = pages(args.root, args.pages)
     webs, findings = tangled(found)
     args.out.mkdir(parents=True, exist_ok=True)
-    for (page, files), (_, text) in zip(webs, found, strict=True):
+    named = paths(args.root, args.pages)
+    for path, (page, files), (_, text) in zip(named, webs, found, strict=True):
         title = next(
             (ln[2:] for ln in text.split("\n") if ln.startswith("# ")),
             page.path,
         )
+        rows: list[facts.Row] = []
+        if path.with_suffix(".facts.json").is_file():
+            rows, bad = facts.generate(path, args.root)
+            findings += bad
         out = args.out / (Path(page.path).stem + ".html")
-        out.write_text(weave.weave(page, files, title), encoding="utf-8")
+        woven = weave.weave(page, files, title, text, rows)
+        out.write_text(woven, encoding="utf-8")
         print(f"lit weave: {out}")
     return report(findings, "weave", len(found))
 
