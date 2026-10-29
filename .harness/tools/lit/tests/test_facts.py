@@ -252,8 +252,8 @@ def test_the_lex_page(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.chdir(REPO)
     got = facts.read(Path(LEX), Path("01-bootstrap"))
     assert Counter(s.kind for s in got) == {
-        "chunk": 34,
-        "paragraph": 53,
+        "chunk": 32,
+        "paragraph": 52,
         "definition": 47,
         "example": 7,
         "refusal": 7,
@@ -268,7 +268,7 @@ def test_the_lex_page(monkeypatch: pytest.MonkeyPatch) -> None:
     ]
     assert len({s.text for s in chunks}) == len(chunks)
     skeletons = [s for s in chunks if "skeleton" in s.labels]
-    assert len(skeletons) == 3
+    assert [s.id for s in skeletons] == ["chunk:Define%20the%20pre-lexer:1"]
     assert all(s.code_hash == "" for s in skeletons)
 
 
