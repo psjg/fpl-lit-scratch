@@ -236,9 +236,10 @@ class _Build:
         )
 
     def line(self, tree: Tree[Token], outer: Span) -> Line:
-        """Build ``frames (NOTE | DOC)? _NL block?``.
+        """Build ``frames check? (NOTE | DOC)? _NL block?``.
 
-        A ``;;`` line holds its comment and no frames.
+        A ``;;`` line holds its comment and no frames. The frames of a
+        ``check`` are the right side of ``L |- R``.
 
         Raises:
             FplError: :meth:`comment` refuses the line's comment.
@@ -246,17 +247,41 @@ class _Build:
         span = self.at(tree, outer)
         frames, *rest = tree.children
         assert isinstance(frames, Tree)
-        lines = tuple(
-            line
-            for child in rest
-            if isinstance(child, Tree)
-            for line in self.subtrees(child, span, self.line)
-        )
+        parts = {str(c.data): c for c in rest if isinstance(c, Tree)}
+        checked = "check" in parts
         comment = next(
-            (self.comment(c, frames) for c in rest if isinstance(c, Token)),
+            (
+                self.comment(c, frames, checked)
+                for c in rest
+                if isinstance(c, Token)
+            ),
             None,
         )
-        return Line(self.held(frames, span, comment), lines, span, comment)
+        return Line(
+            self.held(frames, span, comment),
+            self.part(parts.get("block"), span, self.line),
+            span,
+            comment,
+            next(iter(self.part(parts.get("check"), span, self.frames)), None),
+        )
+
+    def part[T](
+        self,
+        tree: Tree[Token] | None,
+        outer: Span,
+        build: Callable[[Tree[Token], Span], T],
+    ) -> tuple[T, ...]:
+        """Return :meth:`subtrees` of an optional part, or none.
+
+        Args:
+            tree: The part, None where the line has none.
+            outer: The span of the line.
+            build: Builds one subtree of the part.
+
+        Returns:
+            What *build* makes of each subtree, in order.
+        """
+        return () if tree is None else self.subtrees(tree, outer, build)
 
     def held(
         self, frames: Tree[Token], span: Span, comment: Comment | None
@@ -266,17 +291,25 @@ class _Build:
             return ()
         return self.subtrees(frames, span, self.frame)
 
-    def comment(self, token: Token, frames: Tree[Token]) -> Comment:
+    def comment(
+        self, token: Token, frames: Tree[Token], checked: bool
+    ) -> Comment:
         """Build a note with its continuation lines, or a ``;;`` one.
 
+        Args:
+            token: The comment's token.
+            frames: The line's frames.
+            checked: Whether the line has a check.
+
         Raises:
-            FplError: A ``;;`` comment follows code on its line.
+            FplError: A ``;;`` comment follows code or a check on its
+                line.
         """
         span = self.lines.span(self.lexed.origin[token.start_pos or 0])
         level = (
             1 if token.type == "NOTE" else len(token) - len(token.lstrip(";"))
         )
-        if level > 1 and _code(frames):
+        if level > 1 and (checked or _code(frames)):
             raise FplError(
                 span, f"a {';' * level} comment stands on a line of its own"
             )

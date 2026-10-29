@@ -44,7 +44,7 @@ from fpl.ast_core import (
     Var,
     Wild,
 )
-from fpl.errors import FailError, FplError, Span
+from fpl.errors import FailError, FplError, OutOfGasError, Span, UnequalError
 
 #: A builtin word: called with the word's span and its arguments, it
 #: returns the values it leaves.
@@ -80,6 +80,8 @@ def evaluate(
     fuel: int | None = None,
     *,
     spent: list[int | None] | None = None,
+    left: list[Stack] | None = None,
+    show: Callable[[Stack], str] = repr,
 ) -> tuple[tuple[Value, ...], ...]:
     """Run each run line of a program on a fresh stack.
 
@@ -89,6 +91,10 @@ def evaluate(
         spent: When given, each run line appends the steps it took, in
             order, even when it fails (``None`` for a line without a
             bound).
+        left: When given, each run line appends the stack it leaves, so
+            the stacks of the lines before a failure are kept.
+        show: Prints a stack for the message of a failed check; the
+            driver passes the printer's, as eval sees core only.
 
     Returns:
         The stack each run line leaves, in order.
@@ -98,17 +104,39 @@ def evaluate(
             the first step.
         :exc:`FplError`: A run line fails (from :func:`metered`), for
             instance with ``out of fuel``; :exc:`FailError` where a
-            match finds no row.
-
-    Note:
-        A later definition of a word shadows an earlier one, for every
-        line. For each defined word *w* there are three more:
-        ``w/history`` pushes the definitions it shadows, oldest first,
-        each as a quotation; ``w/doc`` pushes the docstring of the one
-        in force; ``w/effect`` pushes its effect line
-        (:func:`effect_line`).
+            match finds no row; :exc:`~fpl.errors.UnequalError` where
+            the sides of a check leave different stacks.
     """
     budget(fuel)
+    words = defined(statements)
+    stacks = [] if left is None else left
+    for s in statements:
+        if isinstance(s, Run):
+            stacks.append(metered(s, words, fuel, spent, show))
+    return tuple(stacks)
+
+
+def defined(statements: tuple[Statement, ...]) -> Words:
+    r"""Return the words a program's definitions put in force.
+
+    A later definition of a word shadows an earlier one, for every
+    line. For each defined word *w* there are three more:
+    ``w/history`` pushes the definitions it shadows, oldest first, each
+    as a quotation; ``w/doc`` pushes the docstring of the one in force;
+    ``w/effect`` pushes its effect line (:func:`effect_line`).
+
+    Args:
+        statements: The program; its run lines are skipped.
+
+    Returns:
+        The code of each defined word and of its three queries.
+
+    Examples:
+        >>> from fpl.driver import checked
+        >>> words = defined(checked("two : -- n\n\t2\n")[0])
+        >>> sorted(w for w in words if w.startswith("two"))
+        ['two', 'two/doc', 'two/effect', 'two/history']
+    """
     logged: dict[str, list[Define]] = {}
     for s in statements:
         if isinstance(s, Define):
@@ -120,11 +148,7 @@ def evaluate(
         )
         words[f"{word}/doc"] = (Push(log[-1].doc),)
         words[f"{word}/effect"] = (Push(effect_line(log[-1])),)
-    return tuple(
-        metered(s, words, fuel, spent)
-        for s in statements
-        if isinstance(s, Run)
-    )
+    return words
 
 
 def budget(fuel: int | None) -> None:
@@ -176,11 +200,11 @@ class Meter:
         """Take one step.
 
         Raises:
-            :exc:`FplError`: No step is left (``out of fuel``), reported
-                at the line.
+            :exc:`~fpl.errors.OutOfGasError`: No step is left (``out of
+                fuel``), reported at the line.
         """
         if self.left == 0:
-            raise FplError(self.span, "out of fuel")
+            raise OutOfGasError(self.span, "out of fuel")
         if self.left is not None:
             self.left -= 1
 
@@ -196,11 +220,13 @@ def metered(
     words: Words,
     fuel: int | None,
     spent: list[int | None] | None = None,
+    show: Callable[[Stack], str] = repr,
 ) -> tuple[Value, ...]:
     """Run one run line on a meter of its own.
 
     The steps of every run nested in the line are charged to the same
-    meter.
+    meter. A check ``L |- R`` runs ``R`` after ``L``, on a fresh stack
+    and the same meter.
 
     Args:
         run: The run line.
@@ -208,19 +234,34 @@ def metered(
         fuel: Steps the line may take; ``None`` is no bound.
         spent: When given, the steps taken are appended, even if the run
             then fails.
+        show: Prints a stack for the message of a failed check.
 
     Returns:
-        The stack the run line leaves.
+        The stack the run line leaves; with a check, that of ``L``.
 
     Raises:
         :exc:`FplError`: The run fails (from :func:`final`), or recurses
             deeper than the Python stack allows (``recursion too deep``,
             at the line).
+        :exc:`~fpl.errors.UnequalError`: ``L`` and ``R`` leave
+            different stacks, at the line.
+
+    Examples:
+        >>> check = Run((Push(2),), Span(4, 1), (Push(3),))
+        >>> metered(check, {}, None, show=str)  # doctest: +ELLIPSIS
+        Traceback (most recent call last):
+            ...
+        fpl.errors.UnequalError: ERROR: 4:1 check failed: ...
     """
     meter = Meter(fuel, run.span)
     token = FUEL.set(meter)
     try:
-        return final(State((), run.code, words))
+        stack = final(State((), run.code, words))
+        if run.check is not None:
+            right = final(State((), run.check, words))
+            if stack != right:
+                raise UnequalError(run.span, show(stack), show(right))
+        return stack
     except RecursionError:
         raise FplError(run.span, "recursion too deep") from None
     finally:

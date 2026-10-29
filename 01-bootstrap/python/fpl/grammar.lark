@@ -8,7 +8,10 @@
 start: line*  // a leading blank run is one empty first line: _NL takes every later run
 
 // A line is a flat program; an optional indented block follows it (children first, post-order).
+// A line L |- R checks that L and R leave equal stacks; it heads no block, and no enclosure holds one.
 line: frames (NOTE | DOC)? _NL block?  // a ;; line is one empty frame and its comment; it may head a block
+    | frames check (NOTE | DOC)? _NL
+check: _CHECK frames
 block: _INDENT line+ _DEDENT
 
 // The bar separates frames; a tab separates cells within a frame (rank literals: space = token, tab = cell,
@@ -35,6 +38,7 @@ dict:      _LBRACE _NL* frames _RBRACE        // S15: keys literal, values evalu
 // A token is any run of non-whitespace, non-self-delimiting characters (Forth rule).
 TOKEN.1: /[^\s\[\]()“”「」⟦⟧⟨⟩{}|⍝;]+/          // ; is self-delimiting: x; note
 _BAR: "|"
+_CHECK.3: /\|-(?!\S)/  // above the bar: |- then a space is the check; |-x stays a bar and the word -x
 _TABS: /\t+/
 _LANGLE: "⟨"
 _LBRACE: "{"

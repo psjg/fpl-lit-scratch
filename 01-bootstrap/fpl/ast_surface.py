@@ -112,7 +112,7 @@ class Comment:
 
 @dataclass(frozen=True)
 class Line:
-    """The frames on one line, its comment and the block under it.
+    """The frames on one line, its check, its comment and its block.
 
     A ``;;`` comment line has no frames. An empty line has one empty
     frame.
@@ -125,6 +125,8 @@ class Line:
     span: Span = field(compare=False)
     #: The comment that starts or continues on this line, if any.
     comment: Comment | None = None
+    #: The frames right of ``|-`` in ``L |- R``; None without a check.
+    check: tuple[Frame, ...] | None = None
 
 
 @dataclass(frozen=True)

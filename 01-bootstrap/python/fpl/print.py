@@ -119,18 +119,34 @@ class _Out:
         note would read back as that note's continuation, so a blank
         line, which ends a note, is written between them.
         """
-        code = _code(line.frames)
+        code = _code(line.frames) or line.check is not None
         note = line.comment is not None and line.comment.level == 1
         if self.noted and note and not code:
             self.put("\n")
         self.put("\t" * depth)
         self.frames(line.frames)
+        self.check(line)
         if line.comment is not None:
             self.comment(line.comment, code)
         self.noted = note
         for inner in line.block:
             self.put("\n")
             self.line(inner, depth + 1)
+
+    def check(self, line: Line) -> None:
+        """Write a line's check after its frames, if it has one.
+
+        It is `` |- R``, or ``|- R`` where the line has no frames, as in
+        a fail judgment; an empty ``R`` leaves ``|-`` last.
+
+        Args:
+            line: The line being written, its frames already out.
+        """
+        if line.check is None:
+            return
+        self.put(" |-" if _code(line.frames) else "|-")
+        self.put(" " if _code(line.check) else "")
+        self.frames(line.check)
 
     def comment(self, comment: Comment, code: bool) -> None:
         """Write *comment* as written.

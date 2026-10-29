@@ -296,11 +296,28 @@ class Define:
 
 
 @dataclass(frozen=True)
+class Judgment:
+    """The closing line ``|- ! err/<tag>``: the program fails so.
+
+    It is no statement: the driver takes it from the last line of a
+    file before the rest is desugared, which may itself be the failure.
+    """
+
+    #: The error's path under ``err/``, as written.
+    tag: str
+    #: The message the error must have, or None for any.
+    message: str | None
+    span: Span = field(compare=False, default=Span(1, 1))
+
+
+@dataclass(frozen=True)
 class Run:
     """A line's code, run on a fresh stack; what it leaves prints."""
 
     code: tuple[Node, ...]
     span: Span = field(compare=False, default=Span(1, 1))
+    #: The code right of ``|-``, whose stack must equal :attr:`code`'s.
+    check: tuple[Node, ...] | None = None
 
 
 #: One top-level item of a program.

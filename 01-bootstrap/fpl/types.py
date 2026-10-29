@@ -38,7 +38,7 @@ from fpl.ast_core import (
     Var,
     Wild,
 )
-from fpl.errors import FplError, Span
+from fpl.errors import FplError, Span, StackError
 from fpl.eval import CONTROLS
 
 
@@ -143,8 +143,10 @@ class UntypedError(Exception):
     """
 
 
-class UnderflowError(FplError):
+class UnderflowError(StackError):
     """Fewer values than a word, a binder or a match takes."""
+
+    tag = "err/stack/underflow"
 
     def __init__(self, span: Span) -> None:
         """Build the error with the message ``stack underflow``.
@@ -234,7 +236,8 @@ def checked(
     """Return the goals one statement meets.
 
     The last definition of a word also sets the word's arrow in
-    *arrows*.
+    *arrows*. Both sides of a check ``L |- R`` are typed, each on a
+    fresh stack.
 
     Args:
         statement: A definition or a run of code.
@@ -246,7 +249,9 @@ def checked(
         UntypedError: A ``Run`` holds code that is not typed.
     """
     if isinstance(statement, Run):
-        return after(Typing((), {}, {}), statement.code, arrows).goals
+        sides = (statement.code, statement.check or ())
+        typed = (after(Typing((), {}, {}), side, arrows) for side in sides)
+        return tuple(goal for side in typed for goal in side.goals)
     arrow, goals = inferred(statement, arrows)
     if last[statement.word] is statement:
         arrows[statement.word] = dispatching(statement, arrow)

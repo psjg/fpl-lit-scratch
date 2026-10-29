@@ -32,6 +32,7 @@ from fpl.ast_core import (
     Equal,
     Guarded,
     Inverse,
+    Judgment,
     Keyed,
     Listed,
     Match,
@@ -62,7 +63,13 @@ from fpl.ast_surface import (
     Text,
     Word,
 )
-from fpl.errors import FplError, Span, UnresolvedError
+from fpl.errors import (
+    FplError,
+    NoEvaluatorError,
+    Span,
+    UnknownWordError,
+    UnresolvedError,
+)
 from fpl.print import render
 
 #: Where a refusal without a position of its own is reported: the
@@ -80,6 +87,8 @@ DOC = Effect((), ("d",))
 QUERIES = {"history": HISTORY, "doc": DOC, "effect": Effect((), ("e",))}
 #: The mark between a generated name and the position it is made for.
 PRIME = "\N{PRIME}"
+#: The refusal of a check that starts with ``!`` but is no judgment.
+JUDGMENT = "a fail judgment is ! err/<tag> “message”"
 #: The builtin type words, unless the program defines a word of that
 #: name.
 TYPES = frozenset(("Int", "Decimal", "Text", "Symbol"))
@@ -102,10 +111,10 @@ def unimplemented() -> NoReturn:
     """Refuse what no part implements yet, at the source's start.
 
     Raises:
-        :exc:`FplError`: Always, at :data:`START`, with the message ``no
-            evaluator yet``.
+        :exc:`~fpl.errors.NoEvaluatorError`: Always, at :data:`START`,
+            with the message ``no evaluator yet``.
     """
-    raise FplError(START, "no evaluator yet")
+    raise NoEvaluatorError(START, "no evaluator yet")
 
 
 def missing(word: Word, directory: bool) -> UnresolvedError:
@@ -121,14 +130,15 @@ def missing(word: Word, directory: bool) -> UnresolvedError:
         directory: Whether *word* names a directory.
 
     Returns:
-        An :exc:`~fpl.errors.UnresolvedError` at *word*, for the caller
-        to raise.
+        A :exc:`~fpl.errors.NoEvaluatorError` or an
+        :exc:`~fpl.errors.UnknownWordError` at *word*, for the caller to
+        raise.
     """
     name = "/".join(word.body)
-    reason = (
-        "no evaluator yet" if directory or name in PLANNED else "unknown word"
-    )
-    return UnresolvedError(word.span, f"{reason}: {word.prefix}{name}")
+    spelled = f"{word.prefix}{name}"
+    if directory or name in PLANNED:
+        return NoEvaluatorError(word.span, f"no evaluator yet: {spelled}")
+    return UnknownWordError(word.span, f"unknown word: {spelled}")
 
 
 def desugar(program: Program) -> tuple[Statement, ...]:
@@ -149,6 +159,10 @@ def desugar(program: Program) -> tuple[Statement, ...]:
             (:meth:`Catalog.keyed`, :meth:`Catalog.settle`).
         :exc:`~fpl.errors.UnresolvedError`: A call names a word that
             nothing defines.
+        :exc:`FplError`: A check ``L |- R`` stands elsewhere than on a
+            run line at the top (``a check is a run line``), or a fail
+            judgment is left in (``a fail judgment closes the program``;
+            :func:`closing` takes the closing one out first).
 
     Examples:
         >>> from fpl.parse import parse
@@ -158,7 +172,7 @@ def desugar(program: Program) -> tuple[Statement, ...]:
         >>> desugar(parse("frob\n"))
         Traceback (most recent call last):
             ...
-        fpl.errors.UnresolvedError: ERROR: 1:1 unknown word: frob
+        fpl.errors.UnknownWordError: ERROR: 1:1 unknown word: frob
     """
     lines = coded(program.lines)
     catalog = Catalog({(): list(EFFECTS)}, dict(EFFECTS))
@@ -546,6 +560,135 @@ def coded(lines: tuple[Line, ...]) -> tuple[Line, ...]:
         elif line.block:
             unimplemented()
     return tuple(kept)
+
+
+def unchecked(lines: tuple[Line, ...]) -> None:
+    r"""Refuse a check in a block, at any depth.
+
+    Args:
+        lines: The lines of a block.
+
+    Raises:
+        :exc:`FplError`: A line of *lines* or of a block under one has a
+            check (``a check is a run line``).
+
+    Examples:
+        >>> from fpl.parse import parse
+        >>> unchecked(parse("1\n").lines)
+        >>> unchecked(parse("1\n\t2 |- 2\n").lines)
+        Traceback (most recent call last):
+            ...
+        fpl.errors.FplError: ERROR: 2:2 a check is a run line
+    """
+    for line in lines:
+        if line.check is not None:
+            raise FplError(line.span, "a check is a run line")
+        unchecked(line.block)
+
+
+def closing(program: Program) -> tuple[Program, Judgment | None]:
+    r"""Take the closing fail judgment off a program.
+
+    The judgment is the last line that holds code, when it is
+    ``|- ! err/<tag>`` alone. It is taken off before the program is
+    desugared, since desugaring may be the failure it judges.
+
+    Args:
+        program: The parsed program.
+
+    Returns:
+        The program without its judgment line, and the judgment; or the
+        program as it is and None.
+
+    Raises:
+        :exc:`FplError`: The last line is a malformed judgment
+            (:func:`judgment`).
+
+    Examples:
+        >>> from fpl.parse import parse
+        >>> rest, judged = closing(parse("$x\n|- ! err/no-row\n"))
+        >>> len(rest.lines), judged.tag, judged.span.line
+        (1, 'err/no-row', 2)
+        >>> closing(parse("1 |- 1\n"))[1] is None
+        True
+    """
+    lines = program.lines
+    at = max(
+        (n for n, line in enumerate(lines) if trivia.code(line)), default=-1
+    )
+    found = None if at < 0 else judgment(lines[at])
+    if found is None or trivia.code(replace(lines[at], check=None)):
+        return program, None
+    return replace(program, lines=lines[:at] + lines[at + 1 :]), found
+
+
+def judgment(line: Line) -> Judgment | None:
+    r"""Read the check ``|- ! err/<tag> “message”`` as a judgment.
+
+    Args:
+        line: A line; only its check is read.
+
+    Returns:
+        The judgment, when the check's first item is the word ``!``;
+        None for any other line.
+
+    Raises:
+        :exc:`FplError`: The check starts with ``!`` but is not one
+            frame of one cell, or :func:`verdict` refuses the rest.
+
+    Examples:
+        >>> from fpl.parse import parse
+        >>> judgment(parse("|- ! err/check “why”\n").lines[0]).message
+        'why'
+        >>> judgment(parse("|- 1 2\n").lines[0]) is None
+        True
+    """
+    match line.check:
+        case (Frame(cells=(Cell(items=(bang, *said)),)),) if (
+            plain(bang) == "!"
+        ):
+            return verdict(said, line.span)
+        case (Frame(cells=(Cell(items=(bang, *_)), *_)), *_) if (
+            plain(bang) == "!"
+        ):
+            raise FplError(line.span, JUDGMENT)
+        case _:
+            return None
+
+
+def verdict(said: list[Item], span: Span) -> Judgment:
+    r"""Read what follows ``!`` in a fail judgment.
+
+    Args:
+        said: The items after ``!``: a path under ``err/``, no part of
+            it empty, then at most one string, without islands, that the
+            error's message must equal.
+        span: The judgment's line.
+
+    Raises:
+        :exc:`FplError`: The items are anything else.
+
+    Returns:
+        The judgment the items spell.
+
+    Examples:
+        >>> verdict([], Span(1, 1))  # doctest: +ELLIPSIS
+        Traceback (most recent call last):
+            ...
+        fpl.errors.FplError: ERROR: 1:1 a fail judgment is ...
+    """
+    match said:
+        case [
+            Word(prefix="", kind="path", body=("err", *_) as path, mods="")
+        ] if all(path):
+            return Judgment("/".join(path), None, span)
+        case [
+            Word(prefix="", kind="path", body=("err", *_) as path, mods=""),
+            Text(kind="str", parts=(str() as message,)),
+        ] if all(path):
+            return Judgment("/".join(path), message, span)
+        case _:
+            raise FplError(span, JUDGMENT)
 
 
 def definition(line: Line) -> tuple[str, Effect] | None:
@@ -987,10 +1130,14 @@ class _Desugar:
 
         Raises:
             :exc:`FplError`: A line is refused (:meth:`code`,
-                :meth:`body`).
+                :meth:`body`, :meth:`run`); a check stands on a head or
+                in a block (``a check is a run line``).
         """
         for line in lines:
             head, name = definition(line), directory(line)
+            unchecked(line.block)
+            if line.check is not None and head is not None:
+                raise FplError(line.span, "a check is a run line")
             if head is not None:
                 path = (*here, head[0])
                 code = self.code(line, head[1], path)
@@ -1002,7 +1149,34 @@ class _Desugar:
             elif name is not None:
                 yield from self.statements(coded(line.block), (*here, name))
             elif not here:
-                yield Run(self.body((line,), 0, here), line.span)
+                yield self.run(line)
+
+    def run(self, line: Line) -> Run:
+        """Return a top-level line to run, with its check if it has one.
+
+        The right side of ``L |- R`` is built as a line of its own, so
+        it is code on a fresh stack as the left side is.
+
+        Args:
+            line: A top-level line that is neither a head nor a
+                directory.
+
+        Returns:
+            The run, its ``check`` the code of ``R`` where there is one.
+
+        Raises:
+            :exc:`FplError`: A side is refused (:meth:`body`), or the
+                check is a fail judgment, which only the driver takes,
+                from the last line (``a fail judgment closes the
+                program``).
+        """
+        code = self.body((line,), 0, ())
+        if line.check is None:
+            return Run(code, line.span)
+        if judgment(line) is not None:
+            raise FplError(line.span, "a fail judgment closes the program")
+        right = Line(line.check, (), line.span)
+        return Run(code, line.span, self.body((right,), 0, ()))
 
     def code(self, line: Line, effect: Effect, here: Here) -> tuple[Node, ...]:
         """Return a definition's code.
@@ -1853,10 +2027,11 @@ def listing(stacks: tuple[tuple[Value, ...], ...]) -> Program:
 
 
 def written(statement: Statement) -> Line:
-    """Return one statement as a line."""
+    """Return one statement as a line, a run with its check."""
     match statement:
-        case Run():
-            return Line(sugared(statement.code), (), START)
+        case Run(check=check):
+            right = None if check is None else sugared(check)
+            return Line(sugared(statement.code), (), START, check=right)
         case Define():
             effect = statement.effect
             fails = ("+fail",) if effect.fails else ()

@@ -2,12 +2,15 @@
 
 :class:`FplError` carries a :class:`Span` and a message and prints as
 one ``ERROR: line:col message`` line; :meth:`FplError.render` adds the
-source line with a caret. :class:`FailError` and
-:class:`UnresolvedError` are its two subclasses.
+source line with a caret. Each subclass names what went wrong by its
+:attr:`~FplError.tag`, a path under ``err/`` that a fail judgment
+``|- ! err/<tag>`` matches; the catalog is
+``02-docs/02.03-reference/02.03.01-errors.md``. The tag is printed
+nowhere yet.
 """
 
 from dataclasses import dataclass
-from typing import override
+from typing import ClassVar, override
 
 
 @dataclass(frozen=True)
@@ -22,6 +25,10 @@ class Span:
 
 class FplError(Exception):
     """A failure of the program being run, not of the interpreter."""
+
+    #: What went wrong, as a path under ``err/``; a subclass names a
+    #: path under its parent's.
+    tag: ClassVar[str] = "err"
 
     def __init__(self, span: Span, message: str) -> None:
         """Store the position and the message.
@@ -82,12 +89,96 @@ class FplError(Exception):
 class FailError(FplError):
     """A match found no fitting row, or a guard's ``+fail`` hit."""
 
+    tag = "err/no-row"
+
 
 class UnresolvedError(FplError):
-    """A word no definition or builtin names, reported at the word.
+    """A word that nothing runs, reported at the word.
 
-    Raised both for an unknown word and for one that the language's
-    examples call but nothing runs yet. The ``.expected`` files of the
-    latter still hold the skeleton's blanket refusal, which
-    ``tests/test_conformance.py`` keeps.
+    The parent of :class:`NoEvaluatorError` and
+    :class:`UnknownWordError`.
     """
+
+    tag = "err/unresolved"
+
+
+class NoEvaluatorError(UnresolvedError):
+    """What the language's examples use and nothing here runs yet.
+
+    The ``.expected`` files of those examples still hold the skeleton's
+    blanket refusal, which ``tests/test_conformance.py`` keeps.
+    """
+
+    tag = "err/unresolved/no-evaluator"
+
+
+class UnknownWordError(UnresolvedError):
+    """A word no definition or builtin names."""
+
+    tag = "err/unresolved/unknown-word"
+
+
+class OutOfGasError(FplError):
+    """A run line took every step its fuel allows."""
+
+    tag = "err/out-of-gas"
+
+
+class StackError(FplError):
+    """The stack does not hold what a word takes."""
+
+    tag = "err/stack"
+
+
+class CheckError(FplError):
+    """A check ``L |- R`` or a closing fail judgment did not hold.
+
+    The message starts with ``check failed:``.
+    """
+
+    tag = "err/check"
+
+    def __init__(self, span: Span, reason: str) -> None:
+        """Store the position and the reason, after ``check failed:``.
+
+        Args:
+            span: The line of the check.
+            reason: Why the check failed.
+
+        Examples:
+            >>> str(CheckError(Span(1, 1), "why"))
+            'ERROR: 1:1 check failed: why'
+        """
+        super().__init__(span, f"check failed: {reason}")
+
+
+class UnequalError(CheckError):
+    """The two sides of ``L |- R`` left different stacks."""
+
+    tag = "err/check/unequal"
+
+    def __init__(self, span: Span, left: str, right: str) -> None:
+        """Store the two stacks, each as the line that prints it.
+
+        Args:
+            span: The line of the check.
+            left: What ``L`` left, printed.
+            right: What ``R`` left, printed.
+
+        Examples:
+            >>> str(UnequalError(Span(3, 1), "2", "3"))
+            'ERROR: 3:1 check failed: 2 is not 3'
+        """
+        super().__init__(span, f"{left} is not {right}")
+
+
+class UnmatchedFailError(CheckError):
+    """The program failed, with another tag or message than judged."""
+
+    tag = "err/check/unmatched-fail"
+
+
+class NoFailError(CheckError):
+    """The program passed where its closing judgment says it fails."""
+
+    tag = "err/check/no-fail"

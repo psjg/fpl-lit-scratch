@@ -75,14 +75,18 @@ def head(line: Line) -> bool:
 
 
 def code(line: Line) -> bool:
-    r"""Tell whether *line* holds code: a bar or an item in a frame.
+    r"""Tell whether *line* holds code: a bar, an item or a check.
 
     Examples:
         >>> from fpl.parse import parse
-        >>> [code(line) for line in parse(";; note\na b").lines]
-        [False, True]
+        >>> [code(line) for line in parse(";; note\na b\n|- 1").lines]
+        [False, True, True]
     """
-    return len(line.frames) > 1 or any(frame.cells for frame in line.frames)
+    return (
+        line.check is not None
+        or len(line.frames) > 1
+        or any(frame.cells for frame in line.frames)
+    )
 
 
 def _order(
