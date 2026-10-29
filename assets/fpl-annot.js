@@ -49,6 +49,11 @@
  * dubbel, nowhere stale. Both get a card at the top of the margin, not
  * a span.
  *
+ * A saved copy. A page saved with its overlay (the snapshot artifact PSJ
+ * annotates) has no site URL and no sidecar beside it; it sets
+ * window.FPL_SNAPSHOT = { item, commit, rows } before this script, and
+ * the overlay runs on that instead.
+ *
  * The margin. Quarto's right column (#quarto-margin-sidebar) is empty
  * once fpl-nav.js has moved the page's sections to the left, and holds
  * the cards; where the column is hidden (a narrow window) each card
@@ -72,13 +77,14 @@
   const QUOTE = { "‘": "'", "’": "'", "“": '"', "”": '"' };
   const GAP = 12;
 
-  const root = new URL("../", document.currentScript.src).href;
+  const snap = window.FPL_SNAPSHOT;
+  const root = snap ? "" : new URL("../", document.currentScript.src).href;
   const here = location.href.split(/[?#]/)[0];
   const meta = (name) =>
     document.querySelector(`meta[name="${name}"]`)?.content ?? "";
-  const commit = meta("fpl-commit");
-  if (!here.startsWith(root) || !here.endsWith(".html") || !commit) return;
-  const page = decodeURIComponent(here.slice(root.length));
+  const commit = snap?.commit ?? meta("fpl-commit");
+  if (!snap && (!here.startsWith(root) || !here.endsWith(".html") || !commit)) return;
+  const page = snap ? snap.item.replace(/\.md$/, ".html") : decodeURIComponent(here.slice(root.length));
   const item = page.replace(/\.html$/, ".md");
   const stem = page.slice(page.lastIndexOf("/") + 1, -".html".length);
   const key = "fpl-annot:" + item;
@@ -642,8 +648,7 @@
   document.fonts?.ready.then(relayout);
 
   document.body.append(pop);
-  fetch(`${stem}.facts.json`)
-    .then((r) => (r.ok ? r.json() : []))
+  (snap ? Promise.resolve(snap.rows) : fetch(`${stem}.facts.json`).then((r) => (r.ok ? r.json() : [])))
     .catch(() => [])
     .then((got) => { sidecar = Array.isArray(got) ? got : []; draw(); });
 })();
