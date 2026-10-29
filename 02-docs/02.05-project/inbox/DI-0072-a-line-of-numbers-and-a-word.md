@@ -214,7 +214,13 @@ On the shape `|- ! err/x 1:5 “msg” @ 3` (position as the second argument, th
 Proposed with it, so that `@` means one thing: the input number `@N` of today's
 `ERROR: @N l:c` moves to `#N`. Thin spot named: `1:5` shares the colon with the sort
 ascription ` : `; the alternative without it is the last path segment
-`err/check/unequal/1:5`. Open until he picks.
+`err/check/unequal/1:5`. His pick (10-29): "ja duidelijk genoeg \d:\d beter we zien het",
+and on `@ n`: "dat vind ik eigenlijk best wel een sick idee voor debugging [...] dus in R2
+is `@` een deadline en in R1 is het een oh de fout zat daar bij dat ding in de debugger?".
+Yes, one meaning: `@ n` is "at step n" of the evaluation, the last step on a success line
+and the failing step on a fail line, the address a debugger jumps to beside the source
+position. Decided: `|- ! err/<scope>* <line>:<col> “msg” @ n` and `|- value : sort @ n`;
+the input number of `ERROR: @N` moves to `#N`.
 
 On rank (10-29, verbatim): "uh krijgen we straks conflicten met het box model stel we
 willen een box model... willen we een box model? net zoals J en UIuia ik heb ook de
