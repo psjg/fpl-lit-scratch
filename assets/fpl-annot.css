@@ -44,6 +44,7 @@ mark.fact-mine:hover, mark.fact-mine.is-hot { background: var(--fpl-mine-wash); 
   text-anchor: end; dominant-baseline: middle; paint-order: stroke; stroke: var(--fpl-bg); stroke-width: 6px; stroke-linejoin: round; }
 .fpl-edge.mine { fill: var(--fpl-mine); }
 .fpl-edge.is-hot { opacity: 1; }
+mark.fact[data-id="draft"] { text-decoration-color: var(--fpl-mine); background: var(--fpl-mine-wash); }
 
 /* paragraph and sentence numbers, outside the reading stand */
 .fpl-p { position: relative; }

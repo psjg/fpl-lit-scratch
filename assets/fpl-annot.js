@@ -420,8 +420,14 @@
       const c = card ?? el("div", { className: "fpl-card mine fpl-editing" });
       c.classList.add("fpl-editing");
       c.replaceChildren(form);
-      if (!card) { margin.append(c); c.style.top = `${rect.top + scrollY - top0()}px`; }
+      if (!card) {
+        margin.append(c);
+        c.style.top = `${rect.top + scrollY - top0()}px`;
+        if (marksOf("draft").length) c.dataset.id = "draft";   // the selection, lit while written
+      }
       editing = c;
+      makeRoom(c);
+      drawLines();
     } else {
       pop.replaceChildren(form);
       pop.hidden = false;
@@ -432,6 +438,20 @@
     }
   }
 
+  /** The cards below the one being written move down out of its way, and back on close (layout). */
+  function makeRoom(c) {
+    const top = c.offsetTop, bottom = top + c.offsetHeight + GAP;
+    let floor = bottom;
+    const below = [...margin.querySelectorAll(".fpl-card")].filter((o) => o !== c && o.offsetTop + o.offsetHeight > top)
+      .sort((a, b) => a.offsetTop - b.offsetTop);
+    for (const o of below) {
+      const y = Math.max(o.offsetTop, floor);
+      o.style.top = `${y}px`;
+      floor = y + o.offsetHeight + GAP;
+    }
+    margin.style.minHeight = `${Math.max(parseFloat(margin.style.minHeight) || 0, floor)}px`;
+  }
+
   let editing = null;
   const open = new Set();   // the spans whose card is open in the spans stand
   function closeEditor() {
@@ -439,6 +459,8 @@
     if (editing === pop) pop.hidden = true;
     else editing.remove();
     editing = null;
+    const drafts = marksOf("draft");
+    if (drafts.length) { for (const m of drafts) m.replaceWith(...m.childNodes); body.normalize(); }
   }
 
   /* ---- the margin: cards at the height of their span, lines between ---- */
@@ -590,7 +612,7 @@
       }
       hot(row.id);
       const card = margin.querySelector(`.fpl-card[data-id="${CSS.escape(row.id)}"]`);
-      if (row.mine) edit(row, card, m.getBoundingClientRect());
+      if (row.mine) { edit(row, card, m.getBoundingClientRect()); hot(row.id); }
       else if (card && wide()) card.scrollIntoView({ block: "nearest", behavior: "smooth" });
       return;
     }
@@ -599,8 +621,13 @@
     if (!body.contains(range.commonAncestorContainer)) return;
     const ix = shown(), [s, e] = bounds(ix, range);
     if (s >= e) return;
-    edit({ text: ix.flat.slice(s, e), prefix: ix.flat.slice(Math.max(0, s - AROUND), s),
-      suffix: ix.flat.slice(e, e + AROUND) }, null, range.getBoundingClientRect());
+    const seed = { text: ix.flat.slice(s, e), prefix: ix.flat.slice(Math.max(0, s - AROUND), s),
+      suffix: ix.flat.slice(e, e + AROUND) };
+    const at = range.getBoundingClientRect();
+    sel.removeAllRanges();
+    wrap(ix, s, e, { id: "draft", mine: true });   // the span stays lit while its fact is written
+    edit(seed, null, at);
+    hot("draft");
   }
   /** The address under a click on a number drawn before a block or sentence, or null. */
   function numberAt(ev) {
@@ -630,7 +657,7 @@
   });
   document.addEventListener("mouseup", pointerDone);
   document.addEventListener("touchend", (ev) => setTimeout(() => pointerDone(ev), 0));
-  body.addEventListener("mouseover", (ev) => { const m = ev.target.closest?.("mark.fact"); if (m) hot(m.dataset.id); });
+  body.addEventListener("mouseover", (ev) => { const m = ev.target.closest?.("mark.fact"); if (m && !editing) hot(m.dataset.id); });
   body.addEventListener("mouseout", (ev) => { if (ev.target.closest?.("mark.fact") && !editing) hot(null); });
   document.addEventListener("keydown", (ev) => {
     if (ev.key === "Escape" && editing) { closeEditor(); layout(); return; }
