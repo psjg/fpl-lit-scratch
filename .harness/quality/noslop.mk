@@ -103,25 +103,25 @@ pristine:
 	fi
 
 # The walker's entry from the root, `make run` (the root's Makefile), run on one real example
-# and compared with its .expected, from the root and with the lanes' own PYTHONPATH taken away:
-# the lanes run inside 01-bootstrap/, where the package is found, so only this step notices that
-# the entry itself broke (it did, in the move to 01-bootstrap/). The root's own 03-fpl/ directory
-# (FPL's tree, with no __init__) sits beside the package 01-bootstrap/fpl, and the example lives in
-# it; the entry has to find the package past it. A missing example, or an empty .expected that
-# would match an entry that prints nothing, is refused.
-ROOT_EXAMPLE := 03-fpl/OLD/03.01-features/draft2/examples/01-frames
+# from the root and with the lanes' own PYTHONPATH taken away: the lanes run inside 01-bootstrap/,
+# where the package is found, so only this step notices that the entry itself broke (it did, in
+# the move to 01-bootstrap/). The root's own 03-fpl/ directory (FPL's tree, with no __init__) sits
+# beside the package 01-bootstrap/fpl, and the example lives in it; the entry has to find the
+# package past it. The example checks itself (each run line carries `L |- R`, DI-0072), so exit 0
+# is conformance; it must also print something, so an entry that runs nothing is refused, as is
+# a missing example.
+ROOT_EXAMPLE := 03-fpl/OLD/03.01-features/draft2/examples/01-frames.fpl
 
 rootrun:
-	@test -s $(ROOT)/$(ROOT_EXAMPLE).fpl -a -s $(ROOT)/$(ROOT_EXAMPLE).expected || { \
-	  echo "check: the example the root's entry is run on, $(ROOT_EXAMPLE), or its .expected is missing" >&2; \
-	  echo "       or empty; name another in ROOT_EXAMPLE (.harness/quality/noslop.mk)" >&2; exit 1; }
-	@cd $(ROOT) && env -u PYTHONPATH $(MAKE) --no-print-directory run FILE=$(ROOT_EXAMPLE).fpl \
+	@test -s $(ROOT)/$(ROOT_EXAMPLE) || { \
+	  echo "check: the example the root's entry is run on, $(ROOT_EXAMPLE), is missing or empty;" >&2; \
+	  echo "       name another in ROOT_EXAMPLE (.harness/quality/noslop.mk)" >&2; exit 1; }
+	@cd $(ROOT) && env -u PYTHONPATH $(MAKE) --no-print-directory run FILE=$(ROOT_EXAMPLE) \
 	  > $(CURDIR)/$(OUT)/rootrun.out 2> $(CURDIR)/$(OUT)/rootrun.err || { \
-	  echo "check: make run FILE=$(ROOT_EXAMPLE).fpl, run from the root, failed:" >&2; \
-	  sed 's/^/         /' $(CURDIR)/$(OUT)/rootrun.err >&2; exit 1; }
-	@diff -u $(ROOT)/$(ROOT_EXAMPLE).expected $(OUT)/rootrun.out || { \
-	  echo "check: make run FILE=$(ROOT_EXAMPLE).fpl, run from the root, printed other than its .expected" >&2; \
-	  exit 1; }
+	  echo "check: make run FILE=$(ROOT_EXAMPLE), run from the root, failed:" >&2; \
+	  sed 's/^/         /' $(CURDIR)/$(OUT)/rootrun.out $(CURDIR)/$(OUT)/rootrun.err >&2; exit 1; }
+	@test -s $(OUT)/rootrun.out || { \
+	  echo "check: make run FILE=$(ROOT_EXAMPLE), run from the root, printed nothing" >&2; exit 1; }
 
 # deptry skips mutmut's copies and python/, the tangle output generated from the literate
 # sources (not hand-written code). A regex; the CLI flag overrides pyproject's extend_exclude.
