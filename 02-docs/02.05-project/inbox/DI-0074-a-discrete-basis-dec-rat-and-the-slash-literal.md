@@ -74,6 +74,20 @@ spells it `FPL_smooth`, he writes `fpl_smooth`: one name, no second one.
    (`0.1` is `1/10`; no Dec sort; FON's `Num` goes); (b) DI-0070's "no decimal point" is about
    floats only, Dec keeps its own normal form and sort; (c) DI-0070 is revised. Prior: (b) is the
    smallest change to the code that exists; (a) is the smallest lattice.
+
+   His lean, 11:12 the same day, in the side chat (hedged, not yet stable):
+
+   > hmm willen we dat? idk misschien willen we het wel als dec houden voor zolang het kan? je
+   > kunt dec atlijd naar rat vertalen als het nodig is als je weet dat alles van dec
+   > geimplementeerd wordt en zonder problemen een kant op kan of beide maakt het niet echt uit
+   > en is het msischien fijn om ze zolang mogelijk dec te houden
+
+   Read as (b): a value stays Dec while the operation closes in Dec and rises to Rat where it
+   does not. Measured: `Fraction(Decimal(x))` is exact for every Dec (`0.1` is `1/10`, `-3.000`
+   is `-3`); the other way is exact iff the denominator is `2^a 5^b` (`1/8`, `3/20` yes, `1/3`
+   no). So Dec rises to Rat and never falls: Int → Dec → Rat. Two things this does not settle:
+   whether DI-0070's "no decimal point in the normal form" narrows to floats (it must, if Dec
+   keeps a point in FON's `Num`), and the canonical form of Rat (point 3).
 2. **The Rat literal.** The shape rule gains one line before the path rule: no sigil and
    `-?\d+/\d+` is a number. Any sigil keeps it a path (`./3/4`, `../a/b`), and positional paths
    carry a name segment, so nothing in the corpus moves. The division word cannot be `/`, that
