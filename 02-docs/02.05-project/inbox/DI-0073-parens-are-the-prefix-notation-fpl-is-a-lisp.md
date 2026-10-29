@@ -30,7 +30,9 @@ Missing for code as data at the REPL: a reader word (source text to a tree value
 eval word on that value (`!` runs a quotation only), structural addressing (a hash per
 node, names bound by position as in an ABT, so that `(+ 1 2)` and `[ 1 2 + ]` have one
 address), and the tree itself as an FPL value (list, dict, symbol) rather than a Python
-class.
+class. On that last point, his words (10-29): "voor nu dan? FPL moet ooit self hosting
+wroden". So the bootstrap walker is the temporary form; the tree as an FPL value (reader,
+eval, a hash per node) is the first step toward self-hosting.
 
 The grammar already has the half of it: `prefix: "(" frames ")"` is "reader op: rotate
 head to end, bar the arguments" (`01-bootstrap/fpl/grammar.lark`, line 30; the September
