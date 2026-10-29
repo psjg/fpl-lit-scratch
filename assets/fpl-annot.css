@@ -102,7 +102,14 @@ body.fpl-numbered .fpl-s:hover .fpl-c::before { opacity: 1; }
 .fpl-filter { display: none; }   /* the filter shows while the control is hovered or focused */
 .fpl-mode:hover .fpl-filter, .fpl-mode:focus-within .fpl-filter { display: flex; }
 .fpl-column .fpl-margin { padding-top: 3rem; }
-@media (max-width: 991px) { .fpl-mode { top: 3.6rem; } }
+.fpl-mode { top: .6rem; right: max(.6rem, env(safe-area-inset-right, 0px)); }
+/* narrow: Quarto's bar is fixed at the top, so the control sits in it, left of the search
+   icon, folded to its current stand until it is hovered or focused */
+@media (max-width: 991px) {
+  .fpl-mode { top: .35rem; right: 3rem; padding: .15rem; background: transparent; border-color: transparent; box-shadow: none; }
+  .fpl-mode:hover, .fpl-mode:focus-within { background: var(--fpl-bg); border-color: var(--fpl-rule); box-shadow: 0 4px 16px rgba(0, 0, 0, .10); }
+  .fpl-mode:not(:hover):not(:focus-within) .fpl-seg button:not(.is-on) { display: none; }
+}
 .fpl-seg { display: inline-flex; padding: 2px; border-radius: 999px; border: 1px solid var(--fpl-rule); background: var(--fpl-wash); }
 .fpl-seg button { font: inherit; font-size: .76rem; font-weight: 600; padding: .25rem .65rem; border: 0; border-radius: 999px;
   background: none; color: var(--fpl-mute); cursor: pointer; }
