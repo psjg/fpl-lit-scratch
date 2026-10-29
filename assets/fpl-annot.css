@@ -143,3 +143,9 @@ body.fpl-numbered .fpl-s:hover .fpl-c::before { display: inline; }
 .fpl-toast { position: fixed; bottom: 1rem; left: 50%; transform: translateX(-50%); z-index: 1002;
   padding: .4rem .8rem; border-radius: 999px; background: var(--fpl-fg); color: var(--fpl-bg); font-size: .8rem; }
 @media (prefers-reduced-motion: reduce) { mark.fact, .fpl-card, .fpl-line { transition: none; animation: none; } }
+
+/* the files of a page, an outline at its end (essay.lua files()) */
+.fpl-files ol { padding-left: 1.4rem; }
+.fpl-files li { margin: .15rem 0; }
+.fpl-files .fpl-addr { font-size: .78rem; font-weight: 600; color: var(--fpl-vers); text-decoration: none; margin-right: .2rem; }
+.fpl-files .fpl-addr:hover { text-decoration: underline; }
