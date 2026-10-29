@@ -122,20 +122,30 @@ and 0.60 and 0.61 with the examples stripped.
 ## Annotating the published page
 
 Every page of the site loads `assets/fpl-annot.js`. It draws the page's sidecar (shipped
-beside the page) as marks, lists its rows in a panel at the bottom right, and lets a reader
-select text, give it labels and a note, and save it as a quote row: `{id, item, commit,
+beside the page) as underlined spans, each with a card in the right margin at the height of
+its span and a line between the two: the span's labels and note, then the facts about it
+(a relation as `contradicts L-G2`, a fact about a fact nested under it). A row whose text is
+not on the page any more, or is there more than once, gets a card at the top of the margin
+with its old text struck through. The right margin is free because `assets/fpl-nav.js` moves
+the page's own sections under its entry in the left sidebar, and `essay.lua` nests the
+headings' anchors (`#strings-and-comments/counted`), so a URL reads `page#scope/subscope`.
+
+A reader selects text, writes a note and picks labels (chips; type `label/sub` for one
+more) in a card at that height, and saves it (⌘↩) as a quote row: `{id, item, commit,
 text, prefix, suffix, labels, note, targets, createdAt, updatedAt}`, the text as shown and
 32 characters of shown text either side. The rows stay in that browser (localStorage) until
-the panel's Export downloads them as `<stem>.annot.json`. The panel prints the `lit facts`
-line that takes them into the sidecar; run it as above, from `01-bootstrap/`, with the path
-of the downloaded file:
+Export in the margin's head downloads them as `<stem>.annot.json`; the head then prints the
+`lit facts` line that takes them into the sidecar. Run it from `01-bootstrap/`, with the
+path of the downloaded file:
 
     lit facts --import FILE \
       --item 01-bootstrap/01.02-pass/01.02.01-lex.md=01-bootstrap/01.02-pass/01.02.01-lex.md@COMMIT
 
 The commit is the one the page was rendered from (`<meta name="fpl-commit">`). The quote is
 then found on the raw page by the table of `plain`: measured 2026-10-29, a sentence selected
-on the lex page imported with 0 findings and was vers.
+on the lex page exported, imported with 0 findings in 0.12 s, and was drawn as a sidecar
+span on the next load. Where the window has no margin column (a phone) each card folds
+under the block its span is in, and the editor is a popover.
 
 ## Layout
 
