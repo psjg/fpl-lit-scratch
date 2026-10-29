@@ -924,6 +924,8 @@ filters:
   resources:
     - assets/fpl-live.js
     - assets/fpl-live.css
+    - assets/fpl-annot.js
+    - assets/fpl-annot.css
     - "**/*.facts.json"
     - "**/*.decisions.tsv"
   render:
@@ -1092,10 +1094,21 @@ format:
     toc: true
     toc-depth: 2
     code-overflow: wrap
-    css: assets/fpl-live.css
+    css:
+      - assets/fpl-live.css
+      - assets/fpl-annot.css
     include-in-header:
       text: |
         <meta name="fpl-site" content="https://psjg.github.io/fpl-lit-scratch">
+    include-after-body:
+      text: |
+        <script>
+        // fpl-annot.js lies beside fpl-annot.css, whose link Quarto writes
+        // relative to the page; this text it does not rewrite.
+        document.body.append(Object.assign(document.createElement("script"), {
+          src: document.querySelector('link[href$="fpl-annot.css"]').href
+            .replace(/css$/, "js")}));
+        </script>
 """
     )
 
