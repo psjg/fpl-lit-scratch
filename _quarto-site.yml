@@ -6,6 +6,8 @@ project:
     - assets/fpl-live.css
     - assets/fpl-annot.js
     - assets/fpl-annot.css
+    - assets/fpl-nav.js
+    - assets/fpl-nav.css
     - "01-bootstrap/**/*.facts.json"
     - "01-bootstrap/**/*.decisions.tsv"
     - assets/fpl-runtime.js
@@ -229,20 +231,22 @@ format:
   html:
     theme: cosmo
     toc: true
-    toc-depth: 2
+    toc-depth: 3
     code-overflow: wrap
     css:
       - assets/fpl-live.css
       - assets/fpl-annot.css
+      - assets/fpl-nav.css
     include-in-header:
       text: |
         <meta name="fpl-site" content="https://psjg.github.io/fpl-lit-scratch">
     include-after-body:
       text: |
         <script>
-        // fpl-annot.js lies beside fpl-annot.css, whose link Quarto writes
-        // relative to the page; this text it does not rewrite.
-        document.body.append(Object.assign(document.createElement("script"), {
-          src: document.querySelector('link[href$="fpl-annot.css"]').href
-            .replace(/css$/, "js")}));
+        // fpl-nav.js and fpl-annot.js lie beside their .css, whose links
+        // Quarto writes relative to the page; this text it does not rewrite.
+        for (const name of ["fpl-nav", "fpl-annot"])
+          document.body.append(Object.assign(document.createElement("script"), {
+            src: document.querySelector(`link[href$="${name}.css"]`).href
+              .replace(/css$/, "js")}));
         </script>

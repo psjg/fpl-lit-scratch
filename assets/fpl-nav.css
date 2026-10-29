@@ -1,0 +1,17 @@
+/*
+ * fpl-nav.css: the page's sections as a nested list under its sidebar
+ * entry (fpl-nav.js). Colours and sizes are the sidebar's own variables,
+ * so light and dark follow the theme.
+ */
+.fpl-toc { margin: 0; padding-left: 1rem; }
+.fpl-toc > li { position: relative; }
+.fpl-toc a.nav-link { display: block; padding: .15rem 1.6rem .15rem 0; font-size: .85rem; line-height: 1.35;
+  color: var(--bs-nav-link-color, inherit); opacity: .8; text-decoration: none; }
+.fpl-toc a.nav-link:hover { opacity: 1; }
+.fpl-toc a.nav-link.active { opacity: 1; font-weight: 600; color: var(--bs-link-color, inherit); }
+.fpl-toc .fpl-toc-toggle { position: absolute; right: 0; top: .1rem; padding: 0 .2rem; }
+.fpl-toc .fpl-toc-toggle .bi::before { transform: none; }
+.fpl-toc li.is-open > .fpl-toc-toggle .bi::before, .fpl-toc li:has(> a.active) > .fpl-toc-toggle .bi::before,
+.fpl-toc li:has(> ul a.active) > .fpl-toc-toggle .bi::before { transform: rotate(90deg); }
+.fpl-toc li > ul { display: none; }
+.fpl-toc li.is-open > ul, .fpl-toc li:has(> a.active) > ul, .fpl-toc li:has(> ul a.active) > ul { display: block; }

@@ -77,7 +77,46 @@ function Pandoc(doc)
     end
   end
   doc.blocks = blocks
+  if FORMAT:match("html") then
+    doc = nest(doc)
+  end
   return doc
+end
+
+-- A heading's anchor is its path: an h3 under "Strings and comments"
+-- is #strings-and-comments/counted, so the URL reads
+-- page#scope/subscope and the sidebar (fpl-nav.js) nests the same way.
+-- Links on the page to the old anchors are rewritten with them; links
+-- from other pages are not.
+function nest(doc)
+  local path, renamed = {}, {}
+  for _, block in ipairs(doc.blocks) do
+    if block.t == "Header" and block.identifier ~= "" then
+      for level = block.level, #path do
+        path[level] = nil
+      end
+      local own = block.identifier
+      local parent = path[block.level - 1]
+      if parent then
+        local id = parent .. "/" .. own
+        renamed[own] = id
+        block.identifier = id
+      end
+      path[block.level] = block.identifier
+    end
+  end
+  if next(renamed) == nil then
+    return doc
+  end
+  return doc:walk({
+    Link = function(link)
+      local old = link.target:match("^#(.+)$")
+      if old and renamed[old] then
+        link.target = "#" .. renamed[old]
+      end
+      return link
+    end,
+  })
 end
 
 function Link(link)
