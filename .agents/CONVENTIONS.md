@@ -77,11 +77,17 @@ Each example checks itself (DI-0072); there are no `.expected` files:
 - A program that fails closes on one line, after every trailing comment:
   `|- ! err/<tag> “<message>”` (the message optional, exact when given). It must fail with that
   tag; `python -m fpl <file>` (`make run FILE=<file>` from the root) then prints the output so
-  far and the error line `ERROR: <line>:<col> <message>` and exits 0.
+  far and the fail line `|- ! <tag> <line>:<col> “<message>” @ <n>` and exits 0. `@ <n>` is the
+  step of the evaluation the program failed at, left out where it is not known (a failure of
+  reading, desugaring or elaboration, before anything runs). A printed fail line pasted back as
+  the closing line is the same check, and it also holds the position and the step; the corpus
+  keeps the position-less `|- ! err/<tag> “<message>”`.
 - A program that prints nothing carries no check.
 
-No Python traceback ever reaches the user: an error is the one line `ERROR: <line>:<col>
-<message>` on stdout.
+No Python traceback ever reaches the user: an error is the one fail line on stdout, `|- ! <tag>
+<line>:<col> “<message>” [@ <n>]`; a refusal that lies in no source (a session log that does not
+load) has the tag `err/session` and the message alone. A result on the TTY loop or in the pad
+is `|- <value> : <sort> [within <n>]`, `n` the steps its run line spent.
 
 **The oracle rule:** the maintainer writes the fixtures that remain. The agent makes
 `make check` green against them. `spec.md`, the examples, `02-docs/02.04-explanation/design.md`
