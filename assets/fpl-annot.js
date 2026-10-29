@@ -30,7 +30,10 @@
  * is not a row but an address on the page (a block, sentence, clause or
  * code line: essay.lua and fpl-nav.js give them ids such as
  * strings-and-comments/b5l12), the row gets a card of its own at that
- * element, with a line to it.
+ * element, with a line to it. A click on a block's or sentence's number
+ * puts that address in the URL and on the clipboard and, in the
+ * kantlijn stand, opens the editor for a fact on it: the way a lawyer
+ * cites a clause.
  *
  * Storage. localStorage["fpl-annot:" + item] holds a JSON array of this
  * browser's rows for that page; the sidecar is never written here. Export
@@ -377,7 +380,9 @@
       el("span", { className: "fpl-space" }),
       button("Annuleer", () => onDone(null)),
       el("button", { type: "submit", className: "fpl-go" }, "Bewaar ", el("kbd", {}, "⌘↩")));
-    form.append(el("div", { className: "fpl-excerpt" }, row.text), note, chips, keys);
+    const about = typeof row.text === "string" ? row.text
+      : `${row.targets?.[0] ?? ""}: ${document.getElementById(row.targets?.[0] ?? "")?.textContent.replace(/\s+/g, " ").trim().slice(0, 140) ?? ""}`;
+    form.append(el("div", { className: "fpl-excerpt" }, about), note, chips, keys);
     form.onsubmit = (ev) => { ev.preventDefault(); onDone({ note: note.value.trim(), labels: [...on] }); };
     form.onkeydown = (e) => {
       if (e.key === "Escape") { e.stopPropagation(); onDone(null); }
@@ -396,7 +401,7 @@
     delete done.mine;
     if (row.id) mine[mine.findIndex((r) => r.id === row.id)] = done;
     else mine.push({ id: `a-${now.toString(36)}${Math.random().toString(36).slice(2, 6)}`,
-      item, commit, ...done, targets: [], createdAt: now });
+      item, commit, targets: [], ...done, createdAt: now });
     keep(mine);
   }
 
@@ -593,6 +598,32 @@
     edit({ text: ix.flat.slice(s, e), prefix: ix.flat.slice(Math.max(0, s - AROUND), s),
       suffix: ix.flat.slice(e, e + AROUND) }, null, range.getBoundingClientRect());
   }
+  /** The address under a click on a number drawn before a block or sentence, or null. */
+  function numberAt(ev) {
+    const t = ev.target instanceof Element ? ev.target : null;
+    const unit = t?.closest(".fpl-s, .fpl-p");
+    if (!unit || !document.body.classList.contains("fpl-numbered")) return null;
+    const before = getComputedStyle(unit, "::before");
+    const w = parseFloat(before.width) || 0;
+    if (!w || before.display === "none") return null;
+    const r = unit.getClientRects()[0];
+    if (!r) return null;
+    if (unit.classList.contains("fpl-p")) {   // the number stands in the left gutter
+      const gap = parseFloat(before.marginRight) || 0;
+      return ev.clientX < r.left - gap && ev.clientX > r.left - gap - w - 4 ? unit.id : null;
+    }
+    return ev.clientX >= r.left - 2 && ev.clientX <= r.left + w + 2 && ev.clientY >= r.top && ev.clientY <= r.bottom ? unit.id : null;
+  }
+  document.addEventListener("click", (ev) => {
+    const id = numberAt(ev);
+    if (!id) return;
+    ev.preventDefault();
+    getSelection()?.removeAllRanges();
+    history.replaceState(null, "", `#${id}`);
+    const url = location.href;
+    navigator.clipboard?.writeText(url).then(() => toast(`Adres gekopieerd: #${id}`), () => toast(`#${id}`));
+    if (mode() === "kantlijn") edit({ targets: [id] }, null, document.getElementById(id).getBoundingClientRect());
+  });
   document.addEventListener("mouseup", pointerDone);
   document.addEventListener("touchend", (ev) => setTimeout(() => pointerDone(ev), 0));
   body.addEventListener("mouseover", (ev) => { const m = ev.target.closest?.("mark.fact"); if (m) hot(m.dataset.id); });

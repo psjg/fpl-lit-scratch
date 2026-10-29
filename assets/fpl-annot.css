@@ -49,11 +49,11 @@ mark.fact-mine:hover, mark.fact-mine.is-hot { background: var(--fpl-mine-wash); 
 /* paragraph and sentence numbers, outside the reading stand */
 .fpl-p { position: relative; }
 .fpl-p::before { content: "\00A7" attr(data-n); position: absolute; right: 100%; margin-right: .6rem; top: .35em;
-  font-size: .68rem; color: var(--fpl-mute); opacity: 0; transition: opacity .12s; user-select: none; }
-.fpl-s::before { content: attr(data-n); font-size: .6em; color: var(--fpl-mute); vertical-align: super; margin-right: .15em;
+  font-size: .68rem; color: var(--fpl-mute); opacity: 0; transition: opacity .12s; user-select: none; cursor: pointer; }
+.fpl-s::before { content: attr(data-n); font-size: .6em; color: var(--fpl-mute); vertical-align: super; margin-right: .15em; cursor: pointer;
   display: none; user-select: none; }
 body.fpl-numbered .fpl-p::before { opacity: .8; }
-body.fpl-numbered .fpl-s::before { display: inline; }
+body.fpl-numbered .fpl-s::before { display: inline-block; }
 .fpl-c::before { content: attr(data-n); font-size: .55em; color: var(--fpl-mute); vertical-align: sub; margin-right: .1em;
   display: none; user-select: none; }
 body.fpl-numbered .fpl-s:hover .fpl-c::before { display: inline; }
