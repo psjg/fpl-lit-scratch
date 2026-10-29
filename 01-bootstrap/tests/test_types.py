@@ -40,7 +40,9 @@ from fpl.types import (
     UntypedError,
     Verdict,
     after,
+    chosen,
     elaborate,
+    fits,
     met,
     rises,
     shown,
@@ -51,7 +53,7 @@ from fpl.types import tested as judged
 
 HERE = Span(1, 1)
 AT = Span(2, 3)
-BUILTINS = ("+", "-", "times", "dup", "swap", "drop")
+BUILTINS = ("+", "-", "times", "succ", "pred", "dup", "swap", "drop")
 
 
 @pytest.mark.parametrize(
@@ -635,3 +637,105 @@ def test_sorts_join_at_the_least_sort_above_them(
     rows leaving a Nat1 and a Zero agree on Nat0, not on a Value.
     """
     assert goals(source) == [goal]
+
+
+SUCC = {
+    "Nat1": "Nat1",
+    "Zero": "Nat1",
+    "Nat0": "Nat1",
+    "Neg1": "Neg0",
+    "Neg0": "Int",
+    "Int": "Int",
+    "Number": "Number",
+}
+PRED = {
+    "Neg1": "Neg1",
+    "Zero": "Neg1",
+    "Neg0": "Neg1",
+    "Nat1": "Nat0",
+    "Nat0": "Int",
+    "Int": "Int",
+    "Number": "Number",
+}
+#: A literal or strand of each sort; no literal is a Nat0, Neg0, Int.
+LITERALS = {
+    "Nat1": "2",
+    "Zero": "0",
+    "Neg1": "-2",
+    "Nat0": "0 2",
+    "Neg0": "0 -1",
+    "Int": "-1 2",
+    "Number": "1.5",
+}
+
+
+@pytest.mark.parametrize(("word", "table"), [("succ", SUCC), ("pred", PRED)])
+@pytest.mark.parametrize("have", list(LITERALS))
+def test_succ_and_pred_leave_a_sort_that_depends_on_their_input(
+    word: str, table: dict[str, str], have: str
+) -> None:
+    """
+    succ and pred are sort-indexed: the sort they leave is the row of
+    their table for the sort of the literal they are given.
+    """
+    start = LITERALS[have]
+    column = len(start) + len(word) + 3
+    assert goals(f"{start} {word} ?\n") == [
+        f"GOAL 1:{column} ? : {table[have]} --"
+    ]
+
+
+@pytest.mark.parametrize(("word", "table"), [("succ", SUCC), ("pred", PRED)])
+@pytest.mark.parametrize("have", list(SUCC))
+def test_the_cases_of_succ_and_pred_cover_every_row_of_the_table(
+    word: str, table: dict[str, str], have: str
+) -> None:
+    """
+    The arrow of succ and pred, applied to each sort of its table, gives
+    the table's sort; the general arrow is Number to Number.
+    """
+    arrow = ARROWS[word]
+    assert (arrow.ins, arrow.outs) == ((Kind.NUMBER,), (Kind.NUMBER,))
+    typing = Typing((Kind(have),), {}, {})
+    assert chosen(typing, arrow, ARROWS).outs == (Kind(table[have]),)
+
+
+@pytest.mark.parametrize("word", ["succ", "pred"])
+@pytest.mark.parametrize("have", [Input(0), Kind.VALUE])
+def test_an_input_or_a_value_keeps_the_general_arrow(
+    word: str, have: Sort
+) -> None:
+    """
+    An input of unknown sort, or a Value, takes the general case: the
+    arrow Number to Number.
+    """
+    arrow = ARROWS[word]
+    assert chosen(Typing((have,), {}, {}), arrow, ARROWS) is arrow
+
+
+@pytest.mark.parametrize("word", ["succ", "pred"])
+def test_a_text_is_refused_by_succ_and_pred(word: str) -> None:
+    """
+    A text is not a number: elaboration refuses it at the word.
+    """
+    with pytest.raises(FplError) as caught:
+        run(f"“a” {word}\n")
+    assert str(caught.value) == "ERROR: 1:5 arithmetic on a non-number"
+
+
+@pytest.mark.parametrize("word", ["succ", "pred"])
+@pytest.mark.parametrize("value", [-3, -1, 0, 1, 4, Decimal("1.5")])
+def test_the_result_of_succ_and_pred_fits_the_sort_found_for_it(
+    word: str, value: int | Decimal
+) -> None:
+    """
+    Preservation: the sort of the value succ or pred leaves fits the
+    sort elaboration found for the clause.
+    """
+    have = sort(value)
+    assert isinstance(have, Kind)
+    table = SUCC if word == "succ" else PRED
+    arrow = chosen(Typing((have,), {}, {}), ARROWS[word], ARROWS)
+    result = value + 1 if word == "succ" else value - 1
+    assert fits(arrow.outs[0], sort(result))
+    assert arrow.outs == (Kind(table[have.value]),)

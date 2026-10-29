@@ -186,6 +186,19 @@ class Dispatch(Arrow):
 
 
 @dataclass(frozen=True)
+class Cases(Arrow):
+    """A word whose result sort depends on the sort of its input.
+
+    The arrow itself is the general case, taken for an input of unknown
+    sort. :func:`chosen` resolves a call to the first of *cases* that
+    takes the sort of its input.
+    """
+
+    #: The one-in one-out arrows, most specific first.
+    cases: tuple[Arrow, ...]
+
+
+@dataclass(frozen=True)
 class Goal:
     """A ``?`` met in typed code."""
 
@@ -236,6 +249,38 @@ class UnderflowError(FplError):
 HOLES = ("?", "_")
 #: The arrow of binary arithmetic: two numbers in, one out.
 NUMBERS = Arrow((Kind.NUMBER, Kind.NUMBER), (Kind.NUMBER,))
+#: The sort ``succ`` leaves for each sort it takes, most specific first.
+SUCC: tuple[tuple[Kind, Kind], ...] = (
+    (Kind.NAT1, Kind.NAT1),
+    (Kind.ZERO, Kind.NAT1),
+    (Kind.NAT0, Kind.NAT1),
+    (Kind.NEG1, Kind.NEG0),
+    (Kind.NEG0, Kind.INT),
+    (Kind.INT, Kind.INT),
+)
+#: The sort ``pred`` leaves for each sort it takes, most specific first.
+PRED: tuple[tuple[Kind, Kind], ...] = (
+    (Kind.NEG1, Kind.NEG1),
+    (Kind.ZERO, Kind.NEG1),
+    (Kind.NEG0, Kind.NEG1),
+    (Kind.NAT1, Kind.NAT0),
+    (Kind.NAT0, Kind.INT),
+    (Kind.INT, Kind.INT),
+)
+
+
+def stepping(table: tuple[tuple[Kind, Kind], ...]) -> Cases:
+    """Return the arrow of a unary step word from its table.
+
+    Any other number, a ``Number``, leaves a ``Number``.
+    """
+    return Cases(
+        NUMBERS.ins[:1],
+        NUMBERS.outs,
+        tuple(Arrow((have,), (left,)) for have, left in table),
+    )
+
+
 #: The arrow of each builtin word, without control words and holes.
 ARROWS: dict[str, Arrow] = {
     **{
@@ -248,6 +293,8 @@ ARROWS: dict[str, Arrow] = {
     "+": NUMBERS,
     "-": NUMBERS,
     "times": NUMBERS,
+    "succ": stepping(SUCC),
+    "pred": stepping(PRED),
     "swap": Arrow((Input(0), Input(1)), (Input(1), Input(0))),
     "dup": Arrow((Input(0),), (Input(0), Input(0))),
     "drop": Arrow((Input(0),), ()),
@@ -706,13 +753,28 @@ def chosen(typing: Typing, arrow: Arrow, arrows: Mapping[str, Arrow]) -> Arrow:
     row survives and the call is certain to reach that clause: the row
     surely fits, or the clause takes the sorts of the values. Where the
     row only may fit, the run would miss by refusing, so the clause must
-    take them. Any other arrow, and a dispatcher whose call cannot be
-    resolved, is returned as it is.
+    take them. A sort-indexed arrow is resolved by :func:`cased`. Any
+    other arrow, and a dispatcher whose call cannot be resolved, is
+    returned as it is.
     """
     cut = len(typing.stack) - len(arrow.ins)
-    if not isinstance(arrow, Dispatch) or cut < 0:
+    if cut < 0:
         return arrow
     sorts = resolved(typing.stack[cut:], typing)
+    if isinstance(arrow, Cases):
+        return cased(arrow, sorts)
+    if isinstance(arrow, Dispatch):
+        return dispatched(arrow, sorts, arrows)
+    return arrow
+
+
+def dispatched(
+    arrow: Dispatch, sorts: tuple[Sort, ...], arrows: Mapping[str, Arrow]
+) -> Arrow:
+    """Return a dispatcher's clause arrow where the call must reach it.
+
+    See :func:`chosen`; the arrow itself where it cannot be resolved.
+    """
     if any(isinstance(s, Input) for s in sorts):
         return arrow
     match surviving(arrow.rows, sorts, arrows):
@@ -725,6 +787,23 @@ def chosen(typing: Typing, arrow: Arrow, arrows: Mapping[str, Arrow]) -> Arrow:
             return arrow
         case _:
             return arrow
+
+
+def cased(arrow: Cases, sorts: tuple[Sort, ...]) -> Arrow:
+    """Return the first case that takes the sorts, else the arrow.
+
+    An input of unknown sort, a ``Value`` and a sort no case takes keep
+    the general arrow.
+
+    Examples:
+        >>> cased(ARROWS["succ"], (Kind.NEG1,)).outs == (Kind.NEG0,)
+        True
+        >>> cased(ARROWS["succ"], (Kind.VALUE,)) is ARROWS["succ"]
+        True
+    """
+    if any(isinstance(s, Input) or s is Kind.VALUE for s in sorts):
+        return arrow
+    return next((c for c in arrow.cases if taken(c, sorts)), arrow)
 
 
 def surviving(

@@ -54,5 +54,5 @@ Decided 2026-10-29, final: the naturals get a sort of their own and the literals
 ## Related
 
 - related:: [DI-0069](DI-0069-the-space-before-a-comment-as-part-of-its-token.md)
-- related:: [DI-0013](DI-0013-one-spelling-per-value.md)
+- related:: [DI-0013](DI-0013-strict-readers-one-value-one-spelling.md)
 - related:: [DI-0072](DI-0072-the-division-family.md)

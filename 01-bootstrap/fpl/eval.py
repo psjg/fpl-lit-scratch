@@ -782,6 +782,21 @@ def builtin(call: Call, state: State, rest: tuple[Node, ...]) -> State:
     )
 
 
+def stepped(delta: int, span: Span, a: Value) -> tuple[Value, ...]:
+    """Add *delta* to a number, or to each item of a strand.
+
+    ``succ`` is ``stepped(1, ...)`` and ``pred`` ``stepped(-1, ...)``.
+
+    Raises:
+        :exc:`FplError`: As :func:`arithmetic`.
+
+    Examples:
+        >>> stepped(1, Span(1, 1), 2), stepped(-1, Span(1, 1), 0)
+        ((3,), (-1,))
+    """
+    return arithmetic(lambda x, y: x + y, span, a, delta)
+
+
 def operands(value: Value, span: Span) -> tuple[Number, ...]:
     """Return a number as one operand, or a strand as its items.
 
@@ -954,6 +969,8 @@ BUILTINS: dict[str, Builtin] = {
     "+": partial(arithmetic, lambda x, y: x + y),
     "-": partial(arithmetic, lambda x, y: x - y),
     "times": partial(arithmetic, lambda x, y: x * y),
+    "succ": partial(stepped, 1),
+    "pred": partial(stepped, -1),
     "swap": swap,
     "dup": dup,
     "?": unfilled,
