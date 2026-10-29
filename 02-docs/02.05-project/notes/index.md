@@ -15,3 +15,4 @@
 * [02.05.13 Playground tracing](02.05.13-playground-tracing.md) - Perfetto traces and optional Sentry spans
 * [02.05.14 The session kernel](02.05.14-session-kernel.md) - one kernel per named session, JSON lines over a unix socket, and repl, tui and pty as frontends on it
 * [02.05.15 One source form: .fpl and .fml](02.05.15-one-source-form.md) - one language with the lexical default inverted; tangle, weave and exports are tooling
+* [02.05.16 The judgment line, as the editor chats of 2026-10-18 left it](02.05.16-judgment-line-from-the-cursor-chats.md) - the fail marker, the err/ path, the message, the position, fuel as a deadline, HTTP aliases and |= in his words, against the decisions of 2026-10-29
