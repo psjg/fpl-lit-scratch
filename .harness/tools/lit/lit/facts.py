@@ -41,6 +41,15 @@ Python); comments, the tokens of line structure that carry no code and
 every docstring are dropped, and each token left is put on the page
 line it came from. A span's tokens are those on its lines. A chunk
 that two files reach takes its tokens from the first.
+
+Beside the generated spans stand two files a person writes. A
+decisions ledger ``<page stem>.decisions.tsv`` gives one ``ledger``
+span per decision, id ``L-<id>``. A sidecar ``<page stem>.facts.json``
+holds hand rows in the annotation program's shape, plus ``targets``
+and ``commit``: a span, a fact about rows, or a relation between them.
+A hand row's span is immutable, ``item@commit[start, end) = text``;
+whether its text is still on the page is computed each time
+(`locate'), never written back. Items are paths from the repository.
 """
 
 from __future__ import annotations
@@ -48,12 +57,23 @@ from __future__ import annotations
 import ast
 import hashlib
 import io
+import json
 import re
 import tokenize
-from collections.abc import Iterator, Mapping, Sequence
+from collections import Counter
+from collections.abc import (
+    Callable,
+    Collection,
+    Iterator,
+    Mapping,
+    Sequence,
+)
+from contextlib import suppress
 from dataclasses import dataclass
 from itertools import takewhile
 from pathlib import Path
+from textwrap import dedent
+from typing import cast
 from urllib.parse import quote
 
 from lit import readable, web
@@ -164,13 +184,20 @@ def docstrings(tree: ast.Module) -> set[tuple[int, int]]:
     }
 
 
-def file_tokens(source: str) -> list[tuple[int, Token]]:
-    """A Python file's code tokens, each with its line in the file."""
+def code_tokens(source: str) -> list[tokenize.TokenInfo]:
+    """A Python file's code tokens, with where each starts and ends."""
     skip = docstrings(ast.parse(source))
     return [
-        (tok.start[0], (tok.type, tok.string))
+        tok
         for tok in tokenize.generate_tokens(io.StringIO(source).readline)
         if tok.type not in DROPPED and (tok.type, tok.start[0]) not in skip
+    ]
+
+
+def file_tokens(source: str) -> list[tuple[int, Token]]:
+    """A Python file's code tokens, each with its line in the file."""
+    return [
+        (tok.start[0], (tok.type, tok.string)) for tok in code_tokens(source)
     ]
 
 
@@ -251,6 +278,26 @@ class Web:
         kind = KINDS[sid.split(":", 1)[0]]
         return Span(
             sid, self.text.item, start, end, text, kind, labels, code, targets
+        )
+
+    @classmethod
+    def of(cls, page: web.Page, text: str) -> Web:
+        """The page read from ``text``, its Python files tangled."""
+        files = tuple(t for t in web.tangle(page)[0] if t.name.endswith(".py"))
+        chunk_at: dict[int, str] = {}
+        section_chunk: dict[int, str] = {}
+        for number, c, sid in chunk_ids(page):
+            section_chunk[number] = sid
+            chunk_at |= dict.fromkeys(
+                range(c.line - 1, c.line + len(c.body) + 2), sid
+            )
+        return cls(
+            page,
+            Text.of(page.path, text),
+            files,
+            page_tokens(files),
+            chunk_at,
+            section_chunk,
         )
 
 
@@ -416,22 +463,11 @@ def spans(
         The chunks, paragraphs, definitions, examples, refusals, test
         rows and tangle lines.
     """
-    files = tuple(t for t in web.tangle(page)[0] if t.name.endswith(".py"))
-    chunk_at: dict[int, str] = {}
-    section_chunk: dict[int, str] = {}
-    for number, c, sid in chunk_ids(page):
-        section_chunk[number] = sid
-        chunk_at |= dict.fromkeys(
-            range(c.line - 1, c.line + len(c.body) + 2), sid
-        )
-    w = Web(
-        page,
-        Text.of(page.path, text),
-        files,
-        page_tokens(files),
-        chunk_at,
-        section_chunk,
-    )
+    return kinds(Web.of(page, text), root, tests)
+
+
+def kinds(w: Web, root: Path, tests: Mapping[str, str]) -> list[Span]:
+    """The spans of `spans', read from a page already tangled."""
     refused = list(refusals(w))
     by_message = {s.labels[0]: s.id for s in refused}
     return [
@@ -454,3 +490,564 @@ def read(path: Path, root: Path) -> list[Span]:
         for t in readable.tests_for(page, root)
     }
     return spans(page, text, root, tests)
+
+
+# The hand-written rows: a sidecar ``<page>.facts.json`` beside a page.
+
+type Row = dict[str, object]
+# A code token on the page: its first code point, the code point after
+# its last, and the token.
+type Placed = tuple[int, int, Token]
+
+# The tokens of line structure. A fragment's indentation never matches
+# the whole file's, so a match by tokens leaves them out on both sides.
+LAYOUT = frozenset({tokenize.NEWLINE, tokenize.INDENT, tokenize.DEDENT})
+# A hand-written id, a ledger id, a commit, a ledger date.
+NAME = re.compile(r"[A-Za-z0-9._-]+")
+COMMIT = re.compile(r"[0-9a-f]{7,40}")
+DATE = re.compile(r"\d{4}-\d{2}-\d{2}")
+# A code point JavaScript counts as two: offsets would differ there.
+ASTRAL = re.compile("[\U00010000-\U0010ffff]")
+# The keys of a hand row, each with the one type its value has; the
+# four that ground a span; the columns of a decisions ledger.
+FIELDS: dict[str, type] = {
+    "id": str,
+    "item": str,
+    "start": int,
+    "end": int,
+    "text": str,
+    "labels": list,
+    "note": str,
+    "targets": list,
+    "commit": str,
+    "createdAt": int,
+    "updatedAt": int,
+}
+SPAN = ("item", "start", "end", "text")
+COLUMNS = ("id", "topic", "date", "who", "decision", "reason")
+VERS, MOVED, TWICE, STALE = "vers", "verplaatst", "dubbel", "stale"
+
+
+def top(root: Path) -> Path:
+    """The repository holding ``root``: the nearest ``.git`` above it.
+
+    Items are paths from there, as okfgraph reads them, whatever the
+    directory lit runs in.
+
+    Raises:
+        ValueError: No directory at or above ``root`` holds ``.git``.
+    """
+    here = root.resolve()
+    for d in (here, *here.parents):
+        if (d / ".git").exists():
+            return d
+    raise ValueError(f"{root}: no .git at or above it")
+
+
+def astral(path: str, text: str) -> list[web.Finding]:
+    """The first code point above U+FFFF on a page, if there is one."""
+    m = ASTRAL.search(text)
+    if m is None:
+        return []
+    line = text.count("\n", 0, m.start()) + 1
+    message = (
+        f"U+{ord(m[0]):X} is two code units in JavaScript, so the"
+        " annotation program's offsets would differ from lit's -- write"
+        " it as an entity or a name"
+    )
+    return [web.Finding(path, line, "lit-facts-astral", message)]
+
+
+def offset(w: Web, t: web.Tangled, at: tuple[int, int]) -> int:
+    """The page code point of a line and column of a tangled file.
+
+    A tangled line is its page line behind the use's indentation
+    (``web.expand``), so the column, less that indentation, is one on
+    the page line.
+    """
+    line, col = at
+    page = t.origin[line - 1]
+    shift = len(t.lines[line - 1]) - len(w.text.lines[page - 1])
+    return w.text.starts[page - 1] + col - shift
+
+
+def stream(w: Web) -> list[Placed]:
+    """Each code token of the page at its code points, in page order.
+
+    Layout is left out, and a chunk two files reach takes its tokens
+    from the first, as in `page_tokens'.
+    """
+    out: list[Placed] = []
+    claimed: set[int] = set()
+    for t in w.files:
+        out += [
+            (offset(w, t, tok.start), offset(w, t, tok.end), token)
+            for tok in code_tokens(t.text)
+            if tok.type not in LAYOUT
+            and t.origin[tok.start[0] - 1] not in claimed
+            for token in [(tok.type, tok.string)]
+        ]
+        claimed |= set(t.origin)
+    return sorted(out)
+
+
+def fragment(text: str) -> list[Placed]:
+    """The code tokens of a row's text, at code points of that text.
+
+    A row may cut a statement in half (``return pairs(src,``), and no
+    tokenizer reads past the cut: the tokens are those read before it.
+    A docstring is left out when the text, dedented, parses, so that
+    a row over a docstring alone holds no tokens.
+    """
+    skip: set[tuple[int, int]] = set()
+    with suppress(SyntaxError):
+        skip = docstrings(ast.parse(dedent(text)))
+    starts = Text.of("", text).starts
+    out: list[Placed] = []
+    with suppress(tokenize.TokenError, SyntaxError):
+        for tok in tokenize.generate_tokens(io.StringIO(text).readline):
+            if (
+                tok.type not in DROPPED | LAYOUT
+                and (tok.type, tok.start[0]) not in skip
+            ):
+                first = starts[tok.start[0] - 1] + tok.start[1]
+                last = starts[tok.end[0] - 1] + tok.end[1]
+                out.append((first, last, (tok.type, tok.string)))
+    return out
+
+
+@dataclass(frozen=True)
+class Located:
+    """Where a hand row's text is on the current page, if anywhere.
+
+    Attributes:
+        state: vers, verplaatst, dubbel or stale.
+        start: The row's first code point now; None unless found once.
+        end: The code point after its last now; None unless found once.
+    """
+
+    state: str
+    start: int | None = None
+    end: int | None = None
+
+
+def locate(
+    row: Row,
+    text: str,
+    tokens: Sequence[Placed],
+    chunks: Sequence[tuple[int, int]],
+) -> Located:
+    """Where a valid hand row's text is in the current ``text``.
+
+    A row is code when its ``[start, end)`` lies inside a chunk span
+    of ``chunks`` and its text holds code tokens (`fragment'); then
+    its token sequence is matched against the page's ``tokens``, so
+    that a docstring or comment edit around the code leaves it found.
+    Otherwise its text is searched for.
+
+    ==========================  ====================================
+    found                       state and current offsets
+    ==========================  ====================================
+    text at ``[start, end)``    vers, the same offsets
+    code: tokens once           vers, the match widened by what the
+                                row holds around its first and last
+                                token
+    code: tokens twice or more  dubbel
+    code: tokens nowhere        stale
+    text once elsewhere         verplaatst, the new offsets
+    text twice or more          dubbel
+    text nowhere                stale
+    ==========================  ====================================
+    """
+    start, end = cast("int", row["start"]), cast("int", row["end"])
+    want = cast("str", row["text"])
+    if text[start:end] == want:
+        return Located(VERS, start, end)
+    inside = any(a <= start and end <= b for a, b in chunks)
+    mine = fragment(want) if inside else []
+    return by_tokens(mine, want, tokens) if mine else by_text(want, text)
+
+
+def by_text(want: str, text: str) -> Located:
+    """A row found by its text alone."""
+    first = text.find(want)
+    if first < 0:
+        return Located(STALE)
+    if text.find(want, first + 1) >= 0:
+        return Located(TWICE)
+    return Located(MOVED, first, first + len(want))
+
+
+def by_tokens(
+    mine: Sequence[Placed], want: str, tokens: Sequence[Placed]
+) -> Located:
+    """A code row found by its token sequence among the page's."""
+    seq = [t for _, _, t in mine]
+    page = [t for _, _, t in tokens]
+    k = len(seq)
+    hits = [
+        i
+        for i in range(len(page) - k + 1)
+        if page[i] == seq[0] and page[i : i + k] == seq
+    ]
+    if not hits:
+        return Located(STALE)
+    if len(hits) > 1:
+        return Located(TWICE)
+    i = hits[0]
+    start = tokens[i][0] - mine[0][0]
+    end = tokens[i + k - 1][1] + len(want) - mine[-1][1]
+    return Located(VERS, start, end)
+
+
+def unique(items: list[tuple[str, object]]) -> Row:
+    """A JSON object whose keys are each written once."""
+    out = dict(items)
+    if len(out) != len(items):
+        raise ValueError("a row holds a key twice")
+    return out
+
+
+def constant(name: str) -> object:
+    """No ``NaN`` or ``Infinity``: JSON has no such number."""
+    raise ValueError(f"{name} is no JSON number")
+
+
+def read_rows(text: str) -> list[Row]:
+    """A sidecar's rows: a bare JSON array of objects, read strictly.
+
+    Raises:
+        ValueError: Not JSON, a key twice in a row, ``NaN``, or not
+            an array of objects.
+    """
+    data: object = json.loads(
+        text, object_pairs_hook=unique, parse_constant=constant
+    )
+    if not isinstance(data, list):
+        raise ValueError("not a JSON array of objects")
+    rows = cast("list[object]", data)
+    if not all(isinstance(r, dict) for r in rows):
+        raise ValueError("not a JSON array of objects")
+    return cast("list[Row]", rows)
+
+
+def strings(value: object) -> bool:
+    """Whether a value is a list of strings."""
+    return isinstance(value, list) and all(
+        isinstance(v, str) for v in cast("list[object]", value)
+    )
+
+
+def id_faults(row: Row, ids: Counter[object]) -> Iterator[str]:
+    """What is wrong with a row's id."""
+    rid = row.get("id")
+    if not isinstance(rid, str):
+        yield "a row needs a string id"
+    elif not NAME.fullmatch(rid):
+        yield f"id {rid!r} holds a character outside [A-Za-z0-9._-]"
+    elif ids[rid] > 1:
+        yield f"id {rid!r} names {ids[rid]} rows"
+
+
+def field_faults(row: Row) -> Iterator[str]:
+    """Unknown keys, and values of the wrong type outside a span."""
+    for key, value in row.items():
+        want = FIELDS.get(key)
+        if want is None:
+            yield f"{key!r} is no key of a row"
+        elif key in {"labels", "targets"} and not strings(value):
+            yield f"{key} must be a list of strings"
+        elif key in {"note", "commit", "createdAt", "updatedAt"} and (
+            type(value) is not want
+        ):
+            yield f"{key} must be a {want.__name__}"
+        elif key == "commit" and not COMMIT.fullmatch(cast("str", value)):
+            yield f"commit {value!r} is no hex commit"
+
+
+def span_shape(row: Row) -> str:
+    """What makes a row's span no span, or ``""``."""
+    if not all(k in row for k in SPAN):
+        return "a span needs item, start, end and text together"
+    start, end = row["start"], row["end"]
+    if type(start) is not int or type(end) is not int:
+        return "start and end must be integers"
+    if start >= end:
+        return f"start {start} is not before end {end}"
+    if not isinstance(row["item"], str) or not isinstance(row["text"], str):
+        return "item and text must be strings"
+    return ""
+
+
+def span_faults(row: Row, texts: Mapping[str, str]) -> Iterator[str]:
+    """What is wrong with a row's span; nothing for a row without one.
+
+    A row with a commit is grounded there, and `lit anchor --verify'
+    checks it; one without is grounded in the current text.
+    """
+    if not any(k in row for k in SPAN):
+        return
+    if shape := span_shape(row):
+        yield shape
+        return
+    item = cast("str", row["item"])
+    if item not in texts:
+        yield f"item {item!r} is neither the page nor a file of the repo"
+    elif "commit" not in row:
+        start, end = cast("int", row["start"]), cast("int", row["end"])
+        if texts[item][start:end] != row["text"]:
+            yield f"text is not at [{start}, {end}) of {item}"
+
+
+def target_faults(row: Row, names: Collection[str]) -> Iterator[str]:
+    """Each target that names no row, generated span or ledger row."""
+    targets = row.get("targets", [])
+    if strings(targets):
+        for t in cast("list[str]", targets):
+            if t not in names:
+                yield f"target {t!r} names nothing"
+
+
+def validate(
+    rows: list[Row],
+    where: str,
+    texts: Mapping[str, str],
+    known: Collection[str],
+) -> list[web.Finding]:
+    """The findings of a sidecar's rows, each at its row's number.
+
+    Args:
+        rows: The rows, as `read_rows' read them.
+        where: The sidecar's path, the place of every finding.
+        texts: The text of each item a row may name: the page, and
+            each file of the repo a row names.
+        known: The ids of the page's generated spans and ledger rows.
+
+    Returns:
+        ``lit-facts-id``, ``lit-facts-field``, ``lit-facts-span`` and
+        ``lit-facts-target`` findings, row by row.
+    """
+    ids: Counter[object] = Counter(r.get("id") for r in rows)
+    names = {i for i in ids if isinstance(i, str)} | set(known)
+    out: list[web.Finding] = []
+    for n, row in enumerate(rows, 1):
+        for rule, faults in (
+            ("lit-facts-id", id_faults(row, ids)),
+            ("lit-facts-field", field_faults(row)),
+            ("lit-facts-span", span_faults(row, texts)),
+            ("lit-facts-target", target_faults(row, names)),
+        ):
+            out += [web.Finding(where, n, rule, m) for m in faults]
+    return out
+
+
+def ledger_fault(row: dict[str, str], seen: set[str]) -> str:
+    """What is wrong with one row of a ledger, or ``""``."""
+    if not NAME.fullmatch(row["id"]) or row["id"] in seen:
+        return f"id {row['id']!r} is no new [A-Za-z0-9._-] id"
+    if not DATE.fullmatch(row["date"]):
+        return f"date {row['date']!r} is no YYYY-MM-DD"
+    if not all(row[c] for c in COLUMNS[1:5]):
+        return "only the reason may be empty"
+    return ""
+
+
+def ledger_rows(
+    text: str,
+) -> tuple[list[dict[str, str]], list[tuple[int, str]]]:
+    """A decisions ledger's rows, or each line that is no row.
+
+    The ledger is tab separated, its first line the header ``id topic
+    date who decision reason``, every line six cells, the last line
+    ended by a newline; only the reason may be empty. A ledger with a
+    fault yields no rows, so a row's line is always its index plus 2.
+    """
+    lines = text.split("\n")
+    if lines[-1]:
+        return [], [(len(lines), "the last line has no newline")]
+    if lines[0] != "\t".join(COLUMNS):
+        return [], [(1, "the header must be " + " ".join(COLUMNS))]
+    rows: list[dict[str, str]] = []
+    bad: list[tuple[int, str]] = []
+    for n, line in enumerate(lines[1:-1], 2):
+        cells = line.split("\t")
+        if len(cells) != len(COLUMNS):
+            bad.append((n, f"{len(cells)} cells, not {len(COLUMNS)}"))
+            continue
+        row: dict[str, str] = dict(zip(COLUMNS, cells, strict=True))
+        if fault := ledger_fault(row, {r["id"] for r in rows}):
+            bad.append((n, fault))
+        rows.append(row)
+    return ([], bad) if bad else (rows, [])
+
+
+def ledger(text: str, item: str) -> tuple[list[Row], list[web.Finding]]:
+    """A ledger's rows as generated spans, or its findings.
+
+    A row's span is its decision cell, its id ``L-<id>``, its labels
+    the topic, who and date, its note the reason.
+    """
+    rows, bad = ledger_rows(text)
+    starts = Text.of(item, text).starts
+    out: list[Row] = []
+    for n, r in enumerate(rows, 2):
+        at = starts[n - 1] + sum(len(r[c]) + 1 for c in COLUMNS[:4])
+        out.append(
+            {
+                "id": "L-" + r["id"],
+                "item": item,
+                "start": at,
+                "end": at + len(r["decision"]),
+                "text": r["decision"],
+                "labels": [r["topic"], r["who"], r["date"]],
+                "note": r["reason"],
+                "targets": [],
+                "kind": "ledger",
+                "codeHash": "",
+            }
+        )
+    return out, [web.Finding(item, n, "lit-facts-ledger", m) for n, m in bad]
+
+
+@dataclass(frozen=True)
+class Here:
+    """A page as its hand rows are read against it.
+
+    Attributes:
+        repo: The repository; items are paths from it.
+        page: The page's item.
+        text: The page's text.
+        tokens: The page's code tokens, placed.
+        chunks: The start and end of each chunk span.
+        known: The ids of the generated spans and ledger rows.
+    """
+
+    repo: Path
+    page: str
+    text: str
+    tokens: list[Placed]
+    chunks: list[tuple[int, int]]
+    known: frozenset[str]
+
+    def texts(self, rows: list[Row]) -> dict[str, str]:
+        """The text of the page and of each file of the repo named."""
+        out = {self.page: self.text}
+        for row in rows:
+            item = row.get("item")
+            if isinstance(item, str) and item not in out:
+                path = (self.repo / item).resolve()
+                if path.is_relative_to(self.repo) and path.is_file():
+                    out[item] = path.read_text(encoding="utf-8")
+        return out
+
+    def place(self, row: Row, texts: Mapping[str, str]) -> Row:
+        """A valid row with its state and current offsets added."""
+        item = row.get("item")
+        if not isinstance(item, str):
+            return dict(row)
+        if item == self.page:
+            found = locate(row, self.text, self.tokens, self.chunks)
+        else:
+            found = locate(row, texts[item], [], [])
+        out = dict(row, state=found.state)
+        if found.start is not None:
+            out |= {"currentStart": found.start, "currentEnd": found.end}
+        return out
+
+    def hand(
+        self, text: str, where: str
+    ) -> tuple[list[Row], list[web.Finding]]:
+        """A sidecar's rows located, or its findings and no rows."""
+        try:
+            rows = read_rows(text)
+        except ValueError as e:
+            return [], [web.Finding(where, 1, "lit-facts-json", str(e))]
+        texts = self.texts(rows)
+        bad = validate(rows, where, texts, self.known)
+        if bad:
+            return [], bad
+        return [self.place(r, texts) for r in rows], []
+
+
+def generate(path: Path, root: Path) -> tuple[list[Row], list[web.Finding]]:
+    """A page's fact layer: every generated span and each hand row.
+
+    The rows are the spans of `spans', the ledger's rows when
+    ``<page stem>.decisions.tsv`` lies beside the page, and each row of
+    ``<page stem>.facts.json`` beside it, located (`locate'): a copy
+    with ``state`` and, when found once, ``currentStart`` and
+    ``currentEnd``; ``start`` and ``end`` stay as written. Every item
+    is a path from the repository (`top'). The sidecar itself is never
+    written.
+
+    Args:
+        path: The page.
+        root: The directory the page's files are written under.
+
+    Returns:
+        The rows, and the findings of the page, the ledger and the
+        sidecar; a sidecar with a finding adds no rows.
+    """
+    repo = top(root)
+
+    def name(p: Path) -> str:
+        return p.resolve().relative_to(repo).as_posix()
+
+    text = path.read_text(encoding="utf-8")
+    page = web.read(name(path), text)
+    tests = {
+        name(t): t.read_text(encoding="utf-8")
+        for t in readable.tests_for(page, root)
+    }
+    w = Web.of(page, text)
+    rows = [s.to_row() for s in kinds(w, Path(name(root)), tests)]
+    findings = astral(page.path, text)
+    tsv = path.with_suffix(".decisions.tsv")
+    if tsv.is_file():
+        led, bad = ledger(tsv.read_text(encoding="utf-8"), name(tsv))
+        rows += led
+        findings += bad
+    car = path.with_suffix(".facts.json")
+    if car.is_file():
+        here = Here(
+            repo,
+            page.path,
+            text,
+            stream(w),
+            [
+                (cast("int", r["start"]), cast("int", r["end"]))
+                for r in rows
+                if r["kind"] == "chunk"
+            ],
+            frozenset(cast("str", r["id"]) for r in rows),
+        )
+        hand, bad = here.hand(car.read_text(encoding="utf-8"), name(car))
+        rows += hand
+        findings += bad
+    return rows, findings
+
+
+def ground(
+    rows: list[Row], where: str, held: Callable[[str, str], str | None]
+) -> list[web.Finding]:
+    """Each valid row with a commit whose text was not at its place.
+
+    ``held(commit, item)`` is the item's text at the commit, or None
+    when the commit does not hold it; the shell asks git.
+    """
+    out: list[web.Finding] = []
+    for n, row in enumerate(rows, 1):
+        commit = row.get("commit")
+        if not isinstance(commit, str) or "item" not in row:
+            continue
+        item = cast("str", row["item"])
+        start, end = cast("int", row["start"]), cast("int", row["end"])
+        then = held(commit, item)
+        if then is None:
+            message = f"{commit} holds no {item}"
+        elif then[start:end] != row["text"]:
+            message = f"text is not at [{start}, {end}) of {item}@{commit}"
+        else:
+            continue
+        out.append(web.Finding(where, n, "lit-facts-ground", message))
+    return out

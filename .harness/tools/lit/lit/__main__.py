@@ -3,9 +3,18 @@
     lit tangle   [PAGE ...]      write each file a page names, read-only
     lit check    [PAGE ...]      the web's rules, and drift: a file
                                  that differs from its page fails at
-                                 the page's line
+                                 the page's line; a page's hand rows
+                                 (<page stem>.facts.json) are valid
     lit lint     [PAGE ...]      prose and code agree; examples pass
     lit weave OUT [PAGE ...]     each page as OUT/<page>.html
+    lit facts --out DIR [PAGE ...]
+                                 each page's fact layer as
+                                 DIR/<page stem>.json: its generated
+                                 spans, its ledger's rows and its hand
+                                 rows, located
+    lit anchor --verify [PAGE ...]
+                                 each hand row with a commit has its
+                                 text at its place there (asks git)
     lit readable PAGE [--tests F ...] [--model M] [--threshold T]
                  [--no-examples] [--command CMD] [--show]
                                  a model answers the tests' facts from
@@ -21,20 +30,25 @@ clean; 1: a finding, or a score below the threshold; 2: usage.
 from __future__ import annotations
 
 import argparse
+import json
 import shlex
 import subprocess
 import sys
 import time
 from pathlib import Path
 
-from lit import lint, readable, run, web
+from lit import facts, lint, readable, run, web
+
+
+def paths(root: Path, named: list[str]) -> list[Path]:
+    """The pages named, or all pages under the root."""
+    return [Path(p) for p in named] or web.discover(root)
 
 
 def pages(root: Path, named: list[str]) -> list[tuple[web.Page, str]]:
     """The pages named, or all pages under the root, with their text."""
-    paths = [Path(p) for p in named] or web.discover(root)
     out: list[tuple[web.Page, str]] = []
-    for p in paths:
+    for p in paths(root, named):
         text = p.read_text(encoding="utf-8")
         shown = p.resolve().relative_to(root.resolve()).as_posix()
         out.append((web.read(shown, text), text))
@@ -126,12 +140,68 @@ def cmd_tangle(args: argparse.Namespace) -> int:
 
 
 def cmd_check(args: argparse.Namespace) -> int:
-    """The web's findings, and each file's drift."""
+    """The web's findings, each file's drift, and the hand rows'."""
     found = pages(args.root, args.pages)
     webs, findings = tangled(found)
     for _, files in webs:
         findings += [d for t in files if (d := drift(t, args.root))]
+    for path, (page, text) in zip(
+        paths(args.root, args.pages), found, strict=True
+    ):
+        if path.with_suffix(".facts.json").is_file():
+            findings += facts.generate(path, args.root)[1]
+        else:
+            findings += facts.astral(page.path, text)
     return report(findings, "check", len(found))
+
+
+def cmd_facts(args: argparse.Namespace) -> int:
+    """Write each page's fact layer; its findings."""
+    named = paths(args.root, args.pages)
+    args.out.mkdir(parents=True, exist_ok=True)
+    findings: list[web.Finding] = []
+    count = 0
+    started = time.perf_counter()
+    for path in named:
+        rows, bad = facts.generate(path, args.root)
+        findings += bad
+        count += len(rows)
+        text = json.dumps(rows, indent=1, ensure_ascii=False) + "\n"
+        out = args.out / (path.stem + ".json")
+        out.write_text(text, encoding="utf-8")
+    ms = (time.perf_counter() - started) * 1000
+    print(f"lit facts: {count} row(s) in {args.out}, {ms:.0f} ms")
+    return report(findings, "facts", len(named))
+
+
+def show(repo: Path, commit: str, item: str) -> str | None:
+    """The item's text at the commit, or None when git has none."""
+    done = subprocess.run(
+        ["git", "-C", str(repo), "show", f"{commit}:{item}"],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        check=False,
+    )
+    return done.stdout if done.returncode == 0 else None
+
+
+def cmd_anchor(args: argparse.Namespace) -> int:
+    """Each valid hand row with a commit, against git."""
+    named = paths(args.root, args.pages)
+    repo = facts.top(args.root)
+    findings: list[web.Finding] = []
+    for path in named:
+        car = path.with_suffix(".facts.json")
+        if not car.is_file():
+            continue
+        bad = facts.generate(path, args.root)[1]
+        rows = [] if bad else facts.read_rows(car.read_text("utf-8"))
+        where = car.resolve().relative_to(repo).as_posix()
+        findings += bad or facts.ground(
+            rows, where, lambda c, i: show(repo, c, i)
+        )
+    return report(findings, "anchor", len(named))
 
 
 def cmd_lint(args: argparse.Namespace) -> int:
@@ -244,6 +314,14 @@ def parser() -> argparse.ArgumentParser:
     p.add_argument("out", type=Path)
     p.add_argument("pages", nargs="*")
     p.set_defaults(fn=cmd_weave)
+    p = sub.add_parser("facts")
+    p.add_argument("--out", type=Path, required=True)
+    p.add_argument("pages", nargs="*")
+    p.set_defaults(fn=cmd_facts)
+    p = sub.add_parser("anchor")
+    p.add_argument("--verify", action="store_true", required=True)
+    p.add_argument("pages", nargs="*")
+    p.set_defaults(fn=cmd_anchor)
     p = sub.add_parser("readable")
     p.add_argument("page")
     p.add_argument("--tests", nargs="*", default=[])

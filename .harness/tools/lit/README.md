@@ -12,11 +12,13 @@ reads noweb chunks written in plain Markdown. It replaces the Entangled prototyp
 index is [index.md](index.md).
 
     lit tangle   [PAGE ...]      write each file a page names, read-only
-    lit check    [PAGE ...]      the web's rules, and drift (make check)
+    lit check    [PAGE ...]      the web's rules, drift, and the hand rows (make check)
     lit lint     [PAGE ...]      prose and code agree; examples pass (make check)
     lit weave OUT [PAGE ...]     each page as one HTML page (make lit-weave)
     lit readable PAGE            a model answers the tests from the prose (make lit-readable)
     lit run -- CMD ...           run CMD; its output names page lines, not file lines
+    lit facts --out DIR [PAGE ...]  each page's spans and hand rows as DIR/<stem>.json
+    lit anchor --verify [PAGE ...]  each hand row's text is at its place in its commit (git)
 
 Every command takes `--root DIR`. File chunks are written relative to it, and without PAGE
 every page under it is read. The walker's root is `01-bootstrap/`, so run lit from there:
@@ -119,6 +121,8 @@ and 0.60 and 0.61 with the examples stripped.
 - [lit/lint.py](lit/lint.py): the three lint rules.
 - [lit/readable.py](lit/readable.py): facts, prompt and scoring.
 - [lit/run.py](lit/run.py): tool output rewritten to page lines.
+- [lit/facts.py](lit/facts.py): a page as spans; its hand rows (`<stem>.facts.json`)
+  validated and located, its ledger (`<stem>.decisions.tsv`) read.
 - [lit/weave.py](lit/weave.py): the HTML. It is the only module that needs markdown-it-py.
 - [lit/__main__.py](lit/__main__.py): the command line.
 
