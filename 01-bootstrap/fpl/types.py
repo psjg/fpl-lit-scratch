@@ -68,23 +68,100 @@ class Verdict(IntEnum):
 class Kind(Enum):
     """A sort of value that elaboration tracks.
 
+    The literals of the integers partition into ``NAT1`` (1 2 …),
+    ``ZERO`` (0) and ``NEG1`` (-1 -2 …). Above them sit the covers
+    ``NAT0`` (``NAT1`` and ``ZERO``) and ``NEG0`` (``NEG1`` and
+    ``ZERO``), then ``INT``, then ``NUMBER``, which also holds the
+    decimals (:data:`RISES`). A sort rises one way, never falls: a word
+    takes any sort that rises to the one it asks (:func:`taken`). A
+    literal gets the smallest sort that holds it (:func:`sort`). ``RAT``
+    is reserved for the rationals: no literal and no arrow has it yet
+    (DI-0070).
+
     ``VALUE`` stands for a value of no tracked sort: a list, a
     quotation, a dict, or what a control word leaves.
     """
 
-    #: A number, an int or a decimal.
-    NUMBER = "number"
+    #: A positive integer, the literals ``1 2 3 …``.
+    NAT1 = "Nat1"
+    #: Zero, the literal ``0`` alone.
+    ZERO = "Zero"
+    #: A negative integer, the literals ``-1 -2 …``.
+    NEG1 = "Neg1"
+    #: A natural number with zero: ``NAT1`` or ``ZERO``.
+    NAT0 = "Nat0"
+    #: A non-positive integer: ``NEG1`` or ``ZERO``.
+    NEG0 = "Neg0"
+    #: An integer: ``NAT0`` or ``NEG0``; no literal of its own.
+    INT = "Int"
+    #: A rational; reserved, no literal yet.
+    RAT = "Rat"
+    #: A number: an integer or a decimal.
+    NUMBER = "Number"
     #: A text.
-    TEXT = "text"
+    TEXT = "Text"
     #: A symbol.
-    SYMBOL = "symbol"
+    SYMBOL = "Symbol"
     #: A value of no tracked sort.
-    VALUE = "value"
+    VALUE = "Value"
 
 
 #: What elaboration knows of a value: a kind, or an input not yet
 #: resolved.
 type Sort = Kind | Input
+
+
+#: The sorts each number sort rises to, one step up the lattice.
+RISES: dict[Kind, tuple[Kind, ...]] = {
+    Kind.NAT1: (Kind.NAT0,),
+    Kind.NEG1: (Kind.NEG0,),
+    Kind.ZERO: (Kind.NAT0, Kind.NEG0),
+    Kind.NAT0: (Kind.INT,),
+    Kind.NEG0: (Kind.INT,),
+    Kind.INT: (Kind.NUMBER,),
+}
+
+
+def rises(have: Kind, need: Kind) -> bool:
+    """Return whether a value of sort *have* is taken where *need* is.
+
+    A sort is taken where itself is asked, and where any sort it rises
+    to is; never the other way.
+
+    Examples:
+        >>> rises(Kind.NAT1, Kind.NUMBER), rises(Kind.NUMBER, Kind.NAT1)
+        (True, False)
+        >>> rises(Kind.ZERO, Kind.NEG0), rises(Kind.NAT1, Kind.ZERO)
+        (True, False)
+    """
+    return have is need or any(
+        rises(above, need) for above in RISES.get(have, ())
+    )
+
+
+def joined(sorts: set[Sort]) -> Sort:
+    """Return the least sort every one of *sorts* rises to.
+
+    Values of one sort have it. Values of several number sorts have the
+    lowest sort of the lattice above them all; any other mix is of no
+    known sort.
+
+    Examples:
+        >>> joined({Kind.ZERO, Kind.NAT1}) is Kind.NAT0
+        True
+        >>> joined({Kind.NAT1, Kind.NEG1}) is Kind.INT
+        True
+        >>> joined({Kind.NAT0, Kind.NEG0}) is Kind.INT
+        True
+        >>> joined({Kind.NAT1, Kind.TEXT}) is Kind.VALUE
+        True
+    """
+    if len(sorts) < 2:
+        return next(iter(sorts), Kind.VALUE)
+    for above in Kind:
+        if all(isinstance(s, Kind) and rises(s, above) for s in sorts):
+            return above
+    return Kind.VALUE
 
 
 @dataclass(frozen=True)
@@ -179,7 +256,7 @@ ARROWS: dict[str, Arrow] = {
 QUERIES = ("history", "doc", "effect")
 #: The kind each builtin type word tests for.
 TESTED = {
-    "Int": Kind.NUMBER,
+    "Int": Kind.INT,
     "Decimal": Kind.NUMBER,
     "Text": Kind.TEXT,
     "Symbol": Kind.SYMBOL,
@@ -457,7 +534,7 @@ def shown(arrow: Arrow) -> str:
 
     Examples:
         >>> shown(Arrow((Input(0), Kind.NUMBER), (Input(0),)))
-        't0 number -- t0'
+        't0 Number -- t0'
     """
     names = [
         f"t{s.index}" if isinstance(s, Input) else s.value
@@ -471,7 +548,7 @@ def reported(goal: Goal) -> str:
 
     Examples:
         >>> reported(Goal(Span(3, 4), Arrow((Kind.NUMBER,), ())))
-        'GOAL 3:4 ? : number --'
+        'GOAL 3:4 ? : Number --'
     """
     return f"GOAL {goal.span.line}:{goal.span.col} ? : {shown(goal.arrow)}"
 
@@ -568,7 +645,8 @@ def agreed(ends: list[Typing]) -> tuple[Sort, ...]:
     """Return the sorts the rows leave.
 
     Inputs are resolved by what every row found. Each position keeps the
-    sort where the rows agree and is ``Kind.VALUE`` elsewhere. A row
+    sort the rows agree on, the least every row's rises to
+    (:func:`joined`), and is ``Kind.VALUE`` elsewhere. A row
     that refuses leaves nothing and does not count.
 
     Raises:
@@ -577,10 +655,7 @@ def agreed(ends: list[Typing]) -> tuple[Sort, ...]:
     stacks = {resolved(end.stack, ends[-1]) for end in ends if end.reached}
     if len({len(stack) for stack in stacks}) != 1:
         raise UntypedError
-    columns = map(set, zip(*stacks, strict=True))
-    return tuple(
-        column.pop() if len(column) == 1 else Kind.VALUE for column in columns
-    )
+    return tuple(map(joined, map(set, zip(*stacks, strict=True))))
 
 
 def bindings(patterns: tuple[Pattern, ...]) -> tuple[str, ...]:
@@ -709,36 +784,44 @@ def tested(have: Sort, test: str, arrows: Mapping[str, Arrow]) -> Verdict:
 
     Never ``Verdict.YES``: the test word runs on the value only at run
     time, so a guarded row is never a sure fit and pruning never stops
-    at it. A builtin type word surely does not on a known sort other
-    than its own. On its own sort, on an input or on a value of no known
-    sort it may, as any other test may, a type word the program
+    at it. A builtin type word surely does not on a known sort that
+    neither rises to its own nor is risen to by it (a ``Number`` may be
+    an ``Int``). On a related sort, on an input or on a value of no
+    known sort it may, as any other test may, a type word the program
     redefines included.
     """
     want = TESTED.get(test)
     if want is None or arrows.get(test) is not ARROWS[test]:
         return Verdict.MAYBE
-    if isinstance(have, Input) or have in (Kind.VALUE, want):
+    if isinstance(have, Input) or have is Kind.VALUE:
         return Verdict.MAYBE
-    return Verdict.NO
+    related = rises(have, want) or rises(want, have)
+    return Verdict.MAYBE if related else Verdict.NO
 
 
 def taken(arrow: Arrow, sorts: tuple[Sort, ...]) -> bool:
     """Return whether the arrow takes values of the sorts.
 
-    A general input takes any sort. A sort taken takes itself or
-    ``Kind.VALUE``.
+    A general input takes any sort. A sort taken takes ``Kind.VALUE``
+    and any sort that rises to it (:func:`rises`).
 
     Examples:
-        >>> taken(NUMBERS, (Kind.NUMBER, Kind.VALUE))
+        >>> taken(NUMBERS, (Kind.NAT1, Kind.VALUE))
         True
+        >>> taken(Arrow((Kind.NAT0,), ()), (Kind.INT,))
+        False
         >>> taken(NUMBERS, (Kind.TEXT, Kind.NUMBER))
         False
     """
     pairs = zip(arrow.ins, sorts, strict=True)
-    return all(
-        isinstance(need, Input) or have in (need, Kind.VALUE)
-        for need, have in pairs
-    )
+    return all(fits(need, have) for need, have in pairs)
+
+
+def fits(need: Sort, have: Sort) -> bool:
+    """Return whether a value of sort *have* meets the input *need*."""
+    if isinstance(need, Input) or have is Kind.VALUE:
+        return True
+    return isinstance(have, Kind) and rises(have, need)
 
 
 def applied(typing: Typing, arrow: Arrow, span: Span) -> Typing:
@@ -779,8 +862,8 @@ def met(
     """Meet one input of an arrow with the sort of a value.
 
     A general input takes the value's sort, recorded in *local*. A
-    number wants a number: an input of the body met by one is found to
-    be one, recorded in *found*.
+    number wants a number or a sort that rises to one: an input of the
+    body met by one is found to be one, recorded in *found*.
 
     Args:
         need: The sort the arrow takes.
@@ -790,8 +873,8 @@ def met(
         span: Where the call is.
 
     Raises:
-        FplError: *have* is a known sort other than *need* and
-            ``Kind.VALUE``.
+        FplError: *have* is a known sort that is not ``Kind.VALUE`` and
+            does not rise to *need*.
 
     Examples:
         >>> met(Kind.NUMBER, Kind.TEXT, {}, {}, Span(3, 4))
@@ -804,34 +887,54 @@ def met(
             local[need.index] = have
         case _ if isinstance(have, Input):
             found[have.index] = need
-        case _ if have not in (need, Kind.VALUE):
+        case _ if not fits(need, have):
             raise FplError(span, "arithmetic on a non-number")
         case _:
             pass
 
 
+def integral(value: int) -> Kind:
+    """Return the smallest sort that holds an integer.
+
+    Examples:
+        >>> integral(2) is Kind.NAT1, integral(0) is Kind.ZERO
+        (True, True)
+        >>> integral(-1) is Kind.NEG1
+        True
+    """
+    if value > 0:
+        return Kind.NAT1
+    return Kind.ZERO if value == 0 else Kind.NEG1
+
+
 def sort(value: Value) -> Sort:
     """Return the sort of a value.
 
-    A strand has its items' sort when they share one.
+    A literal gets the smallest sort that holds it (:func:`integral`).
+    A strand has the least sort all its items rise to (:func:`joined`).
 
     Examples:
+        >>> sort(2) is Kind.NAT1, sort(0) is Kind.ZERO
+        (True, True)
+        >>> sort(-2) is Kind.NEG1
+        True
         >>> sort(Decimal("1.5")) is Kind.NUMBER
         True
-        >>> sort(Strand((1, 2))) is Kind.NUMBER
+        >>> sort(Strand((0, 2))) is Kind.NAT0
         True
         >>> sort(Strand((1, "a"))) is Kind.VALUE
         True
     """
     match value:
-        case int() | Decimal():
+        case int():
+            return integral(value)
+        case Decimal():
             return Kind.NUMBER
         case str():
             return Kind.TEXT
         case Symbol():
             return Kind.SYMBOL
         case Strand():
-            sorts = set(map(sort, value.items))
-            return sorts.pop() if len(sorts) == 1 else Kind.VALUE
+            return joined(set(map(sort, value.items)))
         case _:
             return Kind.VALUE

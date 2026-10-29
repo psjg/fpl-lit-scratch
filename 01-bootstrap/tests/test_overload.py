@@ -51,6 +51,9 @@ from fpl.types import (
     sort,
     verdict,
 )
+from fpl.types import (
+    fits as fitting,
+)
 
 TYPES = ("Int", "Decimal", "Text", "Symbol")
 ATOMS = [
@@ -1306,15 +1309,15 @@ WITNESS = (
 )
 ONE_SYMBOL = ONE + "f : x: one -- y\n\t1 +\nf : x: Symbol -- y\n\tdrop #s\n"
 RESOLVED = [
-    (FG, "“a” f ?", "symbol --"),
-    (FG, "5 f ?", "number --"),
-    (FG, "5 g ?", "value --"),
-    (TEXT_FIRST, "“a” f ?", "value --"),
-    (TEXT_FIRST, "5 f ?", "number --"),
-    (WITNESS, "1 | #s | #s f ?", "value --"),
-    (LONE_INT + G, "5 g ?", "number --"),
-    (ONE_SYMBOL, "1 f ?", "number --"),
-    (ONE_SYMBOL, "“a” f ?", "value --"),
+    (FG, "“a” f ?", "Symbol --"),
+    (FG, "5 f ?", "Number --"),
+    (FG, "5 g ?", "Value --"),
+    (TEXT_FIRST, "“a” f ?", "Value --"),
+    (TEXT_FIRST, "5 f ?", "Nat1 --"),
+    (WITNESS, "1 | #s | #s f ?", "Value --"),
+    (LONE_INT + G, "5 g ?", "Number --"),
+    (ONE_SYMBOL, "1 f ?", "Number --"),
+    (ONE_SYMBOL, "“a” f ?", "Value --"),
 ]
 
 
@@ -1382,7 +1385,7 @@ def test_a_redefined_type_word_gets_no_static_verdict(redefined: bool) -> None:
         text
         + "f : x: Int -- y\n\tdrop #i\nf : x: Text -- y\n\tdrop “t”\n5 f ?\n"
     )
-    assert goal(source) == ("value --" if redefined else "symbol --")
+    assert goal(source) == ("Value --" if redefined else "Symbol --")
 
 
 CELLS = (
@@ -1424,7 +1427,7 @@ def test_a_literal_or_a_constructor_only_may_fit(
     assert verdict(Row((cell,), ()), (have,), {}) is Verdict.MAYBE
 
 
-SORTED = {"1": Kind.NUMBER, "“a”": Kind.TEXT, "#s": Kind.SYMBOL}
+SORTED = {"1": Kind.NAT1, "“a”": Kind.TEXT, "#s": Kind.SYMBOL}
 LEAVES = (Kind.NUMBER, Kind.TEXT, Kind.SYMBOL)
 AGREEING = st.integers(1, 2).flatmap(
     lambda n: st.tuples(
@@ -1457,7 +1460,8 @@ def test_static_and_dynamic_dispatch_agree(
     [law: static-dynamic] whenever types resolves a call to a clause,
     the run takes that clause, or fails with `no row matches` only when
     that clause's row was a maybe; it never takes another clause and
-    never refuses; a wrapper's call on its own input is never refused
+    never refuses, and the value it leaves is of the clause's sort or
+    one rising to it; a wrapper's call on its own input is never refused
     statically.
     """
     keys, values = choice
@@ -1501,7 +1505,7 @@ def test_static_and_dynamic_dispatch_agree(
         case FplError():
             assert result.span.line == 4 + 2 * ordinal
         case _:
-            assert sort(result) is LEAVES[ordinal - 1]
+            assert fitting(LEAVES[ordinal - 1], sort(result))
 
 
 def clause_arrow(row: Row, arrows: dict[str, Arrow]) -> Arrow | None:

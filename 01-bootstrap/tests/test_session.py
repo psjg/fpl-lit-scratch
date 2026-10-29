@@ -327,7 +327,7 @@ def test_the_first_input_is_its_own_file() -> None:
 
 def test_goals_are_noted_before_the_run_fails() -> None:
     log, outcomes = entered(["g : x -- y\n\t?\n", "1 g\n", "1 [\n"])
-    assert outcomes[0].notes == ("GOAL 2:2 ? : t0 -- value",)
+    assert outcomes[0].notes == ("GOAL 2:2 ? : t0 -- Value",)
     assert outcomes[1].out == "ERROR: @1 2:2 unfilled goal\n"
     assert outcomes[1].notes == ("\t?\n ^",)
     assert outcomes[2].out == "ERROR: 1:3 [ never closed\n"

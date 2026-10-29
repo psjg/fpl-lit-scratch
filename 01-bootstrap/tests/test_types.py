@@ -6,6 +6,7 @@ infers, against eval's step.
 
 import contextlib
 from dataclasses import replace
+from decimal import Decimal
 
 import pytest
 from hypothesis import given
@@ -22,6 +23,7 @@ from fpl.ast_core import (
     Row,
     Run,
     Symbol,
+    Value,
     Wild,
 )
 from fpl.driver import run
@@ -29,16 +31,23 @@ from fpl.errors import FplError, Span
 from fpl.eval import State, final, running, step
 from fpl.types import (
     ARROWS,
+    NUMBERS,
     Arrow,
     Input,
     Kind,
     Sort,
     Typing,
     UntypedError,
+    Verdict,
     after,
     elaborate,
+    met,
+    rises,
+    shown,
     sort,
+    taken,
 )
+from fpl.types import tested as judged
 
 HERE = Span(1, 1)
 AT = Span(2, 3)
@@ -149,12 +158,12 @@ def goals(source: str) -> list[str]:
 @pytest.mark.parametrize(
     ("source", "goal"),
     [
-        ("m : xs -- x\n\tdup drop ?\n", "GOAL 2:11 ? : t0 -- value"),
-        ("f : x y -- z\n\t? +\n", "GOAL 2:2 ? : t0 t1 -- number number"),
-        ("f : x y -- z\n\t→a ? a +\n", "GOAL 2:5 ? : t0 -- number"),
-        ("f : x -- y\n\tmatch\n\t\t0\t1\n\t\t_\t?\n", "GOAL 4:5 ? : -- value"),
-        ("“a” ?\n", "GOAL 1:5 ? : text --"),
-        ("f : x -- y\n\t→a ?\n", "GOAL 2:5 ? : -- value"),
+        ("m : xs -- x\n\tdup drop ?\n", "GOAL 2:11 ? : t0 -- Value"),
+        ("f : x y -- z\n\t? +\n", "GOAL 2:2 ? : t0 t1 -- Number Number"),
+        ("f : x y -- z\n\t→a ? a +\n", "GOAL 2:5 ? : t0 -- Number"),
+        ("f : x -- y\n\tmatch\n\t\t0\t1\n\t\t_\t?\n", "GOAL 4:5 ? : -- Value"),
+        ("“a” ?\n", "GOAL 1:5 ? : Text --"),
+        ("f : x -- y\n\t→a ?\n", "GOAL 2:5 ? : -- Value"),
     ],
 )
 def test_a_goal_is_reported_with_the_effect_that_fills_it(
@@ -175,29 +184,29 @@ def test_a_goal_before_a_binder_leaves_what_its_scope_takes() -> None:
     """
     source = "f : x -- y\n\t? →a ?\n"
     assert goals(source) == [
-        "GOAL 2:2 ? : t0 -- value",
-        "GOAL 2:7 ? : -- value",
+        "GOAL 2:2 ? : t0 -- Value",
+        "GOAL 2:7 ? : -- Value",
     ]
 
 
 @pytest.mark.parametrize(
     ("source", "goal"),
     [
-        ("1 ?\n", "GOAL 1:3 ? : number --"),
-        ("1 2 3 ?\n", "GOAL 1:7 ? : number --"),
-        ("1 “a” 2 ?\n", "GOAL 1:9 ? : value --"),
-        ("{ a 1 } ?\n", "GOAL 1:9 ? : value --"),
+        ("1 ?\n", "GOAL 1:3 ? : Nat1 --"),
+        ("1 2 3 ?\n", "GOAL 1:7 ? : Nat1 --"),
+        ("1 “a” 2 ?\n", "GOAL 1:9 ? : Value --"),
+        ("{ a 1 } ?\n", "GOAL 1:9 ? : Value --"),
         (
             "f : x -- y\n\tmatch\n\t\t0\t“a”\n\t\t_\t“b”\n0 f ?\n",
-            "GOAL 5:5 ? : text --",
+            "GOAL 5:5 ? : Text --",
         ),
         (
             "f : x -- y\n\tmatch\n\t\t0\t“a”\n\t\t_\t1\n0 f ?\n",
-            "GOAL 5:5 ? : value --",
+            "GOAL 5:5 ? : Value --",
         ),
     ],
     ids=[
-        "number",
+        "natural",
         "strand",
         "mixed-strand",
         "dict",
@@ -266,7 +275,7 @@ def test_a_hole_that_is_not_nothing_is_refused_at_its_span() -> None:
     """
     with pytest.raises(FplError) as caught:
         run("f : x -- y z\n\t_\n")
-    assert str(caught.value) == "ERROR: 2:2 cannot infer _ : t0 -- value value"
+    assert str(caught.value) == "ERROR: 2:2 cannot infer _ : t0 -- Value Value"
 
 
 def test_match_rows_leaving_different_counts_keep_the_effect_line() -> None:
@@ -417,7 +426,7 @@ def states(
     return arrows, State((), line.code, {d.name: d.code for d in defines})
 
 
-def typed(state: State, arrows: dict[str, Arrow]) -> tuple[object, ...]:
+def typed(state: State, arrows: dict[str, Arrow]) -> tuple[Sort, ...]:
     """
     The sorts the state's code leaves on its stack.
     """
@@ -448,13 +457,25 @@ def test_a_step_keeps_the_sorts_a_state_leaves(
     program: tuple[tuple[Define, ...], Run],
 ) -> None:
     """
-    The sorts a state's code leaves are those of the state one step on.
+    The sorts a state's code leaves are those of the state one step on,
+    or sorts that rise to them: a step may find a literal's own sort
+    where the arrow said ``Number``.
     """
     arrows, state = states(*program)
     expected = typed(state, arrows)
     while running(state):
         state = step(state)
-        assert typed(state, arrows) == expected
+        found = typed(state, arrows)
+        assert len(found) == len(expected)
+        assert all(
+            want == have
+            or (
+                isinstance(want, Kind)
+                and isinstance(have, Kind)
+                and rises(have, want)
+            )
+            for want, have in zip(expected, found, strict=True)
+        )
 
 
 @given(programs())
@@ -481,3 +502,136 @@ def test_a_symbol_is_no_number() -> None:
     with pytest.raises(FplError) as caught:
         run("f : -- x\n\t#a 1 +\n")
     assert str(caught.value) == "ERROR: 2:7 arithmetic on a non-number"
+
+
+@pytest.mark.parametrize(
+    ("value", "kind"),
+    [
+        (0, Kind.ZERO),
+        (2, Kind.NAT1),
+        (-3, Kind.NEG1),
+        (Decimal("1.5"), Kind.NUMBER),
+    ],
+    ids=["zero", "natural", "negative", "decimal"],
+)
+def test_a_literal_gets_the_smallest_sort_that_holds_it(
+    value: Value, kind: Kind
+) -> None:
+    """
+    1 2 3 … are Nat1, 0 alone is Zero, -1 -2 … Neg1, a decimal Number.
+    No literal is a Nat0, Neg0, Int or Rat.
+    """
+    assert sort(value) is kind
+    covers = (Kind.NAT0, Kind.NEG0, Kind.INT, Kind.RAT)
+    assert sort(value) not in covers
+
+
+RISING = [
+    (Kind.NAT0, Kind.NAT1, True),
+    (Kind.NAT0, Kind.ZERO, True),
+    (Kind.NEG0, Kind.ZERO, True),
+    (Kind.NEG0, Kind.NEG1, True),
+    (Kind.INT, Kind.NAT1, True),
+    (Kind.INT, Kind.NEG1, True),
+    (Kind.INT, Kind.NEG0, True),
+    (Kind.NUMBER, Kind.NAT0, True),
+    (Kind.NUMBER, Kind.INT, True),
+    (Kind.NUMBER, Kind.ZERO, True),
+    (Kind.NAT1, Kind.NAT0, False),
+    (Kind.NAT1, Kind.ZERO, False),
+    (Kind.ZERO, Kind.NAT1, False),
+    (Kind.NAT0, Kind.INT, False),
+    (Kind.NAT0, Kind.NEG0, False),
+    (Kind.NAT0, Kind.NEG1, False),
+    (Kind.NEG0, Kind.NAT0, False),
+    (Kind.INT, Kind.NUMBER, False),
+    (Kind.NUMBER, Kind.TEXT, False),
+    (Kind.RAT, Kind.INT, False),
+]
+
+
+@pytest.mark.parametrize(
+    ("need", "have", "fits"),
+    RISING,
+    ids=[f"{have.value}-{need.value}" for need, have, _ in RISING],
+)
+def test_a_sort_rises_one_way(need: Kind, have: Kind, fits: bool) -> None:
+    """
+    Nat1 rises to Nat0, Zero to Nat0 and Neg0, Neg1 to Neg0, those to
+    Int, Int to Number, never the other way: a word that takes an Int
+    takes a Nat1, a word that takes a Nat0 does not take an Int.
+    `taken` and `met` agree.
+    """
+    assert taken(Arrow((need,), ()), (have,)) is fits
+    context = contextlib.nullcontext() if fits else pytest.raises(FplError)
+    with context:
+        met(need, have, {}, {}, HERE)
+
+
+def test_arithmetic_on_naturals_leaves_a_number() -> None:
+    """
+    The arrow of `+` leaves a Number whatever it takes; whether a sum of
+    naturals is a Nat1 is still open (DI-0070).
+    """
+    assert taken(NUMBERS, (Kind.NAT1, Kind.NEG1))
+    assert goals("1 | 2 + ?\n") == ["GOAL 1:9 ? : Number --"]
+
+
+def test_rat_is_a_name_only() -> None:
+    """
+    Rat is reserved for the rationals: a sort `shown` prints, with no
+    literal and no arrow that takes or leaves it.
+    """
+    assert Kind.RAT.value == "Rat"
+    assert shown(Arrow((Kind.RAT,), (Kind.NEG1,))) == "Rat -- Neg1"
+    assert all(Kind.RAT not in (*a.ins, *a.outs) for a in ARROWS.values())
+
+
+@pytest.mark.parametrize(
+    ("have", "verdict"),
+    [
+        (Kind.NAT1, Verdict.MAYBE),
+        (Kind.ZERO, Verdict.MAYBE),
+        (Kind.NEG1, Verdict.MAYBE),
+        (Kind.INT, Verdict.MAYBE),
+        (Kind.NUMBER, Verdict.MAYBE),
+        (Kind.TEXT, Verdict.NO),
+    ],
+    ids=["nat1", "zero", "neg1", "int", "number", "text"],
+)
+def test_a_type_word_may_fit_a_sort_that_rises_to_its_own(
+    have: Kind, verdict: Verdict
+) -> None:
+    """
+    Int tests for an integer, so it may leave 1 on a Nat1, a Zero or a
+    Neg1 as on an Int, and on a Number, which may be one; on a Text it
+    surely does not.
+    """
+    assert judged(have, "Int", ARROWS) is verdict
+
+
+@pytest.mark.parametrize(
+    ("source", "goal"),
+    [
+        ("0 2 ?\n", "GOAL 1:5 ? : Nat0 --"),
+        ("-1 2 ?\n", "GOAL 1:6 ? : Int --"),
+        ("0 -1 ?\n", "GOAL 1:6 ? : Neg0 --"),
+        (
+            "f : x -- y\n\tmatch\n\t\t0\t1\n\t\t_\t0\n0 f ?\n",
+            "GOAL 5:5 ? : Nat0 --",
+        ),
+        (
+            "f : x -- y\n\tmatch\n\t\t0\t0\n\t\t_\t-1\n0 f ?\n",
+            "GOAL 5:5 ? : Neg0 --",
+        ),
+    ],
+    ids=["strand-nat0", "strand-int", "strand-neg0", "rows-nat0", "rows-neg0"],
+)
+def test_sorts_join_at_the_least_sort_above_them(
+    source: str, goal: str
+) -> None:
+    """
+    A strand of 0 and 2 is Nat0, of -1 and 2 Int, of 0 and -1 Neg0;
+    rows leaving a Nat1 and a Zero agree on Nat0, not on a Value.
+    """
+    assert goals(source) == [goal]

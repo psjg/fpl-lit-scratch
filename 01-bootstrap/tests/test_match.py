@@ -267,7 +267,7 @@ def test_a_match_is_exhaustive_exactly_when_its_effect_has_no_fail(
         ("{ a 1 }\t1", Span(1, 1), "no evaluator yet"),
         ("( [ 1 ] x )\t1", Span(1, 1), "no evaluator yet"),
         ("( bound ∈ )\t1", Span(1, 1), "no evaluator yet"),
-        ("_\t_", Span(5, 5), "cannot infer _ : -- value"),
+        ("_\t_", Span(5, 5), "cannot infer _ : -- Value"),
         (
             "( bound x )\t1",
             Span(5, 5),
@@ -424,7 +424,7 @@ def test_a_wildcard_row_whose_body_is_a_goal_is_reported() -> None:
     with pytest.raises(FplError) as refused:
         run("f : x -- y\n\tmatch\n\t\t0\t1\n\t\t_\t?\n1 f\n", reported.append)
     assert (reported, str(refused.value)) == (
-        ["GOAL 4:5 ? : -- value"],
+        ["GOAL 4:5 ? : -- Value"],
         "ERROR: 4:5 unfilled goal",
     )
 

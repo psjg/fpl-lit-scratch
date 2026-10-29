@@ -114,7 +114,7 @@ def test_a_goal_goes_to_stderr_before_the_program_runs(
     assert main([str(program)]) == 1
     printed = capsys.readouterr()
     assert printed.out == "ERROR: 2:2 unfilled goal\n"
-    assert printed.err == "GOAL 2:2 ? : t0 -- value\n\t?\n ^\n"
+    assert printed.err == "GOAL 2:2 ? : t0 -- Value\n\t?\n ^\n"
 
 
 @pytest.mark.parametrize("body", ["f", "f f"])

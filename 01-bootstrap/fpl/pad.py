@@ -27,7 +27,7 @@ on the stack in the type slot:
 
     ;;! -( 09:05:03 )-< command 2 >-------------{ head: 1; ms: 1.0 }-
     3 sq
-    |- 9 : number
+    |- 9 : Number
 
 A definition prints nothing, as in the REPL; a type the elaborator
 does not infer is ``...``, as in the REPL. A refusal is the REPL's
@@ -206,7 +206,7 @@ def run(
     Examples:
         >>> pad = run((), 0, "1 | 2 +", context({}), Tty())
         >>> pad[0].turns
-        ('|- 3 : number',)
+        ('|- 3 : Number',)
     """
     if not 0 <= index <= len(cells):
         raise IndexError(index)
@@ -414,7 +414,7 @@ def shaded(cell: Cell, line: int) -> Ghost | None:
     Examples:
         >>> (cell,) = run((), 0, "1 | 2 +", context({}), Tty())
         >>> shaded(cell, 3)
-        Ghost(line=3, kind='ok', text='|- 3 : number')
+        Ghost(line=3, kind='ok', text='|- 3 : Number')
     """
     shown = [t for t in cell.turns if t.startswith((RESULT + " ", "ERROR:"))]
     if not shown:
@@ -468,10 +468,11 @@ def transcript(cells: Sequence[Cell], indent: str = "") -> str:
         >>> from datetime import datetime
         >>> still = Tty(now=lambda: datetime(2026, 1, 1, 9, 5, 3))
         >>> pad = run((), 0, "1 | 2 +", context({}), still)
-        >>> print(transcript(pad))  # doctest: +ELLIPSIS
+        >>> for line in transcript(pad).splitlines():
+        ...     print(line.rstrip())  # doctest: +ELLIPSIS
         ;;! -( 09:05:03 )-< command 1 >-...-{ head: 0 }- ;
         1 | 2 + ;
-        |- 3 : number ;
+        |- 3 : Number ;
     """
     return "".join(
         "".join(
