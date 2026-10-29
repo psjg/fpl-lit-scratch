@@ -11,3 +11,4 @@ math/mean/doc	; pushes the docstring
 math/mean/history	; shadowed definitions
 words/*/effect	; every declared effect, as an array
 print : s -- +io	; sugar: takes ../io lexically, threads it linearly (§4.3 answer)
+|- ! err/unresolved/no-evaluator “no evaluator yet: shape”

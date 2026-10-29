@@ -4,7 +4,8 @@ Hold every executor of the literate tree against every other.
 A composition means one thing however it runs: how it runs is the
 executor's business, not the program's (handoff section 14, ADR-0012).
 So for every example program this script runs each executor the tree
-has and fails on the first byte two of them disagree on:
+has and fails on the first byte two of them disagree on, each given
+the program without its closing fail judgment (`judged`):
 
 (a) seed    `fpl run`, which runs `run_now` with `direct`, prints what
             the seed walker prints and ends in the same status.
@@ -45,6 +46,7 @@ import io
 import os
 import subprocess
 import sys
+import tempfile
 import types
 from collections.abc import Callable, Iterator
 from concurrent.futures import ProcessPoolExecutor
@@ -328,20 +330,50 @@ class Row:
         return not (self.seed or self.shell or self.slices or self.poison)
 
 
+#: How the closing fail judgment of an example starts (DI-0072).
+JUDGMENT = "|- ! "
+
+
+@contextlib.contextmanager
+def judged(example: Path) -> Iterator[Path]:
+    """
+    The program `example` holds, without its closing fail judgment.
+
+    The judgment `|- ! err/<tag> “message”` is the suite's assertion
+    about the program, which only the seed reads (the tangled tree reads
+    no check or judgment): every executor is held to the seed on the program it
+    judges. An example whose last line that is not blank starts so is
+    copied without that line into a directory of its own, removed when
+    the block ends; any other is yielded as it is. Textual, so a
+    judgment line the converter did not write, or one followed by a
+    comment line, is not taken off and the seed check says so.
+    """
+    lines = example.read_text(encoding="utf-8").splitlines(keepends=True)
+    last = max((n for n, s in enumerate(lines) if s.strip()), default=-1)
+    if last < 0 or not lines[last].startswith(JUDGMENT):
+        yield example
+        return
+    with tempfile.TemporaryDirectory() as tmp:
+        program = Path(tmp) / example.name
+        program.write_text("".join(lines[:last]), encoding="utf-8")
+        yield program
+
+
 def prove(example: Path, real: bool) -> Row:
     """
-    Every check on `example`.
+    Every check on `example`, on the program its judgment judges.
     """
-    xs = joints(example.read_text(encoding="utf-8"))
-    count, wrong = slices(xs, run_shell if real else folded)
-    return Row(
-        name=f"{example.parent.parent.name}/{example.name}",
-        seed=seed(example, real),
-        shell=shell(example, real),
-        count=count,
-        slices=wrong,
-        poison=unlexed(xs),
-    )
+    with judged(example) as program:
+        xs = joints(program.read_text(encoding="utf-8"))
+        count, wrong = slices(xs, run_shell if real else folded)
+        return Row(
+            name=f"{example.parent.parent.name}/{example.name}",
+            seed=seed(program, real),
+            shell=shell(program, real),
+            count=count,
+            slices=wrong,
+            poison=unlexed(xs),
+        )
 
 
 def _nested(n: int) -> str:

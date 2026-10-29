@@ -4,3 +4,4 @@ perimeter : ( circle r ) -- n
 perimeter : ( rect w h ) -- n
 	w h + 2 times
 
+|- ! err/unresolved/unknown-word “unknown word: circle”

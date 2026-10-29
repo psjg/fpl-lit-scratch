@@ -4,3 +4,4 @@ nats : n -- stream
 0 nats 5 take	; → 0 1 2 3 4
 total $= trade #size col [+] fold
 [ expensive ] once
+|- ! err/unresolved/no-evaluator “no evaluator yet: curry”

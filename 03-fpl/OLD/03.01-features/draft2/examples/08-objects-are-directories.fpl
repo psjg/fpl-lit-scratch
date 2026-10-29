@@ -9,3 +9,4 @@ take : s n -- xs
 		s unpair →next →v   acc v , →acc   next ! →s
 	acc
 
+|- ! err/unresolved/no-evaluator “no evaluator yet: dict”

@@ -1,5 +1,5 @@
 """
-The shape of an error: one `.expected` line, and a caret that lands on
+The shape of an error: one `ERROR:` line, and a caret that lands on
 the column.
 """
 
@@ -15,7 +15,7 @@ messages = st.text(
 
 
 @given(positions, positions, messages)
-def test_the_error_line_is_what_an_expected_file_holds(
+def test_the_error_line_is_error_position_message(
     line: int, col: int, message: str
 ) -> None:
     error = FplError(Span(line, col), message)

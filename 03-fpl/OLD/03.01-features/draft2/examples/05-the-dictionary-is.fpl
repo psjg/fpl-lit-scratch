@@ -9,3 +9,4 @@ select
 	sym
 	size price wavg
 
+|- ! err/unresolved/no-evaluator “no evaluator yet: select”

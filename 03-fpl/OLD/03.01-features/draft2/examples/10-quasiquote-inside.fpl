@@ -4,3 +4,4 @@ twice : q -- q'	; the code of q, twice: [ $q¨ $q¨ ]
 with-log : q -- q'	; wrap a quotation: the value of q spliced as one item
 	[ #enter log $q ! #leave log ]
 
+|- ! err/unresolved/no-evaluator “no evaluator yet”

@@ -14,3 +14,4 @@ area : shape -- n
 		( rect w h )	w h times
 		_	?	; wildcard row; its body is a goal the elaborator reports (S40)
 
+|- ! err/unresolved/no-evaluator “no evaluator yet: pos”

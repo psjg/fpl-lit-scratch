@@ -19,3 +19,4 @@ trace : code -- code	; a macro: an each over a code array (level 1)
 [ serve ] trace →serve/traced	; [ serve ] consumed by trace: Code, level 1
 [ serve ] !	; [ serve ] consumed by !: a thunk, level 0
 ;; [ serve ] dup ! swap trace	// rejected: one quotation both forced and inspected
+|- ! err/unresolved/no-evaluator “no evaluator yet”

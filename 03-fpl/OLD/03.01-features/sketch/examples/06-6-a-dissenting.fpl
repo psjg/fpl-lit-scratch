@@ -2,3 +2,4 @@
 inet/
 	seam ? ∈ inet -- core	; a goal ascribed the functor type it must fill; elaboration reports the missing kind
 
+|- ! err/unresolved/no-evaluator “no evaluator yet”

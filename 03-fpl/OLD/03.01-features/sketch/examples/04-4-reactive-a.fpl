@@ -10,3 +10,4 @@ main : -- +in/mouse +out/screen
 	pos [ 2 times ] each →scaled	; was: pos [ 2 * ] signal/lift
 	scaled ../screen/out [draw] each
 
+|- ! err/unresolved/no-evaluator “no evaluator yet”

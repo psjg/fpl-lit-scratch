@@ -5,3 +5,4 @@ words { sep “, ” } join
 [join] { end “” } with →join-flat	; with: curry-with-union; later calls still override
 ;   under python, the printer shows the call as   join(words, sep=", ")
 
+|- ! err/unresolved/no-evaluator “no evaluator yet”

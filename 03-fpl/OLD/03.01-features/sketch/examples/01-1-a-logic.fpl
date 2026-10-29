@@ -20,3 +20,4 @@ append : xs ys zs -- +st
 
 [ fresh →q  q [ 1 2 ] [ 3 ] append  q ] logic/space	; → [ [ 1 2 3 ] ]  a saturated frame: quotation literal + word of arity 1; value on the core stack
 
+|- ! err/unresolved/no-evaluator “no evaluator yet”

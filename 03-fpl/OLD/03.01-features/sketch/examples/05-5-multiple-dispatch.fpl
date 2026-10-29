@@ -5,3 +5,4 @@ area : shape -- n
 		#rect	[ shape/w shape/h times ]
 		_	[ sorry ]	; was: ? [ sorry ] — the hole is _; a hole as pattern matches anything; sorry discharges it (P2): a point, not a region
 
+|- ! err/unresolved/unknown-word “unknown word: shape/kind”

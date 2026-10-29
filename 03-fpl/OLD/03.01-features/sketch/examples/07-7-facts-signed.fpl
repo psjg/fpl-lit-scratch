@@ -21,3 +21,4 @@ kb tax rules/saturate	; forward chaining over the union, as over any facts
 kb verify	; read-time: a signature per fact, KEYS decides who counts; nothing is refused at write time
 
 ;; owed, not sketched: a reference tree — #paris here and #paris there are the same symbol, not the same city
+|- ! err/unresolved/no-evaluator “no evaluator yet”

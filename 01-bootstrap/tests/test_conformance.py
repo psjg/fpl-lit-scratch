@@ -1,6 +1,10 @@
 """
-Every maintainer-written example runs to its `.expected` output
-(.agents/CONVENTIONS.md).
+Every maintainer-written example checks itself (DI-0072): a run line
+that prints carries `L |- R`, and a program that fails closes on
+`|- ! err/<tag> “message”` (.agents/CONVENTIONS.md). So an example
+conforms when the walker runs it to the end: a check that does not
+hold, a failure other than the one judged, or a judged failure that
+does not come, each raises an FplError. The template is an example too.
 """
 
 from pathlib import Path
@@ -9,102 +13,15 @@ import pytest
 from corpus import PROGRAMS
 
 from fpl.driver import run
-from fpl.errors import FplError, UnresolvedError
-
-PLACEHOLDER = "ERROR: 1:1 no evaluator yet\n"
-EXAMPLES = [p for p in PROGRAMS if p.parts[-3] != "_template"]
-UNRESOLVED = {
-    "draft1/draft1": "no evaluator yet: newline",
-    "draft2/03-operatives-thunks": "no evaluator yet: ../debug",
-    "draft2/05-the-dictionary-is": "no evaluator yet: select",
-    "draft2/06-constructors-run-backwards": "no evaluator yet: unpair",
-    "draft2/08-objects-are-directories": "no evaluator yet: dict",
-    "draft2/11-laziness": "no evaluator yet: curry",
-    "draft3/paths": "no evaluator yet: shape",
-    "match/01-1-constructors-run": "no evaluator yet: pos",
-    "match/02-2-the-same": "unknown word: circle",
-    "match/03-3-multiple-dispatch": "unknown word: Asteroid",
-    "match/04-4-list-patterns": "no evaluator yet: false",
-    "match/05-5-prolog-s-family": "unknown word: x",
-    "sketch/05-5-multiple-dispatch": "unknown word: shape/kind",
-}
-"""
-The examples whose `.expected` holds the skeleton's blanket refusal for
-a call nothing answers, each with the refusal it gets now, at its word.
-Only these are mapped back to the placeholder, so another example that
-starts failing so, or one of these whose word changes (PLANNED moved),
-fails a test; the owner rewrites the `.expected` files and drops the
-map.
-"""
-SUPERSEDED = {
-    "draft2/01-frames": (
-        "2 3 4\n[ 1 2 3 + ]\n5\n0 1 2\n",
-        "2 3 4\n6\n5\n0 1 2\n",
-    )
-}
-"""
-The examples whose `.expected` holds an output that a decision since
-has changed, each with that old text exactly and the output now. The
-line `1 2 3 +` reduces to 6 where it was the section `[ 1 2 3 + ]`
-(DI-0072).
-Only these are compared with the new output, and only while the fixture
-still holds the old text, so any edit of one of them, the owner's
-rewrite or not, breaks a test and the map goes after it.
-"""
 
 
 def name(program: Path) -> str:
     """
-    The suite and the example, as the tests and UNRESOLVED name it.
+    The suite and the example, as the test ids name it.
     """
     return f"{program.parts[-3]}/{program.stem}"
 
 
-def output(program: Path) -> str:
-    """
-    What `python -m fpl` prints for a program: its output, or its one
-    error line. A call nothing answers is told at its word there, but
-    the maintainer's `.expected` files of the programs in UNRESOLVED
-    still hold the skeleton's blanket refusal, and it stands for them
-    here until they are rewritten (hole unimplemented-words).
-    """
-    try:
-        return run(program.read_text())
-    except FplError as error:
-        mapped = (
-            isinstance(error, UnresolvedError) and name(program) in UNRESOLVED
-        )
-        return PLACEHOLDER if mapped else f"{error}\n"
-
-
-@pytest.mark.parametrize("program", EXAMPLES, ids=[name(p) for p in EXAMPLES])
+@pytest.mark.parametrize("program", PROGRAMS, ids=[name(p) for p in PROGRAMS])
 def test_example(program: Path) -> None:
-    expected = program.with_suffix(".expected").read_text()
-    if name(program) in SUPERSEDED:
-        expected = SUPERSEDED[name(program)][1]
-    assert output(program) == expected
-
-
-@pytest.mark.parametrize("example", sorted(SUPERSEDED))
-def test_the_output_a_decision_changed(example: str) -> None:
-    """
-    Each mapped example's `.expected` is still exactly the old text, so
-    an edit of the fixture breaks this and the map is reviewed.
-    """
-    (program,) = (p for p in EXAMPLES if name(p) == example)
-    old = program.with_suffix(".expected").read_text()
-    assert old == SUPERSEDED[example][0]
-
-
-@pytest.mark.parametrize("example", sorted(UNRESOLVED))
-def test_the_word_a_placeholder_stands_for(example: str) -> None:
-    """
-    Each mapped example still fails at the word recorded, and its
-    `.expected` is the placeholder: a word that moves in or out of
-    PLANNED, or a fixture rewritten, breaks this.
-    """
-    (program,) = (p for p in EXAMPLES if name(p) == example)
-    with pytest.raises(UnresolvedError) as caught:
-        run(program.read_text())
-    assert caught.value.message == UNRESOLVED[example]
-    assert program.with_suffix(".expected").read_text() == PLACEHOLDER
+    run(program.read_text())

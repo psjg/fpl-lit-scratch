@@ -8,3 +8,4 @@ area : shape -- a
 	| [ dup times π times ] [ [times] fold ] agenda
 3 4 rect rect inverse	; → 3 4
 
+|- ! err/unresolved/no-evaluator “no evaluator yet: unpair”

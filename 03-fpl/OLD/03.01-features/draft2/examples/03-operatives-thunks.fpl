@@ -4,3 +4,4 @@ my-if : c t --
 when-debug : q --
 	../debug [ ! ] [ drop ] if
 
+|- ! err/unresolved/no-evaluator “no evaluator yet: ../debug”

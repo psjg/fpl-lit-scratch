@@ -10,3 +10,4 @@ tax/
 
 [ income 60000 ] tax rules/saturate	; → income 60000  bracket high  rate 0.49   (tax mentioned pushes the directory: mention is use)
 
+|- ! err/unresolved/no-evaluator “no evaluator yet”

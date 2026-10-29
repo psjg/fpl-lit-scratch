@@ -14,3 +14,4 @@ puzzle : -- sol +st
 
 [ puzzle ] fd/space	; → [ dict(x:… y:…) ]  ⟨sketch⟩ finite domains + distribute bound the search; whether elaboration can discharge +div from that is open
 
+|- ! err/unresolved/no-evaluator “no evaluator yet”

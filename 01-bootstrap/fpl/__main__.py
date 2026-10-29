@@ -20,8 +20,9 @@ def main(argv: list[str]) -> int:
     """Run the file named in *argv*; print its output or its error line.
 
     Goals go to stderr before anything runs. The error line goes to
-    stdout, where an ``.expected`` file compares it; the source line and
-    the caret under the column go to stderr.
+    stdout, after the output so far; the source line and the caret
+    under the column go to stderr. A closing fail judgment that matches
+    makes that line output and the exit 0 (:func:`fpl.driver.run`).
 
     Args:
         argv: The command-line arguments after the program name; the

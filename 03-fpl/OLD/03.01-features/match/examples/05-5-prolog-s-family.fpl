@@ -25,3 +25,4 @@ family/
 [ fresh →g  g #jim family/grandfather  g ] logic/space	; inside: fresh g unifies against the rows → [ #bob ]
 [ fresh →c  #bob c family/parent  c ] logic/space	; all solutions, not the first → [ #ann #pat ]
 
+|- ! err/unresolved/unknown-word “unknown word: x”

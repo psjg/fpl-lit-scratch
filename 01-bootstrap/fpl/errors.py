@@ -50,7 +50,7 @@ class FplError(Exception):
 
     @override
     def __str__(self) -> str:
-        """Return the one line an ``.expected`` file holds for an error.
+        """Return the one line the program prints for an error.
 
         The format is fixed by ``.agents/CONVENTIONS.md``.
 
@@ -131,8 +131,9 @@ class UnresolvedError(FplError):
 class NoEvaluatorError(UnresolvedError):
     """What the language's examples use and nothing here runs yet.
 
-    The ``.expected`` files of those examples still hold the skeleton's
-    blanket refusal, which ``tests/test_conformance.py`` keeps.
+    Those examples close on ``|- ! err/unresolved/no-evaluator`` with
+    the message they get, so ``tests/test_conformance.py`` passes them
+    until the word is implemented and the judgment no longer holds.
     """
 
     tag = "err/unresolved/no-evaluator"

@@ -15,3 +15,4 @@ contains : x xs -- b
 ; a sequence queried as a whole is a value-level query, where a regex belongs:
 ;   lines [ “err.*” regex ] find
 
+|- ! err/unresolved/no-evaluator “no evaluator yet: false”

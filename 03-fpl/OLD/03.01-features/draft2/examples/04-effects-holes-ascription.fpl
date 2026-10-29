@@ -10,3 +10,4 @@ sort : xs -- ys ∈ sorted ∩ xs perm
 	⊢ unfold grade-perm select-sorted qed
 	⊨ dup sorted
 
+|- ! err/unresolved/no-evaluator “no evaluator yet”
