@@ -22,7 +22,7 @@ index is [index.md](index.md).
                                     the annotation program's rows for LABEL into PAGE's
                                     sidecar, merged by id, then checked
     lit facts --export PAGE [--item LABEL=PAGE@COMMIT] [--out FILE]
-                                    the sidecar's span rows in the program's row shape
+                                    the sidecar's hand rows in the program's row shape
     lit anchor --verify [PAGE ...]  each hand row's text is at its place in its commit (git)
 
 Every command takes `--root DIR`. Files are written relative to it, and without PAGE
@@ -158,22 +158,27 @@ id in the page, `strings-and-comments/b4`, `…/b4s2`, `…/b4s2c3`, `…/b5l12`
 name one, and a fact can cite one: a row without text whose first target is such an id gets
 a card at that element, with a line to it.
 
-A reader selects text, writes a note and picks labels (chips; type `label/sub` for one
-more) in a card at that height, and saves it (⌘↩) as a quote row: `{id, item, commit,
-text, prefix, suffix, labels, note, targets, createdAt, updatedAt}`, the text as shown and
-32 characters of shown text either side. The rows stay in that browser (localStorage) until
-Export in the margin's head downloads them as `<stem>.annot.json`; the head then prints the
-`lit facts` line that takes them into the sidecar. Run it from `01-bootstrap/`, with the
-path of the downloaded file:
+A reader selects text, writes a note and picks labels (chips; type `label/sub` for one more) in
+a card at that height, and saves it (⌘↩) as a quote row: `{id, item, commit, by, text, prefix,
+suffix, labels, note, targets, createdAt, updatedAt}`, the text as shown and 32 characters of
+shown text either side; `by` is who wrote it, the name given in the margin's head or an agent's
+model id. A reply, or a fact about a fact or an address, is the same row without `text`,
+`prefix` and `suffix`: a fact about its first target. The rows stay in that browser
+(localStorage) until Export in the margin's head downloads them as `<stem>.annot.json`; the
+head then prints the `lit facts` line that takes them into the sidecar. Run it from
+`01-bootstrap/`, with the path of the downloaded file:
 
     lit facts --import FILE \
       --item 01-bootstrap/01.02-pass/01.02.01-lex.md=01-bootstrap/01.02-pass/01.02.01-lex.md@COMMIT
 
 The commit is the one the page was rendered from (`<meta name="fpl-commit">`). The quote is
-then found on the raw page by the table of `plain`: measured 2026-10-29, a sentence selected
-on the lex page exported, imported with 0 findings in 0.12 s, and was drawn as a sidecar
-span on the next load. Where the window has no margin column (a phone) each card folds
-under the block its span is in, and the editor is a popover.
+then found on the raw page by the table of `plain`: measured 2026-10-29, a sentence selected on
+the lex page exported, imported with 0 findings in 0.12 s, and was drawn as a sidecar span on
+the next load. A row without text needs a target and lands as `{id, labels, note, targets,
+commit, by, createdAt, updatedAt}`, with no `item`: in a sidecar a row that names an item is a
+span. A row with neither text nor targets is refused. `lit facts --export` gives every hand row
+back, a row without text under the page's label. Where the window has no margin column (a
+phone) each card folds under the block its span is in, and the editor is a popover.
 
 ## Layout
 

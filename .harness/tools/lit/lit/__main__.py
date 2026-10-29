@@ -19,7 +19,7 @@
                                  COMMIT, merged into its sidecar by
                                  id; then the sidecar is checked
     lit facts --export PAGE [--item LABEL=PAGE@COMMIT] [--out FILE]
-                                 the sidecar's span rows in the
+                                 the sidecar's hand rows in the
                                  program's shape, as one JSON array
     lit anchor --verify [PAGE ...]
                                  each hand row with a commit has its
@@ -238,7 +238,8 @@ def cmd_export(args: argparse.Namespace) -> int:
         return report(bad, "facts", 1)
     labels = {} if args.item is None else {args.item[1:]: args.item[0]}
     hand = [r for r in rows if "kind" not in r]
-    text = dumps(facts.exported(hand, labels))
+    page = args.export.resolve().relative_to(facts.top(args.root)).as_posix()
+    text = dumps(facts.exported(hand, labels, page))
     if args.out is None:
         sys.stdout.write(text)
     else:

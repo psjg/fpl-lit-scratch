@@ -30,6 +30,12 @@ def tool(rid: str, item: str = "A", at: int = 27, **more: object) -> facts.Row:
     } | more
 
 
+def reply(rid: str, **more: object) -> facts.Row:
+    """A row of the program without text: a fact about its targets."""
+    row: facts.Row = {"id": rid, "item": "A", "labels": ["question"]}
+    return row | {"note": "why?", "createdAt": 2, "updatedAt": 3} | more
+
+
 def repo(tmp_path: Path, rows: list[facts.Row] | None = None) -> Path:
     """A repository holding the demo page and, if given, its sidecar."""
     (tmp_path / ".git").mkdir()
@@ -124,6 +130,11 @@ def test_a_row_the_program_cannot_mean_is_refused_at_its_place(
         tool("n") | {"id": 3},
         tool("ok"),
         tool("c", createdAt="now"),
+        tool("w", by=7),
+        tool("g", targets="ok"),
+        reply("nothing", targets=[]),
+        reply("placed", targets=["ok"], start=1, end=2),
+        reply("quoted", targets=["ok"], prefix="The "),
     ]
     src = dump(tmp_path / "rows.json", rows)
     assert lit(tmp_path, "facts", "--import", str(src), "--item", ITEM) == 1
@@ -137,9 +148,66 @@ def test_a_row_the_program_cannot_mean_is_refused_at_its_place(
         (6, "id 3 is no new string"),
         (7, "id 'ok' is no new string"),
         (8, "createdAt must be an integer"),
+        (9, "by must be a string"),
+        (10, "targets must be a list of strings"),
+        (11, "a row with neither text nor targets is about nothing"),
+        (12, "a row without text has no offsets, prefix or suffix"),
+        (13, "a row without text has no offsets, prefix or suffix"),
     ):
         assert f"{where}{n}: lit-facts-import: {message}" in said
     assert [r["id"] for r in held(car)] == ["ok"]
+
+
+def test_a_reply_lands_without_a_place_and_says_who_wrote_it(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """A row without text keeps its targets; ``by`` rides on any row."""
+    car = repo(tmp_path, [{"id": "f", "note": "a fact", "targets": []}])
+    rows = [
+        tool("a", by="PSJ"),
+        reply("b", targets=["a", "f"], by="claude-fable-5-1"),
+        reply("c", targets=["b"]),
+    ]
+    src = dump(tmp_path / "rows.json", rows)
+    assert lit(tmp_path, "facts", "--import", str(src), "--item", ITEM) == 0
+    said = capsys.readouterr().out
+    assert "lit facts: imported 3, replaced 0, kept 1" in said
+    assert "lit facts: 1 page(s), 0 finding(s)" in said
+    got = held(car)
+    assert list(got[1]) == [
+        "id",
+        "item",
+        "start",
+        "end",
+        "text",
+        "labels",
+        "note",
+        "targets",
+        "commit",
+        "by",
+        "createdAt",
+        "updatedAt",
+    ]
+    assert got[1]["by"] == "PSJ"
+    assert got[2] == {
+        "id": "b",
+        "labels": ["question"],
+        "note": "why?",
+        "targets": ["a", "f"],
+        "commit": SHA,
+        "by": "claude-fable-5-1",
+        "createdAt": 2,
+        "updatedAt": 3,
+    }
+    assert "by" not in got[3]
+    assert got[3]["targets"] == ["b"]
+
+
+def test_the_fold_keeps_a_row_without_text() -> None:
+    """A reply is a new row like any other: it follows, by creation."""
+    old: list[facts.Row] = [{"id": "a", "item": "p.md", "text": "x"}]
+    new: list[facts.Row] = [{"id": "b", "targets": ["a"], "createdAt": 2}]
+    assert facts.merged(old, new) == ([*old, *new], 0)
 
 
 @pytest.mark.parametrize(
@@ -224,7 +292,11 @@ def test_an_export_of_an_import_gives_back_the_rows(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     """The program's rows return, with the targets import adds."""
-    rows = [tool("a"), tool("b", at=24, end=30, text="# Demo", targets=[])]
+    rows = [
+        tool("a", by="PSJ"),
+        tool("b", at=24, end=30, text="# Demo", targets=[]),
+        reply("c", targets=["a"]),
+    ]
     car = repo(tmp_path, [{"id": "f", "note": "a fact", "targets": ["a"]}])
     src = dump(tmp_path / "rows.json", rows)
     assert lit(tmp_path, "facts", "--import", str(src), "--item", ITEM) == 0
@@ -237,11 +309,13 @@ def test_an_export_of_an_import_gives_back_the_rows(
         == 0
     )
     back = json.loads(out.read_text(encoding="utf-8"))
-    assert back == [r | {"targets": r.get("targets", [])} for r in rows]
+    fact = {"id": "f", "item": "A", "note": "a fact", "targets": ["a"]}
+    want = [r | {"targets": r.get("targets", [])} for r in rows]
+    assert back == [fact, *want]
     capsys.readouterr()
     assert lit(tmp_path, "facts", "--export", p) == 0
     shown = json.loads(capsys.readouterr().out)
-    assert [r["item"] for r in shown] == ["p.md", "p.md"]
+    assert [r["item"] for r in shown] == ["p.md"] * 4
     car.write_text('[{"id": "a b"}]', encoding="utf-8")
     assert lit(tmp_path, "facts", "--export", p) == 1
 

@@ -535,11 +535,14 @@ FIELDS: dict[str, type] = {
     "note": str,
     "targets": list,
     "commit": str,
+    "by": str,
     "createdAt": int,
     "updatedAt": int,
 }
 SPAN = ("item", "start", "end", "text")
 QUOTE = ("prefix", "suffix")
+# The two times of a row, in milliseconds since the epoch.
+STAMPS = ("createdAt", "updatedAt")
 COLUMNS = ("id", "topic", "date", "who", "decision", "reason")
 VERS, MOVED, TWICE, STALE = "vers", "verplaatst", "dubbel", "stale"
 
@@ -885,7 +888,7 @@ def field_faults(row: Row) -> Iterator[str]:
             yield f"{key!r} is no key of a row"
         elif key in {"labels", "targets"} and not strings(value):
             yield f"{key} must be a list of strings"
-        elif key in {"note", "commit", *QUOTE, "createdAt", "updatedAt"} and (
+        elif key in {"note", "commit", "by", *QUOTE, *STAMPS} and (
             type(value) is not want
         ):
             yield f"{key} must be a {want.__name__}"
@@ -1207,8 +1210,9 @@ def ground(
 
 
 # The keys a row of the annotation program may carry over, besides
-# its id and its span, in the order a sidecar row writes them.
-TOOL_KEYS = ("labels", "note", "targets", "createdAt", "updatedAt")
+# its id and its span, in the order a sidecar row writes them: ``by``
+# is who wrote it, a person's name or an agent's model id.
+TOOL_KEYS = ("labels", "note", "targets", "by", *STAMPS)
 
 
 @dataclass(frozen=True)
@@ -1272,20 +1276,37 @@ def import_faults(row: Row, seen: set[str]) -> Iterator[str]:
     Its id must be a new string, its offsets both there and integers
     or both away (a quote), its ``prefix`` and ``suffix`` strings, its
     text one without astral code points (JavaScript counts those as
-    two, so the program's offsets would not be lit's), and its times
-    integers, since the new rows are ordered by them.
+    two, so the program's offsets would not be lit's), its targets a
+    list of strings, its ``by`` a string, and its times integers,
+    since the new rows are ordered by them. A row without a text is a
+    fact about its first target: it needs one, and has no place of
+    its own (`text_faults').
     """
-    rid, text = row.get("id"), row["text"]
+    rid = row.get("id")
     if not isinstance(rid, str) or rid in seen:
         yield f"id {rid!r} is no new string"
     yield from place_faults(row)
-    if not isinstance(text, str):
+    yield from text_faults(row)
+    if "targets" in row and not strings(row["targets"]):
+        yield "targets must be a list of strings"
+    if "by" in row and not isinstance(row["by"], str):
+        yield "by must be a string"
+    for key in STAMPS:
+        if key in row and type(row[key]) is not int:
+            yield f"{key} must be an integer"
+
+
+def text_faults(row: Row) -> Iterator[str]:
+    """A text without astral code points, or targets and no place."""
+    if "text" not in row:
+        if not row.get("targets"):
+            yield "a row with neither text nor targets is about nothing"
+        if any(k in row for k in (*SPAN[1:3], *QUOTE)):
+            yield "a row without text has no offsets, prefix or suffix"
+    elif not isinstance(text := row["text"], str):
         yield "text must be a string"
     elif m := ASTRAL.search(text):
         yield f"text holds U+{ord(m[0]):X}, two code units in JavaScript"
-    for key in ("createdAt", "updatedAt"):
-        if key in row and type(row[key]) is not int:
-            yield f"{key} must be an integer"
 
 
 def place_faults(row: Row) -> Iterator[str]:
@@ -1306,13 +1327,18 @@ def imported(
     """The program's rows for one label as hand rows on a page.
 
     A row is the label's when its ``item`` is ``label`` and it holds a
-    ``text``; every other row (another item, the program's own records
-    of labels and items) is passed over. A row of the label becomes
-    ``{id, item: page, start, end, text, prefix, suffix, labels, note,
-    targets, commit, createdAt, updatedAt}``: its ``targets`` are
-    ``[]`` when it has none, and the offsets (a quote has none), the
-    prefix and suffix, ``labels``, ``note`` and the times are carried
-    only when it has them.
+    ``text`` or an ``id``; every other row (another item, the
+    program's own records of labels and items) is passed over. A row
+    of the label with a text becomes ``{id, item: page, start, end,
+    text, prefix, suffix, labels, note, targets, commit, by,
+    createdAt, updatedAt}``: its ``targets`` are ``[]`` when it has
+    none, and the offsets (a quote has none), the prefix and suffix,
+    ``labels``, ``note``, ``by`` and the times are carried only when
+    it has them. A row without a text (a reply, a fact about a fact
+    or about an address on the page) is a fact about its first
+    target, and becomes ``{id, labels, note, targets, commit, by,
+    createdAt, updatedAt}``: no ``item``, since a sidecar row that
+    names one is a span, and the sidecar is the page's already.
 
     Returns:
         The hand rows, and a ``lit-facts-import`` finding for each row
@@ -1323,7 +1349,7 @@ def imported(
     seen: set[str] = set()
     for t in rows:
         d = t.row
-        if d.get("item") != label or "text" not in d:
+        if d.get("item") != label or not ("text" in d or "id" in d):
             continue
         if faults := list(import_faults(d, seen)):
             bad += [
@@ -1333,7 +1359,7 @@ def imported(
             continue
         rid = cast("str", d["id"])
         seen.add(rid)
-        row: Row = {"id": rid, "item": page}
+        row: Row = {"id": rid, "item": page} if "text" in d else {"id": rid}
         row |= {k: d[k] for k in (*SPAN[1:], *QUOTE, *TOOL_KEYS[:2]) if k in d}
         row |= {"targets": d.get("targets", []), "commit": commit}
         row |= {k: d[k] for k in TOOL_KEYS[3:] if k in d}
@@ -1367,24 +1393,25 @@ def merged(old: Sequence[Row], new: Sequence[Row]) -> tuple[list[Row], int]:
 
 
 def exported(
-    rows: Sequence[Row], labels: Mapping[tuple[str, str], str]
+    rows: Sequence[Row], labels: Mapping[tuple[str, str], str], page: str
 ) -> list[Row]:
-    """A sidecar's span rows in the annotation program's shape.
+    """A sidecar's hand rows in the annotation program's shape.
 
-    Each row with a span becomes ``{id, item, start, end, text}`` (a
-    quote: ``{id, item, text}``) and whichever of ``prefix``,
-    ``suffix``, ``labels``, ``note``, ``targets``, ``createdAt`` and
-    ``updatedAt`` it holds; its ``commit`` is dropped. Its ``item`` is
-    the program's label for ``(item, commit)`` in ``labels``, or the
-    path itself when none is given. Rows without a span (facts,
-    relations) stay behind: the program has no place for them yet.
+    Each row becomes ``{id, item, start, end, text}`` (a quote: ``{id,
+    item, text}``; a row without a span, a fact about rows: ``{id,
+    item}``) and whichever of ``prefix``, ``suffix``, ``labels``,
+    ``note``, ``targets``, ``by``, ``createdAt`` and ``updatedAt`` it
+    holds; its ``commit`` is dropped. Its ``item`` is the program's
+    label for ``(item, commit)`` in ``labels``, or the path itself when
+    none is given. A row without a span is about rows of ``page``, the
+    sidecar's, at no text of it: it takes any label ``page`` has.
     """
+    mine = next((v for (i, _), v in labels.items() if i == page), page)
     out: list[Row] = []
     for r in rows:
-        if "text" not in r:
-            continue
-        at = (cast("str", r["item"]), cast("str", r.get("commit", "")))
-        row: Row = {"id": r["id"], "item": labels.get(at, at[0])}
+        at = (cast("str", r.get("item", "")), cast("str", r.get("commit", "")))
+        item = labels.get(at, at[0]) if "text" in r else mine
+        row: Row = {"id": r["id"], "item": item}
         row |= {k: r[k] for k in (*SPAN[1:], *QUOTE, *TOOL_KEYS) if k in r}
         out.append(row)
     return out

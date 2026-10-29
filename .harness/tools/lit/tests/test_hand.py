@@ -154,6 +154,8 @@ ROWS: list[facts.Row] = [
         "text": "#",
         "targets": 5,
     },
+    {"id": "f9", "targets": ["s8"], "commit": SHA, "by": 3},
+    {"id": "f10", "targets": ["f9"], "commit": SHA, "by": "PSJ"},
 ]
 
 
@@ -178,7 +180,9 @@ def test_validate_names_each_fault_at_its_row() -> None:
         (9, "lit-facts-span"),
         (10, "lit-facts-field"),
         (11, "lit-facts-field"),
+        (12, "lit-facts-field"),
     }
+    assert [f.message for f in got if f.line == 12] == ["by must be a str"]
     messages = [f.message for f in got if f.line == 2]
     assert "target 'L-Z99' names nothing" in messages
     assert "target 'nothing' names nothing" in messages
