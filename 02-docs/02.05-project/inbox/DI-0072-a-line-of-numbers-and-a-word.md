@@ -206,9 +206,15 @@ built in the corpus session on his direct order of 09:34; this session takes the
 afterwards. His answers (10-29): a passing check prints the result line ("ja"); `err/out-of-gas`
 stays ("ja"); the position stays on the judgment line, his words on `l:c`: "oh shit deze
 moeten we er in houden als arg voor die error... we kunne het zevels een hyperlink maken
-naar de locatie van het ongeluk". Open: where the position goes on the line (after the
-message as `@ 1:5`, before it as the second argument, or as the last path segment
-`err/check/unequal/1:5`, one address per accident, which makes the link literal).
+naar de locatie van het ongeluk". He also wants the fuel on the judgment line, as the editor chats of 2026-10-18 had it:
+"net zoals ik toen met cursor besproken had zou ik de fuel ook in de judgement regel
+willen toevoegen" (mined into [02.05.16](../notes/02.05.16-judgment-line-from-the-cursor-chats.md)).
+On the shape `|- ! err/x 1:5 “msg” @ 3` (position as the second argument, the deadline
+`@ n` last, on success lines too): "dat ziet er eigenlijk ook niet al te verkeerd uit".
+Proposed with it, so that `@` means one thing: the input number `@N` of today's
+`ERROR: @N l:c` moves to `#N`. Thin spot named: `1:5` shares the colon with the sort
+ascription ` : `; the alternative without it is the last path segment
+`err/check/unequal/1:5`. Open until he picks.
 
 On rank (10-29, verbatim): "uh krijgen we straks conflicten met het box model stel we
 willen een box model... willen we een box model? net zoals J en UIuia ik heb ook de
