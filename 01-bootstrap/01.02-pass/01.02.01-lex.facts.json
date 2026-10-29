@@ -1,0 +1,179 @@
+[
+ {
+  "id": "s-tabs",
+  "item": "01-bootstrap/01.02-pass/01.02.01-lex.md",
+  "start": 21895,
+  "end": 22026,
+  "text": "Inside brackets a line may be aligned as the author likes; outside them\nindentation is tabs, and a space after the tabs is refused.",
+  "labels": [],
+  "note": "",
+  "targets": [],
+  "commit": "582e27a"
+ },
+ {
+  "id": "f-tabs",
+  "labels": [
+   "reason",
+   "PSJ"
+  ],
+  "note": "PSJ, 2026-10-28: a tab between cells is a column separator, after Gravgaard's elastic tabstops, and leading tabs are the indentation level; FPL is on the tabs side because less brainpower goes to bullshit.",
+  "targets": [
+   "s-tabs"
+  ]
+ },
+ {
+  "id": "r-tabs-because",
+  "labels": [
+   "because"
+  ],
+  "note": "",
+  "targets": [
+   "f-tabs",
+   "L-I4",
+   "L-I6"
+  ]
+ },
+ {
+  "id": "s-own-pair",
+  "item": "01-bootstrap/01.02-pass/01.02.01-lex.md",
+  "start": 8355,
+  "end": 8438,
+  "text": "Counting a pair, `counted', is counting its own opener and closer and\nnothing else.",
+  "labels": [],
+  "note": "",
+  "targets": [],
+  "commit": "582e27a"
+ },
+ {
+  "id": "r-own-pair-cites",
+  "labels": [
+   "cites"
+  ],
+  "note": "",
+  "targets": [
+   "s-own-pair",
+   "L-S5",
+   "L-PH2"
+  ]
+ },
+ {
+  "id": "s-placeholder",
+  "item": "01-bootstrap/01.02-pass/01.02.01-lex.md",
+  "start": 10221,
+  "end": 10316,
+  "text": "A string is\nreplaced in the code by a `PLACEHOLDER', `¶`, which the grammar reads as\none token.",
+  "labels": [],
+  "note": "",
+  "targets": [],
+  "commit": "582e27a"
+ },
+ {
+  "id": "r-placeholder-cites",
+  "labels": [
+   "cites"
+  ],
+  "note": "",
+  "targets": [
+   "s-placeholder",
+   "L-PH1",
+   "L-PH3"
+  ]
+ },
+ {
+  "id": "s-origin-place",
+  "item": "01-bootstrap/01.02-pass/01.02.01-lex.md",
+  "start": 6605,
+  "end": 6786,
+  "text": "The offset just past the last character still has a place, at the end\nof the last line; that is where an error such as a pair never closed is\nreported when the pair runs to the end.",
+  "labels": [],
+  "note": "",
+  "targets": [],
+  "commit": "1977936"
+ },
+ {
+  "id": "s-counted-code",
+  "item": "01-bootstrap/01.02-pass/01.02.01-lex.md",
+  "start": 7772,
+  "end": 7821,
+  "text": "depth += (text[j] == opener) - (text[j] == close)",
+  "labels": [],
+  "note": "",
+  "targets": [],
+  "commit": "20a797b"
+ },
+ {
+  "id": "f-counted",
+  "labels": [
+   "claim"
+  ],
+  "note": "only the opener's own pair is counted, so a nested opener needs its own closer",
+  "targets": [
+   "s-counted-code"
+  ]
+ },
+ {
+  "id": "s-cfg",
+  "item": "01-bootstrap/01.02-pass/01.02.01-lex.md",
+  "start": 627,
+  "end": 668,
+  "text": "A context-free grammar can count\nneither.",
+  "labels": [],
+  "note": "",
+  "targets": [],
+  "commit": "582e27a"
+ },
+ {
+  "id": "r-cfg-contradicts",
+  "labels": [
+   "contradicts"
+  ],
+  "note": "",
+  "targets": [
+   "s-cfg",
+   "L-G2"
+  ]
+ },
+ {
+  "id": "f-cfg-note",
+  "labels": [
+   "note"
+  ],
+  "note": "Dyck languages are context-free; what a Lark lexer cannot do is make a nested string one terminal, and the off-side rule needs a stack",
+  "targets": [
+   "r-cfg-contradicts"
+  ]
+ },
+ {
+  "id": "s-stage",
+  "item": "01-bootstrap/01.02-pass/01.02.01-lex.md",
+  "start": 29643,
+  "end": 29743,
+  "text": "The literate tree splits the two,\nso that `lex', a stage of its own, can be run and looked at alone.",
+  "labels": [],
+  "note": "",
+  "targets": [],
+  "commit": "582e27a"
+ },
+ {
+  "id": "r-stage-cites",
+  "labels": [
+   "cites"
+  ],
+  "note": "",
+  "targets": [
+   "s-stage",
+   "L-P4"
+  ]
+ },
+ {
+  "id": "r-dedent-checked",
+  "labels": [
+   "checkedBy"
+  ],
+  "note": "",
+  "targets": [
+   "refusal:dedent%20below%20line%201%2C%20but%20its%20%5B%20is%20still%20open",
+   "test:test_prelex_refuses_at_the_place_in_the_source:7"
+  ]
+ }
+]
