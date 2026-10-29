@@ -194,8 +194,12 @@ class Cases(Arrow):
     takes the sort of its input.
     """
 
-    #: The one-in one-out arrows, most specific first.
+    #: The arrows of the same count of ins, most specific first.
     cases: tuple[Arrow, ...]
+    #: Whether the last input is a divisor: a ``Zero`` there is refused
+    #: by :func:`called`, since no case takes it and the general arrow
+    #: would wrongly let it by.
+    divisor: bool = False
 
 
 @dataclass(frozen=True)
@@ -281,6 +285,52 @@ def stepping(table: tuple[tuple[Kind, Kind], ...]) -> Cases:
     )
 
 
+type Rows = tuple[tuple[Kind, Kind, Kind], ...]
+
+#: The sort of the quotient of ``kdiv``, ``bdiv`` and ``tdiv`` alike, as
+#: (dividend, divisor, result), most specific first. Any other pair
+#: leaves an ``Int``. A floored, Euclidean or truncated quotient has
+#: the sign of ``a`` times that of ``d``, or is 0 (a floored one of a
+#: negative ``a`` by a positive ``d`` is below 0, never above).
+QUOTIENT: Rows = (
+    (Kind.ZERO, Kind.NAT1, Kind.ZERO),
+    (Kind.NAT0, Kind.NAT1, Kind.NAT0),
+    (Kind.NEG0, Kind.NAT1, Kind.NEG0),
+    (Kind.NAT0, Kind.NEG1, Kind.NEG0),
+    (Kind.NEG0, Kind.NEG1, Kind.NAT0),
+)
+#: The sort of the remainder of ``kmod``: the sign of the divisor.
+KMOD: Rows = (
+    (Kind.INT, Kind.NAT1, Kind.NAT0),
+    (Kind.INT, Kind.NEG1, Kind.NEG0),
+)
+#: The sort of the remainder of ``bmod``: never negative.
+BMOD: Rows = (
+    (Kind.INT, Kind.NAT1, Kind.NAT0),
+    (Kind.INT, Kind.NEG1, Kind.NAT0),
+)
+#: The sort of the remainder of ``tmod``: the sign of the dividend.
+TMOD: Rows = (
+    (Kind.ZERO, Kind.INT, Kind.ZERO),
+    (Kind.NAT0, Kind.INT, Kind.NAT0),
+    (Kind.NEG0, Kind.INT, Kind.NEG0),
+)
+
+
+def dividing(table: Rows) -> Cases:
+    """Return the arrow of a division word from its table.
+
+    The general arrow takes two integers and leaves one; a ``Zero``
+    divisor is refused (:attr:`Cases.divisor`).
+    """
+    return Cases(
+        (Kind.INT, Kind.INT),
+        (Kind.INT,),
+        tuple(Arrow((a, d), (left,)) for a, d, left in table),
+        divisor=True,
+    )
+
+
 #: The arrow of each builtin word, without control words and holes.
 ARROWS: dict[str, Arrow] = {
     **{
@@ -295,6 +345,12 @@ ARROWS: dict[str, Arrow] = {
     "times": NUMBERS,
     "succ": stepping(SUCC),
     "pred": stepping(PRED),
+    "kdiv": dividing(QUOTIENT),
+    "kmod": dividing(KMOD),
+    "bdiv": dividing(QUOTIENT),
+    "bmod": dividing(BMOD),
+    "tdiv": dividing(QUOTIENT),
+    "tmod": dividing(TMOD),
     "swap": Arrow((Input(0), Input(1)), (Input(1), Input(0))),
     "dup": Arrow((Input(0),), (Input(0), Input(0))),
     "drop": Arrow((Input(0),), ()),
@@ -741,9 +797,14 @@ def called(typing: Typing, node: Call, arrows: Mapping[str, Arrow]) -> Typing:
         return replace(typing, stack=(*typing.stack, typing.env[node.name]))
     if node.name not in arrows:
         raise UntypedError
-    return applied(
-        typing, chosen(typing, arrows[node.name], arrows), node.span
-    )
+    arrow = arrows[node.name]
+    if (
+        isinstance(arrow, Cases)
+        and arrow.divisor
+        and resolved(typing.stack[-1:], typing) == (Kind.ZERO,)
+    ):
+        raise FplError(node.span, "division by zero")
+    return applied(typing, chosen(typing, arrow, arrows), node.span)
 
 
 def chosen(typing: Typing, arrow: Arrow, arrows: Mapping[str, Arrow]) -> Arrow:

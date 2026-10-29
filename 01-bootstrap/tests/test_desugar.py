@@ -517,6 +517,78 @@ def test_stack_words_and_literals(source: str, printed: str) -> None:
 
 
 @pytest.mark.parametrize(
+    ("source", "printed"),
+    [
+        ("-7 | 2 kdiv\n", "-4\n"),
+        ("-7 | 2 kmod\n", "1\n"),
+        ("-7 | 2 bdiv\n", "-4\n"),
+        ("-7 | 2 bmod\n", "1\n"),
+        ("-7 | 2 tdiv\n", "-3\n"),
+        ("-7 | 2 tmod\n", "-1\n"),
+        ("7 | -2 kdiv\n", "-4\n"),
+        ("7 | -2 kmod\n", "-1\n"),
+        ("7 | -2 bdiv\n", "-3\n"),
+        ("7 | -2 bmod\n", "1\n"),
+        ("7 | -2 tdiv\n", "-3\n"),
+        ("7 | -2 tmod\n", "1\n"),
+        ("-7 | -2 kdiv\n", "3\n"),
+        ("-7 | -2 kmod\n", "-1\n"),
+        ("-7 | -2 bdiv\n", "4\n"),
+        ("-7 | -2 bmod\n", "1\n"),
+        ("-7 | -2 tdiv\n", "3\n"),
+        ("-7 | -2 tmod\n", "-1\n"),
+        ("7 8 | 2 kmod\n", "1 0\n"),
+        ("7 8 | 2 -3 tdiv\n", "3 -2\n"),
+        ("1" + "0" * 30 + " | 7 tmod\n", "1\n"),
+    ],
+)
+def test_division_words_differ_in_the_sign_of_the_remainder(
+    source: str, printed: str
+) -> None:
+    """
+    kdiv/kmod floor, bdiv/bmod keep the remainder in [0, |d|), tdiv/tmod
+    truncate; each pair satisfies a = d q + r.
+    """
+    assert run(source) == printed
+
+
+@pytest.mark.parametrize(
+    ("source", "error"),
+    [
+        ("0 7 | 0 1 kmod\n", "ERROR: 1:11 division by zero"),
+        ("1.5 | 2 kdiv\n", "ERROR: 1:9 arithmetic on a non-number"),
+        ("“a” | 2 bmod\n", "ERROR: 1:9 arithmetic on a non-number"),
+    ],
+)
+def test_division_refuses_at_its_position(source: str, error: str) -> None:
+    """
+    A zero divisor met at run time and a non-integer operand are refused
+    at the word.
+    """
+    with pytest.raises(FplError) as caught:
+        run(source)
+    assert str(caught.value) == error
+
+
+@pytest.mark.parametrize(
+    ("source", "error"),
+    [
+        ("7 | 0 kmod\n", "ERROR: 1:7 division by zero"),
+        ("7 | 0 tdiv\n", "ERROR: 1:7 division by zero"),
+    ],
+)
+def test_a_zero_divisor_is_refused_before_the_line_runs(
+    source: str, error: str
+) -> None:
+    """
+    A divisor known to be 0 is refused at elaboration, as at run time.
+    """
+    with pytest.raises(FplError) as caught:
+        run(source)
+    assert str(caught.value) == error
+
+
+@pytest.mark.parametrize(
     ("source", "error"),
     [
         ("[ ] 1 +\n", "ERROR: 1:7 arithmetic on a non-number"),

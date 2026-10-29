@@ -28,6 +28,7 @@ from fpl.ast_core import (
 )
 from fpl.driver import run
 from fpl.errors import FplError, Span
+from fpl.eval import BUILTINS as RUN
 from fpl.eval import State, final, running, step
 from fpl.types import (
     ARROWS,
@@ -53,7 +54,10 @@ from fpl.types import tested as judged
 
 HERE = Span(1, 1)
 AT = Span(2, 3)
-BUILTINS = ("+", "-", "times", "succ", "pred", "dup", "swap", "drop")
+BUILTINS = (
+    *("+", "-", "times", "succ", "pred", "dup", "swap", "drop"),
+    *("kdiv", "kmod", "bdiv", "bmod", "tdiv", "tmod"),
+)
 
 
 @pytest.mark.parametrize(
@@ -739,3 +743,178 @@ def test_the_result_of_succ_and_pred_fits_the_sort_found_for_it(
     result = value + 1 if word == "succ" else value - 1
     assert fits(arrow.outs[0], sort(result))
     assert arrow.outs == (Kind(table[have.value]),)
+
+
+#: The sort kdiv, bdiv and tdiv leave, by the sorts of dividend and
+#: divisor; a pair not listed leaves an Int.
+QUOTIENT = {
+    ("Zero", "Nat1"): "Zero",
+    ("Nat1", "Nat1"): "Nat0",
+    ("Nat0", "Nat1"): "Nat0",
+    ("Neg0", "Nat1"): "Neg0",
+    ("Nat0", "Neg1"): "Neg0",
+    ("Neg0", "Neg1"): "Nat0",
+    ("Int", "Nat1"): "Int",
+    ("Nat0", "Int"): "Int",
+    ("Int", "Int"): "Int",
+}
+#: The sort of each word that leaves a remainder, as above.
+DIVISIONS = {
+    "kdiv": QUOTIENT,
+    "bdiv": QUOTIENT,
+    "tdiv": QUOTIENT,
+    "kmod": {
+        ("Int", "Nat1"): "Nat0",
+        ("Int", "Neg1"): "Neg0",
+        ("Nat1", "Nat1"): "Nat0",
+        ("Int", "Nat0"): "Int",
+        ("Int", "Int"): "Int",
+    },
+    "bmod": {
+        ("Int", "Nat1"): "Nat0",
+        ("Int", "Neg1"): "Nat0",
+        ("Neg1", "Neg1"): "Nat0",
+        ("Int", "Int"): "Int",
+    },
+    "tmod": {
+        ("Zero", "Int"): "Zero",
+        ("Nat0", "Int"): "Nat0",
+        ("Neg0", "Int"): "Neg0",
+        ("Neg1", "Nat1"): "Neg0",
+        ("Int", "Nat1"): "Int",
+        ("Int", "Int"): "Int",
+    },
+}
+SIX = list(DIVISIONS)
+GRID = (-7, -1, 0, 1, 7)
+DIVISORS = (-2, -1, 1, 2)
+
+
+@pytest.mark.parametrize("word", SIX)
+def test_the_division_words_take_two_integers_and_leave_one(
+    word: str,
+) -> None:
+    """
+    The general arrow of the six division words is Int Int to Int.
+    """
+    arrow = ARROWS[word]
+    assert (arrow.ins, arrow.outs) == ((Kind.INT, Kind.INT), (Kind.INT,))
+
+
+@pytest.mark.parametrize(
+    ("word", "have", "left"),
+    [
+        (word, have, left)
+        for word, table in DIVISIONS.items()
+        for have, left in table.items()
+    ],
+)
+def test_division_leaves_a_sort_that_depends_on_both_inputs(
+    word: str, have: tuple[str, str], left: str
+) -> None:
+    """
+    Division is sort-indexed by dividend and divisor: the sort it leaves
+    is the row of its table for the sorts of the two values.
+    """
+    typing = Typing((Kind(have[0]), Kind(have[1])), {}, {})
+    assert chosen(typing, ARROWS[word], ARROWS).outs == (Kind(left),)
+
+
+@pytest.mark.parametrize(
+    ("source", "left"),
+    [
+        ("7 | 2 kdiv", "Nat0"),
+        ("0 | 2 kdiv", "Zero"),
+        ("-7 | 2 kdiv", "Neg0"),
+        ("7 | -2 kdiv", "Neg0"),
+        ("-7 | -2 kdiv", "Nat0"),
+        ("-7 | 2 kmod", "Nat0"),
+        ("7 | -2 kmod", "Neg0"),
+        ("7 | -2 bmod", "Nat0"),
+        ("-7 | 2 tmod", "Neg0"),
+        ("0 | 2 tmod", "Zero"),
+        ("1.5 | 2 kdiv", None),
+    ],
+)
+def test_a_division_goal_shows_the_sort_it_leaves(
+    source: str, left: str | None
+) -> None:
+    """
+    A goal after a division of literals shows the sort of its table row;
+    a decimal is refused before any goal is met.
+    """
+    column = len(source) + 2
+    expected = [] if left is None else [f"GOAL 1:{column} ? : {left} --"]
+    assert goals(f"{source} ?\n") == expected
+
+
+@pytest.mark.parametrize("word", SIX)
+@pytest.mark.parametrize("have", [Input(0), Kind.VALUE])
+def test_an_unknown_division_input_keeps_the_general_arrow(
+    word: str, have: Sort
+) -> None:
+    """
+    An input of unknown sort, or a Value, in either place takes the
+    general case.
+    """
+    arrow = ARROWS[word]
+    for sorts in ((have, Kind.NAT1), (Kind.NAT1, have), (have, have)):
+        assert chosen(Typing(sorts, {}, {}), arrow, ARROWS) is arrow
+
+
+@pytest.mark.parametrize("word", SIX)
+def test_a_known_zero_divisor_is_refused_statically(word: str) -> None:
+    """
+    A divisor known to be Zero is refused at the word before any line
+    runs, as it is at run time.
+    """
+    with pytest.raises(FplError) as caught:
+        run(f"7 | 0 {word}\n")
+    assert str(caught.value) == "ERROR: 1:7 division by zero"
+    with pytest.raises(FplError) as caught:
+        elaborate((Run((Push(7), Push(0), Call(word, AT))),))
+    assert str(caught.value) == "ERROR: 2:3 division by zero"
+
+
+@pytest.mark.parametrize("word", SIX)
+def test_a_decimal_is_refused_by_division(word: str) -> None:
+    """
+    A Decimal is no integer: elaboration refuses it at the word.
+    """
+    for source in (f"1.5 | 2 {word}\n", f"2 | 1.5 {word}\n"):
+        with pytest.raises(FplError) as caught:
+            run(source)
+        column = len(source) - len(word)
+        assert str(caught.value) == (
+            f"ERROR: 1:{column} arithmetic on a non-number"
+        )
+
+
+@pytest.mark.parametrize("word", SIX)
+def test_a_decimal_that_elaboration_missed_is_refused_at_run_time(
+    word: str,
+) -> None:
+    """
+    A value of no known sort reaches a division unchecked: the run
+    refuses a Decimal there, in either place, as elaboration does.
+    """
+    for a, d in ((Decimal("1.5"), 2), (7, Decimal("2"))):
+        with pytest.raises(FplError) as caught:
+            RUN[word](AT, a, d)
+        assert str(caught.value) == "ERROR: 2:3 arithmetic on a non-number"
+
+
+@pytest.mark.parametrize("word", SIX)
+@pytest.mark.parametrize("a", GRID)
+@pytest.mark.parametrize("d", DIVISORS)
+def test_the_result_of_division_fits_the_sort_found_for_it(
+    word: str, a: int, d: int
+) -> None:
+    """
+    Preservation: the sort of the value a division leaves fits the sort
+    elaboration found for the clause.
+    """
+    typing = Typing((sort(a), sort(d)), {}, {})
+    arrow = chosen(typing, ARROWS[word], ARROWS)
+    (result,) = RUN[word](HERE, a, d)
+    assert fits(arrow.outs[0], sort(result))

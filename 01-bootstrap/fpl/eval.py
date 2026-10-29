@@ -797,6 +797,82 @@ def stepped(delta: int, span: Span, a: Value) -> tuple[Value, ...]:
     return arithmetic(lambda x, y: x + y, span, a, delta)
 
 
+def floored(a: int, d: int) -> tuple[int, int]:
+    """Divide with a floored quotient; the remainder takes d's sign.
+
+    Examples:
+        >>> floored(-7, 2), floored(7, -2), floored(-7, -2)
+        ((-4, 1), (-4, -1), (3, -1))
+    """
+    return a // d, a % d
+
+
+def euclidean(a: int, d: int) -> tuple[int, int]:
+    """Divide with a remainder in ``0 <= r < |d|`` (Boute 1992).
+
+    Examples:
+        >>> euclidean(-7, 2), euclidean(7, -2), euclidean(-7, -2)
+        ((-4, 1), (-3, 1), (4, 1))
+    """
+    r = a % abs(d)
+    return (a - r) // d, r
+
+
+def truncated(a: int, d: int) -> tuple[int, int]:
+    """Divide with a quotient cut toward zero; r takes a's sign.
+
+    The quotient is built from magnitudes, so a big integer never
+    passes through a float.
+
+    Examples:
+        >>> truncated(-7, 2), truncated(7, -2), truncated(-7, -2)
+        ((-3, -1), (-3, 1), (3, -1))
+    """
+    q = abs(a) // abs(d)
+    q = -q if (a < 0) != (d < 0) else q
+    return q, a - d * q
+
+
+def divided(
+    rule: Callable[[int, int], tuple[int, int]],
+    part: int,
+    span: Span,
+    a: Value,
+    d: Value,
+) -> tuple[Value, ...]:
+    """Leave the quotient (*part* 0) or remainder (1) of integers.
+
+    ``a d kdiv`` leaves the quotient of *a* by *d*, ``a d kmod`` the
+    remainder; strands map item by item as in :func:`arithmetic`.
+
+    Args:
+        rule: How the pair divides: :func:`floored`, :func:`euclidean`
+            or :func:`truncated`.
+        part: 0 for the quotient, 1 for the remainder.
+        span: The word's position, for errors.
+        a: The dividend.
+        d: The divisor.
+
+    Raises:
+        :exc:`FplError`: An operand is not an integer (``arithmetic on a
+            non-number``, the text of :func:`operands`), or a divisor
+            is 0 (``division by zero``).
+
+    Examples:
+        >>> divided(floored, 1, Span(1, 1), Strand((7, 8)), 2)
+        (Strand(items=(1, 0)),)
+    """
+
+    def op(x: Number, y: Number) -> Number:
+        if isinstance(x, Decimal) or isinstance(y, Decimal):
+            raise FplError(span, "arithmetic on a non-number")
+        if y == 0:
+            raise FplError(span, "division by zero")
+        return rule(x, y)[part]
+
+    return arithmetic(op, span, a, d)
+
+
 def operands(value: Value, span: Span) -> tuple[Number, ...]:
     """Return a number as one operand, or a strand as its items.
 
@@ -971,6 +1047,12 @@ BUILTINS: dict[str, Builtin] = {
     "times": partial(arithmetic, lambda x, y: x * y),
     "succ": partial(stepped, 1),
     "pred": partial(stepped, -1),
+    "kdiv": partial(divided, floored, 0),
+    "kmod": partial(divided, floored, 1),
+    "bdiv": partial(divided, euclidean, 0),
+    "bmod": partial(divided, euclidean, 1),
+    "tdiv": partial(divided, truncated, 0),
+    "tmod": partial(divided, truncated, 1),
     "swap": swap,
     "dup": dup,
     "?": unfilled,
