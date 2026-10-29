@@ -74,3 +74,4 @@ Tick a box when you have answered; comment under the line.
 - [ ] [DI-0070 nat, number, and the base of a float](DI-0070-nat-number-and-the-base-of-a-float.md) — the sort a result line names, ℕ as its own sort or not yet, and floats in a power-of-two base; open
 - [ ] [DI-0071 Line numbers as part of the grammar](DI-0071-line-numbers-in-the-grammar.md) — every line carries its number, as BASIC and COBOL did; a thought, open
 - [ ] [DI-0072 A line of numbers and a word: reduce, map, zip, and rank in the type](DI-0072-a-line-of-numbers-and-a-word.md) — `1 2 3 4 +` reduces, `+ 1` maps, `+ 4 3 2 1` zips; the bar as `] [`, `|-` as a check, rank in the type; four option clusters, open
+- [ ] [DI-0073 `( )` is the prefix notation, `[ ]` the postfix; FPL is at least a Lisp](DI-0073-parens-are-the-prefix-notation-fpl-is-a-lisp.md) — nested prefix already reads as a Lisp for fixed arity; the variadic head and quotations under the line rule are the gaps; open
