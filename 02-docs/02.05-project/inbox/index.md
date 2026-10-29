@@ -73,5 +73,5 @@ Tick a box when you have answered; comment under the line.
 - [ ] [DI-0069 The space before a comment as part of its token](DI-0069-the-space-before-a-comment-as-part-of-its-token.md) — when every pad line ends in ` ;`, is the space before the comment sign part of the NOTE token? three options, open
 - [ ] [DI-0070 nat, number, and the base of a float](DI-0070-nat-number-and-the-base-of-a-float.md) — the sort a result line names, ℕ as its own sort (decided: Nat1, Zero, Neg1, Int, Rat), and floats in a power-of-two base
 - [ ] [DI-0071 Line numbers as part of the grammar](DI-0071-line-numbers-in-the-grammar.md) — every line carries its number, as BASIC and COBOL did; a thought, open
-- [ ] [DI-0072 The division family](DI-0072-the-division-family.md) — div, mod, rem, floor and ceiling words and the jump to the rationals; open
+- [ ] [DI-0072 The division family](DI-0072-the-division-family.md) — div, mod, rem, floor and ceiling words and the jump to the rationals; decided 2026-10-29: four pairs kdiv bdiv tdiv pdiv, a stuck term at a zero divisor; floor, ceiling and Rat open
 - [ ] [DI-0074 A discrete basis: Dec, Rat written 1/3, and FPL_smooth derived](DI-0074-a-discrete-basis-dec-rat-and-the-slash-literal.md) — no floats in the kernel; Dec and Rat as exact sorts, the `/` literal against the path rule (measured), FPL_smooth already in 02.04.13; open
