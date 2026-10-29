@@ -62,7 +62,7 @@ def test_a_piped_input_comes_back_as_a_transcript(
 ) -> None:
     done = pty(home, stdin="1 2 +\n")
     assert done.returncode == 0, done.stderr
-    assert done.stdout.startswith("1 2 +\n|= [ 1 2 + ]\n;; HEAD 1 $")
+    assert done.stdout.startswith("1 2 +\n|= 3\n;; HEAD 1 $")
 
 
 def test_the_next_call_joins_the_same_session(home: dict[str, str]) -> None:
@@ -70,11 +70,11 @@ def test_the_next_call_joins_the_same_session(home: dict[str, str]) -> None:
     second = pty(home, "--replay", stdin="3 4 +\nnope\n")
     assert second.returncode == 1, second.stderr
     heard = second.stdout
-    assert heard.startswith("1 2 +\n|= [ 1 2 + ]\n3 4 +\n|= [ 3 4 + ]\n")
+    assert heard.startswith("1 2 +\n|= 3\n3 4 +\n|= 7\n")
     assert "|= ERROR: 1:1 unknown word: nope" in heard
     again = pty(home, stdin=heard)
     assert again.returncode == 1
-    assert "|= [ 1 2 + ]" in again.stdout
+    assert "|= 3" in again.stdout
 
 
 def test_a_read_head_appends_nothing_and_a_stale_write_head_is_refused(
@@ -83,7 +83,7 @@ def test_a_read_head_appends_nothing_and_a_stale_write_head_is_refused(
     pty(home, stdin="1 2 +\n")
     read = pty(home, "--at", "0", stdin="3 4 +\n")
     assert read.returncode == 0, read.stderr
-    assert "|= [ 3 4 + ]" in read.stdout
+    assert "|= 7" in read.stdout
     assert ";; HEAD" not in read.stdout
     stale = pty(home, "--head", "0", stdin="5\n")
     assert stale.returncode == 2

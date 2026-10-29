@@ -1,8 +1,8 @@
 """
 Control words over quotations: ! forces, if chooses, swap-args commutes,
-repeat iterates, each, scan and fold run a quotation over the items of a
-strand or a list (draft1; draft2 §frames, §operatives, §( ) rotates;
-combined draft row 14).
+repeat iterates, each, scan, fold, foldl and foldr run a quotation over
+the items of a strand or a list (draft1; draft2 §frames, §operatives,
+§( ) rotates; combined draft row 14).
 """
 
 import tracemalloc
@@ -12,10 +12,11 @@ import pytest
 from hypothesis import given
 from hypothesis import strategies as st
 
+from fpl.ast_core import Strand
 from fpl.desugar import desugar
 from fpl.driver import run
-from fpl.errors import FplError
-from fpl.eval import evaluate
+from fpl.errors import FplError, Span
+from fpl.eval import BUILTINS, evaluate
 from fpl.parse import parse
 
 numbers = st.lists(st.integers(-99, 99), min_size=2, max_size=8)
@@ -26,6 +27,66 @@ def test_swap_args_fills_the_right_slot_from_outside() -> None:
     [D2.4] 1 | 1 2 3 [-] swap-args is 1 2 3 - 1.
     """
     assert run("1 | 1 2 3 [-] swap-args\n") == "0 1 2\n"
+
+
+@pytest.mark.parametrize(
+    ("source", "printed"),
+    [
+        ("1 2 3 4 [+] fold\n", "10\n"),
+        ("1 2 3 [-] fold\n", "-4\n"),
+        ("1 2 3 [-] foldl\n", "-4\n"),
+        ("1 2 3 [-] foldr\n", "2\n"),
+        ("1 2 3 4 [+] foldr\n", "10\n"),
+        ("5 7 [-] foldr\n", "-2\n"),
+        ("1 2 3 [-] scan\n", "1 -1 -4\n"),
+        ("⟨ [ 1 ] [ 2 ] [ 3 ] ⟩ [,] foldr\n", "[ 1 | 2 | 3 ]\n"),
+        ("⟨ 1 ⟩ [-] foldr\n", "1\n"),
+    ],
+)
+def test_the_folds_run_left_or_right(source: str, printed: str) -> None:
+    """
+    DI-0072: fold and foldl run q from the left, ((1-2)-3) is -4; foldr
+    runs it from the right, 1-(2-3) is 2, each step on a fresh stack
+    with the item below the result so far; one item is its own fold.
+    """
+    assert run(source) == printed
+
+
+@pytest.mark.parametrize(
+    ("source", "message"),
+    [
+        ("⟨⟩ [+] foldr\n", "ERROR: 1:8 fold over nothing"),
+        ("3 [+] foldr\n", "ERROR: 1:7 a strand or a list is expected"),
+        ("1 2 [drop drop] foldr\n", "ERROR: 1:17 each step leaves one value"),
+        ("1 2 | 3 foldr\n", "ERROR: 1:9 a quotation is expected"),
+    ],
+)
+def test_foldr_refuses_what_fold_refuses(source: str, message: str) -> None:
+    """
+    foldr takes the same inputs as fold and refuses them the same way.
+    """
+    with pytest.raises(FplError) as caught:
+        run(source)
+    assert str(caught.value) == message
+
+
+def test_a_reduction_over_an_empty_strand_is_refused() -> None:
+    """
+    The one-value form of + has no item to start from in a strand of
+    none, which no line writes; it is refused, not crashed on.
+    """
+    with pytest.raises(FplError, match="reduction over nothing"):
+        BUILTINS["+/1"](Span(1, 1), Strand(()))
+
+
+@given(numbers)
+def test_foldr_is_the_alternating_sum_of_minus(xs: list[int]) -> None:
+    """
+    [-] foldr is x1-(x2-(...-xn)), the alternating sum, whose sign
+    flips with each item from the right.
+    """
+    expected = sum(x * (-1) ** i for i, x in enumerate(xs))
+    assert run(" ".join(map(str, xs)) + " [-] foldr\n") == f"{expected}\n"
 
 
 def test_plus_folded_over_a_strand_is_its_sum() -> None:

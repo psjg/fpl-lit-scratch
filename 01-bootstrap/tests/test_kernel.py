@@ -112,7 +112,7 @@ def test_feed_replay_and_commands() -> None:
             "status": "done",
         }
         fed = c.ask(op="feed", text="1 2 +\n\nnope\n", id=1)
-        assert fed["transcript"].startswith("1 2 +\n|= [ 1 2 + ]\n;; HEAD 1 $")
+        assert fed["transcript"].startswith("1 2 +\n|= 3\n;; HEAD 1 $")
         codes = [t["code"] for t in fed["turns"]]
         assert codes == [0, 1]
         assert "1 input ok" in c.ask(op="log")["out"]

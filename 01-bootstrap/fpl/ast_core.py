@@ -307,11 +307,16 @@ class Run:
 type Statement = Define | Run
 
 _BINARY = Effect(("x", "y"), ("z",))
+#: The binary arithmetic words, each with the name of its one-value
+#: form: the word called where exactly one value is on the stack, which
+#: reduces a strand (``1 2 3 4 +`` is 10).
+ONE_VALUE: dict[str, str] = {word: f"{word}/1" for word in ("+", "-", "times")}
 #: The :class:`Effect` of each builtin word, by name.
 EFFECTS: dict[str, Effect] = {
     "+": _BINARY,
     "-": _BINARY,
     "times": _BINARY,
+    **dict.fromkeys(ONE_VALUE.values(), Effect(("xs",), ("x",))),
     "swap": Effect(("x", "y"), ("y", "x")),
     "dup": Effect(("x",), ("x", "x")),
     "drop": Effect(("x",), ()),
@@ -327,7 +332,10 @@ EFFECTS: dict[str, Effect] = {
     "repeat": Effect(("q", "n"), (), slots=("thunk", "value")),
     "each": Effect(("xs", "q"), ("ys",), slots=("value", "thunk")),
     "scan": Effect(("xs", "q"), ("ys",), slots=("value", "thunk")),
-    "fold": Effect(("xs", "q"), ("x",), slots=("value", "thunk")),
+    **dict.fromkeys(
+        ("fold", "foldl", "foldr"),
+        Effect(("xs", "q"), ("x",), slots=("value", "thunk")),
+    ),
     **dict.fromkeys(
         ("Int", "Decimal", "Text", "Symbol"), Effect(("x",), ("b",))
     ),

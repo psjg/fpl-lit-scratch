@@ -627,6 +627,32 @@ def arithmetic(
     )
 
 
+def reduction(
+    word: str,
+    op: Callable[[Number, Number], Number],
+    span: Span,
+    a: Value,
+) -> tuple[Value, ...]:
+    """
+    The one-value form of an arithmetic word: the right fold of the
+    word over a strand's items, 1 2 3 - being 1-(2-3); a strand of one
+    is its item and an empty one is refused. A lone number and a
+    quotation have no items, so the word suspends with them into the
+    section it would have been, 1 - being [ 1 - ] (DI-0072).
+    """
+    if isinstance(a, Strand):
+        if not a.items:
+            raise FplError(span, "reduction over nothing")
+        *init, last = operands(a, span)
+        result: Value = last
+        for x in reversed(init):
+            (result,) = arithmetic(op, span, x, result)
+        return (result,)
+    if not isinstance(a, Quotation):
+        operands(a, span)
+    return (Quotation((Push(a), Call(word, span))),)
+
+
 def swap(_span: Span, a: Value, b: Value) -> tuple[Value, ...]:
     """
     x y -- y x
@@ -714,6 +740,9 @@ BUILTINS: dict[str, Builtin] = {
     "+": partial(arithmetic, lambda x, y: x + y),
     "-": partial(arithmetic, lambda x, y: x - y),
     "times": partial(arithmetic, lambda x, y: x * y),
+    "+/1": partial(reduction, "+", lambda x, y: x + y),
+    "-/1": partial(reduction, "-", lambda x, y: x - y),
+    "times/1": partial(reduction, "times", lambda x, y: x * y),
     "swap": swap,
     "dup": dup,
     "?": unfilled,
@@ -853,13 +882,30 @@ def scan(span: Span, words: Words, xs: Value, q: Value) -> tuple[Node, ...]:
 
 def fold(span: Span, words: Words, xs: Value, q: Value) -> tuple[Node, ...]:
     """
-    xs q -- x : the last result of the scan; no item to start from is
-    refused.
+    xs q -- x : the last result of the scan, the left fold, 1 2 3 [-]
+    fold being (1-2)-3; no item to start from is refused. It is also
+    the word foldl.
     """
     last = deque(running_results(span, words, xs, q), maxlen=1)
     if not last:
         raise FplError(span, "fold over nothing")
     return (Push(last[0]),)
+
+
+def foldr(span: Span, words: Words, xs: Value, q: Value) -> tuple[Node, ...]:
+    """
+    xs q -- x : the last item, then q run on each item before it and
+    the result so far, the item below the result, 1 2 3 [-] foldr being
+    1-(2-3); no item to start from is refused.
+    """
+    code = quoted(q, span).code
+    values = items(xs, span)
+    if not values:
+        raise FplError(span, "fold over nothing")
+    result = values[-1]
+    for x in reversed(values[:-1]):
+        result = single(State((x, result), code, words), span)
+    return (Push(result),)
 
 
 CONTROLS: dict[str, Control] = {
@@ -870,6 +916,8 @@ CONTROLS: dict[str, Control] = {
     "each": each,
     "scan": scan,
     "fold": fold,
+    "foldl": fold,
+    "foldr": foldr,
 }
 
 

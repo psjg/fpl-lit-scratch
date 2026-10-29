@@ -111,13 +111,13 @@ def test_shift_enter_writes_the_result_under_the_cell(
     )
     assert done.returncode == 0, done.stderr
     shown = done.stdout
-    assert "|= [ 1 2 + ]" in shown
+    assert "|= 3" in shown
     assert "trace: not yet" in shown
     assert "fuel" in shown
     editors = [x for x in shown.splitlines() if x.startswith("EDITOR")]
     assert editors == [
-        "EDITOR '1 2 +\\n|= [ 1 2 + ]'",
-        "EDITOR '1 2 +\\n|= [ 1 2 + ]'",
+        "EDITOR '1 2 +\\n|= 3'",
+        "EDITOR '1 2 +\\n|= 3'",
     ]
 
 

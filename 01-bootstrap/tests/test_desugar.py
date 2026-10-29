@@ -45,7 +45,7 @@ bounded = st.integers(1 - 10**DIGITS, 10**DIGITS - 1)
 items = st.recursive(
     st.integers(-9, 99).map(str)
     | st.integers(4090, 4400).map(lambda n: "9" * n)
-    | st.sampled_from(sorted(BUILTINS))
+    | st.sampled_from([word for word in sorted(BUILTINS) if "/" not in word])
     | st.sampled_from(["#a", "→a", "1 →a a", "{ k 1 }"]),
     lambda inner: (
         st.lists(inner, max_size=4).map(lambda xs: "[" + " ".join(xs) + "]")
@@ -214,12 +214,63 @@ def test_literals_strand_inside_a_frame_and_the_bar_applies_across() -> None:
     assert run("1 | 1 2 3 +\n") == "2 3 4\n"
 
 
-def test_an_unsaturated_frame_with_nothing_below_is_a_section() -> None:
+def test_a_lone_number_before_a_binary_word_is_a_section() -> None:
     """
-    [D2.2] 1 2 3 + is the section [1‿2‿3 +], as the printer writes a
-    quotation.
+    [D2.2] 1 + has one value for a word that takes two and nothing to
+    reach: the one-value form of + pushes the section [1 +], as the
+    printer writes a quotation.
     """
-    assert run("1 2 3 +\n") == "[ 1 2 3 + ]\n"
+    assert run("1 +\n") == "[ 1 + ]\n"
+
+
+@pytest.mark.parametrize(
+    ("source", "printed"),
+    [
+        ("1 2 3 4 +\n", "10\n"),
+        ("1 1 +\n", "2\n"),
+        ("1 2 3 -\n", "2\n"),
+        ("1 2 3 times\n", "6\n"),
+        ("1 2 3 4 | +\n", "10\n"),
+        ("1 | 2 + | 3 times\n", "9\n"),
+        ("1 | 1 +\n", "2\n"),
+        ("1 | 1 2 3 +\n", "2 3 4\n"),
+        ("1 2 3 4 | 1 +\n", "2 3 4 5\n"),
+        ("1 2 3 4 | 4 3 2 1 +\n", "5 5 5 5\n"),
+        ("1 | 1 2 3 -\n", "0 -1 -2\n"),
+        ("1 -\n", "[ 1 - ]\n"),
+        ("1 2 3 - | 1\n", "2 | 1\n"),
+        ("1 | 2 + +\n", "[ 3 + ]\n"),
+        ("[ 1 2 3 4 ] +\n", "[ [ 1 2 3 4 ] + ]\n"),
+        ("1 2 3 4 | + fold\n", "1 2 3 4 [ + fold ]\n"),
+    ],
+)
+def test_a_binary_word_over_one_value_takes_its_one_value_form(
+    source: str, printed: str
+) -> None:
+    """
+    DI-0072: where the balance is one value, + - and times dispatch to
+    their one-value form, the right fold over a strand and the section
+    on a lone number; with two values they are the pervasive word, as
+    before.
+    """
+    assert run(source) == printed
+
+
+def test_a_quoted_word_is_never_read_as_its_one_value_form() -> None:
+    """
+    A quotation runs on the stack its caller gives it, so [+] folds
+    pairs, though a word alone in it meets no value when it is
+    desugared.
+    """
+    assert run("1 2 3 [-] fold\n") == "-4\n"
+
+
+def test_a_program_that_defines_the_word_keeps_its_own() -> None:
+    """
+    A definition of + is called as written, even where one value is
+    below it.
+    """
+    assert run("+ : x -- y\n\t1 times\n1 2 3 +\n") == "1 2 3\n"
 
 
 def test_the_bar_supplies_what_a_frame_lacks() -> None:
@@ -241,7 +292,7 @@ def test_each_line_runs_on_a_fresh_stack() -> None:
     draft2 examples/01-frames.fpl:2-4: one result per line; nothing a
     line leaves is below the next.
     """
-    assert run("1 | 1 2 3 +\n1 2 3 +\n2 | 3 +\n") == "2 3 4\n[ 1 2 3 + ]\n5\n"
+    assert run("1 | 1 2 3 +\n1 +\n2 | 3 +\n") == "2 3 4\n[ 1 + ]\n5\n"
 
 
 def test_curry_puts_the_value_before_the_code() -> None:
@@ -342,7 +393,7 @@ def test_a_lone_literal_is_itself_and_literals_side_by_side_are_one_strand() -> 
 @pytest.mark.parametrize(
     ("source", "printed"),
     [
-        ("1 | 2 + +\n", "1 [ 2 + + ]\n"),
+        ("1 | 2 swap drop drop drop\n", "1 [ 2 swap drop drop drop ]\n"),
         ("1 + | 2 swap\n", "2 [ 1 + ]\n"),
         ("1 + | swap\n", "[ 1 + ] [ swap ]\n"),
     ],

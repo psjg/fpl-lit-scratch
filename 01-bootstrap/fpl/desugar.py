@@ -21,6 +21,7 @@ from fpl import trivia
 from fpl.ast_core import (
     DIGITS,
     EFFECTS,
+    ONE_VALUE,
     PLANNED,
     Atom,
     Bind,
@@ -1191,7 +1192,7 @@ class _Desugar:
         return self.catalog.dispatch(self.catalog.resolve(here, (part,)), 1)
 
     def routed(
-        self, nodes: tuple[Node, ...], balance: int
+        self, nodes: tuple[Node, ...], balance: int, *, whole: bool = False
     ) -> tuple[Node, ...]:
         """Return the nodes with each dispatched call routed.
 
@@ -1203,18 +1204,39 @@ class _Desugar:
             nodes: The nodes in order.
             balance: The number of values on the stack before the first
                 node.
+            whole: Whether *balance* counts every value on the stack,
+                as in a line, and not only those the code below puts
+                there, as in a quotation, which runs on any stack. Only
+                a balance that is whole can say a word has exactly one
+                value (:meth:`chosen`).
         """
         out: list[Node] = []
         for node in nodes:
             taken = node
             if isinstance(node, Call) and not self.local(node.name):
-                taken = Call(
-                    self.catalog.dispatch(node.name, balance), node.span
-                )
+                taken = Call(self.chosen(node.name, balance, whole), node.span)
             takes, leaves = self.arity(taken)
             balance = max(0, balance - takes) + leaves
             out.append(taken)
         return tuple(out)
+
+    def chosen(self, name: str, balance: int, whole: bool) -> str:
+        """Return the word a call of *name* on *balance* values runs.
+
+        A binary arithmetic word that the program does not define is
+        its one-value form (:data:`~fpl.ast_core.ONE_VALUE`) where
+        exactly one value is on the stack. Anything else is the arity
+        group its balance picks (:meth:`Catalog.dispatch`).
+
+        Args:
+            name: The called word.
+            balance: The number of values on the stack before the call.
+            whole: Whether those are all the values on the stack.
+        """
+        alone = whole and balance == 1
+        if alone and name in ONE_VALUE and name not in self.catalog.heads:
+            return ONE_VALUE[name]
+        return self.catalog.dispatch(name, balance)
 
     def body(
         self, lines: tuple[Line, ...], balance: int, here: Here
@@ -1258,7 +1280,7 @@ class _Desugar:
             for part in parts:
                 before = self.effects
                 written = part()
-                nodes = self.routed(written, balance)
+                nodes = self.routed(written, balance, whole=True)
                 after = self.balance(nodes, balance)
                 if after is None:
                     nodes, after = (
@@ -1912,6 +1934,11 @@ def unfolded(code: tuple[Node, ...]) -> Iterator[Node]:
             yield from unfolded(node.body)
 
 
+#: The word that is written for each one-value form, which is never
+#: written: it is what the word is called as where one value is below.
+written_as = {form: word for word, form in ONE_VALUE.items()}
+
+
 def spelled(node: Node) -> tuple[Item, ...]:
     """Return the items that write one node.
 
@@ -1924,7 +1951,7 @@ def spelled(node: Node) -> tuple[Item, ...]:
         case Push():
             return shown(node.value)
         case Call():
-            return (named(node.name),)
+            return (named(written_as.get(node.name, node.name)),)
         case Bind():
             return (
                 Word(

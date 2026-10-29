@@ -36,6 +36,21 @@ starts failing so, or one of these whose word changes (PLANNED moved),
 fails a test; the owner rewrites the `.expected` files and drops the
 map.
 """
+SUPERSEDED = {
+    "draft2/01-frames": (
+        "2 3 4\n[ 1 2 3 + ]\n5\n0 1 2\n",
+        "2 3 4\n6\n5\n0 1 2\n",
+    )
+}
+"""
+The examples whose `.expected` holds an output that a decision since
+has changed, each with that old text exactly and the output now. The
+line `1 2 3 +` reduces to 6 where it was the section `[ 1 2 3 + ]`
+(DI-0072).
+Only these are compared with the new output, and only while the fixture
+still holds the old text, so any edit of one of them, the owner's
+rewrite or not, breaks a test and the map goes after it.
+"""
 
 
 def name(program: Path) -> str:
@@ -64,7 +79,21 @@ def output(program: Path) -> str:
 
 @pytest.mark.parametrize("program", EXAMPLES, ids=[name(p) for p in EXAMPLES])
 def test_example(program: Path) -> None:
-    assert output(program) == program.with_suffix(".expected").read_text()
+    expected = program.with_suffix(".expected").read_text()
+    if name(program) in SUPERSEDED:
+        expected = SUPERSEDED[name(program)][1]
+    assert output(program) == expected
+
+
+@pytest.mark.parametrize("example", sorted(SUPERSEDED))
+def test_the_output_a_decision_changed(example: str) -> None:
+    """
+    Each mapped example's `.expected` is still exactly the old text, so
+    an edit of the fixture breaks this and the map is reviewed.
+    """
+    (program,) = (p for p in EXAMPLES if name(p) == example)
+    old = program.with_suffix(".expected").read_text()
+    assert old == SUPERSEDED[example][0]
 
 
 @pytest.mark.parametrize("example", sorted(UNRESOLVED))

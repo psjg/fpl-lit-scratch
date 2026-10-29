@@ -107,7 +107,7 @@ def test_bare_fpl_opens_the_repl() -> None:
     """
     opened = fpl(stdin=b"1 2 +\n")
     assert opened.returncode == 0, opened.stderr.decode()
-    assert opened.stdout == b"[ 1 2 + ]\n"
+    assert opened.stdout == b"3\n"
 
 
 def test_repl_is_a_command_and_bare_fpl_is_its_alias() -> None:
@@ -117,7 +117,7 @@ def test_repl_is_a_command_and_bare_fpl_is_its_alias() -> None:
     named = fpl("repl", stdin=b"1 2 +\n")
     bare = fpl(stdin=b"1 2 +\n")
     assert named.returncode == bare.returncode == 0, named.stderr.decode()
-    assert named.stdout == bare.stdout == b"[ 1 2 + ]\n"
+    assert named.stdout == bare.stdout == b"3\n"
     assert b"repl" in fpl("--help").stdout
 
 
@@ -143,7 +143,7 @@ def test_the_repl_opens_from_the_wheel_layout(tmp_path: Path) -> None:
         check=False,
     )
     assert opened.returncode == 0, opened.stderr.decode()
-    assert opened.stdout == b"[ 1 2 + ]\n"
+    assert opened.stdout == b"3\n"
 
 
 def test_the_status_of_the_repl_is_the_status_of_fpl() -> None:

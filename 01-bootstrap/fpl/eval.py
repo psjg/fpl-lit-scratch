@@ -844,6 +844,56 @@ def arithmetic(
     )
 
 
+def reduction(
+    word: str,
+    op: Callable[[Number, Number], Number],
+    span: Span,
+    a: Value,
+) -> tuple[Value, ...]:
+    """Reduce a strand with an arithmetic word, the one-value form.
+
+    The right fold of *word* over the items, ``1 2 3 -`` being
+    ``1-(2-3)``, which is 2; a strand of one is its item. A lone number
+    and a quotation have no items to reduce, so the word suspends with
+    them into the section it would have been (``1 -`` is ``[ 1 - ]``).
+    Which of the two a value is cannot be told before it runs, since
+    the rank of a value is not in its type yet (DI-0072).
+
+    Args:
+        word: The name of the two-value word, for the section.
+        op: The operator on two numbers.
+        span: The word's position, for errors.
+        a: The one value below the word.
+
+    Returns:
+        The reduced number, or the section.
+
+    Raises:
+        :exc:`FplError`: *a* is an empty strand (``reduction over
+            nothing``), or none of a strand of numbers, a number
+            and a quotation (``arithmetic on a non-number``, from
+            :func:`operands`), or a result is too large (from
+            :func:`arithmetic`).
+
+    Examples:
+        >>> reduction("-", int.__sub__, Span(1, 1), Strand((1, 2, 3)))
+        (2,)
+        >>> reduction("-", int.__sub__, Span(1, 1), 1)[0].code[1].name
+        '-'
+    """
+    if isinstance(a, Strand):
+        if not a.items:
+            raise FplError(span, "reduction over nothing")
+        *init, last = operands(a, span)
+        result: Value = last
+        for x in reversed(init):
+            (result,) = arithmetic(op, span, x, result)
+        return (result,)
+    if not isinstance(a, Quotation):
+        operands(a, span)
+    return (Quotation((Push(a), Call(word, span))),)
+
+
 def swap(_span: Span, a: Value, b: Value) -> tuple[Value, ...]:
     """Swap the top two values (``x y -- y x``)."""
     return b, a
@@ -954,6 +1004,9 @@ BUILTINS: dict[str, Builtin] = {
     "+": partial(arithmetic, lambda x, y: x + y),
     "-": partial(arithmetic, lambda x, y: x - y),
     "times": partial(arithmetic, lambda x, y: x * y),
+    "+/1": partial(reduction, "+", lambda x, y: x + y),
+    "-/1": partial(reduction, "-", lambda x, y: x - y),
+    "times/1": partial(reduction, "times", lambda x, y: x * y),
     "swap": swap,
     "dup": dup,
     "?": unfilled,
@@ -1132,6 +1185,9 @@ def scan(span: Span, words: Words, xs: Value, q: Value) -> tuple[Node, ...]:
 def fold(span: Span, words: Words, xs: Value, q: Value) -> tuple[Node, ...]:
     """Reduce the items to the last result of the scan (``xs q -- x``).
 
+    The left fold, ``1 2 3 [-] fold`` being (1-2)-3; it is also the
+    word ``foldl``.
+
     Raises:
         :exc:`FplError`: There is no item to start from (``fold over
             nothing``), or as :func:`running_results`.
@@ -1140,6 +1196,28 @@ def fold(span: Span, words: Words, xs: Value, q: Value) -> tuple[Node, ...]:
     if not last:
         raise FplError(span, "fold over nothing")
     return (Push(last[0]),)
+
+
+def foldr(span: Span, words: Words, xs: Value, q: Value) -> tuple[Node, ...]:
+    """Reduce the items from the right (``xs q -- x``).
+
+    The last item, then *q* run on each item before it and the result
+    so far, the item below the result: ``1 2 3 [-] foldr`` is 1-(2-3),
+    which is 2, where :func:`fold` gives (1-2)-3.
+
+    Raises:
+        :exc:`FplError`: There is no item to start from (``fold over
+            nothing``), or as :func:`quoted`, :func:`items` and
+            :func:`single`.
+    """
+    code = quoted(q, span).code
+    values = items(xs, span)
+    if not values:
+        raise FplError(span, "fold over nothing")
+    result = values[-1]
+    for x in reversed(values[:-1]):
+        result = single(State((x, result), code, words), span)
+    return (Push(result),)
 
 
 #: Control words by name, each called as ``fn(span, words, *args)``.
@@ -1151,4 +1229,6 @@ CONTROLS: dict[str, Control] = {
     "each": each,
     "scan": scan,
     "fold": fold,
+    "foldl": fold,
+    "foldr": foldr,
 }
