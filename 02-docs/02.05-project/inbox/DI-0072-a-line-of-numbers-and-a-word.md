@@ -219,8 +219,12 @@ and on `@ n`: "dat vind ik eigenlijk best wel een sick idee voor debugging [...]
 is `@` een deadline en in R1 is het een oh de fout zat daar bij dat ding in de debugger?".
 Yes, one meaning: `@ n` is "at step n" of the evaluation, the last step on a success line
 and the failing step on a fail line, the address a debugger jumps to beside the source
-position. Decided: `|- ! err/<scope>* <line>:<col> “msg” @ n` and `|- value : sort @ n`;
-the input number of `ERROR: @N` moves to `#N`.
+position. Then (10-29): "wacht even noem dat ding op R2 misschien IN of WITHIN", "zijn die twee
+judgements appart? is er misschien een ander symbool dat we kunnen gebruiken voor tijd?
+unicode? of ascii liever ascii natuurlijk", and on `within` for the success line: "dat".
+Decided: two judgments, `|- ! err/<scope>* <line>:<col> “msg” @ n` (a point, the failing
+step) and `|- value : sort within n` (a bound); no third sign for time; the input number
+of `ERROR: @N` moves to `#N`.
 
 On rank (10-29, verbatim): "uh krijgen we straks conflicten met het box model stel we
 willen een box model... willen we een box model? net zoals J en UIuia ik heb ook de
