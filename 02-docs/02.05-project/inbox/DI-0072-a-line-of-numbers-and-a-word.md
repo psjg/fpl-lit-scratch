@@ -194,13 +194,16 @@ whole-program `ERROR: 1:1 no evaluator yet`; his pick (10-29, "dit") for those: 
 themselves (10-29, verbatim, also said to the corpus session): "subclass FPLError zo diep
 als dat je die moet subclassen zodat we specefiekere error codes kunnen gaan bouwen in de
 toekomst" and "we gaan de `|- ! err/<scope>/<scope> "<msg>"` synatx gebruiken", which he
-then rewrote as `err/<scope>* "<msg>"`. The idea came from an earlier Cursor session with
+then rewrote as `err/<scope>* "<msg>"`; to the corpus session he chose FPL quotes for
+the message ("spel het idd met fpl quotes"), so the line reads `|- ! err/<scope>* “msg”`. The idea came from an earlier Cursor session with
 a Grok agent; [02.03.01](../../02.03-reference/02.03.01-errors.md) locked its first shape.
 So the exception tree under `FplError` (`01-bootstrap/fpl/errors.py`) mirrors the path:
 one class per segment, each class carrying its segment, the fail judgment printing the
 path of the class that was raised; the first tree names only the errors that exist today
-(underflow, unresolved/unknown, unresolved/unimplemented, fail/no-row, arithmetic/...,
-thunk/expected, fold/empty, out-of-gas, fon). Open for him: what a passing check prints,
+(underflow, unresolved/unknown-word, unresolved/no-evaluator, fail/no-row, arithmetic/...,
+thunk/expected, fold/empty, out-of-gas, fon). The tree and the `L |- R` check are
+built in the corpus session on his direct order of 09:34; this session takes the printer
+afterwards. Open for him: what a passing check prints,
 whether the position stands on the judgment line or in the caret block under it, and
 whether `err/out-of-gas` keeps that name.
 
