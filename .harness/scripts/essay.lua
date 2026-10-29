@@ -269,8 +269,9 @@ end
 -- chunks in file order, each a link to the chunk's page address. The
 -- header form is lit's (.harness/tools/lit/lit/web.py): the name line
 -- opens with the chunk's place, a dotted number (3.1 is under 3), and
--- the lines after it name a file each, a place of their own first when
--- the chunk sits elsewhere in that file. A chunk another chunk uses is shown
+-- the second line names its files, separated by spaces, a place of
+-- their own in front (2:fpl/lex.py) when the chunk sits elsewhere in
+-- that file. A chunk another chunk uses is shown
 -- under it, by its place. A page without such headers shows nothing.
 local function place_key(place)
   local key = {}
@@ -306,12 +307,9 @@ local function chunk_of(block)
   end
   local files = {}
   for i = 2, #lines do
-    local own, path = lines[i]:match("^%s*(%d[%d%.]*)%s+(%S+)%s*$")
-    if not path then
-      path = lines[i]:match("^%s*(%S+)%s*$")
-    end
-    if path then
-      table.insert(files, { path = path, place = own or place })
+    for token in lines[i]:gmatch("%S+") do
+      local own, path = token:match("^(%d[%d%.]*):(.+)$")
+      table.insert(files, { path = path or token, place = own or place })
     end
   end
   return { name = (name:gsub("%s+", " ")), place = place, files = files,
