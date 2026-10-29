@@ -22,7 +22,27 @@ local function nice(slug)
   end))
 end
 
+-- The commit a page was rendered from, for the annotation overlay
+-- (assets/fpl-annot.js) to write on the rows it exports. It is read at
+-- render time, so a published page names the commit publish.sh ran
+-- on, not the one that last stamped the site config. A dirty tree is
+-- still that commit: render from a clean one to publish.
+local commit = nil
+
+local function stamp()
+  if commit == nil then
+    commit = pandoc.pipe("git", { "rev-parse", "HEAD" }, ""):gsub("%s+$", "")
+  end
+  quarto.doc.include_text(
+    "in-header",
+    '<meta name="fpl-commit" content="' .. commit .. '">'
+  )
+end
+
 function Pandoc(doc)
+  if quarto.doc.is_format("html") then
+    stamp()
+  end
   local file = ""
   if quarto.doc ~= nil and quarto.doc.input_file ~= nil then
     file = quarto.doc.input_file

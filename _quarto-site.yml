@@ -4,6 +4,8 @@ project:
   resources:
     - assets/fpl-live.js
     - assets/fpl-live.css
+    - "**/*.facts.json"
+    - "**/*.decisions.tsv"
     - assets/fpl-runtime.js
     - assets/fpl-playground.js
     - assets/fpl-language.js
@@ -228,3 +230,6 @@ format:
     toc-depth: 2
     code-overflow: wrap
     css: assets/fpl-live.css
+    include-in-header:
+      text: |
+        <meta name="fpl-site" content="https://psjg.github.io/fpl-lit-scratch">
