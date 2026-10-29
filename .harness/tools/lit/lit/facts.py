@@ -504,7 +504,7 @@ type Placed = tuple[int, int, Token]
 LAYOUT = frozenset({tokenize.NEWLINE, tokenize.INDENT, tokenize.DEDENT})
 # A hand-written id, a ledger id, a commit, a ledger date.
 NAME = re.compile(r"[A-Za-z0-9._-]+")
-COMMIT = re.compile(r"[0-9a-f]{7,40}")
+COMMIT = re.compile(r"[0-9a-f]{40}")
 DATE = re.compile(r"\d{4}-\d{2}-\d{2}")
 # A code point JavaScript counts as two: offsets would differ there.
 ASTRAL = re.compile("[\U00010000-\U0010ffff]")
@@ -762,7 +762,7 @@ def field_faults(row: Row) -> Iterator[str]:
         ):
             yield f"{key} must be a {want.__name__}"
         elif key == "commit" and not COMMIT.fullmatch(cast("str", value)):
-            yield f"commit {value!r} is no hex commit"
+            yield f"commit {value!r} is not a full 40-hex commit"
 
 
 def span_shape(row: Row) -> str:

@@ -14,6 +14,8 @@ from lit import facts, web
 
 REPO = Path(__file__).resolve().parents[4]
 LEX = "01-bootstrap/01.02-pass/01.02.01-lex.md"
+SHA = "abc1234def5678abc1234def5678abc1234def56"
+NONE = "abcdef0abcdef0abcdef0abcdef0abcdef0abcde"
 
 PAGE = """
     # Demo
@@ -144,7 +146,7 @@ ROWS: list[facts.Row] = [
         "start": 0,
         "end": 1,
         "text": "?",
-        "commit": "abc1234",
+        "commit": SHA,
         "createdAt": 1,
         "updatedAt": True,
     },
@@ -267,7 +269,7 @@ def demo(tmp_path: Path, rows: list[facts.Row]) -> Path:
 def hand_rows(first: str) -> list[facts.Row]:
     """A span on the page, one in another file, a fact, a relation."""
     return [
-        at(first, "return pairs(src,", rid="call") | {"commit": "abc1234"},
+        at(first, "return pairs(src,", rid="call") | {"commit": SHA},
         {"id": "n", "item": "notes.txt", "start": 2, "end": 6, "text": "note"},
         {
             "id": "f",
@@ -277,7 +279,7 @@ def hand_rows(first: str) -> list[facts.Row]:
         },
         {"id": "r", "labels": ["because"], "targets": ["f", "n"]},
         at(first, "The pairs", rid="gone")
-        | {"text": "Never written.", "commit": "abc1234"},
+        | {"text": "Never written.", "commit": SHA},
     ]
 
 
@@ -381,7 +383,7 @@ def test_anchor_verify_catches_a_wrong_commit(
     rows = [
         at(first, "The pairs", rid="a") | {"commit": one},
         at(first, "The pairs", rid="b") | {"commit": two},
-        at(first, "The pairs", rid="c") | {"commit": "abcdef0"},
+        at(first, "The pairs", rid="c") | {"commit": NONE},
         {"id": "f", "note": "no span", "commit": one},
     ]
     sidecar = json.dumps(rows)
@@ -390,7 +392,7 @@ def test_anchor_verify_catches_a_wrong_commit(
     assert lit(tmp_path, "anchor", "--verify") == 1
     out = capsys.readouterr().out
     assert "p.facts.json:2: lit-facts-ground: text is not at" in out
-    assert "p.facts.json:3: lit-facts-ground: abcdef0 holds no p.md" in out
+    assert f"p.facts.json:3: lit-facts-ground: {NONE} holds no p.md" in out
     assert "p.facts.json:1:" not in out
     (tmp_path / "p.facts.json").write_text("[1]", encoding="utf-8")
     assert lit(tmp_path, "anchor", "--verify") == 1
@@ -399,12 +401,24 @@ def test_anchor_verify_catches_a_wrong_commit(
     assert lit(tmp_path, "anchor", "--verify") == 0
 
 
-def test_the_lex_page_without_a_sidecar(
+def test_the_lex_page_with_its_sidecar(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """No sidecar, no ledger: no finding, and only generated rows."""
+    """The real page, its sidecar and ledger: 681 rows, no finding."""
     monkeypatch.chdir(REPO)
     rows, bad = facts.generate(Path(LEX), Path("01-bootstrap"))
     assert bad == []
-    assert len(rows) == 599
+    assert len(rows) == 681
     assert rows[0]["item"] == LEX
+
+
+def test_generate_without_a_sidecar_gives_generated_rows_only(
+    tmp_path: Path,
+) -> None:
+    """A page with no sidecar and no ledger: no finding, no hand row."""
+    git(tmp_path, "init", "-q")
+    path = page(tmp_path, "p.md", text())
+    rows, bad = facts.generate(path, tmp_path)
+    assert bad == []
+    assert rows
+    assert all("commit" not in r for r in rows)
