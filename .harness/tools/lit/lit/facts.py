@@ -50,6 +50,11 @@ and ``commit``: a span, a fact about rows, or a relation between them.
 A hand row's span is immutable, ``item@commit[start, end) = text``;
 whether its text is still on the page is computed each time
 (`locate'), never written back. Items are paths from the repository.
+
+The annotation program keeps its rows elsewhere, each ``item`` a label
+it knows (``A``, ``lex``) rather than a path. `imported' turns its
+rows for one label into hand rows on one page at one commit, `merged'
+folds them into a sidecar, and `exported' is the way back.
 """
 
 from __future__ import annotations
@@ -713,6 +718,18 @@ def constant(name: str) -> object:
     raise ValueError(f"{name} is no JSON number")
 
 
+def loads(text: str) -> object:
+    """A JSON text read strictly: no key twice, no ``NaN``.
+
+    Raises:
+        ValueError: Not JSON, a key twice in an object, or ``NaN``.
+    """
+    data: object = json.loads(
+        text, object_pairs_hook=unique, parse_constant=constant
+    )
+    return data
+
+
 def read_rows(text: str) -> list[Row]:
     """A sidecar's rows: a bare JSON array of objects, read strictly.
 
@@ -720,9 +737,7 @@ def read_rows(text: str) -> list[Row]:
         ValueError: Not JSON, a key twice in a row, ``NaN``, or not
             an array of objects.
     """
-    data: object = json.loads(
-        text, object_pairs_hook=unique, parse_constant=constant
-    )
+    data = loads(text)
     if not isinstance(data, list):
         raise ValueError("not a JSON array of objects")
     rows = cast("list[object]", data)
@@ -1050,4 +1065,175 @@ def ground(
         else:
             continue
         out.append(web.Finding(where, n, "lit-facts-ground", message))
+    return out
+
+
+# The keys a row of the annotation program may carry over, besides
+# its id and its span, in the order a sidecar row writes them.
+TOOL_KEYS = ("labels", "note", "targets", "createdAt", "updatedAt")
+
+
+@dataclass(frozen=True)
+class Tool:
+    """A row of the annotation program, at the place it was read.
+
+    Attributes:
+        where: The file it was read from.
+        number: Its number there: 1-based in an array, 1 in a file of
+            one row.
+        row: The row, out of its export envelope.
+    """
+
+    where: str
+    number: int
+    row: Row
+
+
+def envelope(value: object) -> Row:
+    """A row out of its export envelope: ``data`` when present.
+
+    Raises:
+        ValueError: The value, or its ``data``, is no object.
+    """
+    if isinstance(value, dict) and "data" in value:
+        value = cast("Row", value)["data"]
+    if not isinstance(value, dict):
+        raise ValueError("a row is no JSON object")
+    return cast("Row", value)
+
+
+def tool_rows(where: str, text: str, *, array: bool) -> list[Tool]:
+    """The rows of one file of the annotation program's export.
+
+    The program exports either one file holding a JSON array of rows
+    (``array``) or a directory of files holding one row each. A row
+    may stand in its envelope ``{"id", "data", "version",
+    "updatedAt"}``, and then its ``data`` is the row.
+
+    Args:
+        where: The file's name, the place of its rows.
+        text: The file's text, read strictly (`loads').
+        array: Whether the file is an array of rows.
+
+    Raises:
+        ValueError: No JSON, an array file that holds no array, or a
+            row that is no object.
+    """
+    data = loads(text)
+    if not array:
+        return [Tool(where, 1, envelope(data))]
+    if not isinstance(data, list):
+        raise ValueError("not a JSON array of rows")
+    items = cast("list[object]", data)
+    return [Tool(where, n, envelope(v)) for n, v in enumerate(items, 1)]
+
+
+def import_faults(row: Row, seen: set[str]) -> Iterator[str]:
+    """Why a row of the program cannot become a hand row, if it can't.
+
+    Its id must be a new string, its offsets integers, its text one
+    without astral code points (JavaScript counts those as two, so the
+    program's offsets would not be lit's), and its times integers,
+    since the new rows are ordered by them.
+    """
+    rid, text = row.get("id"), row["text"]
+    if not isinstance(rid, str) or rid in seen:
+        yield f"id {rid!r} is no new string"
+    if type(row["start"]) is not int or type(row["end"]) is not int:
+        yield "start and end must be integers"
+    if not isinstance(text, str):
+        yield "text must be a string"
+    elif m := ASTRAL.search(text):
+        yield f"text holds U+{ord(m[0]):X}, two code units in JavaScript"
+    for key in ("createdAt", "updatedAt"):
+        if key in row and type(row[key]) is not int:
+            yield f"{key} must be an integer"
+
+
+def imported(
+    rows: Sequence[Tool], label: str, page: str, commit: str
+) -> tuple[list[Row], list[web.Finding]]:
+    """The program's rows for one label as hand rows on a page.
+
+    A row is the label's when its ``item`` is ``label`` and it holds
+    ``start``, ``end`` and ``text``; every other row (another item,
+    the program's own records of labels and items) is passed over. A
+    row of the label becomes ``{id, item: page, start, end, text,
+    labels, note, targets, commit, createdAt, updatedAt}``: its
+    ``targets`` are ``[]`` when it has none, and ``labels``, ``note``
+    and the times are carried only when it has them.
+
+    Returns:
+        The hand rows, and a ``lit-facts-import`` finding for each row
+        refused (`import_faults'), at its place.
+    """
+    out: list[Row] = []
+    bad: list[web.Finding] = []
+    seen: set[str] = set()
+    for t in rows:
+        d = t.row
+        if d.get("item") != label or not all(k in d for k in SPAN[1:]):
+            continue
+        if faults := list(import_faults(d, seen)):
+            bad += [
+                web.Finding(t.where, t.number, "lit-facts-import", m)
+                for m in faults
+            ]
+            continue
+        rid = cast("str", d["id"])
+        seen.add(rid)
+        row: Row = {"id": rid, "item": page}
+        row |= {k: d[k] for k in SPAN[1:]}
+        row |= {k: d[k] for k in TOOL_KEYS[:2] if k in d}
+        row |= {"targets": d.get("targets", []), "commit": commit}
+        row |= {k: d[k] for k in TOOL_KEYS[3:] if k in d}
+        out.append(row)
+    return out, bad
+
+
+def created(row: Row) -> int:
+    """When a valid imported row was made; 0 when it does not say."""
+    return cast("int", row.get("createdAt", 0))
+
+
+def merged(old: Sequence[Row], new: Sequence[Row]) -> tuple[list[Row], int]:
+    """A sidecar's rows with the imported ``new`` folded in.
+
+    A new row whose id an old row has takes that row's place; every
+    other old row stays where it is; the remaining new rows follow,
+    ordered by ``createdAt`` (a row without one first, ties in the
+    order read).
+
+    Returns:
+        The rows, and how many old rows were replaced.
+    """
+    by = {cast("str", r["id"]): r for r in new}
+    out: list[Row] = []
+    for r in old:
+        rid = r.get("id")
+        out.append(by.pop(rid) if isinstance(rid, str) and rid in by else r)
+    rest = sorted(by.values(), key=created)
+    return out + rest, len(new) - len(rest)
+
+
+def exported(
+    rows: Sequence[Row], labels: Mapping[tuple[str, str], str]
+) -> list[Row]:
+    """A sidecar's span rows in the annotation program's shape.
+
+    Each row with a span becomes ``{id, item, start, end, text}`` and
+    whichever of ``labels``, ``note``, ``targets``, ``createdAt`` and
+    ``updatedAt`` it holds; its ``commit`` is dropped. Its ``item`` is
+    the program's label for ``(item, commit)`` in ``labels``, or the
+    path itself when none is given. Rows without a span (facts,
+    relations) stay behind: the program has no place for them yet.
+    """
+    out: list[Row] = []
+    for r in rows:
+        if not all(k in r for k in SPAN):
+            continue
+        at = (cast("str", r["item"]), cast("str", r.get("commit", "")))
+        row: Row = {"id": r["id"], "item": labels.get(at, at[0])}
+        row |= {k: r[k] for k in (*SPAN[1:], *TOOL_KEYS) if k in r}
+        out.append(row)
     return out

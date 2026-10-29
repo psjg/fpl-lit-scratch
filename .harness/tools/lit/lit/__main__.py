@@ -13,6 +13,14 @@
                                  DIR/<page stem>.json: its generated
                                  spans, its ledger's rows and its hand
                                  rows, located
+    lit facts --import DIR_OR_FILE --item LABEL=PAGE@COMMIT [PAGE]
+                                 the annotation program's rows for
+                                 LABEL, as hand rows on PAGE at
+                                 COMMIT, merged into its sidecar by
+                                 id; then the sidecar is checked
+    lit facts --export PAGE [--item LABEL=PAGE@COMMIT] [--out FILE]
+                                 the sidecar's span rows in the
+                                 program's shape, as one JSON array
     lit anchor --verify [PAGE ...]
                                  each hand row with a commit has its
                                  text at its place there (asks git)
@@ -156,8 +164,96 @@ def cmd_check(args: argparse.Namespace) -> int:
     return report(findings, "check", len(found))
 
 
+def usage(message: str) -> int:
+    """Say what the command line lacks; the usage status."""
+    print(f"lit: {message}", file=sys.stderr)
+    return 2
+
+
+def label(value: str) -> tuple[str, str, str]:
+    """``LABEL=PAGE@COMMIT``: the program's name for a page's text.
+
+    Raises:
+        argparse.ArgumentTypeError: Another spelling, or a commit that
+            is no full 40-hex commit.
+    """
+    name, eq, rest = value.partition("=")
+    page, at, commit = rest.rpartition("@")
+    if not (name and eq and page and at and facts.COMMIT.fullmatch(commit)):
+        message = f"{value!r} is no LABEL=PAGE@COMMIT with a 40-hex commit"
+        raise argparse.ArgumentTypeError(message)
+    return name, page, commit
+
+
+def dumps(rows: list[facts.Row]) -> str:
+    """Rows in their one written form."""
+    return json.dumps(rows, indent=1, ensure_ascii=False) + "\n"
+
+
+def export_files(
+    source: Path,
+) -> tuple[list[facts.Tool], list[web.Finding]]:
+    """The rows of an export, a directory of rows or one array file."""
+    many = source.is_dir()
+    rows: list[facts.Tool] = []
+    bad: list[web.Finding] = []
+    for f in sorted(source.glob("*.json")) if many else [source]:
+        try:
+            text = f.read_text(encoding="utf-8")
+            rows += facts.tool_rows(f.as_posix(), text, array=not many)
+        except ValueError as e:
+            bad.append(web.Finding(f.as_posix(), 1, "lit-facts-json", str(e)))
+    return rows, bad
+
+
+def cmd_import(args: argparse.Namespace) -> int:
+    """Merge the program's rows into a page's sidecar; check it."""
+    if args.item is None:
+        return usage("--import needs --item LABEL=PAGE@COMMIT")
+    name, item, commit = args.item
+    path = facts.top(args.root) / item
+    if any(Path(p).resolve() != path.resolve() for p in args.pages):
+        return usage(f"the page of --import is {item}, the one --item names")
+    rows, bad = export_files(args.source)
+    car = path.with_suffix(".facts.json")
+    try:
+        old = facts.read_rows(car.read_text("utf-8")) if car.is_file() else []
+    except ValueError as e:
+        old = []
+        bad.append(web.Finding(car.as_posix(), 1, "lit-facts-json", str(e)))
+    if bad:
+        return report(bad, "facts", 1)
+    new, refused = facts.imported(rows, name, item, commit)
+    rows_now, replaced = facts.merged(old, new)
+    car.write_text(dumps(rows_now), encoding="utf-8")
+    kept = len(old) - replaced
+    print(f"lit facts: imported {len(new)}, replaced {replaced}, kept {kept}")
+    return report(refused + facts.generate(path, args.root)[1], "facts", 1)
+
+
+def cmd_export(args: argparse.Namespace) -> int:
+    """Write a page's span rows in the program's shape."""
+    rows, bad = facts.generate(args.export, args.root)
+    if bad:
+        return report(bad, "facts", 1)
+    labels = {} if args.item is None else {args.item[1:]: args.item[0]}
+    hand = [r for r in rows if "kind" not in r]
+    text = dumps(facts.exported(hand, labels))
+    if args.out is None:
+        sys.stdout.write(text)
+    else:
+        args.out.write_text(text, encoding="utf-8")
+    return 0
+
+
 def cmd_facts(args: argparse.Namespace) -> int:
-    """Write each page's fact layer; its findings."""
+    """Write each page's fact layer, or import or export hand rows."""
+    if args.source is not None:
+        return cmd_import(args)
+    if args.export is not None:
+        return cmd_export(args)
+    if args.out is None:
+        return usage("facts needs --out DIR, --import or --export")
     named = paths(args.root, args.pages)
     args.out.mkdir(parents=True, exist_ok=True)
     findings: list[web.Finding] = []
@@ -167,9 +263,8 @@ def cmd_facts(args: argparse.Namespace) -> int:
         rows, bad = facts.generate(path, args.root)
         findings += bad
         count += len(rows)
-        text = json.dumps(rows, indent=1, ensure_ascii=False) + "\n"
         out = args.out / (path.stem + ".json")
-        out.write_text(text, encoding="utf-8")
+        out.write_text(dumps(rows), encoding="utf-8")
     ms = (time.perf_counter() - started) * 1000
     print(f"lit facts: {count} row(s) in {args.out}, {ms:.0f} ms")
     return report(findings, "facts", len(named))
@@ -322,7 +417,11 @@ def parser() -> argparse.ArgumentParser:
     p.add_argument("pages", nargs="*")
     p.set_defaults(fn=cmd_weave)
     p = sub.add_parser("facts")
-    p.add_argument("--out", type=Path, required=True)
+    mode = p.add_mutually_exclusive_group()
+    mode.add_argument("--import", dest="source", type=Path)
+    mode.add_argument("--export", type=Path)
+    p.add_argument("--item", type=label)
+    p.add_argument("--out", type=Path)
     p.add_argument("pages", nargs="*")
     p.set_defaults(fn=cmd_facts)
     p = sub.add_parser("anchor")

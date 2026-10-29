@@ -18,6 +18,11 @@ index is [index.md](index.md).
     lit readable PAGE            a model answers the tests from the prose (make lit-readable)
     lit run -- CMD ...           run CMD; its output names page lines, not file lines
     lit facts --out DIR [PAGE ...]  each page's spans and hand rows as DIR/<stem>.json
+    lit facts --import DIR_OR_FILE --item LABEL=PAGE@COMMIT [PAGE]
+                                    the annotation program's rows for LABEL into PAGE's
+                                    sidecar, merged by id, then checked
+    lit facts --export PAGE [--item LABEL=PAGE@COMMIT] [--out FILE]
+                                    the sidecar's span rows in the program's row shape
     lit anchor --verify [PAGE ...]  each hand row's text is at its place in its commit (git)
 
 Every command takes `--root DIR`. File chunks are written relative to it, and without PAGE
