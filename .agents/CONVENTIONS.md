@@ -64,19 +64,24 @@ error. README and index.md under `03-fpl/` are not tangled.
   <name>/
     spec.md
     examples/*.fpl
-    examples/*.expected
 01-bootstrap/tests/
   corpus.py              finds 03-fpl/OLD/03.01-features/
-  test_conformance.py    runs the driver on those examples, diffs .expected
+  test_conformance.py    runs the driver on each example; it passes when none raises
   test_ambiguity.py      asserts the grammar parses the corpus with zero Earley ambiguity
 ```
 
-`.expected` format:
+Each example checks itself (DI-0072); there are no `.expected` files:
 
-- Normal case: exact stdout of `python -m fpl <file>`, which `make run FILE=<file>` prints
-  from the root.
-- Error case: a single line `ERROR: <line>:<col> <message>` — no Python traceback ever reaches
-  the user.
+- A run line that prints carries its value: `1 | 2 + |- 3`, before any `;` note. Both sides
+  run; the line prints its left side, and unequal stacks fail with `err/check/unequal`.
+- A program that fails closes on one line, after every trailing comment:
+  `|- ! err/<tag> “<message>”` (the message optional, exact when given). It must fail with that
+  tag; `python -m fpl <file>` (`make run FILE=<file>` from the root) then prints the output so
+  far and the error line `ERROR: <line>:<col> <message>` and exits 0.
+- A program that prints nothing carries no check.
+
+No Python traceback ever reaches the user: an error is the one line `ERROR: <line>:<col>
+<message>` on stdout.
 
 **The oracle rule:** the maintainer writes the fixtures that remain. The agent makes
 `make check` green against them. `spec.md`, the examples, `02-docs/02.04-explanation/design.md`

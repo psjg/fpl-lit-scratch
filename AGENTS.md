@@ -111,7 +111,7 @@ the long search: more examples, CrossHair, and mutation testing.
 To run the walker, from the root of any checkout: `make run FILE=path/to/p.fpl` runs a file
 and `make repl` starts the REPL (`make repl ARGS='--session s.log'`). The package is
 `01-bootstrap/fpl`, so a bare `python -m fpl` from the root finds no module; `make check` ends by
-running one example through `make run` and diffing it with its `.expected`.
+running one example, which checks itself, through `make run` and requiring it to exit 0.
 
 The gate's configuration is policy: it lives in the harness (`.harness/quality/`), a change to it
 carries `[policy]` and no code, and `make check` refuses to run against an uncommitted one.
@@ -125,7 +125,7 @@ hand-edit `.fpl` files; do not invent language semantics in those notes until th
 maintainer has settled them.
 
 The old conformance suite lives at `03-fpl/OLD/03.01-features/` (`spec.md` +
-`examples/*.fpl` + `*.expected`). The walker corpus still reads it. A new oracle home
+`examples/*.fpl`, each checking itself with `|-`). The walker corpus still reads it. A new oracle home
 is not chosen yet — do not scaffold new features under `03.01-features/`.
 
 **The oracle rule still holds for what remains of the suite:** the maintainer writes the

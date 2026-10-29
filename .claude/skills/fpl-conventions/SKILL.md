@@ -11,7 +11,8 @@ Claude session follows the same conventions any agent would. Read, in order:
    gate, the FPL image and the oracle rule.
 2. **`.agents/CONVENTIONS.md`** — the `01-bootstrap/fpl/` module tree (surface AST → desugar →
    core AST → semantics), the `03-fpl/` image (`*.md` → `make tangle-fpl` → `*.fpl`), the
-   archived corpus under `03-fpl/OLD/03.01-features/`, `.expected` format, `make check`.
+   archived corpus under `03-fpl/OLD/03.01-features/` and how its examples check
+   themselves, `make check`.
 3. **`.agents/COMMITS.md`** — Conventional-Commits header + the git-trailer provenance block,
    the machine-account authorship model, `[gate]` vs `[advisory]` rules. Commit with
    `.harness/scripts/acommit.sh`.

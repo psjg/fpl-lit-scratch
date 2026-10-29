@@ -82,7 +82,7 @@ request that moves the package is drawn where the package was.
 | `.harness/scripts/nix-deps` | a dependency `01-bootstrap/pyproject.toml` declares (runtime, optional, group, build-system) that `lib.pythonDeps` of `flake.nix` does not provide, or one the flake provides that nothing declares |
 | `vulture` | code nothing uses |
 | `pylint` duplicate-code | six or more lines repeated |
-| `make run` from the root | the entry a README points to failing, or printing other than the `.expected` of `03-fpl/OLD/03.01-features/draft2/examples/01-frames` (the lanes run in `01-bootstrap/`, so only this step runs the walker from the root) |
+| `make run` from the root | the entry a README points to failing on `03-fpl/OLD/03.01-features/draft2/examples/01-frames.fpl` (a nonzero exit, which a check of the example that does not hold also gives), or printing nothing (the lanes run in `01-bootstrap/`, so only this step runs the walker from the root) |
 
 On the milestone-0 skeleton `make check` takes about 6 seconds and `make harden` about 3
 minutes, almost all of it CrossHair.

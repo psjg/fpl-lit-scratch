@@ -55,8 +55,9 @@ the human-readable syntax spec.
 3. **Ambiguity gate.** Earley silently accepts ambiguous grammars, and the pain surfaces
    months later as "why did precedence change". The grammar loads with `ambiguity='explicit'`
    and a test asserts zero ambiguity over the example corpus.
-4. **Don't let the agent be its own oracle.** The maintainer authors `spec.md`, the `.fpl`
-   examples, and the `.expected` files. The agent makes `make check` green against them. See
+4. **Don't let the agent be its own oracle.** The maintainer authors `spec.md` and the `.fpl`
+   examples, whose `|-` checks state what they print. The agent makes `make check` green
+   against them. See
    `CONVENTIONS.md`.
 5. **Cheat on the backend.** When compilation matters: core IR → C → `clang`. Clang is the
    optimiser, instruction selector, assembler, and linker. Swapping IR→C for IR→LLVM later
