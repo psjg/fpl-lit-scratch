@@ -6,8 +6,8 @@ project:
     - assets/fpl-live.css
     - assets/fpl-annot.js
     - assets/fpl-annot.css
-    - "**/*.facts.json"
-    - "**/*.decisions.tsv"
+    - "01-bootstrap/**/*.facts.json"
+    - "01-bootstrap/**/*.decisions.tsv"
     - assets/fpl-runtime.js
     - assets/fpl-playground.js
     - assets/fpl-language.js

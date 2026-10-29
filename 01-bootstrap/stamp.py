@@ -926,8 +926,8 @@ filters:
     - assets/fpl-live.css
     - assets/fpl-annot.js
     - assets/fpl-annot.css
-    - "**/*.facts.json"
-    - "**/*.decisions.tsv"
+    - "01-bootstrap/**/*.facts.json"
+    - "01-bootstrap/**/*.decisions.tsv"
   render:
     - index.qmd
     - 01-bootstrap/README.md
