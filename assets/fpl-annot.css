@@ -157,7 +157,8 @@ body.fpl-numbered .fpl-s:hover .fpl-c::before { opacity: 1; }
 @media (prefers-reduced-motion: reduce) { mark.fact, .fpl-card, .fpl-line { transition: none; animation: none; } }
 
 /* the files of a page, an outline at its end (essay.lua files()) */
-.fpl-files ol { padding-left: 1.4rem; }
-.fpl-files li { margin: .15rem 0; }
+.fpl-files .fpl-part { margin: .15rem 0 .15rem calc(1rem + var(--depth, 0) * 1.2rem); }
+.fpl-files .fpl-part[data-depth="1"] { --depth: 1; } .fpl-files .fpl-part[data-depth="2"] { --depth: 2; } .fpl-files .fpl-part[data-depth="3"] { --depth: 3; }
+.fpl-files .fpl-place { display: inline-block; min-width: 2.6rem; font-variant-numeric: tabular-nums; color: var(--fpl-mute); font-size: .85rem; }
 .fpl-files .fpl-addr { font-size: .78rem; font-weight: 600; color: var(--fpl-vers); text-decoration: none; margin-right: .2rem; }
 .fpl-files .fpl-addr:hover { text-decoration: underline; }

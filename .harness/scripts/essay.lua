@@ -256,118 +256,75 @@ function Link(link)
   return link
 end
 
--- The files a page tangles, as an outline at its end: per file its parts
--- in file order, each a link to the part's address. The rules are lit's
--- (.harness/tools/lit/lit/web.py): the front matter's `tangle:` names
--- the page's file; its parts are the chunks no other chunk uses, in
--- page order, the import chunks hoisted after a leading docstring; a
--- chunk may also name a file and a place on the lines of its header
--- after the name (`fpl/lex.py 3`): it stays a part of the page's file
--- and that file is exactly the parts so placed, in that order. A page
--- without either shows nothing.
-local function chunk_of(block)
-  local code = block.content[1]
-  local header, rest = code.text:match("^<<(.-)>>%+?=\n?(.*)$")
-  if not header then
-    return nil
+-- The files a page tangles, as an outline at its end: per file its
+-- chunks in file order, each a link to the chunk's page address. The
+-- header form is lit's (.harness/tools/lit/lit/web.py): the name line
+-- opens with the chunk's place, a dotted number (3.1 is under 3), and
+-- the lines after it name a file each, a place of their own first when
+-- the chunk sits elsewhere in that file. A chunk another chunk uses is shown
+-- under it, by its place. A page without such headers shows nothing.
+local function place_key(place)
+  local key = {}
+  for n in place:gmatch("%d+") do
+    table.insert(key, tonumber(n))
   end
-  local name = header:match("^[^\n]*"):gsub("%s+", " ")
-  local explicit = {}
-  for line in header:gmatch("\n([^\n]+)") do
-    local path, seq = line:match("^%s*(%S+)%s+(%d+)%s*$")
-    if path then
-      table.insert(explicit, { path = path, seq = tonumber(seq) })
-    end
-  end
-  local uses, imports, any, first = {}, true, false, nil
-  for line in rest:gmatch("[^\n]+") do
-    local use = line:match("^%s*<<(.-)>>%s*$")
-    if use then
-      table.insert(uses, (use:gsub("%s+", " ")))
-    elseif line:match("%S") then
-      any = true
-      first = first or line
-      if not line:match("^%s*#") and not line:match("^%s*import%s")
-        and not line:match("^%s*from%s.-%simport%s") then
-        imports = false
-      end
-    end
-  end
-  local quote = first and first:match("^%s*(...)") or ""
-  return { name = name, plus = code.text:match("^<<.->>%+=") ~= nil, id = block.identifier,
-    n = block.attributes["data-n"], addr = block.attributes["data-addr"], explicit = explicit, uses = uses,
-    imports = any and imports and #uses == 0, docstring = quote == '"""' or quote == "'''" }
+  return key
 end
 
--- The front matter's tangle: as written. Pandoc reads a YAML string as
--- markdown, so python/fpl/lex/__init__.py arrives with __init__ as a
--- Strong; the underscores are put back.
-local function meta_path(meta)
-  if meta == nil then
+local function before(a, b)
+  local ka, kb = place_key(a), place_key(b)
+  for i = 1, math.max(#ka, #kb) do
+    if ka[i] == nil then return true end
+    if kb[i] == nil then return false end
+    if ka[i] ~= kb[i] then return ka[i] < kb[i] end
+  end
+  return false
+end
+
+local function chunk_of(block)
+  local code = block.content[1]
+  local header = code.text:match("^<<(.-)>>%+?=")
+  if not header or code.text:match("^<<.->>%+=") then
     return nil
   end
-  if type(meta) == "string" then
-    return meta
+  local lines = {}
+  for line in (header .. "\n"):gmatch("([^\n]*)\n") do
+    table.insert(lines, line)
   end
-  local out = ""
-  for _, x in ipairs(meta) do
-    if x.t == "Strong" then
-      out = out .. "__" .. pandoc.utils.stringify(x) .. "__"
-    elseif x.t == "Emph" then
-      out = out .. "_" .. pandoc.utils.stringify(x) .. "_"
-    else
-      out = out .. pandoc.utils.stringify(x)
+  local place, name = lines[1]:match("^(%d[%d%.]*)%s+(.+)$")
+  if not place then
+    name, place = lines[1], nil
+  end
+  local files = {}
+  for i = 2, #lines do
+    local own, path = lines[i]:match("^%s*(%d[%d%.]*)%s+(%S+)%s*$")
+    if not path then
+      path = lines[i]:match("^%s*(%S+)%s*$")
+    end
+    if path then
+      table.insert(files, { path = path, place = own or place })
     end
   end
-  return out
+  return { name = (name:gsub("%s+", " ")), place = place, files = files,
+    id = block.identifier, n = block.attributes["data-n"], addr = block.attributes["data-addr"] }
 end
 
 function files(doc)
-  local default = meta_path(doc.meta.tangle)
-  local chunks, used, defined = {}, {}, {}
+  local out, paths = {}, {}
   for _, block in ipairs(doc.blocks) do
     if block.t == "Div" and block.attributes["data-kind"] == "C" then
       local c = chunk_of(block)
       if c then
-        for _, u in ipairs(c.uses) do
-          used[u] = true
+        for _, f in ipairs(c.files) do
+          if f.place then
+            if not out[f.path] then
+              out[f.path] = {}
+              table.insert(paths, f.path)
+            end
+            table.insert(out[f.path], { place = f.place, chunk = c })
+          end
         end
-        if not c.plus and not defined[c.name] then
-          defined[c.name] = true
-          table.insert(chunks, c)
-        end
       end
-    end
-  end
-  local out, paths = {}, {}
-  if default then
-    local parts, hoisted = {}, {}
-    for _, c in ipairs(chunks) do
-      if not used[c.name] then
-        table.insert(c.imports and hoisted or parts, c)
-      end
-    end
-    local ordered = {}
-    local lead = parts[1] and parts[1].docstring and 1 or 0
-    for i = 1, lead do table.insert(ordered, parts[i]) end
-    for _, c in ipairs(hoisted) do table.insert(ordered, c) end
-    for i = lead + 1, #parts do table.insert(ordered, parts[i]) end
-    out[default] = ordered
-    table.insert(paths, default)
-  end
-  for _, c in ipairs(chunks) do
-    for _, e in ipairs(c.explicit) do
-      if not out[e.path] then
-        out[e.path] = {}
-        table.insert(paths, e.path)
-      end
-      table.insert(out[e.path], { seq = e.seq, chunk = c })
-    end
-  end
-  for _, path in ipairs(paths) do
-    if path ~= default then
-      table.sort(out[path], function(a, b) return a.seq < b.seq end)
-      for i, item in ipairs(out[path]) do out[path][i] = item.chunk end
     end
   end
   if #paths == 0 then
@@ -376,14 +333,17 @@ function files(doc)
   table.sort(paths)
   local blocks = { pandoc.Header(2, { pandoc.Str("Files") }, pandoc.Attr("files", { "fpl-files" })) }
   for _, path in ipairs(paths) do
-    local items = {}
-    for _, c in ipairs(out[path]) do
-      table.insert(items, { pandoc.Plain({
-        pandoc.Link({ pandoc.Str((c.addr or "") .. " §" .. (c.n or "?") .. ":C") }, "#" .. c.id, "", pandoc.Attr("", { "fpl-addr" })),
-        pandoc.Space(), pandoc.Str(c.name) }) })
-    end
+    table.sort(out[path], function(x, y) return before(x.place, y.place) end)
     table.insert(blocks, pandoc.Para({ pandoc.Code(path) }))
-    table.insert(blocks, pandoc.OrderedList(items))
+    for _, item in ipairs(out[path]) do
+      local c = item.chunk
+      local _, depth = item.place:gsub("%.", "")
+      table.insert(blocks, pandoc.Div({ pandoc.Plain({
+        pandoc.Span({ pandoc.Str(item.place) }, pandoc.Attr("", { "fpl-place" })), pandoc.Space(),
+        pandoc.Link({ pandoc.Str((c.addr or "") .. " §" .. (c.n or "?") .. ":C") }, "#" .. c.id, "", pandoc.Attr("", { "fpl-addr" })),
+        pandoc.Space(), pandoc.Str(c.name) }) },
+        pandoc.Attr("", { "fpl-part" }, { ["data-depth"] = tostring(depth) })))
+    end
   end
   doc.blocks:insert(pandoc.Div(blocks, pandoc.Attr("", { "fpl-files" })))
 end
