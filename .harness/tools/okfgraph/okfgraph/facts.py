@@ -24,8 +24,11 @@ written         node
 ==============  ================================================
 
 ``item`` is a bundle path and becomes ``<base><item>``; a timestamp in
-epoch milliseconds becomes an ``xsd:dateTime``. Every other key is
-kept as it is: an unknown key is a ``fact:`` literal.
+epoch milliseconds becomes an ``xsd:dateTime``. ``fact:target`` is a
+set in the graph, so a row with targets also gets ``fact:first``, the
+node of its first: the order of a relation (from, to) is that one
+edge. Every other key is kept as it is: an unknown key is a ``fact:``
+literal.
 
 pyoxigraph drops a row whose id is no IRI, and a target that is none,
 without an error, and merges two rows with one id. So the loader
@@ -96,7 +99,9 @@ def doc(row: Row, page: str, base: str) -> Row:
     if isinstance(item := row.get("item"), str):
         out["item"] = base + quote(item)
     targets = cast("list[str]", row.get("targets", []))
-    out["targets"] = [node(t, page, base) for t in targets]
+    out["targets"] = nodes = [node(t, page, base) for t in targets]
+    if nodes:
+        out["first"] = nodes[0]
     for key in STAMPS:
         if isinstance(ms := row.get(key), int):
             at = dt.datetime.fromtimestamp(ms / 1000, dt.UTC)

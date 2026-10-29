@@ -7,6 +7,7 @@
     "id":        "@id",
     "item":      { "@id": "fact:source", "@type": "@id" },
     "targets":   { "@id": "fact:target", "@type": "@id" },
+    "first":     { "@id": "fact:first",  "@type": "@id" },
     "labels":    "fact:label",
     "start":     { "@id": "fact:start",     "@type": "xsd:integer" },
     "end":       { "@id": "fact:end",       "@type": "xsd:integer" },

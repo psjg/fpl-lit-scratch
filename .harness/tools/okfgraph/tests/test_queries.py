@@ -3,7 +3,7 @@
 The page ``q/two.md`` has five chunk spans (``Out`` nested in ``Lex``,
 as no fence is, to see the smallest one win), two definitions, one
 paragraph and a ledger of two decisions, all in a generated layer
-written by hand below. Its sidecar holds three hand spans and seven
+written by hand below. Its sidecar holds three hand spans and eight
 rows about rows. Rows files are JSON strings written into a temporary
 directory, never committed as files: the walk would load them into the
 real bundle.
@@ -90,7 +90,8 @@ HAND: list[dict[str, object]] = [
     {"id": "f-gone", "note": "rests on a stale span", "targets": ["s-gone"]},
     {"id": "loop", "targets": ["loop"]},
     {"id": "old", "note": "an older reading", "targets": ["r-1"]},
-    {"id": "sup", "labels": ["supersedes"], "targets": ["old"]},
+    {"id": "new", "note": "a newer reading", "targets": ["r-1"]},
+    {"id": "sup", "labels": ["supersedes"], "targets": ["new", "old"]},
     {"id": "why", "labels": ["because"], "targets": ["L-A1", "L-Z99"]},
 ]
 
@@ -123,7 +124,7 @@ def test_a_hand_span_lies_in_its_smallest_chunk(tmp_path: Path) -> None:
 def test_a_chain_runs_through_a_relation_to_its_spans(
     tmp_path: Path,
 ) -> None:
-    # old is superseded: it starts no chain, but sup reaches through it.
+    # new supersedes old: old starts no chain, sup reaches through both.
     tsv_ = "q/two.decisions.tsv#"
     hops = [
         ("f-2", "r-1", "r-1"),
@@ -131,8 +132,15 @@ def test_a_chain_runs_through_a_relation_to_its_spans(
         ("f-2", "r-1", "s-out"),
         ("f-gone", "s-gone", "s-gone"),
         ("loop", "loop", "loop"),
+        ("new", "r-1", "r-1"),
+        ("new", "r-1", "s-in"),
+        ("new", "r-1", "s-out"),
         ("r-1", "s-in", "s-in"),
         ("r-1", "s-out", "s-out"),
+        ("sup", "new", "new"),
+        ("sup", "new", "r-1"),
+        ("sup", "new", "s-in"),
+        ("sup", "new", "s-out"),
         ("sup", "old", "old"),
         ("sup", "old", "r-1"),
         ("sup", "old", "s-in"),
@@ -146,6 +154,15 @@ def test_a_chain_runs_through_a_relation_to_its_spans(
     ]
 
 
+def test_supersedes_hides_its_later_targets_not_its_first(
+    tmp_path: Path,
+) -> None:
+    # sup is [new, old]: old is superseded, new is the reading that is.
+    starts = {r[0] for r in report(write(tmp_path, FILES), "fact-chain")}
+    assert iri("new") in starts
+    assert iri("old") not in starts
+
+
 def test_a_row_on_a_stale_span_is_stale_by_dependency(
     tmp_path: Path,
 ) -> None:
@@ -154,6 +171,7 @@ def test_a_row_on_a_stale_span_is_stale_by_dependency(
         [iri("f-2"), '"-"', *free],
         [iri("f-gone"), '"-"', "", "", "", "true"],
         [iri("loop"), '"-"', *free],
+        [iri("new"), '"-"', *free],
         [iri("old"), '"-"', *free],
         [iri("r-1"), '"-"', *free],
         [iri("s-gone"), '"stale"', '"c0"', "", "", "false"],

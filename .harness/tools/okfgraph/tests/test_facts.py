@@ -131,6 +131,8 @@ def test_rows_name_exact_iris(tmp_path: Path) -> None:
         ox.NamedNode(LEDGER + "#L-I4"),
         ox.NamedNode(BASE + "pass/evaluate.md#s-9"),
     }
+    # fact:target is a set; fact:first keeps which target came first.
+    assert objects(store, s1, FACT + "first") == {ox.NamedNode(PAGE + "#s-2")}
     start = ox.Literal("4", datatype=ox.NamedNode(XSD + "integer"))
     assert objects(store, s1, FACT + "start") == {start}
     assert objects(store, s1, FACT + "note") == {ox.Literal("")}
