@@ -166,6 +166,24 @@ dit als een openvraag houden waarbij we ook de andere optie open houden". So: `f
 `foldr` as two words beside `fold`; a bare word after a strand is the right fold for now;
 the direction stays an open question with the other option kept, data to be gathered.
 
+His question (10-29, verbatim) on "underflow is currying, a section stays" against the
+reduce: "wat zou dat betekenen hoe kunnen we nu niet meer curyen dan? wordt de taal minder
+krachtig? ik zou zeggen dat 1 2 3 4 | 1 + toch een implicit curry is (net zoals dat
+eigenlijk een desugar is van 1 2 3 4 + 1 en dat dat cannoiek uiteindelijk allemaal
+`[ [ 1 2 3 4 ] [ 1 ] + ]` zou worden... niet?". Measured against the rules: the reduce
+fires only where the frame holds exactly one value and that value is a strand; `1 -`
+stays the section `[ 1 - ]`, `1 2 3 4 | 1 +` stays the apply across the bar (two values,
+nothing missing), and `1 2 3 - | 1` stays `[ 1 2 3 - ] 1`. What moves is one bare
+spelling: `1 2 3 4 +` was the section `x ↦ x + 1 2 3 4` and becomes the fold; that section
+is still written `[ 1 2 3 4 + ]`. So no power is lost, one default changes. Note that a
+strand counts as one value statically, so `1 +` and `1 2 3 4 +` have the same deficit
+(one); the fold and the section part at run time, or statically once rank is in the
+type (cluster 4). His canonical form `[ [ 1 2 3 4 ] [ 1 ] + ]` is the line-as-operator
+reading of cluster 2 (every quotation on a line runs). The one example of the chat
+that the fold rule changes is `1 2 3 - | 1`: the chat had `[ 1 2 3 - ] 1` (a section,
+then a value), the fold rule gives `2 1`. His pick (10-29) on the second reading: "dit
+klinkt beter". So `1 2 3 - | 1` is `2 1`.
+
 Outcome: cluster 1 in progress (the reduce, right fold); the rest open.
 
 ## Related
