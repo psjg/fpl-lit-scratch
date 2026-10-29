@@ -1090,10 +1090,12 @@ website:
               - 03-fpl/OLD/03.01-features/sketch/spec.md
 format:
   html:
-    theme: cosmo
+    theme: [cosmo, assets/fpl-grid.scss]
     toc: true
     toc-depth: 2
-    code-overflow: wrap
+    code-overflow: scroll
+    grid:
+      body-width: 780px
     css:
       - assets/fpl-live.css
       - assets/fpl-annot.css

@@ -1,0 +1,8 @@
+/*-- scss:defaults --*/
+// The body column holds eighty columns of code. Quarto's grid is Sass
+// arithmetic in px (a `ch` would not subtract from its 50px), so the
+// measure is taken once: the code font is 0.875 of the 17px root, a
+// monospace cell 0.6em wide, 80 cells = 714px, plus the block's 1.5em
+// padding = 740px. Below that the page scrolls sideways; a longer line
+// scrolls inside its block (code-overflow: scroll). Nothing wraps.
+$grid-body-column-min: 740px;
