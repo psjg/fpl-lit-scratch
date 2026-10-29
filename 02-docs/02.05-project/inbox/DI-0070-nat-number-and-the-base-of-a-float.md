@@ -40,4 +40,4 @@ Decided 2026-10-29: `nat`, as the small form of (b): a sort of its own for the l
 ## Related
 
 - related:: [DI-0069](DI-0069-the-space-before-a-comment-as-part-of-its-token.md)
-- related:: [DI-0013](DI-0013-one-spelling-per-value.md)
+- related:: [DI-0013](DI-0013-strict-readers-one-value-one-spelling.md)

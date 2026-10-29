@@ -184,6 +184,47 @@ that the fold rule changes is `1 2 3 - | 1`: the chat had `[ 1 2 3 - ] 1` (a sec
 then a value), the fold rule gives `2 1`. His pick (10-29) on the second reading: "dit
 klinkt beter". So `1 2 3 - | 1` is `2 1`.
 
+On the archived corpus (10-29, verbatim), when the fold changed the expected output of
+`draft2/01-frames`: "die spec bestanden waren altijd al een slecht idee ze moeten gewoon
+herschreven worden in de FPl fragemneten zelf met behulp van `|-`". So the `.expected`
+files go; each fragment carries its own `L |- R` checks (cluster 3 first, then the rewrite).
+Of the 29 archived examples 4 have line results, 2 empty output and 23 are one
+whole-program `ERROR: 1:1 no evaluator yet`; his pick (10-29, "dit") for those: one closing
+`|- ! err/<tag> "..."` line per file, a failing program is a check too. On the errors
+themselves (10-29, verbatim, also said to the corpus session): "subclass FPLError zo diep
+als dat je die moet subclassen zodat we specefiekere error codes kunnen gaan bouwen in de
+toekomst" and "we gaan de `|- ! err/<scope>/<scope> "<msg>"` synatx gebruiken", which he
+then rewrote as `err/<scope>* "<msg>"`. The idea came from an earlier Cursor session with
+a Grok agent; [02.03.01](../../02.03-reference/02.03.01-errors.md) locked its first shape.
+So the exception tree under `FplError` (`01-bootstrap/fpl/errors.py`) mirrors the path:
+one class per segment, each class carrying its segment, the fail judgment printing the
+path of the class that was raised; the first tree names only the errors that exist today
+(underflow, unresolved/unknown, unresolved/unimplemented, fail/no-row, arithmetic/...,
+thunk/expected, fold/empty, out-of-gas, fon). Open for him: what a passing check prints,
+whether the position stands on the judgment line or in the caret block under it, and
+whether `err/out-of-gas` keeps that name.
+
+On rank (10-29, verbatim): "uh krijgen we straks conflicten met het box model stel we
+willen een box model... willen we een box model? net zoals J en UIuia ik heb ook de
+distinctie tussen rank polymorphisme etc nooit begrepen ik wil onze niet weer de hoek in
+schilderen zegmaar". The walker today has two carriers: a strand (flat, one rank, atoms
+only) and a list (values, so it nests). Step 1 folds a strand's items and leaves rank
+above one undefined, so it paints nothing in. The box question is cluster 4.
+
+The array models, as told to him 10-29 (priors from the languages' own references, to
+be researched before the choice): in J and Uiua an array is rectangular and of one atom
+kind, and a box (`<` in J, `□` in Uiua) wraps any array as one atom, so ragged or nested
+data fits a rectangular array; APL2 and Dyalog go the other way, nested arrays with no
+separate box; K has lists of lists. Rank polymorphism: each word has a rank, the size of
+the cells it works on, and on an array of higher rank it works per cell by itself (J's
+`"` conjunction); FPL's `+` does that today for rank 0, a scalar over the items of a
+strand. FPL today is K's choice: strand (flat, rank 1, atoms) and list (values, nested);
+a box would be a list of one element. His ask (10-29): "1 leg dit ergens vast 2 doe
+onderzoek naar wat het meest elegant zou zijn in de toekomst en wat de voor en nadelen
+de trade offs van alle versies zijn zodat we een geinformeerde keuze kunnen maken als we
+moeten gaan kiezen". The research is a task of its own; its note goes under
+`02-docs/02.05-project/notes/` and this item links it.
+
 Outcome: cluster 1 in progress (the reduce, right fold); the rest open.
 
 ## Related
