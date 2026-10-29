@@ -1,0 +1,15 @@
+# Each hand row (no `fact:kind`: lit gives every row it generates one; with a commit or a
+# target) with the state lit computed for it on HEAD (vers, verplaatst, dubbel, stale; "-" when
+# lit has not located it), its commit, its current offsets, and staleByDependency: true when a
+# row it reaches through `fact:target+` is stale. Join: the closure from each hand row only.
+SELECT DISTINCT (STRAFTER(STR(?r), STR(b:)) AS ?row) ?state ?commit ?currentStart ?currentEnd
+       ?staleByDependency
+WHERE {
+  ?r fact:commit|fact:target ?any .
+  FILTER NOT EXISTS { ?r fact:kind ?k }
+  OPTIONAL { ?r fact:state ?st }
+  OPTIONAL { ?r fact:commit ?commit }
+  OPTIONAL { ?r fact:currentStart ?currentStart ; fact:currentEnd ?currentEnd }
+  BIND(COALESCE(?st, "-") AS ?state)
+  BIND(EXISTS { ?r fact:target+ ?d . ?d fact:state "stale" } AS ?staleByDependency)
+} ORDER BY ?row

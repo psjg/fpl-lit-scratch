@@ -1,0 +1,13 @@
+# rule: fact-cites-unknown
+# remedy: cite an id that exists in the page's decisions TSV
+# A target whose fragment starts `L-` (facts.py puts such an id on the page's decisions TSV)
+# that no ledger span carries; the path is the page of the citing row. Join: the target edges
+# x the ledger kind of their tail.
+SELECT DISTINCT ?path ?detail WHERE {
+  ?f fact:target ?t .
+  FILTER(STRSTARTS(STRAFTER(STR(?t), "#"), "L-"))
+  FILTER NOT EXISTS { ?t fact:kind "ledger" }
+  BIND(STRAFTER(STR(?f), STR(b:)) AS ?id)
+  BIND(STRBEFORE(?id, "#") AS ?path)
+  BIND(CONCAT(STRAFTER(?id, "#"), " cites ", STRAFTER(STR(?t), STR(b:))) AS ?detail)
+} ORDER BY ?path ?detail

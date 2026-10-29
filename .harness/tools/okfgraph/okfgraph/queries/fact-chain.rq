@@ -1,0 +1,16 @@
+# Each live hand row with targets (a hand row has no `fact:kind`: lit gives every row it
+# generates one; a row a `supersedes` relation targets is not live), the target it starts
+# through, each row or span it reaches through `fact:target+`, and the kind of what it reaches
+# ("-" for a hand row). A path's middle binds no variable in SPARQL, so the kinds along the way
+# are those of the rows reached, one line each. Join: the closure from each hand row only; a
+# generated row (a tangle line to its chunk) starts none.
+SELECT DISTINCT (STRAFTER(STR(?f), STR(b:)) AS ?row) (STRAFTER(STR(?via), STR(b:)) AS ?through)
+       (STRAFTER(STR(?x), STR(b:)) AS ?reaches) ?kind
+WHERE {
+  ?f fact:target ?via .
+  FILTER NOT EXISTS { ?f fact:kind ?any }
+  FILTER NOT EXISTS { ?n fact:target ?f ; fact:label "supersedes" }
+  ?via fact:target* ?x .
+  OPTIONAL { ?x fact:kind ?k }
+  BIND(COALESCE(?k, "-") AS ?kind)
+} ORDER BY ?row ?through ?reaches

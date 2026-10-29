@@ -1,0 +1,10 @@
+# Each decision of a ledger (a span of kind "ledger"; lit puts the decision in its text and the
+# reason in its note, which it always writes) whose reason is empty, with the rows that target
+# it. Join: the ledger spans x the rows that target them.
+SELECT (STRAFTER(STR(?l), STR(b:)) AS ?decision) ?text
+       (GROUP_CONCAT(DISTINCT STRAFTER(STR(?by), STR(b:)); separator=" ") AS ?targetedBy)
+WHERE {
+  ?l fact:kind "ledger" ; fact:note "" .
+  OPTIONAL { ?l fact:text ?text }
+  OPTIONAL { ?by fact:target ?l }
+} GROUP BY ?l ?text ORDER BY ?decision

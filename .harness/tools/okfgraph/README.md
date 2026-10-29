@@ -102,7 +102,10 @@ A query whose header holds `# rule:` and `# remedy:` is a gate; the others are r
 | `g-wikilink` | `wikilink` | a body holds a `[[wikilink]]` |
 | `h-status-enum` | `status-enum` | `status` is not `draft`, `stable` or `deprecated` |
 | `i-type-unknown` | `type-unknown` | `type` is not in the vocabulary |
+| `fact-cycle` | `fact-cycle` | a fact row reaches itself through its `targets` |
+| `fact-cites-unknown` | `fact-cites-unknown` | a row cites an `L-` id no span of the page's decisions TSV carries |
 | `b-into`, `c-adr`, `l-body-undeclared`, `z-stats` | report | edges into a note, ADR states and edges, undeclared body relations, counts |
+| `fact-about-chunk`, `fact-chain`, `fact-still-true`, `fact-decision-unreasoned`, `fact-chunk-untouched`, `fact-stats` | report | the chunk a hand span lies in, the rows a fact reaches, whether a span's text still stands, decisions without a reason, chunks nothing touches, counts |
 
 `make check` runs `make okf-check` first, so every gate blocks. To bring in a new rule
 before the bundle meets it, `okfgraph check --baseline FILE` tolerates the findings FILE

@@ -1,0 +1,22 @@
+# Each chunk span no hand span lies in (a row with `fact:commit`, at its current offsets when lit
+# located it; half-open) and none of whose definitions the prose names: no definition span that
+# targets the chunk has a label `name' that a paragraph span of the same page quotes. kind is
+# root (the name is a file; it wins), skeleton (every line a use) or body. Join: the named
+# chunks once, definitions by target x their page's paragraphs by CONTAINS, taken out by MINUS
+# (as a NOT EXISTS per chunk: 110 ms on the lex page, 4 ms so); the chunk x the hand spans of
+# its own source.
+SELECT (STRAFTER(STR(?c), STR(b:)) AS ?chunk) ?kind WHERE {
+  ?c fact:kind "chunk" ; fact:source ?src ; fact:start ?a ; fact:end ?z .
+  MINUS {
+    ?d fact:kind "definition" ; fact:target ?c ; fact:label ?name ; fact:source ?src .
+    ?p fact:kind "paragraph" ; fact:source ?src ; fact:text ?t .
+    FILTER(CONTAINS(?t, CONCAT("`", ?name, "'")))
+  }
+  FILTER NOT EXISTS {
+    ?r fact:commit ?x ; fact:source ?src ; fact:start ?s0 ; fact:end ?e0 .
+    OPTIONAL { ?r fact:currentStart ?cs ; fact:currentEnd ?ce }
+    FILTER(?a <= COALESCE(?cs, ?s0) && COALESCE(?ce, ?e0) <= ?z)
+  }
+  BIND(IF(EXISTS { ?c fact:label "root" }, "root",
+       IF(EXISTS { ?c fact:label "skeleton" }, "skeleton", "body")) AS ?kind)
+} ORDER BY ?kind ?chunk

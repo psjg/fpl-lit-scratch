@@ -1,0 +1,11 @@
+# rule: fact-cycle
+# remedy: break the cycle: a row may not reach itself through targets
+# A row that reaches itself through `fact:target+`, a row that targets itself included; the
+# path is the page of the row's IRI. Join: the closure from each target edge's head.
+SELECT DISTINCT ?path ?detail WHERE {
+  ?f fact:target ?t .
+  ?t fact:target* ?f .
+  BIND(STRAFTER(STR(?f), STR(b:)) AS ?id)
+  BIND(STRBEFORE(?id, "#") AS ?path)
+  BIND(CONCAT(STRAFTER(?id, "#"), " reaches itself through targets") AS ?detail)
+} ORDER BY ?path ?detail

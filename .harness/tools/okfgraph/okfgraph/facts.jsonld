@@ -10,6 +10,8 @@
     "labels":    "fact:label",
     "start":     { "@id": "fact:start",     "@type": "xsd:integer" },
     "end":       { "@id": "fact:end",       "@type": "xsd:integer" },
+    "currentStart": { "@id": "fact:currentStart", "@type": "xsd:integer" },
+    "currentEnd":   { "@id": "fact:currentEnd",   "@type": "xsd:integer" },
     "createdAt": { "@id": "fact:createdAt", "@type": "xsd:dateTime" },
     "updatedAt": { "@id": "fact:updatedAt", "@type": "xsd:dateTime" }
   }
