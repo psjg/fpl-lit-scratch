@@ -25,7 +25,7 @@ from fpl.ast_surface import (
     Text,
     Word,
 )
-from fpl.errors import FplError, Span
+from fpl.errors import PrintError, Span
 
 #: Opening and closing delimiter that :meth:`_Out.enclosure` prints for
 #: each enclosure pair.
@@ -67,7 +67,7 @@ def render(program: Program) -> str:
     try:
         out.lines(program.lines, 0)
     except RecursionError:
-        raise FplError(Span(1, 1), "nesting too deep to print") from None
+        raise PrintError(Span(1, 1), "nesting too deep to print") from None
     text = "".join(out.chunks)
     return text + "\n" if text else ""
 

@@ -64,9 +64,19 @@ from fpl.ast_surface import (
     Word,
 )
 from fpl.errors import (
-    FplError,
+    AmbiguousClauseError,
+    AmbiguousQueryError,
+    CheckFormError,
+    ClauseError,
+    DictError,
+    MatchError,
     NoEvaluatorError,
+    NotInvertibleError,
+    PatternError,
+    PrintError,
+    RowError,
     Span,
+    TooLongError,
     UnknownWordError,
     UnresolvedError,
 )
@@ -578,11 +588,11 @@ def unchecked(lines: tuple[Line, ...]) -> None:
         >>> unchecked(parse("1\n\t2 |- 2\n").lines)
         Traceback (most recent call last):
             ...
-        fpl.errors.FplError: ERROR: 2:2 a check is a run line
+        fpl.errors.CheckFormError: ERROR: 2:2 a check is a run line
     """
     for line in lines:
         if line.check is not None:
-            raise FplError(line.span, "a check is a run line")
+            raise CheckFormError(line.span, "a check is a run line")
         unchecked(line.block)
 
 
@@ -651,7 +661,7 @@ def judgment(line: Line) -> Judgment | None:
         case (Frame(cells=(Cell(items=(bang, *_)), *_)), *_) if (
             plain(bang) == "!"
         ):
-            raise FplError(line.span, JUDGMENT)
+            raise CheckFormError(line.span, JUDGMENT)
         case _:
             return None
 
@@ -675,7 +685,7 @@ def verdict(said: list[Item], span: Span) -> Judgment:
         >>> verdict([], Span(1, 1))  # doctest: +ELLIPSIS
         Traceback (most recent call last):
             ...
-        fpl.errors.FplError: ERROR: 1:1 a fail judgment is ...
+        fpl.errors.CheckFormError: ERROR: 1:1 a fail judgment is ...
     """
     match said:
         case [
@@ -688,7 +698,7 @@ def verdict(said: list[Item], span: Span) -> Judgment:
         ] if all(path):
             return Judgment("/".join(path), message, span)
         case _:
-            raise FplError(span, JUDGMENT)
+            raise CheckFormError(span, JUDGMENT)
 
 
 def definition(line: Line) -> tuple[str, Effect] | None:
@@ -860,13 +870,13 @@ def agree(
                 f"{group}/{at} takes a {kind} at {position}, "
                 f"{group}/{i} a {before}"
             )
-            raise FplError(span, message)
+            raise ClauseError(span, message)
     if len(effect.outs) != len(other.outs):
         message = (
             f"{group}/{at} leaves {len(effect.outs)}, "
             f"{group}/{i} {len(other.outs)}"
         )
-        raise FplError(span, message)
+        raise ClauseError(span, message)
 
 
 def typings(effect: Effect) -> frozenset[int]:
@@ -919,7 +929,7 @@ def crossed(
                 f"{group}/{later} is ambiguous with {group}/{earlier} "
                 f"at {spoken(meet)}"
             )
-            raise FplError(span, message)
+            raise AmbiguousClauseError(span, message)
     return undecided
 
 
@@ -1027,7 +1037,7 @@ def number(item: Item) -> Number:
         unimplemented()
     numeral = item.body[0]
     if sum(map(str.isdecimal, numeral)) > DIGITS:
-        raise FplError(item.span, "number too long")
+        raise TooLongError(item.span, "number too long")
     return Decimal(numeral) if "." in numeral else int(numeral)
 
 
@@ -1137,7 +1147,7 @@ class _Desugar:
             head, name = definition(line), directory(line)
             unchecked(line.block)
             if line.check is not None and head is not None:
-                raise FplError(line.span, "a check is a run line")
+                raise CheckFormError(line.span, "a check is a run line")
             if head is not None:
                 path = (*here, head[0])
                 code = self.code(line, head[1], path)
@@ -1174,7 +1184,9 @@ class _Desugar:
         if line.check is None:
             return Run(code, line.span)
         if judgment(line) is not None:
-            raise FplError(line.span, "a fail judgment closes the program")
+            raise CheckFormError(
+                line.span, "a fail judgment closes the program"
+            )
         right = Line(line.check, (), line.span)
         return Run(code, line.span, self.body((right,), 0, ()))
 
@@ -1509,7 +1521,7 @@ class _Desugar:
         word = line.frames[0].cells[0].items[0]
         rows = tuple(self.row(row, arity) for row in coded(line.block))
         if not rows:
-            raise FplError(word.span, "a match has no rows")
+            raise MatchError(word.span, "a match has no rows")
         return Match(rows, word.span)
 
     def row(self, line: Line, arity: int) -> Row:
@@ -1527,7 +1539,7 @@ class _Desugar:
             or len(line.frames) > 1
             or len(cells) - arity not in (0, 1)
         ):
-            raise FplError(line.span, f"a row is {arity} patterns and a body")
+            raise RowError(line.span, f"a row is {arity} patterns and a body")
         outer = self.effects
         patterns = tuple(self.pattern(cell.items) for cell in cells[:arity])
         body = self.routed(
@@ -1654,9 +1666,9 @@ class _Desugar:
         name = self.catalog.dispatch(called, len(found))
         effect = self.effects[name]
         if len(effect.outs) != 1:
-            raise FplError(head.span, f"{name} is not invertible")
+            raise NotInvertibleError(head.span, f"{name} is not invertible")
         if len(found) != len(effect.ins):
-            raise FplError(
+            raise PatternError(
                 head.span, f"{name} takes {len(effect.ins)} patterns"
             )
         return Inverse(name, found, head.span)
@@ -1813,7 +1825,7 @@ class _Desugar:
         if found is None:
             raise missing(word, self.catalog.listed(here, word.body))
         if found in self.catalog.refused:
-            raise FplError(word.span, self.catalog.refused[found])
+            raise AmbiguousQueryError(word.span, self.catalog.refused[found])
         return Call(self.catalog.aliases.get(found, found), word.span)
 
     def origin(self, word: Word) -> Here:
@@ -1903,7 +1915,7 @@ class _Desugar:
             ):
                 unimplemented()
             if key in entries:
-                raise FplError(key_item.span, f"repeated key {key}")
+                raise DictError(key_item.span, f"repeated key {key}")
             entries[key] = nodes[0]
         return Keyed(tuple(entries.items()), enclosure.span)
 
@@ -2023,7 +2035,7 @@ def listing(stacks: tuple[tuple[Value, ...], ...]) -> Program:
             START,
         )
     except RecursionError:
-        raise FplError(START, "nesting too deep to print") from None
+        raise PrintError(START, "nesting too deep to print") from None
 
 
 def written(statement: Statement) -> Line:

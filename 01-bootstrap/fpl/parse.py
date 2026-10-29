@@ -31,7 +31,15 @@ from fpl.ast_surface import (
     Text,
     Word,
 )
-from fpl.errors import FplError, Span
+from fpl.errors import (
+    CommentError,
+    ModifierError,
+    Span,
+    StrayDedentError,
+    TooDeepError,
+    UnclosedError,
+    UnexpectedError,
+)
 from fpl.lex import BRACKETS, Lines, Prelexed, Stashed, counted, prelex, shape
 
 #: The Lark grammar file, next to this module.
@@ -127,12 +135,12 @@ def parse(source: str) -> Program:
         >>> parse("(x\n")
         Traceback (most recent call last):
             ...
-        fpl.errors.FplError: ERROR: 1:1 ( never closed
+        fpl.errors.UnclosedError: ERROR: 1:1 ( never closed
     """
     try:
         return read(source, Lines(source), 0, len(source))
     except RecursionError:
-        raise FplError(Span(1, 1), "nesting too deep to read") from None
+        raise TooDeepError(Span(1, 1), "nesting too deep to read") from None
 
 
 def read(source: str, lines: Lines, start: int, end: int) -> Program:
@@ -167,21 +175,23 @@ def _tree(source: str, lexed: Prelexed) -> Tree[Token]:
             "NOTE",
             "DOC",
         }
-        message = (
-            "a comment cannot stand inside an enclosure"
-            if comment
-            else "unexpected input"
-        )
-        raise FplError(
-            placed(source, lexed, failure.pos_in_stream), message
+        if comment:
+            raise CommentError(
+                placed(source, lexed, failure.pos_in_stream),
+                "a comment cannot stand inside an enclosure",
+            ) from None
+        raise UnexpectedError(
+            placed(source, lexed, failure.pos_in_stream), "unexpected input"
         ) from None
     except UnexpectedInput as failure:
-        raise FplError(
+        raise UnexpectedError(
             placed(source, lexed, failure.pos_in_stream), "unexpected input"
         ) from None
     except MisindentedError as failure:
         where_ = placed(source, lexed, failure.token.end_pos)
-        raise FplError(where_, "dedent to a level never opened") from None
+        raise StrayDedentError(
+            where_, "dedent to a level never opened"
+        ) from None
 
 
 def placed(source: str, lexed: Prelexed, offset: int | None) -> Span:
@@ -310,7 +320,7 @@ class _Build:
             1 if token.type == "NOTE" else len(token) - len(token.lstrip(";"))
         )
         if level > 1 and (checked or _code(frames)):
-            raise FplError(
+            raise CommentError(
                 span, f"a {';' * level} comment stands on a line of its own"
             )
         return Comment(
@@ -362,7 +372,7 @@ class _Build:
         """
         read_ = shape(token)
         if read_ is None:
-            raise FplError(span, f"a modifier ends its word: {token}")
+            raise ModifierError(span, f"a modifier ends its word: {token}")
         prefix, kind, body, mods = read_
         return Word(prefix, kind, body, mods, span)
 
@@ -408,7 +418,7 @@ class _Build:
         """
         after = counted(self.source, at, BRACKETS["⟨"], end)
         if after is None:
-            raise FplError(self.lines.span(at), "⟨ never closed")
+            raise UnclosedError(self.lines.span(at), "⟨ never closed")
         parts.append(read(self.source, self.lines, at + 1, after - 1))
         return after
 

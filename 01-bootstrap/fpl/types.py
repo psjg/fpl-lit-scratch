@@ -38,7 +38,13 @@ from fpl.ast_core import (
     Var,
     Wild,
 )
-from fpl.errors import FplError, Span, StackError
+from fpl.errors import (
+    EffectError,
+    GoalError,
+    NotNumberError,
+    Span,
+    UnderflowError,
+)
 from fpl.eval import CONTROLS
 
 
@@ -141,20 +147,6 @@ class UntypedError(Exception):
     match whose rows leave different counts, and for a call to a name
     with no arrow. The word's effect line is trusted instead.
     """
-
-
-class UnderflowError(StackError):
-    """Fewer values than a word, a binder or a match takes."""
-
-    tag = "err/stack/underflow"
-
-    def __init__(self, span: Span) -> None:
-        """Build the error with the message ``stack underflow``.
-
-        Args:
-            span: The word, binder or match that took too many values.
-        """
-        super().__init__(span, "stack underflow")
 
 
 #: The hole words: ``?`` is a goal, ``_`` is inferred as nothing.
@@ -300,7 +292,7 @@ def inferred(
         return declared(define), ()
     if len(end.stack) != promised:
         message = f"leaves {len(end.stack)} values, its effect line {promised}"
-        raise FplError(define.span, f"{define.word} {message}")
+        raise EffectError(define.span, f"{define.word} {message}")
     return Arrow(
         resolved(start.stack, end), resolved(end.stack, end)
     ), end.goals
@@ -383,7 +375,7 @@ def filled(
             typing, stack=stack, goals=(*typing.goals, Goal(node.span, arrow))
         )
     if len(arrow.outs) != len(arrow.ins):
-        raise FplError(node.span, f"cannot infer _ : {shown(arrow)}")
+        raise GoalError(node.span, f"cannot infer _ : {shown(arrow)}")
     return typing
 
 
@@ -424,7 +416,7 @@ def wanted(
                     Kind.VALUE if isinstance(s, Input) else s for s in found
                 )
     ending = "runs" if need is None else f"ends at {need}"
-    raise FplError(
+    raise GoalError(
         hole.span, f"cannot infer {hole.name} : no count it leaves {ending}"
     )
 
@@ -802,7 +794,7 @@ def met(
         >>> met(Kind.NUMBER, Kind.TEXT, {}, {}, Span(3, 4))
         Traceback (most recent call last):
             ...
-        fpl.errors.FplError: ERROR: 3:4 arithmetic on a non-number
+        fpl.errors.NotNumberError: ERROR: 3:4 arithmetic on a non-number
     """
     match need:
         case Input():
@@ -810,7 +802,7 @@ def met(
         case _ if isinstance(have, Input):
             found[have.index] = need
         case _ if have not in (need, Kind.VALUE):
-            raise FplError(span, "arithmetic on a non-number")
+            raise NotNumberError(span, "arithmetic on a non-number")
         case _:
             pass
 

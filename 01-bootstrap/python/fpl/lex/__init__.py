@@ -16,7 +16,15 @@ from dataclasses import dataclass
 from typing import Literal
 
 from fpl.ast_surface import Kind
-from fpl.errors import FplError, Span
+from fpl.errors import (
+    FplError,
+    MismatchedError,
+    Span,
+    StrayDedentError,
+    TabsError,
+    UnclosedError,
+    UnopenedError,
+)
 
 from pathlib import Path
 
@@ -187,7 +195,7 @@ def _pair(source: str, at: int, end: int, code: _Code) -> int:
     opener = source[at]
     after = counted(source, at, PAIRS[opener], end)
     if after is None:
-        raise FplError(Lines(source).span(at), f"{opener} never closed")
+        raise UnclosedError(Lines(source).span(at), f"{opener} never closed")
     if opener == "⟦":
         if code.at_line_start():
             return (
@@ -231,7 +239,7 @@ def _special(source: str, at: int, end: int, code: _Code) -> int:
     if char in PAIRS:
         return _pair(source, at, end, code)
     if char in CLOSERS:
-        raise FplError(Lines(source).span(at), f"{char} closes nothing")
+        raise UnopenedError(Lines(source).span(at), f"{char} closes nothing")
     newline = source.find("\n", at, end)
     after = end if newline < 0 else newline
     code.put(source[at:after], at)
@@ -300,7 +308,7 @@ def prelex(source: str, start: int = 0, end: int | None = None) -> Prelexed:
         >>> prelex("x “ab\n")
         Traceback (most recent call last):
             ...
-        fpl.errors.FplError: ERROR: 1:3 “ never closed
+        fpl.errors.UnclosedError: ERROR: 1:3 “ never closed
     """
     lexed = pairs(source, start, end)
     strict(source, lexed.code, lexed.origin)
@@ -310,10 +318,14 @@ def prelex(source: str, start: int = 0, end: int | None = None) -> Prelexed:
 class _RefusalError(Exception):
     """A strictness refusal at a code offset, not yet placed."""
 
-    def __init__(self, offset: int, message: str) -> None:
+    def __init__(
+        self, offset: int, message: str, kind: type[FplError]
+    ) -> None:
         super().__init__(message)
         self.offset = offset
         self.message = message
+        #: The error the refusal becomes once it is placed.
+        self.kind = kind
 
 
 def _brackets(
@@ -337,10 +349,14 @@ def _brackets(
         if char in BRACKETS:
             open_.append((char, base + n, depth))
         elif char in CLOSERS and not open_:
-            raise _RefusalError(base + n, f"{char} closes nothing")
+            raise _RefusalError(
+                base + n, f"{char} closes nothing", UnopenedError
+            )
         elif char in CLOSERS and open_[-1][0] != CLOSERS[char]:
             raise _RefusalError(
-                base + n, f"{char} does not close {open_[-1][0]}"
+                base + n,
+                f"{char} does not close {open_[-1][0]}",
+                MismatchedError,
             )
         elif char in CLOSERS:
             open_.pop()
@@ -367,18 +383,22 @@ def _lines(code: str, line_of: Callable[[int], int]) -> None:
     for line in code.split("\n"):
         depth = len(line) - len(line.lstrip("\t"))
         if not open_ and line[depth : depth + 1] == " ":
-            raise _RefusalError(base + depth, "indentation must be tabs")
+            raise _RefusalError(
+                base + depth, "indentation must be tabs", TabsError
+            )
         if open_ and line.strip() and depth < open_[-1][2]:
             opener, opened, _ = open_[-1]
             message = (
                 f"dedent below line {line_of(opened)}, "
                 f"but its {opener} is still open"
             )
-            raise _RefusalError(base + depth, message)
+            raise _RefusalError(base + depth, message, StrayDedentError)
         _brackets(line, base, depth, open_)
         base += len(line) + 1
     if open_:
-        raise _RefusalError(open_[-1][1], f"{open_[-1][0]} never closed")
+        raise _RefusalError(
+            open_[-1][1], f"{open_[-1][0]} never closed", UnclosedError
+        )
 
 
 def strict(source: str, code: str, origin: tuple[int, ...]) -> None:
@@ -400,7 +420,7 @@ def strict(source: str, code: str, origin: tuple[int, ...]) -> None:
     try:
         _lines(code, lambda offset: lines.span(origin[offset]).line)
     except _RefusalError as refusal:
-        raise FplError(
+        raise refusal.kind(
             lines.span(origin[refusal.offset]), refusal.message
         ) from None
 

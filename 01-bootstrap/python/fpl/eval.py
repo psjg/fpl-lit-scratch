@@ -44,7 +44,25 @@ from fpl.ast_core import (
     Var,
     Wild,
 )
-from fpl.errors import FailError, FplError, OutOfGasError, Span, UnequalError
+from fpl.errors import (
+    AmbiguousCallError,
+    DictError,
+    EachError,
+    EmptyFoldError,
+    FailError,
+    GoalError,
+    NotInvertibleError,
+    NotListError,
+    NotNumberError,
+    NotQuotationError,
+    OutOfGasError,
+    RecursionDepthError,
+    Span,
+    TooLargeError,
+    UnderflowError,
+    UnequalError,
+    UnequalStrandsError,
+)
 
 #: A builtin word: called with the word's span and its arguments, it
 #: returns the values it leaves.
@@ -263,7 +281,7 @@ def metered(
                 raise UnequalError(run.span, show(stack), show(right))
         return stack
     except RecursionError:
-        raise FplError(run.span, "recursion too deep") from None
+        raise RecursionDepthError(run.span, "recursion too deep") from None
     finally:
         if spent is not None:
             spent.append(meter.spent())
@@ -371,7 +389,7 @@ def step(state: State) -> State:
         case Match():
             return matching(node, state, rest)
         case Refuse():
-            raise FplError(node.span, node.message)
+            raise AmbiguousCallError(node.span, node.message)
         case _:
             assert_never(node)
 
@@ -388,7 +406,7 @@ def binding(node: Bind, state: State, rest: tuple[Node, ...]) -> State:
         :exc:`FplError`: The stack is empty (``stack underflow``).
     """
     if not state.stack:
-        raise FplError(node.span, "stack underflow")
+        raise UnderflowError(node.span)
     scope = substitute(node.body, node.name, state.stack[-1])
     return State(state.stack[:-1], scope + rest, state.words)
 
@@ -520,7 +538,7 @@ def matching(node: Match, state: State, rest: tuple[Node, ...]) -> State:
     """
     cut = len(state.stack) - len(node.rows[0].patterns)
     if cut < 0:
-        raise FplError(node.span, "stack underflow")
+        raise UnderflowError(node.span)
     for row in node.rows:
         bound = matches(row.patterns, state.stack[cut:], state.words)
         if bound is not None:
@@ -666,7 +684,7 @@ def undone(
             state = unrun(node, state, words, span, trail | {name})
         return state
     if name in words or name not in INVERSES:
-        raise FplError(span, f"{name} is not invertible")
+        raise NotInvertibleError(span, f"{name} is not invertible")
     return INVERSES[name](stack)
 
 
@@ -688,7 +706,7 @@ def unrun(
         case Call():
             return undone(node.name, stack, words, span, trail)
         case _:
-            raise FplError(
+            raise NotInvertibleError(
                 span, "a constructor is words and literals: not invertible"
             )
 
@@ -789,7 +807,7 @@ def gathered(node: Keyed, words: Words) -> Dict:
     for key, code in node.entries:
         stack = final(State((), (code,), words))
         if len(stack) != 1:
-            raise FplError(node.span, "a dict value is one value")
+            raise DictError(node.span, "a dict value is one value")
         entries.append((key, stack[0]))
     return Dict(tuple(entries))
 
@@ -813,7 +831,7 @@ def builtin(call: Call, state: State, rest: tuple[Node, ...]) -> State:
     """
     cut = len(state.stack) - len(EFFECTS[call.name].ins)
     if cut < 0:
-        raise FplError(call.span, "stack underflow")
+        raise UnderflowError(call.span)
     below, taken = state.stack[:cut], state.stack[cut:]
     if call.name in CONTROLS:
         code = CONTROLS[call.name](call.span, state.words, *taken)
@@ -838,7 +856,7 @@ def operands(value: Value, span: Span) -> tuple[Number, ...]:
     items = value.items if isinstance(value, Strand) else (value,)
     numbers = tuple(item for item in items if isinstance(item, int | Decimal))
     if len(numbers) < len(items):
-        raise FplError(span, "arithmetic on a non-number")
+        raise NotNumberError(span, "arithmetic on a non-number")
     return numbers
 
 
@@ -871,13 +889,13 @@ def arithmetic(
     """
     xs, ys = operands(a, span), operands(b, span)
     if len(xs) != len(ys) and 1 not in (len(xs), len(ys)):
-        raise FplError(span, "strands of unequal length")
+        raise UnequalStrandsError(span, "strands of unequal length")
     zs = tuple(
         op(xs[i % len(xs)], ys[i % len(ys)])
         for i in range(max(len(xs), len(ys)))
     )
     if any(abs(z) >= LIMIT for z in zs):
-        raise FplError(span, "number too large")
+        raise TooLargeError(span, "number too large")
     return (
         Strand(zs)
         if isinstance(a, Strand) or isinstance(b, Strand)
@@ -924,7 +942,7 @@ def reduction(
     """
     if isinstance(a, Strand):
         if not a.items:
-            raise FplError(span, "reduction over nothing")
+            raise EmptyFoldError(span, "reduction over nothing")
         *init, last = operands(a, span)
         result: Value = last
         for x in reversed(init):
@@ -971,7 +989,9 @@ def join(span: Span, a: Value, b: Value) -> tuple[Value, ...]:
         case Listed(), Listed():
             return (Listed(a.items + b.items),)
         case _:
-            raise FplError(span, ", joins two quotations or two lists")
+            raise NotQuotationError(
+                span, ", joins two quotations or two lists"
+            )
 
 
 def pair(_span: Span, a: Value, b: Value) -> tuple[Value, ...]:
@@ -993,7 +1013,7 @@ def cons(span: Span, x: Value, xs: Value) -> tuple[Value, ...]:
         (Listed(items=(0, 1)),)
     """
     if not isinstance(xs, Listed):
-        raise FplError(span, "cons takes a list")
+        raise NotListError(span, "cons takes a list")
     return (Listed((x, *xs.items)),)
 
 
@@ -1029,7 +1049,7 @@ def unfilled(span: Span) -> tuple[Value, ...]:
     Raises:
         :exc:`FplError`: Always (``unfilled goal``).
     """
-    raise FplError(span, "unfilled goal")
+    raise GoalError(span, "unfilled goal")
 
 
 def nothing(_span: Span) -> tuple[Value, ...]:
@@ -1071,7 +1091,7 @@ def quoted(value: Value, span: Span) -> Quotation:
         :exc:`FplError`: *value* is not a quotation.
     """
     if not isinstance(value, Quotation):
-        raise FplError(span, "a quotation is expected")
+        raise NotQuotationError(span, "a quotation is expected")
     return value
 
 
@@ -1100,7 +1120,7 @@ def choose(
     """
     branches = quoted(e, span), quoted(t, span)
     if not isinstance(c, int) or c not in (0, 1):
-        raise FplError(span, "if takes 0 or 1")
+        raise NotNumberError(span, "if takes 0 or 1")
     return branches[c].code
 
 
@@ -1129,7 +1149,7 @@ def repeat(span: Span, _words: Words, q: Value, n: Value) -> tuple[Node, ...]:
     """
     code = quoted(q, span).code
     if not isinstance(n, int) or n < 0:
-        raise FplError(span, "repeat takes a count")
+        raise NotNumberError(span, "repeat takes a count")
     if n == 0:
         return ()
     return (*code, Push(q), Push(n - 1), Call("repeat", span))
@@ -1142,7 +1162,7 @@ def items(xs: Value, span: Span) -> tuple[Value, ...]:
         :exc:`FplError`: *xs* is neither.
     """
     if not isinstance(xs, Strand | Listed):
-        raise FplError(span, "a strand or a list is expected")
+        raise NotListError(span, "a strand or a list is expected")
     return xs.items
 
 
@@ -1155,7 +1175,7 @@ def single(state: State, span: Span) -> Value:
     """
     stack = final(state)
     if len(stack) != 1:
-        raise FplError(span, "each step leaves one value")
+        raise EachError(span, "each step leaves one value")
     return stack[0]
 
 
@@ -1235,7 +1255,7 @@ def fold(span: Span, words: Words, xs: Value, q: Value) -> tuple[Node, ...]:
     """
     last = deque(running_results(span, words, xs, q), maxlen=1)
     if not last:
-        raise FplError(span, "fold over nothing")
+        raise EmptyFoldError(span, "fold over nothing")
     return (Push(last[0]),)
 
 
@@ -1254,7 +1274,7 @@ def foldr(span: Span, words: Words, xs: Value, q: Value) -> tuple[Node, ...]:
     code = quoted(q, span).code
     values = items(xs, span)
     if not values:
-        raise FplError(span, "fold over nothing")
+        raise EmptyFoldError(span, "fold over nothing")
     result = values[-1]
     for x in reversed(values[:-1]):
         result = single(State((x, result), code, words), span)

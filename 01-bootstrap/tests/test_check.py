@@ -17,6 +17,7 @@ from fpl.errors import (
     NoFailError,
     OutOfGasError,
     StackError,
+    UnderflowError,
     UnequalError,
     UnknownWordError,
     UnmatchedFailError,
@@ -26,7 +27,6 @@ from fpl.log import Log
 from fpl.parse import parse
 from fpl.print import render
 from fpl.session import enter
-from fpl.types import UnderflowError
 
 UNRESOLVED = "$x\n"
 

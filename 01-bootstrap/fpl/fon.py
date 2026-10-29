@@ -78,6 +78,8 @@ class FonError(FplError):
     its offset in the text.
     """
 
+    tag = "err/fon"
+
     def __init__(self, text: str, offset: int, message: str) -> None:
         """Refuse *text* at *offset* with *message*.
 

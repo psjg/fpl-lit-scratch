@@ -15,7 +15,7 @@ from pathlib import Path
 
 from fpl.ast_core import Run, Statement
 from fpl.driver import Lines, checked, printed, stacks
-from fpl.errors import FplError, Span
+from fpl.errors import FplError, SessionError, Span, excerpt
 from fpl.log import SCHEMA, Event, Log, RefusedError, Status, Who, prefixed
 from fpl.multihash import Multihash, content, hashed
 from fpl.types import Goal, reported
@@ -197,7 +197,7 @@ class _Entry:
         lines = self.text.split("\n")
         first = next((line for line in lines if line.strip()), "")
         if self.parts and first[:1].isspace():
-            raise FplError(
+            raise SessionError(
                 Span(self.starts[-1] + lines.index(first), 1), MARGIN
             )
 
@@ -244,13 +244,13 @@ def _failed(
     notes.
     """
     owner = entry.owner(error.span.line)
-    local = FplError(entry.local(error.span), error.message)
+    span = entry.local(error.span)
     texts = (*(part.text for part in entry.parts), entry.text)
     where = (
         f"@{entry.parts[owner].event.seq} " if owner < len(entry.parts) else ""
     )
-    line = f"ERROR: {where}{local.span.line}:{local.span.col} {local.message}"
-    caret = local.render(texts[owner]).partition("\n")[2]
+    line = f"ERROR: {where}{span.line}:{span.col} {error.message}"
+    caret = excerpt(texts[owner], span)
     return entry.logged(
         "error",
         line + "\n",
