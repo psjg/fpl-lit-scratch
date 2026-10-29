@@ -13,6 +13,14 @@ related: []
 
 > hebben we crockfords dec64 in de taal zitten
 
+After the first version of this note (replies in the same chat, 13:07):
+
+> draai die assembly man
+
+> ik voel eigenlijk weinig voor die trap cool dat het kan maar het fuckt met de totaliteit en correctness by construction als we het kunnen voorkomen met design dan graag zolang mogelijk afhouden
+
+> ik zou ze plugable naast elkaar willen hebben net zoals iEEE747 whatever floating point ook iets is wat plugable is en dan aan de voorwaarden kan voldoen
+
 ## Context
 
 Asked in a side chat on 2026-10-29, after [DI-0074](DI-0074-a-discrete-basis-dec-rat-and-the-slash-literal.md)
@@ -50,8 +58,15 @@ libmpdec 4.0.1) unless marked a prior.
 
 **Measured: a model of the spec** (20 lines of Python on `int` and `Fraction`: build the exact
 result, round to the nearest, ties away, pick the lowest exponent at which the coefficient fits,
-`nan` when none does; it models the page, not the assembly, whose last-place behaviour is a prior).
-Against `Decimal` at precision 8192 with `Inexact` trapped:
+`nan` when none does) and then the reference assembly itself. Crockford's `dec64.s` (ARM64, dated
+2024-04-09, written for Microsoft's assembler) was converted mechanically to clang syntax (labels,
+`global`, `dcq`, comments, two addressing forms; no instruction changed), assembled on this arm64
+Mac and driven from C through `dec64.h`. On 3012 cases (twelve named ones and 3000 random money
+pairs) the assembly and the model give the same value in every one, `nan` included, so the
+table below is the assembly's behaviour, with the conversion as my own and unreviewed. Run directly
+on the assembly: `0 × nan` and `0 ÷ nan` return 0, `5 ÷ nan` and `nan + 1` return `nan`, and
+`dec64_new(1, -128)` returns 0, a silent underflow. The upstream test program was not run.
+Model and assembly against `Decimal` at precision 8192 with `Inexact` trapped:
 
 | case | DEC64 model | `Decimal` |
 |---|---|---|
@@ -79,7 +94,10 @@ turns it into `LIMIT = 10**DIGITS` and `arithmetic` raises `number too large` at
 ([eval.py:853](../../../01-bootstrap/fpl/eval.py)). A search for `Inexact`, `traps` and
 `getcontext` in `fpl/` finds nothing: the trap DI-0074 describes is a measured property of
 `Decimal`, not code in this checkout, because `÷` is not a walker word yet. So the refusal Dec
-relies on is a design to build, and DEC64 is a design question before it is a dependency.
+relies on is a design to build, and DEC64 is a design question before it is a dependency. He does not want the trap
+(quote above): a trap makes `÷` partial at run time, which costs totality and correctness by
+construction. Note that `LIMIT` above is a refusal of the same kind, a bound met at run time; it is
+the one the walker already has.
 
 ## Options and outcome
 
@@ -89,17 +107,20 @@ relies on is a design to build, and DEC64 is a design question before it is a de
    needs a fixed word. It is not a sort: it has a `nan` and rounds, both of which the kernel
    excludes. The kernel stays discrete and
    unbounded; DEC64 is below it. Prior: representation.
-2. **The obligation a DEC64 target must discharge.** `Dec` closes under `+ − ×` and refuses `÷`
-   that leaves ℤ[1/10]. DEC64 differs in four places, each one an obligation: (a) rounding must be
-   refused, not applied (the target computes in a wider word and checks that the coefficient fits
-   55 bits and the exponent −127..127, else it takes the error path, not `nan`); (b) one `nan` for
-   overflow and division by zero must become two different failures; (c) `0 × nan` is `0`, so the
-   target must never form a `nan` into a multiplication, or the refusal in (b) is lost; (d)
-   magnitudes under 1e-127 must fail, not round to 0. With these, a program that runs on the walker
-   and on the DEC64 target either gives the same value or fails on the target only through range,
-   which is the bound that 02.04.13 already says a representation owes ("its error bound as an
-   obligation"). Prior: this is the sound reading; DEC64's own rounding is then never used, and
-   what is left of DEC64 is the layout and the integer fast path.
+2. **The obligation a DEC64 target must discharge, by design and not by trap.** `Dec` closes under
+   `+ − ×`; `÷` leaves ℤ[1/10] and rises to `Rat` (DI-0074), so no division ever has to fail on
+   `Dec`. DEC64 differs in four places, and each is an obligation on the choice of the
+   representation, checked before the program runs, not a check inside it: (a) a result must fit
+   55 bits of coefficient and exponents −127..127, which a static bound on the operands decides
+   (a width per value, as the digits of a coefficient add under `×` and the larger plus one under
+   `+`), and a program whose bounds do not fit is given another representation; (b) the one `nan`
+   (division by zero and overflow alike) never arises, because no operation on a value in range
+   leaves the range once (a) holds, and `÷` by a Nat1 divisor cannot be zero (DI-0074 point 3);
+   (c) `0 × nan` is 0 (measured), harmless when no `nan` is ever formed; (d) literals and results
+   under 1e-127 or past 17 digits do not occur, for the same reason. If that holds, DEC64's own
+   rounding is never exercised, and what is left of DEC64 is the layout and the integer fast
+   path. Prior, not measured: that the bounds can be tracked cheaply enough in the planner; the
+   range-typed `Dec` this asks for is a design question for 02.04.13.
 3. **What it gains over `Decimal`** (measured where marked). A fixed word, fixed layout and no
    allocation: `Decimal` is a heap object with a context (precision, rounding, traps) a
    compiled target has to ship (libmpdec); DEC64 has no context at all, one rounding rule, so the
@@ -116,11 +137,18 @@ relies on is a design to build, and DEC64 is a design question before it is a de
    inexact and other status flags, two encodings): not read from the standard in this note
    (paywalled), so a prior; it has the status flags DEC64 lacks, which suits obligation (a). Whether
    a target should prefer it over DEC64 is a later question, to be measured on a target.
-6. **Decision for him.** Keep DEC64 as a named candidate target form of `Dec`, to be taken up when
-   a compiled target needs a fixed-width decimal (no change to the kernel or the lattice now), or
-   drop it. Not decided; the lean in DI-0074 (Dec above Int, below Rat) is untouched either way.
+6. **His answer, 13:07: pluggable, side by side.** DEC64 is one plug among several for the `Dec`
+   sort, as IEEE binary floating point is one for a smooth sort: each representation states the
+   conditions under which it implements the sort (range, exactness, which operations are total),
+   and a target takes the one whose conditions the program meets. That is 02.04.13's rule applied
+   to `Dec`, and it removes the question of whether FPL has DEC64: it has a slot, and DEC64
+   would be filled when a compiled target needs a fixed word. The plugs named so far: the walker's
+   bignum `Decimal` (conditions: `DIGITS`), DEC64, IEEE decimal64 (prior), a scaled `int` (Q
+   format, DI-0074). The shape of a plug's interface (its conditions as proof obligations, how a
+   program says which plug it wants or leaves it to the planner) is not designed here.
 
-Outcome: open. No code was written; the model lives outside the repository.
+Outcome: the pluggable reading is his; the interface of a plug and the static bound of point 2 are
+open. No code was written; the model and the converted assembly live outside the repository.
 
 ## Related
 
