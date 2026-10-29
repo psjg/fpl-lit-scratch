@@ -924,6 +924,8 @@ filters:
   resources:
     - assets/fpl-live.js
     - assets/fpl-live.css
+    - "**/*.facts.json"
+    - "**/*.decisions.tsv"
   render:
     - index.qmd
     - 01-bootstrap/README.md
@@ -1091,6 +1093,9 @@ format:
     toc-depth: 2
     code-overflow: wrap
     css: assets/fpl-live.css
+    include-in-header:
+      text: |
+        <meta name="fpl-site" content="https://psjg.github.io/fpl-lit-scratch">
 """
     )
 
