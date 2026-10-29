@@ -73,3 +73,4 @@ Tick a box when you have answered; comment under the line.
 - [ ] [DI-0069 The space before a comment as part of its token](DI-0069-the-space-before-a-comment-as-part-of-its-token.md) — when every pad line ends in ` ;`, is the space before the comment sign part of the NOTE token? three options, open
 - [ ] [DI-0070 nat, number, and the base of a float](DI-0070-nat-number-and-the-base-of-a-float.md) — the sort a result line names, ℕ as its own sort or not yet, and floats in a power-of-two base; open
 - [ ] [DI-0071 Line numbers as part of the grammar](DI-0071-line-numbers-in-the-grammar.md) — every line carries its number, as BASIC and COBOL did; a thought, open
+- [ ] [DI-0072 A line of numbers and a word: reduce, map, zip, and rank in the type](DI-0072-a-line-of-numbers-and-a-word.md) — `1 2 3 4 +` reduces, `+ 1` maps, `+ 4 3 2 1` zips; the bar as `] [`, `|-` as a check, rank in the type; four option clusters, open
