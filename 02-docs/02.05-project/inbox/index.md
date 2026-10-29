@@ -72,3 +72,4 @@ Tick a box when you have answered; comment under the line.
 - [ ] [DI-0068 History in running text is good when it carries the reason](DI-0068-history-in-running-text-is-good-when-it-carries-the-reason.md) — history is not the problem, history without its consequence is; the series of reasons makes the historical remark better
 - [ ] [DI-0069 The space before a comment as part of its token](DI-0069-the-space-before-a-comment-as-part-of-its-token.md) — when every pad line ends in ` ;`, is the space before the comment sign part of the NOTE token? three options, open
 - [ ] [DI-0070 nat, number, and the base of a float](DI-0070-nat-number-and-the-base-of-a-float.md) — the sort a result line names, ℕ as its own sort or not yet, and floats in a power-of-two base; open
+- [ ] [DI-0071 Line numbers as part of the grammar](DI-0071-line-numbers-in-the-grammar.md) — every line carries its number, as BASIC and COBOL did; a thought, open
