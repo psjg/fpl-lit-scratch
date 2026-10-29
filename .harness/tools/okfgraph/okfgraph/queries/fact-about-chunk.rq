@@ -1,14 +1,16 @@
 # Each hand span (a row with `fact:commit`: lit gives the rows it generates none) with the
 # smallest chunk span that holds it, its labels and note, and the rows that target it; a span
 # outside every chunk has no chunk. A span lit located sits at its current offsets, else at its
-# written ones; containment is half-open. Join: one-sided, a hand span x the chunk spans of its
+# written ones; a quote row (text, prefix and suffix, no written offsets) lit did not locate
+# sits nowhere and has no chunk. Containment is half-open. Join: one-sided, a hand span x the chunk spans of its
 # own source, the kind bound before the numeric filter (a self-join over every span is
 # quadratic: 8 s for 3000 spans).
 SELECT (STRAFTER(STR(?r), STR(b:)) AS ?row) (STRAFTER(STR(?c), STR(b:)) AS ?chunk)
        (GROUP_CONCAT(DISTINCT ?label; separator=" ") AS ?labels) ?note
        (GROUP_CONCAT(DISTINCT STRAFTER(STR(?by), STR(b:)); separator=" ") AS ?targetedBy)
 WHERE {
-  ?r fact:commit ?commit ; fact:source ?src ; fact:start ?s0 ; fact:end ?e0 .
+  ?r fact:commit ?commit ; fact:source ?src .
+  OPTIONAL { ?r fact:start ?s0 ; fact:end ?e0 }
   OPTIONAL { ?r fact:currentStart ?cs ; fact:currentEnd ?ce }
   BIND(COALESCE(?cs, ?s0) AS ?s)
   BIND(COALESCE(?ce, ?e0) AS ?e)

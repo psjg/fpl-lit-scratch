@@ -215,3 +215,23 @@ def test_current_offsets_are_integers(tmp_path: Path) -> None:
     xsd = ox.NamedNode(PREFIXES["xsd"] + "integer")
     found = {q.object for q in store.quads_for_pattern(s_in, at, None)}
     assert found == {ox.Literal("35", datatype=xsd)}
+
+
+def test_a_quote_row_lies_at_its_located_offsets(tmp_path: Path) -> None:
+    # s-quote names its text, not its offsets: lit located it in Tail,
+    # which it holds then, so Tail is no longer untouched.
+    quote = {"id": "s-quote", "item": PAGE, "commit": "c2", "text": "tail"}
+    located = quote | {"state": "vers", "currentStart": 193, "currentEnd": 197}
+    root = write(
+        tmp_path,
+        FILES
+        | {
+            "q/two.facts.json": json.dumps([*HAND, quote]),
+            "build/facts/two.json": json.dumps([*BUILT, located]),
+        },
+    )
+    about = report(root, "fact-about-chunk")
+    assert [iri("s-quote"), iri("chunk:Tail:1"), "", "", ""] in about
+    assert report(root, "fact-chunk-untouched") == [
+        [iri("chunk:Root:1"), '"root"'],
+    ]

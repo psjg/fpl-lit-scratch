@@ -1,5 +1,5 @@
 # Each chunk span no hand span lies in (a row with `fact:commit`, at its current offsets when lit
-# located it; half-open) and none of whose definitions the prose names: no definition span that
+# located it, else at its written ones, which a quote row has none of; half-open) and none of whose definitions the prose names: no definition span that
 # targets the chunk has a label `name' that a paragraph span of the same page quotes. kind is
 # root (the name is a file; it wins), skeleton (every line a use) or body. Join: the named
 # chunks once, definitions by target x their page's paragraphs by CONTAINS, taken out by MINUS
@@ -13,7 +13,8 @@ SELECT (STRAFTER(STR(?c), STR(b:)) AS ?chunk) ?kind WHERE {
     FILTER(CONTAINS(?t, CONCAT("`", ?name, "'")))
   }
   FILTER NOT EXISTS {
-    ?r fact:commit ?x ; fact:source ?src ; fact:start ?s0 ; fact:end ?e0 .
+    ?r fact:commit ?x ; fact:source ?src .
+    OPTIONAL { ?r fact:start ?s0 ; fact:end ?e0 }
     OPTIONAL { ?r fact:currentStart ?cs ; fact:currentEnd ?ce }
     FILTER(?a <= COALESCE(?cs, ?s0) && COALESCE(?ce, ?e0) <= ?z)
   }
