@@ -8,7 +8,7 @@
   "labels": [],
   "note": "",
   "targets": [],
-  "commit": "68984ba"
+  "commit": "68984ba2f4065dad60f06f4d623ffd5f0f9d0123"
  },
  {
   "id": "f-tabs",
@@ -42,7 +42,7 @@
   "labels": [],
   "note": "",
   "targets": [],
-  "commit": "68984ba"
+  "commit": "68984ba2f4065dad60f06f4d623ffd5f0f9d0123"
  },
  {
   "id": "r-own-pair-cites",
@@ -65,7 +65,7 @@
   "labels": [],
   "note": "",
   "targets": [],
-  "commit": "68984ba"
+  "commit": "68984ba2f4065dad60f06f4d623ffd5f0f9d0123"
  },
  {
   "id": "r-placeholder-cites",
@@ -88,7 +88,7 @@
   "labels": [],
   "note": "",
   "targets": [],
-  "commit": "1977936"
+  "commit": "197793601e563dc7c68c9c67004ce62e5b57769f"
  },
  {
   "id": "s-counted-code",
@@ -99,7 +99,7 @@
   "labels": [],
   "note": "",
   "targets": [],
-  "commit": "20a797b"
+  "commit": "20a797b22c7c3b2597e586ed8fd2c3e564e5a096"
  },
  {
   "id": "f-counted",
@@ -120,7 +120,7 @@
   "labels": [],
   "note": "",
   "targets": [],
-  "commit": "68984ba"
+  "commit": "68984ba2f4065dad60f06f4d623ffd5f0f9d0123"
  },
  {
   "id": "r-cfg-contradicts",
@@ -152,7 +152,7 @@
   "labels": [],
   "note": "",
   "targets": [],
-  "commit": "68984ba"
+  "commit": "68984ba2f4065dad60f06f4d623ffd5f0f9d0123"
  },
  {
   "id": "r-stage-cites",
