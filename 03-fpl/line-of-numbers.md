@@ -43,7 +43,7 @@ A word between two strands of equal length combines them item by item.
 
 ## The bar
 
-The bar opens a frame that reaches the values to its left. These lines come from DI-0072 and from the September design chat.
+The bar opens a frame that reaches the values to its left. These lines come from DI-0072 and from the September design chat; the chat had `1 2 3 - | 1` as `[ 1 2 3 - ] 1`, a section then a value, and the fold rule of DI-0072 makes the first frame `2`.
 
 ```fpl
 1 | 1 + |- 2
@@ -51,7 +51,7 @@ The bar opens a frame that reaches the values to its left. These lines come from
 1 | 1 2 3 + |- 2 3 4
 2 | 3 + |- 5
 1 | 1 2 3 - |- 0 -1 -2
-1 2 3 - | 1 |- [ 1 2 3 - ] 1
+1 2 3 - | 1 |- 2 1
 1 - |- [ 1 - ]
 ```
 
