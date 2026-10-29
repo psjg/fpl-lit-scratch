@@ -91,14 +91,19 @@ end
 -- the page count all the way down. The number is a span of Quarto's own
 -- class, so the theme sets it like a section number.
 --
--- Below the headings the paragraphs count too, and their sentences: the
--- fourth paragraph under 1.2.1.3 is ¶4, its second sentence ¶4.2. Each
--- paragraph is a div (class fpl-p, data-n, id <heading>/p4) and each
--- sentence a span (class fpl-s, data-n, id <heading>/p4s2) and, where a
--- sentence has more than one, each clause a span (fpl-c, id ...s2c3),
--- so a URL can name a clause; the overlay shows the numbers outside the
--- reading stand, the clauses' only while the sentence is hovered. A sentence ends at a word ending in . ? or ! (closing quotes
--- or brackets after it) that is not a one-letter or known abbreviation.
+-- Below the headings the blocks count too, paragraphs and code alike,
+-- and a paragraph's sentences and clauses: the fourth block under 1.2.1.3
+-- is §4 (§4:C when it is code), its second sentence §4.2, that
+-- sentence's third clause §4.2.3, the twelfth line of code block 5
+-- §5:12. A block is a div (class fpl-p, data-n, data-kind P or C, id
+-- <heading>/b4), a sentence a span (fpl-s, id <heading>/b4s2), a clause
+-- a span (fpl-c, id ...s2c3); a code line gets its id (...b5l12) from
+-- fpl-nav.js, since Quarto draws the lines after this filter. The
+-- blocks before the first heading count under the page itself, with
+-- ids without a heading (b2). The overlay shows the numbers outside
+-- the reading stand, the clauses' only while the sentence is hovered.
+-- A sentence ends at a word ending in . ? or ! (closing quotes or
+-- brackets after it) that is not a one-letter or known abbreviation.
 local ABBR = { ["e.g."] = true, ["i.e."] = true, ["vs."] = true, ["cf."] = true,
   ["etc."] = true, ["Mr."] = true, ["Dr."] = true, ["St."] = true, ["No."] = true }
 
@@ -167,6 +172,9 @@ function number(doc, addr)
   local base = addr:gsub("%f[%d]0+(%d)", "%1")
   local count, head, para = {}, "", 0
   local blocks = pandoc.List({})
+  local function id_of(n)
+    return (head ~= "" and head .. "/" or "") .. "b" .. n
+  end
   for _, block in ipairs(doc.blocks) do
     if block.t == "Header" and block.level >= 2 then
       for level = block.level + 1, #count do
@@ -185,12 +193,17 @@ function number(doc, addr)
       block.content:insert(1, num)
       head, para = block.identifier, 0
       blocks:insert(block)
-    elseif block.t == "Para" and head ~= "" then
+    elseif block.t == "Para" then
       para = para + 1
-      local id = head .. "/p" .. para
+      local id = id_of(para)
       local inl, n = sentences(block.content, id)
       blocks:insert(pandoc.Div({ pandoc.Para(inl) },
-        pandoc.Attr(id, { "fpl-p" }, { ["data-n"] = tostring(para), ["data-s"] = tostring(n) })))
+        pandoc.Attr(id, { "fpl-p" }, { ["data-n"] = tostring(para), ["data-kind"] = "P", ["data-s"] = tostring(n) })))
+    elseif block.t == "CodeBlock" then
+      para = para + 1
+      local _, lines = block.text:gsub("\n", "")
+      blocks:insert(pandoc.Div({ block },
+        pandoc.Attr(id_of(para), { "fpl-p" }, { ["data-n"] = tostring(para), ["data-kind"] = "C", ["data-l"] = tostring(lines + 1) })))
     else
       blocks:insert(block)
     end

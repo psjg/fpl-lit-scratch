@@ -130,11 +130,20 @@ with its old text struck through. The right margin is free because `assets/fpl-n
 the page's own sections under its entry in the left sidebar, and `essay.lua` nests the
 headings' anchors (`#strings-and-comments/counted`), so a URL reads `page#scope/subscope`.
 
-The control at the top of the margin (or, narrow, at the top right) has three stands,
-also cycled with the key `a`: *Lezen* shows nothing; *Spans* underlines the spans whose labels
-pass the filter, a row of label chips under the control (a struck chip hides its spans, "alles"
-shows them all); *Kantlijn* adds the cards, the lines and the editor. The stand and the filter
-are remembered in that browser for the whole site, and a page opens in Lezen.
+The control floating at the top right has three stands, also cycled with the key `a`:
+*Lezen* shows nothing; *Spans* underlines the spans whose labels pass the filter (a row of
+label chips under the control while it is hovered; a struck chip hides its spans) and a click
+on a span opens its card alone; *Kantlijn* shows every card, the lines and the editor. The
+stand and the filter are remembered in that browser for the whole site; a page opens in Lezen.
+
+Outside Lezen every block carries its address: below the page's own number (01.02.01 Lex is
+1.2.1) the headings count (`1.2.1.3`), and under a heading the blocks, paragraphs and code
+alike, in page order: `§4` is the fourth block, `§5:C` the fifth when it is code, `§4.2` the
+second sentence of block 4, `§4.2.3` that sentence's third clause (cut at , ; : or a dash,
+shown while the sentence is hovered), `§5:12` the twelfth line of code block 5. Each has an
+id in the page, `strings-and-comments/b4`, `…/b4s2`, `…/b4s2c3`, `…/b5l12`, so a URL can
+name one, and a fact can cite one: a row without text whose first target is such an id gets
+a card at that element, with a line to it.
 
 A reader selects text, writes a note and picks labels (chips; type `label/sub` for one
 more) in a card at that height, and saves it (⌘↩) as a quote row: `{id, item, commit,

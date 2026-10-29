@@ -14,12 +14,20 @@
  * list is open while the section or one of its subsections is current,
  * or when the chevron was clicked.
  *
+ * A code line's id is its address (essay.lua numbers the blocks; Quarto
+ * draws the lines later, so the ids come here): <block id>l<n>.
+ *
  * The sidebar folds at every width: a button at the top left hides it
  * (body.fpl-nav-off) and brings it back; the page keeps its columns, so
  * the text does not move. localStorage["fpl-nav:off"] remembers it.
  */
 (() => {
   "use strict";
+  // every line of a code block gets its address as id: <block id>l<n>
+  for (const block of document.querySelectorAll(".fpl-p[data-kind='C']")) {
+    let n = 0;
+    for (const line of block.querySelectorAll("pre code > span")) line.id = `${block.id}l${++n}`;
+  }
   const fold = document.createElement("button");
   fold.className = "fpl-fold";
   fold.type = "button";

@@ -26,7 +26,11 @@
  * prefix and suffix choose among several hits. Rows of the sidecar keep
  * their own shape and are drawn by their text the same way. A row without
  * text is a fact about its first target: it is shown on the card of the
- * span it hangs from, nested under the fact it is about.
+ * span it hangs from, nested under the fact it is about. When that target
+ * is not a row but an address on the page (a block, sentence, clause or
+ * code line: essay.lua and fpl-nav.js give them ids such as
+ * strings-and-comments/b5l12), the row gets a card of its own at that
+ * element, with a line to it.
  *
  * Storage. localStorage["fpl-annot:" + item] holds a JSON array of this
  * browser's rows for that page; the sidecar is never written here. Export
@@ -177,6 +181,16 @@
   const button = (text, onclick, className = "") =>
     el("button", { type: "button", onclick, className }, text);
   const marksOf = (id) => body.querySelectorAll(`mark.fact[data-id="${CSS.escape(id)}"]`);
+  /** What a row is drawn at: its marks, or the addressed element it is about. */
+  function anchorsOf(id) {
+    const ms = marksOf(id);
+    if (ms.length) return [...ms];
+    const row = all.find((r) => r.id === id);
+    const at = row && typeof row.text !== "string" && row.targets?.[0];
+    const e = at && !all.some((r) => r.id === at) && document.getElementById(at);
+    return e && body.contains(e) ? [e] : [];
+  }
+  const addressed = (r) => typeof r.text !== "string" && anchorsOf(r.id).length > 0;
 
   /** Every row, the sidecar's first, each marked mine when it is local. */
   const rows = () => [...sidecar, ...local().map((r) => ({ ...r, mine: true }))];
@@ -204,6 +218,7 @@
       state[row.id] = typeof at === "string" ? at : "vers";
       if (typeof at !== "string" && mode() !== "lezen" && passes(row)) wrap(ix, at[0], at[1], row);
     }
+    for (const row of all) if (addressed(row)) state[row.id] = "vers";
     layout();
   }
 
@@ -258,6 +273,8 @@
       st === "stale" ? el("span", { className: "fpl-lost" }, "niet meer gevonden")
         : st === "dubbel" ? el("span", { className: "fpl-lost" }, "meer dan één keer gevonden") : null));
     if (st !== "vers") card.append(el("div", { className: "fpl-excerpt" }, plain(row.text)));
+    else if (typeof row.text !== "string") card.append(el("div", { className: "fpl-excerpt" },
+      `${row.targets[0]}: ${anchorsOf(row.id)[0].textContent.replace(/\s+/g, " ").trim().slice(0, 140)}`));
     if (row.labels?.length) card.append(el("div", { className: "fpl-chips" }, ...row.labels.map((l) => chip(l, cls))));
     if (row.note) card.append(el("p", { className: "fpl-note" }, row.note));
     for (const r of facts(row.id)) card.append(factView(r, cls));
@@ -265,7 +282,7 @@
     card.onmouseleave = () => hot(null);
     card.onclick = (ev) => {
       if (ev.target.closest("button, a, .fpl-editor")) return;
-      const m = marksOf(row.id)[0];
+      const m = anchorsOf(row.id)[0];
       m?.scrollIntoView({ block: "center", behavior: "smooth" });
       if (row.mine && m) edit(row, card);
     };
@@ -274,7 +291,7 @@
 
   /** The head of the margin: counts and the three buttons. */
   function head() {
-    const spans = all.filter((r) => typeof r.text === "string");
+    const spans = all.filter((r) => typeof r.text === "string" || addressed(r));
     const lost = spans.filter((r) => state[r.id] !== "vers").length, mine = local().length;
     const file = el("input", { type: "file", accept: ".json", hidden: true });
     file.onchange = () => file.files[0]?.text().then(merge);
@@ -445,10 +462,10 @@
     }
     if (mode() === "lezen") return;
     if (full) margin.append(head());
-    const spans = all.filter((r) => typeof r.text === "string" && passes(r) && (full || open.has(r.id)));
+    const spans = all.filter((r) => (typeof r.text === "string" || addressed(r)) && passes(r) && (full || open.has(r.id)));
     if (!spans.length) return;
     const lost = spans.filter((r) => state[r.id] !== "vers");
-    const found = spans.map((r) => ({ r, m: marksOf(r.id)[0] })).filter((x) => x.m)
+    const found = spans.map((r) => ({ r, m: anchorsOf(r.id)[0] })).filter((x) => x.m)
       .sort((a, b) => a.m.getBoundingClientRect().top - b.m.getBoundingClientRect().top);
     if (wide()) {
       let y = full ? margin.firstElementChild.offsetHeight + GAP : 0;
@@ -486,9 +503,9 @@
     lines.setAttribute("height", h);
     lines.replaceChildren();
     for (const c of margin.querySelectorAll(".fpl-card[data-id]")) {
-      const ms = marksOf(c.dataset.id);
+      const ms = anchorsOf(c.dataset.id);
       if (!ms.length) continue;
-      const rects = [...ms].flatMap((m) => [...m.getClientRects()]);
+      const rects = ms.flatMap((m) => [...m.getClientRects()]);
       const last = rects[rects.length - 1], cr = c.getBoundingClientRect();
       // from the end of the span down into the gap under its line, along that
       // gap out of the text, then to the card; the type sits in the gutter
@@ -524,8 +541,9 @@
 
   /** The span, card and line of one row light up together. */
   function hot(id) {
-    for (const n of [...body.querySelectorAll("mark.fact"), ...margin.querySelectorAll(".fpl-card"), ...lines.children])
+    for (const n of [...body.querySelectorAll("mark.fact, .is-hot"), ...margin.querySelectorAll(".fpl-card"), ...lines.children])
       n.classList.toggle("is-hot", !!id && n.dataset.id === id);
+    if (id) for (const e of anchorsOf(id)) if (!e.matches("mark.fact")) e.classList.add("is-hot");
   }
 
   /* ---- selecting and clicking ---- */
