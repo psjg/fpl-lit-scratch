@@ -307,11 +307,14 @@ class Run:
 type Statement = Define | Run
 
 _BINARY = Effect(("x", "y"), ("z",))
+_UNARY = Effect(("x",), ("y",))
 #: The :class:`Effect` of each builtin word, by name.
 EFFECTS: dict[str, Effect] = {
     "+": _BINARY,
     "-": _BINARY,
     "times": _BINARY,
+    "succ": _UNARY,
+    "pred": _UNARY,
     "swap": Effect(("x", "y"), ("y", "x")),
     "dup": Effect(("x",), ("x", "x")),
     "drop": Effect(("x",), ()),

@@ -500,6 +500,11 @@ def test_parentheses_rotate_the_head_to_the_end() -> None:
             "15241578753238669120562399025\n",
         ),
         ("1 2 | 10 times\n", "10 20\n"),
+        ("2 succ\n", "3\n"),
+        ("-1 succ\n", "0\n"),
+        ("0 pred\n", "-1\n"),
+        ("1.5 succ\n", "2.5\n"),
+        ("1 2 pred\n", "0 1\n"),
         (": : --\n1\t2 : 3\n", "1 | 2 | 3\n"),
     ],
 )
@@ -516,6 +521,8 @@ def test_stack_words_and_literals(source: str, printed: str) -> None:
     [
         ("[ ] 1 +\n", "ERROR: 1:7 arithmetic on a non-number"),
         ("1 | [ ] +\n", "ERROR: 1:9 arithmetic on a non-number"),
+        ("“a” succ\n", "ERROR: 1:5 arithmetic on a non-number"),
+        ("[ ] pred\n", "ERROR: 1:5 arithmetic on a non-number"),
         ("1 2 | 1 2 3 +\n", "ERROR: 1:13 strands of unequal length"),
         ("1 | 2 ,\n", "ERROR: 1:7 , joins two quotations or two lists"),
         ("f : -- y z\n\t[ ] ! [ ] !\n1 | f +\n", "ERROR: 3:7 stack underflow"),
