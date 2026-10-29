@@ -14,7 +14,7 @@ SHA = "abc1234def5678abc1234def5678abc1234def56"
 ITEM = f"A=p.md@{SHA}"
 
 
-def tool(rid: str, item: str = "A", at: int = 8, **more: object) -> facts.Row:
+def tool(rid: str, item: str = "A", at: int = 32, **more: object) -> facts.Row:
     """A row of the program over ``The file.`` of the demo page."""
     text = md(GOOD)[at : at + 9]
     return {
@@ -69,8 +69,8 @@ def test_a_directory_export_brings_in_the_label_rows_only(
         {
             "id": "a-1",
             "item": "p.md",
-            "start": 8,
-            "end": 17,
+            "start": 32,
+            "end": 41,
             "text": "The file.",
             "labels": ["good"],
             "note": "",
@@ -224,7 +224,7 @@ def test_an_export_of_an_import_gives_back_the_rows(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     """The program's rows return, with the targets import adds."""
-    rows = [tool("a"), tool("b", at=0, end=6, text="# Demo", targets=[])]
+    rows = [tool("a"), tool("b", at=24, end=30, text="# Demo", targets=[])]
     car = repo(tmp_path, [{"id": "f", "note": "a fact", "targets": ["a"]}])
     src = dump(tmp_path / "rows.json", rows)
     assert lit(tmp_path, "facts", "--import", str(src), "--item", ITEM) == 0

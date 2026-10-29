@@ -18,14 +18,12 @@ SHA = "abc1234def5678abc1234def5678abc1234def56"
 NONE = "abcdef0abcdef0abcdef0abcdef0abcdef0abcde"
 
 PAGE = """
+    ---
+    tangle: m.py
+    ---
     # Demo
 
     {before}The pairs are counted twice, twice.
-
-    ```python
-    <<m.py>>=
-    <<Functions>>
-    ```
 
     ```python
     <<Functions>>=
@@ -293,7 +291,7 @@ def test_facts_out_writes_each_page_with_its_rows_located(
     assert "lit facts: 1 page(s), 0 finding(s)" in capsys.readouterr().out
     rows = json.loads((out / "p.json").read_text(encoding="utf-8"))
     assert Counter(r.get("kind", "hand") for r in rows) == {
-        "chunk": 2,
+        "chunk": 1,
         "paragraph": 3,
         "definition": 3,
         "tangle": 11,
@@ -308,7 +306,7 @@ def test_facts_out_writes_each_page_with_its_rows_located(
     assert by["gone"]["state"] == "stale"
     assert "currentStart" not in by["gone"]
     assert by["L-X9"]["item"] == "p.decisions.tsv"
-    assert by["chunk:m.py:1"]["item"] == "p.md"
+    assert by["chunk:Functions:1"]["item"] == "p.md"
 
 
 def test_check_and_facts_report_a_bad_sidecar(tmp_path: Path) -> None:
@@ -339,7 +337,7 @@ def test_check_reports_an_astral_page_without_a_sidecar(
     lit(tmp_path, "tangle")
     capsys.readouterr()
     assert lit(tmp_path, "check") == 1
-    assert "p.md:3: lit-facts-astral" in capsys.readouterr().out
+    assert "p.md:6: lit-facts-astral" in capsys.readouterr().out
 
 
 def git(root: Path, *argv: str) -> str:

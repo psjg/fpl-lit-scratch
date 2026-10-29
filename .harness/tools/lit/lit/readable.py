@@ -390,9 +390,7 @@ def claude(model: str) -> list[str]:
 
 def tests_for(page: Page, root: Path) -> list[Path]:
     """The default tests: ``tests/test_<stem>.py`` per Python file."""
-    stems = {
-        Path(c.name).stem for c in page.chunks() if c.name.endswith(".py")
-    }
+    stems = {Path(f).stem for f in page.files() if f.endswith(".py")}
     return sorted(
         root / "tests" / f"test_{s}.py"
         for s in stems

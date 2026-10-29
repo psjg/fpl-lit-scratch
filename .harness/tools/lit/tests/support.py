@@ -14,14 +14,12 @@ from lit.__main__ import main
 FENCE = "```"
 
 GOOD = """
+    ---
+    tangle: demo.py
+    ---
     # Demo
 
     The file.
-
-    ```python
-    <<demo.py>>=
-    <<Functions>>
-    ```
 
     `add' sums.
 

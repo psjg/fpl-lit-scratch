@@ -39,7 +39,7 @@ def test_unknown_reference(
     out = run_lint(
         tmp_path, md(GOOD) + "\nSee `ghost' and `add.nope'.\n", capsys
     )
-    assert "p.md:18: lit-unknown: `ghost' names nothing the code" in out
+    assert "p.md:16: lit-unknown: `ghost' names nothing the code" in out
     assert "`add.nope'" in out
 
 
@@ -52,12 +52,15 @@ def test_reference_inside_a_fence_is_not_read(
 
 
 MODULE = """
+    ---
+    tangle: m.py
+    ---
     # Demo
 
     `Box.size' and `LIMIT' are described; `_hidden' is private.
 
     ```python
-    <<m.py>>=
+    <<Define the module>>=
     import os.path as osp
     from typing import Any
 
@@ -113,31 +116,25 @@ def test_qualified_reference_and_allow_list(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     """`Cls.meth' satisfies meth; lit-allow waives a name."""
-    text = "---\nlit-allow: [other, free, _PRIV]\n---\n" + MODULE
+    allow = "lit-allow: [other, free, _PRIV, a, b]"
+    text = md(MODULE).replace("tangle: m.py", f"tangle: m.py\n{allow}")
     text = text.replace("`LIMIT' are", "`LIMIT' `Box' `count' are")
-    out = run_lint(tmp_path, md(text), capsys)
+    text = text.replace("`_hidden'", "`_skip'")
+    out = run_lint(tmp_path, text, capsys)
     assert "0 finding(s)" in out
 
 
 def test_two_files_from_one_chunk_owe_once(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """Two roots reaching one chunk report its name once."""
+    """One chunk placed in two files reports its name once."""
     text = """
         # Two
 
         ```python
-        <<a.py>>=
-        <<Shared>>
-        ```
-
-        ```python
-        <<b.py>>=
-        <<Shared>>
-        ```
-
-        ```python
-        <<Shared>>=
+        <<Shared
+        a.py 1
+        b.py 1>>=
         def twice() -> int:
             return 2
         ```
@@ -147,14 +144,12 @@ def test_two_files_from_one_chunk_owe_once(
 
 
 EX = """
+    ---
+    tangle: m.py
+    ---
     # Ex
 
     The `add' sums.
-
-    ```python
-    <<m.py>>=
-    <<Add>>
-    ```
 
     {prose}
 
@@ -174,7 +169,7 @@ EX = """
     ("example", "message"),
     [
         (">>> add(1, 2)\n3", None),
-        (">>> add(1, 2)\n4", "p.md:19: lit-example: expected '4', got '3'"),
+        (">>> add(1, 2)\n4", "p.md:17: lit-example: expected '4', got '3'"),
         (">>> add(1, None)", "lit-example: raised TypeError"),
     ],
 )
@@ -198,8 +193,11 @@ def test_example_without_python_file(
 ) -> None:
     """An example with no Python file to run in is a finding."""
     text = f"""
+        ---
+        tangle: n.txt
+        ---
         {FENCE}text
-        <<n.txt>>=
+        <<Say hi>>=
         hi
         {FENCE}
 
@@ -217,12 +215,15 @@ def test_module_that_fails_to_load(
 ) -> None:
     """A module that raises on load is one finding at line 1."""
     text = """
+        ---
+        tangle: boom_mod.py
+        ---
         # Boom
 
         `x' is bound.
 
         ```python
-        <<boom_mod.py>>=
+        <<Bind x and fail>>=
         x = 1
         raise RuntimeError("no")
         ```
@@ -280,12 +281,15 @@ def test_load_restores_a_none_entry(tmp_path: Path) -> None:
 
 
 PACKAGE = """
+    ---
+    tangle: pkg/__init__.py
+    ---
     # Pkg
 
     `VALUE' is the helper's.
 
     ```python
-    <<pkg/__init__.py>>=
+    <<Import the value>>=
     from .helper import VALUE
     ```
 
@@ -299,7 +303,7 @@ PACKAGE = """
 def test_a_package_root_runs_relative_imports(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """An __init__.py root is a package; relative imports resolve."""
+    """An __init__.py file is a package; relative imports resolve."""
     (tmp_path / "pkg").mkdir()
     (tmp_path / "pkg" / "helper.py").write_text("VALUE = 7\n")
     out = run_lint(tmp_path, PACKAGE, capsys)

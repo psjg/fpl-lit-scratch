@@ -272,7 +272,7 @@ def test_chapter_with_and_without_examples() -> None:
     read = web.read("p.md", text)
     with_ = readable.chapter(read, text)
     without = readable.chapter(read, text, examples=False)
-    assert "⟨demo.py⟩" in with_
+    assert "⟨Functions⟩" in with_
     assert "def add" not in with_
     assert ">>> 1" in with_
     assert ">>> 1" not in without
@@ -282,8 +282,8 @@ def test_tests_for_finds_only_existing_files(tmp_path: Path) -> None:
     """tests/test_<stem>.py per Python file, when it exists."""
     (tmp_path / "tests").mkdir()
     (tmp_path / "tests" / "test_a.py").write_text("")
-    text = "```python\n<<a.py>>=\n```\n```python\n<<b/b.py>>=\n```\n"
-    text += "```python\n<<n.txt>>=\n```\n"
+    text = "---\ntangle: b/b.py\n---\n```python\n<<A\na.py 1>>=\n```\n"
+    text += "```python\n<<N\nn.txt 1>>=\n```\n"
     got = readable.tests_for(web.read("p.md", text), tmp_path)
     assert got == [tmp_path / "tests" / "test_a.py"]
 
@@ -361,7 +361,7 @@ def test_cli_show_prints_the_prompt(
     out = capsys.readouterr().out
     assert "=== CHAPTER ===" in out
     assert "1. What is `add(1, 2)`?" in out
-    assert "⟨demo.py⟩" in out
+    assert "⟨Functions⟩" in out
 
 
 def test_cli_no_facts(

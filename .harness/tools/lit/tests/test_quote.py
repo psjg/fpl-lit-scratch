@@ -206,8 +206,8 @@ def test_a_quote_row_goes_in_and_comes_back_out(
     [row] = [r for r in rows if r["id"] == "q"]
     assert (row["state"], row["currentStart"], row["currentEnd"]) == (
         "vers",
-        8,
-        17,
+        32,
+        41,
     )
     assert lit(tmp_path, "anchor", "--verify") == 0
     out = tmp_path / "back.json"

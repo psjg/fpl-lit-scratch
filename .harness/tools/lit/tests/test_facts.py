@@ -15,8 +15,11 @@ REPO = Path(__file__).resolve().parents[4]
 LEX = "01-bootstrap/01.02-pass/01.02.01-lex.md"
 
 TWO = """
+    ---
+    tangle: m.py
+    ---
     ```python
-    <<m.py>>=
+    <<Say what the module is>>=
     \"\"\"The module, {word}.\"\"\"
     <<Functions>>
     ```
@@ -35,7 +38,8 @@ DEMO = """
     The first file.
 
     ```python
-    <<m.py>>=
+    <<The first file
+    m.py 1>>=
     \"\"\"The module.\"\"\"
     <<Functions>>
     ```
@@ -43,7 +47,8 @@ DEMO = """
     `add' sums, and the second file shares it.
 
     ```python
-    <<n.py>>=
+    <<The second file
+    n.py 1>>=
     <<Functions>>
     ```
 
@@ -130,12 +135,12 @@ def test_a_docstring_moves_the_text_and_not_the_hash() -> None:
     assert len(chunks) == 2
     assert all(a[i].text != b[i].text for i in chunks)
     assert all(a[i].code_hash == b[i].code_hash for i in chunks)
-    root, functions = chunks
-    assert a[root].code_hash == ""
+    top, functions = chunks
+    assert a[top].code_hash == ""
     assert a[functions].code_hash != ""
     assert a[functions].text != c[functions].text
     assert a[functions].code_hash != c[functions].code_hash
-    assert a[root] == c[root]
+    assert a[top] == c[top]
 
 
 def test_every_kind_is_read_and_every_target_resolves(tmp_path: Path) -> None:
@@ -163,9 +168,10 @@ def test_every_kind_is_read_and_every_target_resolves(tmp_path: Path) -> None:
 def test_the_demo_page_spans_say_what_they_are(tmp_path: Path) -> None:
     """Labels, targets and hashes of the demo page, kind by kind."""
     by = {s.id: s for s in demo(tmp_path)}
-    assert by["chunk:m.py:1"].labels == ("m.py", "root")
-    assert by["chunk:n.py:1"].labels == ("n.py", "root", "skeleton")
-    assert by["chunk:n.py:1"].code_hash == ""
+    first, second = "chunk:The%20first%20file:1", "chunk:The%20second%20file:1"
+    assert by[first].labels == ("The first file",)
+    assert by[second].labels == ("The second file", "skeleton")
+    assert by[second].code_hash == ""
     assert by["chunk:Functions:2"].text.startswith(
         "```python\n<<Functions>>+="
     )
@@ -193,10 +199,16 @@ def test_the_demo_page_spans_say_what_they_are(tmp_path: Path) -> None:
     )
     assert rows[2].labels == ("",)
     assert rows[0].item == (tmp_path / "tests" / "test_m.py").as_posix()
-    first = by["tangle:" + quoted(tmp_path, 1)]
-    assert first.text == '"""The module."""'
-    assert first.code_hash == ""
-    assert first.targets == ("chunk:m.py:1",)
+    line = by["tangle:" + quoted(tmp_path, 1)]
+    assert line.text == '"""The module."""'
+    assert line.code_hash == ""
+    assert line.targets == (first,)
+
+
+def test_a_chunk_named_like_a_path_keeps_the_root_label() -> None:
+    """The old file root, refused by the web, is still labelled root."""
+    got = spans("```python\n<<m.py>>=\nx = 1\n```\n")
+    assert got["chunk:m.py:1"].labels == ("m.py", "root")
 
 
 def quoted(root: Path, line: int) -> str:

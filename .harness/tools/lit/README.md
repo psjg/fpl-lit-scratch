@@ -25,7 +25,7 @@ index is [index.md](index.md).
                                     the sidecar's span rows in the program's row shape
     lit anchor --verify [PAGE ...]  each hand row's text is at its place in its commit (git)
 
-Every command takes `--root DIR`. File chunks are written relative to it, and without PAGE
+Every command takes `--root DIR`. Files are written relative to it, and without PAGE
 every page under it is read. The walker's root is `01-bootstrap/`, so run lit from there:
 
     cd 01-bootstrap && PYTHONPATH=../.harness/tools/lit ../.harness/.venv/bin/python -m lit check
@@ -44,18 +44,32 @@ line names it, and every chunk is named for its purpose:
 - `<<Name>>=` defines a chunk and `<<Name>>+=` adds to one defined earlier on the page.
 - A line holding only `<<Name>>` is a use. The chunk's lines go there, each indented by the
   use's indentation, so a chunk can be the body of an `if` inside a function.
-- A chunk named like a path, such as `<<fpl/lex.py>>=`, is a file. It is written relative to
-  the root, byte for byte, with no header line, and set read-only (0444). A `.` or `..`
-  segment is refused, so a file cannot land outside the root. git does not keep
-  the mode, so the drift gate is what holds the file to the page.
+- The front matter names the page's file: `tangle: python/fpl/lex/__init__.py`. Its parts
+  are the chunks no other chunk uses, in page order, except that a part holding only imports
+  moves up behind the docstring, or to the front when there is none. One blank line stands
+  between two parts, two around a def or a class (PEP 8). The file is written relative to
+  the root, byte for byte, and set read-only (0444). A `.` or `..` segment is refused, so a
+  file cannot land outside the root. git does not keep the mode, so the drift gate is what
+  holds the file to the page.
+- A header can place its chunk in a second file, or at a set place, with one line per file
+  after the name, a path and a number:
+
+      <<Define the pre-lexer
+      fpl/lex.py 3>>=
+
+  The chunk is then the third part of `fpl/lex.py` and stays a part of the front matter's
+  file; placed in that file itself, it moves to its place. A file named only on headers
+  holds its placed parts in the order of their numbers.
 - Every other fence (`pycon`, `text`, `fpl`) is prose. A `pycon` fence is an example, and the
   lint runs it.
 - Prose comes before each chunk. A section is the prose up to and including one chunk.
 
 The reader is strict and guesses nothing. These are findings, each at its page line: a
-python fence without a header, a `+=` before its `=`, a second `=`, a use of a chunk never
-defined, a chunk no file reaches, a cycle, a fence that never closes, and two pages writing
-one file.
+python fence without a header, a header's file line that is no path and number or stands on
+a `+=`, a `+=` before its `=`, a second `=`, a use of a chunk never defined, a chunk named
+like a path (the old file root: name the file in `tangle:` instead), a page with chunks
+that names no file, a file without parts, two parts at one place, a chunk no file reaches,
+a cycle, a fence that never closes, and two pages writing one file.
 
 ## The gates
 

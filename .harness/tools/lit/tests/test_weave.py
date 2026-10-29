@@ -13,12 +13,15 @@ from support import lit, md, page
 from lit import facts, weave
 
 PAGE = """
+    ---
+    tangle: demo.py
+    ---
     # Demo Title
 
     Intro: `add' and `Box.size' but not `ghost' or `a<b'.
 
     ```python
-    <<demo.py>>=
+    <<The demo>>=
     <<Functions>>
     class Box:
         <<Methods>>
@@ -87,7 +90,7 @@ def test_chunk_headers_continue_with_plus(html: str) -> None:
     """⟨Name §n⟩ ≡ begins a chunk, +≡ continues it."""
     assert "⟨Functions §2⟩ ≡" in html
     assert "⟨Functions §2⟩ +≡" in html
-    assert "⟨demo.py §1⟩ ≡" in html
+    assert "⟨The demo §1⟩ ≡" in html
 
 
 def test_uses_are_links_and_undefined_uses_are_text(html: str) -> None:
@@ -98,8 +101,8 @@ def test_uses_are_links_and_undefined_uses_are_text(html: str) -> None:
 
 
 def test_footers_say_where_used_and_which_file(html: str) -> None:
-    """A chunk's footer lists its users; a file's names the file."""
-    assert "This is the file <code>demo.py</code>." in html
+    """A chunk's footer lists its users; an old file root names it."""
+    assert "This is the file <code>notes.txt</code>." in html
     assert 'This code is used in <a href="#s1">§1</a>.' in html
 
 
@@ -123,7 +126,8 @@ def test_title_falls_back_to_the_page_path(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     """A page without a heading is titled by its path."""
-    path = page(tmp_path, "d.md", "```python\n<<d.py>>=\nx = 1\n```\n")
+    text = "---\ntangle: d.txt\n---\n```python\n<<X>>=\nx = 1\n```\n"
+    path = page(tmp_path, "d.md", text)
     assert lit(tmp_path, "weave", str(tmp_path / "o"), str(path)) == 0
     got = (tmp_path / "o" / "d.html").read_text(encoding="utf-8")
     assert "<title>d.md</title>" in got
@@ -131,6 +135,9 @@ def test_title_falls_back_to_the_page_path(
 
 
 FACTS = """
+    ---
+    tangle: f.py
+    ---
     # Facts Demo
 
     alpha beta gamma delta.
@@ -149,7 +156,7 @@ FACTS = """
     ```
 
     ```python
-    <<f.py>>=
+    <<The file>>=
     <<Functions>>
     ```
 
@@ -396,7 +403,7 @@ def test_generated_targets_link_to_their_section(tmp_path: Path) -> None:
             }
         ],
     )
-    assert '<a href="#s1">chunk f.py</a> → tangle</li>' in got
+    assert '<a href="#s1">chunk The file</a> → tangle</li>' in got
 
 
 def test_a_page_without_hand_rows_weaves_as_before(
