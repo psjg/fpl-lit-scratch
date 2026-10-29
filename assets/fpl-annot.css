@@ -1,0 +1,34 @@
+/*
+ * fpl-annot.css: the marks, panel and popover of fpl-annot.js. A mark's
+ * colour is the weave's (lit/weave.py): a sidecar row found on the page is
+ * green; a row of this browser is blue; a stale or doubled row is listed
+ * in red, not drawn. Nested marks darken where they overlap.
+ */
+mark.fact { color: inherit; padding: 0; cursor: pointer; }
+mark.fact-vers { background: rgba(70, 190, 70, .28); }
+mark.fact-mine { background: rgba(60, 130, 230, .28); }
+.fpl-annot-panel {
+  position: fixed; right: 12px; bottom: 12px; z-index: 1000;
+  max-width: min(420px, calc(100vw - 24px)); max-height: 60vh; overflow: hidden auto;
+  background: var(--bs-body-bg, #fff); color: var(--bs-body-color, #222);
+  border: 1px solid #bbb; border-radius: 6px; padding: 6px 10px;
+  font-size: .8rem; box-shadow: 0 2px 8px rgba(0, 0, 0, .15);
+}
+.fpl-annot-panel summary { cursor: pointer; font-weight: 600; }
+.fpl-annot-panel ol { padding-left: 1.2rem; margin: 6px 0 0; }
+.fpl-annot-panel li { cursor: pointer; margin-bottom: 4px; }
+.fpl-annot-panel li div { color: #666; }
+.fpl-annot-panel .fact-stale, .fpl-annot-panel .fact-dubbel { color: #b00; }
+.fpl-annot-help code { word-break: break-all; font-size: .75rem; }
+.fpl-annot-bar { display: flex; gap: 6px; margin: 6px 0; }
+.fpl-annot-pop {
+  position: absolute; z-index: 1001; width: 320px; padding: 8px;
+  display: flex; flex-direction: column; gap: 6px;
+  background: var(--bs-body-bg, #fff); border: 1px solid #bbb; border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, .2); font-size: .85rem;
+}
+.fpl-annot-pop[hidden] { display: none; }
+.fpl-annot-pop q { max-height: 4.5em; overflow: hidden; color: #555; }
+@media (prefers-color-scheme: dark) {
+  .fpl-annot-panel .fact-stale, .fpl-annot-panel .fact-dubbel { color: #f77; }
+}

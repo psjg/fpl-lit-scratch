@@ -119,6 +119,24 @@ refusal messages and their places, what a comment leaves behind, the sigils and 
 forms of a token) brought it to 0.71 and 0.73 in two measurements of three runs each,
 and 0.60 and 0.61 with the examples stripped.
 
+## Annotating the published page
+
+Every page of the site loads `assets/fpl-annot.js`. It draws the page's sidecar (shipped
+beside the page) as marks, lists its rows in a panel at the bottom right, and lets a reader
+select text, give it labels and a note, and save it as a quote row: `{id, item, commit,
+text, prefix, suffix, labels, note, targets, createdAt, updatedAt}`, the text as shown and
+32 characters of shown text either side. The rows stay in that browser (localStorage) until
+the panel's Export downloads them as `<stem>.annot.json`. The panel prints the `lit facts`
+line that takes them into the sidecar; run it as above, from `01-bootstrap/`, with the path
+of the downloaded file:
+
+    lit facts --import FILE \
+      --item 01-bootstrap/01.02-pass/01.02.01-lex.md=01-bootstrap/01.02-pass/01.02.01-lex.md@COMMIT
+
+The commit is the one the page was rendered from (`<meta name="fpl-commit">`). The quote is
+then found on the raw page by the table of `plain`: measured 2026-10-29, a sentence selected
+on the lex page imported with 0 findings and was vers.
+
 ## Layout
 
 - [lit/web.py](lit/web.py): reading a page, and the tangle. Standard library only, so the
