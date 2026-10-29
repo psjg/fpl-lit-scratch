@@ -551,6 +551,13 @@
       p.setAttribute("class", `fpl-line ${c.classList.contains("mine") ? "mine" : ""}`);
       p.dataset.id = c.dataset.id;
       lines.append(p);
+      const dot = document.createElementNS("http://www.w3.org/2000/svg", "circle");   // the lollipop at the span
+      dot.setAttribute("cx", x1);
+      dot.setAttribute("cy", yb);
+      dot.setAttribute("r", 2.5);
+      dot.setAttribute("class", `fpl-knob ${c.classList.contains("mine") ? "mine" : ""}`);
+      dot.dataset.id = c.dataset.id;
+      lines.append(dot);
       const type = edgeType(c.dataset.id);
       if (type) {   // just before the card, where the line arrives, in a halo that breaks the line
         const t = document.createElementNS("http://www.w3.org/2000/svg", "text");
