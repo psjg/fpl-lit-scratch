@@ -7,8 +7,9 @@ from collections import Counter
 from pathlib import Path
 
 import pytest
-from lit import facts, web
 from support import md, page
+
+from lit import facts, web
 
 REPO = Path(__file__).resolve().parents[4]
 LEX = "01-bootstrap/01.02-pass/01.02.01-lex.md"
