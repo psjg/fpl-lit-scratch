@@ -179,8 +179,24 @@ the one the walker already has.
    only if the coefficient stays under 2^55, the bignum always, and so on), and the author closes
    it by naming the kind of plug, not necessarily one plug (a fixed-width decimal, an exact one).
    That makes A (the program pins) and B (the planner picks) the two ends of one mechanism: B
-   leaves no hole when the bound decides, A closes the hole by hand. Not designed: the vocabulary
-   of plug kinds, and what a closed hole records, which the hole discipline already asks for.
+   leaves no hole when the bound decides, A closes the hole by hand.
+
+   **Proposed closure (mine, for him to confirm).** The hole takes the three fields of 02.04.07
+   section 1.1. *Depends:* the static bound of point 2 on coefficient digits and exponent, per
+   value. *Default in force:* the smallest plug whose conditions the bound satisfies; where the
+   bound is unknown, the exact plug (the bignum), which is total, so an unknown bound costs speed
+   and never correctness. *Closes by:* the author naming a kind, by the obligation that
+   separates the plugs and not by their names:
+   - `exact`: unbounded digits, no range obligation (the walker's `Decimal`, `DIGITS` aside);
+   - `fixed`: a fixed word, its range an obligation discharged by the bound (DEC64, decimal64);
+   - `scaled`: a fixed word with a static scale, a decimal Q format, the cheapest and the
+     narrowest (DI-0074).
+   Naming one plug (`DEC64`) is a pin and a dispensatie: it closes the hole to a single plug, and
+   if the bound does not fit that plug the build fails before it runs, never at run time. What a
+   closed hole records, in the log and in the interface hash (02.04.07, where profiles are part of the interface hash): the kind or
+   pin, the bounds the compiler computed, and the plug chosen. Not closed by this: the surface
+   spelling of the three kinds, and whether `fixed` may be left to the planner to split between
+   DEC64 and decimal64.
 
 Outcome: the pluggable reading and the hole as the way to choose are his; the interface of a plug,
 the kinds of plug and the static bound of point 2 are open. No code was written; the model and the converted assembly live outside the repository.
