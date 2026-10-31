@@ -231,7 +231,7 @@ A hole is closed by the commit that removes its entry; that commit's body names 
 
 ## pervasive-arithmetic
 - Depends on it: fpl/eval.py arithmetic, tests/test_desugar.py
-- Default in force: + - times take numbers or strands of numbers; a number meets each item of a strand, two strands meet item by item; unequal lengths and non-numbers are refused at the word
+- Default in force: + - times (and its spelling *) take numbers or strands of numbers; a number meets each item of a strand, two strands meet item by item; unequal lengths and non-numbers are refused at the word
 - Closes by: design side, the arithmetic of the array model
 - Evidence: claim D2.1 (1 | 1 2 3 + gives 2 3 4)
 

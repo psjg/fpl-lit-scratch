@@ -954,6 +954,7 @@ BUILTINS: dict[str, Builtin] = {
     "+": partial(arithmetic, lambda x, y: x + y),
     "-": partial(arithmetic, lambda x, y: x - y),
     "times": partial(arithmetic, lambda x, y: x * y),
+    "*": partial(arithmetic, lambda x, y: x * y),
     "swap": swap,
     "dup": dup,
     "?": unfilled,

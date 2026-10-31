@@ -42,7 +42,7 @@ from fpl.types import (
 
 HERE = Span(1, 1)
 AT = Span(2, 3)
-BUILTINS = ("+", "-", "times", "dup", "swap", "drop")
+BUILTINS = ("+", "-", "times", "*", "dup", "swap", "drop")
 
 
 @pytest.mark.parametrize(

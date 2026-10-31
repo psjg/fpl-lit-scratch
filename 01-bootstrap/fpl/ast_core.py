@@ -312,6 +312,7 @@ EFFECTS: dict[str, Effect] = {
     "+": _BINARY,
     "-": _BINARY,
     "times": _BINARY,
+    "*": _BINARY,
     "swap": Effect(("x", "y"), ("y", "x")),
     "dup": Effect(("x",), ("x", "x")),
     "drop": Effect(("x",), ()),
