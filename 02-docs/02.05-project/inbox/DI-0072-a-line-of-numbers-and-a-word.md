@@ -132,7 +132,9 @@ Four clusters, each with its cost:
 4. **Rank in the type.** (a) element sort only, the shape is a value, what `types.py` does
    now; (b) rank in the sort, Remora-style, the result line gets a list notation; (c) the
    full shape, his `[Nat1 : [4]]`, "strands of unequal length" becomes a static error, lengths
-   known at elaboration. Sort names are decided in DI-0070.
+   known at elaboration. Sort names are decided in DI-0070. What the array languages and the
+   typed array languages do on each of the three, and what each would cost FPL, is read and
+   measured in [02.05.17 Array models](../notes/02.05.17-array-models.md).
 
 What the other languages do with `-` over `1 2 3`, read 10-29 from each one's own
 reference (docs) or run (measured):
@@ -277,3 +279,4 @@ Outcome: cluster 1 in progress (the reduce, right fold); the rest open.
 - related:: [DI-0070](DI-0070-nat-number-and-the-base-of-a-float.md)
 - related:: [02.04.05 syntax rationale](../../02.04-explanation/02.04.05-syntax-rationale.md)
 - related:: [02.03.01 errors](../../02.03-reference/02.03.01-errors.md)
+- related:: [02.05.17 Array models](../notes/02.05.17-array-models.md)
