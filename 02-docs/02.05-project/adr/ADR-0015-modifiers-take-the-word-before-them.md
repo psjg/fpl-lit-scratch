@@ -78,6 +78,13 @@ would remove the →k workaround)", and listed "Ragged carrier vs the fast path"
 polymorphism. Arity inference is trivial; rank/shape in types is not" among what was still
 open. The 2026-10-31 position answers the first and leaves the other two to [02.05.16](../notes/02.05.16-array-models.md).
 
+On the type side the concatenative precedents reach as far as Hindley-Milner stack types
+with row variables (Cat: "a strong static type system"; Kitten: "statically typed,
+stack-based"; Stoddart and Knaggs 1993: a signature algebra); none carries a shape, and no
+dependently typed concatenative language was found. The shape vocabulary a modifier's
+effect would need comes from the array side: SaC's ladder `τ[s0..]`, `τ[.,.]`, `τ[+]`,
+`τ[*]` (see [02.05.16](../notes/02.05.16-array-models.md)).
+
 What keeps the second option out of the corner: modifiers are their own part of speech
 (J's adverbs and conjunctions, Uiua's modifier glyphs), so the grammar knows at `even? keep`
 that `keep` takes the word, not its result, and the effect of the pair follows from the
