@@ -21,6 +21,10 @@ After the first version of this note (replies in the same chat, 13:07):
 
 > ik zou ze plugable naast elkaar willen hebben net zoals iEEE747 whatever floating point ook iets is wat plugable is en dan aan de voorwaarden kan voldoen
 
+On the planner choosing and the program pinning a plug as the exception (09:59):
+
+> precies als er ambiguiteit is dan kan de compiler helpen dat gat kleiner te maken (dit is een hole) en je kant het dicht specificeren door te zeggen wat voor soort plug het wordt om dat gat te dichten
+
 ## Context
 
 Asked in a side chat on 2026-10-29, after [DI-0074](DI-0074-a-discrete-basis-dec-rat-and-the-slash-literal.md)
@@ -168,8 +172,18 @@ the one the walker already has.
    format, DI-0074). The shape of a plug's interface (its conditions as proof obligations, how a
    program says which plug it wants or leaves it to the planner) is not designed here.
 
-Outcome: the pluggable reading is his; the interface of a plug and the static bound of point 2 are
-open. No code was written; the model and the converted assembly live outside the repository.
+7. **Who picks the plug: the hole.** The planner picks by the static bound (point 2); where the
+   bound does not decide, the choice is a hole in the sense of
+   [02.04.07](../../02.04-explanation/02.04.07-principles-and-privileges.md), not a default. The
+   compiler narrows it: it states which plugs still satisfy the bounds it could compute (DEC64
+   only if the coefficient stays under 2^55, the bignum always, and so on), and the author closes
+   it by naming the kind of plug, not necessarily one plug (a fixed-width decimal, an exact one).
+   That makes A (the program pins) and B (the planner picks) the two ends of one mechanism: B
+   leaves no hole when the bound decides, A closes the hole by hand. Not designed: the vocabulary
+   of plug kinds, and what a closed hole records, which the hole discipline already asks for.
+
+Outcome: the pluggable reading and the hole as the way to choose are his; the interface of a plug,
+the kinds of plug and the static bound of point 2 are open. No code was written; the model and the converted assembly live outside the repository.
 
 ## Related
 
