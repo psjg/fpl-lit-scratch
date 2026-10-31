@@ -165,6 +165,7 @@ ARROWS: dict[str, Arrow] = {
     "+": NUMBERS,
     "-": NUMBERS,
     "times": NUMBERS,
+    "*": NUMBERS,
     "swap": Arrow((Input(0), Input(1)), (Input(1), Input(0))),
     "dup": Arrow((Input(0),), (Input(0), Input(0))),
     "drop": Arrow((Input(0),), ()),

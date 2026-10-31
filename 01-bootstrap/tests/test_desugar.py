@@ -665,7 +665,7 @@ def test_a_result_of_more_than_digits_digits_is_refused_at_the_word(
     assert str(caught.value) == error
 
 
-@given(bounded, bounded, st.sampled_from(["+", "-", "times"]))
+@given(bounded, bounded, st.sampled_from(["+", "-", "times", "*"]))
 def test_arithmetic_prints_its_result_or_refuses_it(
     x: int, y: int, word: str
 ) -> None:
@@ -673,7 +673,7 @@ def test_arithmetic_prints_its_result_or_refuses_it(
     Any two integers the language can write meet as a printed number or
     as the refusal, never as a Python error.
     """
-    z = {"+": x + y, "-": x - y, "times": x * y}[word]
+    z = {"+": x + y, "-": x - y, "times": x * y, "*": x * y}[word]
     expected = f"{z}\n" if abs(z) < 10**DIGITS else "ERROR number too large"
     assert outcome(f"{x} | {y} {word}\n") == expected
 

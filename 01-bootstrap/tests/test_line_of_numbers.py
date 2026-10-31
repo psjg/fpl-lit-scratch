@@ -32,7 +32,6 @@ OPEN = {
     "1 2 3 4 + 4 3 2 1 |- 5 5 5 5": "DI-0072 cluster 2: strands zip",
     "[ 1 2 3 4 ] + |- 10": "DI-0072 cluster 1: a quotation reduces",
     "1 2 3 4 | + fold |- 10": "DI-0072 cluster 1: bar and fold agree",
-    "1 2 + 3 * |- 9": "DI-0072 cluster 2: the walker spells times",
     "1 1 + |- [1 1 +]": "DI-0072 cluster 3: |- as a check",
     "[ [ 1 2 + ] 3 times ] ! |- 9": "DI-0073: the postfix lisp reading",
 }
