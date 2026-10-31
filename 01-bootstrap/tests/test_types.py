@@ -576,13 +576,14 @@ def test_a_sort_rises_one_way(need: Kind, have: Kind, fits: bool) -> None:
         met(need, have, {}, {}, HERE)
 
 
-def test_arithmetic_on_naturals_leaves_a_number() -> None:
+def test_arithmetic_on_naturals_closes_on_the_lattice() -> None:
     """
-    The arrow of `+` leaves a Number whatever it takes; whether a sum of
-    naturals is a Nat1 is still open (DI-0070).
+    The general arrow of `+` stays Number to Number, so an input or a
+    value of unknown sort leaves a Number; a sum of naturals is a Nat1
+    where the lattice closes (DI-0070 left it open).
     """
     assert taken(NUMBERS, (Kind.NAT1, Kind.NEG1))
-    assert goals("1 | 2 + ?\n") == ["GOAL 1:9 ? : Number --"]
+    assert goals("1 | 2 + ?\n") == ["GOAL 1:9 ? : Nat1 --"]
 
 
 def test_rat_is_a_name_only() -> None:
@@ -963,4 +964,161 @@ def test_the_result_of_division_fits_the_sort_found_for_it(
     typing = Typing((sort(a), sort(d)), {}, {})
     arrow = chosen(typing, ARROWS[word], ARROWS)
     (result,) = RUN[word](HERE, a, d)
+    assert fits(arrow.outs[0], sort(result))
+
+
+#: The sort of `+`, `-` and `times` for each pair of operand sorts: the
+#: first row of the tables in fpl.types that takes the pair, written out
+#: here from the mathematics and checked against the run below.
+CLOSED = {
+    "+": {
+        ("Zero", "Zero"): "Zero",
+        ("Nat1", "Nat0"): "Nat1",
+        ("Nat1", "Nat1"): "Nat1",
+        ("Nat0", "Nat1"): "Nat1",
+        ("Zero", "Nat1"): "Nat1",
+        ("Nat0", "Nat0"): "Nat0",
+        ("Zero", "Nat0"): "Nat0",
+        ("Neg1", "Neg0"): "Neg1",
+        ("Neg0", "Neg1"): "Neg1",
+        ("Zero", "Neg1"): "Neg1",
+        ("Neg0", "Neg0"): "Neg0",
+        ("Nat1", "Neg1"): "Int",
+        ("Nat0", "Neg0"): "Int",
+        ("Int", "Int"): "Int",
+        ("Int", "Zero"): "Int",
+    },
+    "-": {
+        ("Zero", "Zero"): "Zero",
+        ("Nat1", "Neg0"): "Nat1",
+        ("Nat1", "Zero"): "Nat1",
+        ("Nat0", "Neg1"): "Nat1",
+        ("Zero", "Neg1"): "Nat1",
+        ("Nat0", "Neg0"): "Nat0",
+        ("Zero", "Neg0"): "Nat0",
+        ("Neg1", "Nat0"): "Neg1",
+        ("Neg0", "Nat1"): "Neg1",
+        ("Zero", "Nat1"): "Neg1",
+        ("Neg0", "Nat0"): "Neg0",
+        ("Nat1", "Nat1"): "Int",
+        ("Nat0", "Nat0"): "Int",
+        ("Int", "Int"): "Int",
+    },
+    "times": {
+        ("Zero", "Int"): "Zero",
+        ("Int", "Zero"): "Zero",
+        ("Zero", "Zero"): "Zero",
+        ("Nat1", "Nat1"): "Nat1",
+        ("Neg1", "Neg1"): "Nat1",
+        ("Nat1", "Neg1"): "Neg1",
+        ("Neg1", "Nat1"): "Neg1",
+        ("Nat0", "Nat0"): "Nat0",
+        ("Neg0", "Neg0"): "Nat0",
+        ("Nat0", "Neg0"): "Neg0",
+        ("Neg0", "Nat0"): "Neg0",
+        ("Nat0", "Neg1"): "Neg0",
+        ("Int", "Int"): "Int",
+    },
+}
+ARITHMETIC = ["+", "-", "times"]
+OPERANDS = (-3, -1, 0, 1, 3)
+
+
+@pytest.mark.parametrize(
+    ("word", "have", "left"),
+    [
+        (word, have, left)
+        for word, table in CLOSED.items()
+        for have, left in table.items()
+    ],
+)
+def test_arithmetic_leaves_a_sort_that_depends_on_both_operands(
+    word: str, have: tuple[str, str], left: str
+) -> None:
+    """
+    `+`, `-` and `times` are sort-indexed by both operands: the sort
+    they leave is the first row of the table that takes the two sorts.
+    """
+    typing = Typing((Kind(have[0]), Kind(have[1])), {}, {})
+    assert chosen(typing, ARROWS[word], ARROWS).outs == (Kind(left),)
+
+
+@pytest.mark.parametrize("word", ARITHMETIC)
+def test_the_general_arrow_of_arithmetic_stays_number(word: str) -> None:
+    """
+    The general arrow is Number Number to Number, so a body doing the
+    word on inputs infers it as before.
+    """
+    arrow = ARROWS[word]
+    assert (arrow.ins, arrow.outs) == (NUMBERS.ins, NUMBERS.outs)
+    body = Define("t", Effect(("x", "y"), ("z",)), (Call(word, HERE),))
+    arrows, _ = elaborate((body,))
+    assert arrows["t"] == Arrow(NUMBERS.ins, NUMBERS.outs)
+
+
+@pytest.mark.parametrize("word", ARITHMETIC)
+@pytest.mark.parametrize(
+    "have",
+    [
+        (Input(0), Kind.NAT1),
+        (Kind.NAT1, Input(1)),
+        (Kind.VALUE, Kind.ZERO),
+        (Kind.NUMBER, Kind.NAT1),
+        (Kind.ZERO, Kind.NUMBER),
+    ],
+)
+def test_an_open_or_decimal_operand_keeps_the_general_arrow(
+    word: str, have: tuple[Sort, Sort]
+) -> None:
+    """
+    An input, a Value or a Number (a decimal may be one) in either
+    place falls to the general arrow: a Number, even by Zero.
+    """
+    arrow = ARROWS[word]
+    assert chosen(Typing(have, {}, {}), arrow, ARROWS) is arrow
+
+
+@pytest.mark.parametrize(
+    ("source", "left"),
+    [
+        ("1 | 2 +", "Nat1"),
+        ("0 | 0 +", "Zero"),
+        ("-1 | 0 +", "Neg1"),
+        ("1 | -1 +", "Int"),
+        ("3 | 2 -", "Int"),
+        ("3 | -2 -", "Nat1"),
+        ("0 | 5 -", "Neg1"),
+        ("0 | 5 times", "Zero"),
+        ("-2 | -3 times", "Nat1"),
+        ("-2 | 3 times", "Neg1"),
+        ("1.5 | 2 +", "Number"),
+        ("1.5 | 0 times", "Number"),
+        ("1 2 | 3 +", "Nat1"),
+        ("3 dup times", "Nat1"),
+    ],
+)
+def test_an_arithmetic_goal_shows_the_sort_it_leaves(
+    source: str, left: str
+) -> None:
+    """
+    A goal after arithmetic on literals shows the sort of its table
+    row; a decimal operand leaves a Number.
+    """
+    column = len(source) + 2
+    assert goals(f"{source} ?\n") == [f"GOAL 1:{column} ? : {left} --"]
+
+
+@pytest.mark.parametrize("word", ARITHMETIC)
+@pytest.mark.parametrize("a", OPERANDS)
+@pytest.mark.parametrize("b", OPERANDS)
+def test_the_result_of_arithmetic_fits_the_sort_found_for_it(
+    word: str, a: int, b: int
+) -> None:
+    """
+    Preservation: the sort of the value `+`, `-` or `times` leaves fits
+    the sort elaboration found for it.
+    """
+    typing = Typing((sort(a), sort(b)), {}, {})
+    arrow = chosen(typing, ARROWS[word], ARROWS)
+    (result,) = RUN[word](HERE, a, b)
     assert fits(arrow.outs[0], sort(result))
