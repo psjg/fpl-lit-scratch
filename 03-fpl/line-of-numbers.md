@@ -6,7 +6,7 @@ description: "An in-language test suite for reduce, map, zip, the bar and the li
 
 # A line of numbers
 
-This note is the test suite of [DI-0072](../02-docs/02.05-project/inbox/DI-0072-a-line-of-numbers-and-a-word.md), written in FPL. Here `|-` is the check of DI-0072: `L |- R` evaluates both sides, and unequal sides are an error. The walker does not read `|-` as a check yet, so `01-bootstrap/tests/test_line_of_numbers.py` runs each row the long way: the output of `L` must be `R`. A row the walker cannot meet today is the target and is listed in that file as a strict expected failure, so a row that starts to pass turns the suite red until its entry goes.
+This note is the test suite of [DI-0072](../02-docs/02.05-project/inbox/DI-0072-a-line-of-numbers-and-a-word.md), written in FPL. Here `|-` is the check of DI-0072: `L |- R` evaluates both sides, and unequal sides are an error. The walker reads `|-` as a check since 2026-10-29; `01-bootstrap/tests/test_line_of_numbers.py` still runs each row the long way: the output of `L` must be `R`. A row the walker cannot meet today is the target and is listed in that file as a strict expected failure, so a row that starts to pass turns the suite red until its entry goes.
 
 ## Reduce
 
