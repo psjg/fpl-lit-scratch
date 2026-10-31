@@ -14,7 +14,7 @@ from fpl.errors import FplError
     [
         ("1 →x | 2 →x | x\n", "2\n"),
         ("1 ->x | x\n", "1\n"),
-        ("2 →k | [ k times ]\n", "[ 2 times ]\n"),
+        ("2 →k | [ k * ]\n", "[ 2 * ]\n"),
         ("1 →x | [ 2 →x x ] | x\n", "[ 2 →x x ] 1\n"),
         ("1 →x | [ 2 →y x y ]\n", "[ 2 →y 1 y ]\n"),
         ("1 →x | ⟨ [ x ] ⟩\n", "⟨ [ 1 ] ⟩\n"),
@@ -152,10 +152,9 @@ def test_what_binders_do_not_yet_read_is_refused(source: str) -> None:
 @pytest.mark.parametrize(
     ("source", "printed"),
     [
-        ("m/\n\tsq : x -- y\n\t\tdup times\n3 m/sq\n", "9\n"),
+        ("m/\n\tsq : x -- y\n\t\tdup *\n3 m/sq\n", "9\n"),
         (
-            "m/\n\tsq : x -- y\n\t\tdup times\n\tq : x -- y\n\t\tsq 1 +\n3 "
-            "m/q\n",
+            "m/\n\tsq : x -- y\n\t\tdup *\n\tq : x -- y\n\t\tsq 1 +\n3 m/q\n",
             "10\n",
         ),
         ("m/\n\tn/\n\t\tk : -- y\n\t\t\t5\nm/n/k\n", "5\n"),
@@ -205,7 +204,7 @@ def test_dot_dot_is_the_directory_enclosing_the_word(
     assert run(source) == printed
 
 
-BASE = "m/\n\tsq : x -- y\n\t\tdup times\n"
+BASE = "m/\n\tsq : x -- y\n\t\tdup *\n"
 
 
 @pytest.mark.parametrize(
@@ -235,7 +234,7 @@ def test_bind_appends_a_directory_to_the_log_and_later_shadows_earlier(
         ("f : -- y\n\t1\nf/history\n", "⟨⟩\n"),
         (
             BASE + "m/\n\tsq : x -- y\n\t\tdup +\nm/sq/history\n",
-            "⟨ [ dup times ] ⟩\n",
+            "⟨ [ dup * ] ⟩\n",
         ),
     ],
 )

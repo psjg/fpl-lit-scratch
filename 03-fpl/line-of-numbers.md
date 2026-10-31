@@ -57,7 +57,7 @@ The bar opens a frame that reaches the values to its left. These lines come from
 
 ## The line as operator
 
-A bare line is read left to right, each word dyadic over the run before it and the run after it, so this line is `(1 2 +) 3 *`. The walker spells multiplication `times` today; `*` is the spelling of DI-0072.
+A bare line is read left to right, each word dyadic over the run before it and the run after it, so this line is `(1 2 +) 3 *`. The walker spells multiplication `*` since 2026-10-31, as DI-0072 does (`times` before).
 
 ```fpl
 1 2 + 3 * |- 9

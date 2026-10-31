@@ -20,18 +20,18 @@ SHAPES = (
     "rect : w h -- shape\n\t#rect swap pair pair\n"
     "nonzero : x -- b\n\tmatch\n\t\t0\t0\n\t\t_\t1\n"
     "area : shape -- n\n\tmatch\n"
-    "\t\t( circle r ∈ nonzero )\tr dup times\n"
+    "\t\t( circle r ∈ nonzero )\tr dup *\n"
     "\t\t( circle 0 )\t#empty\n"
-    "\t\t( rect w h )\tw h times\n"
+    "\t\t( rect w h )\tw h *\n"
 )
 
 
 def test_rotation_puts_the_head_after_its_arguments() -> None:
     """
-    [D2.11] [D2.12] (+ 1 2) is 1 | 2 +, and (+ (times 2 3) 4) is 2 | 3
-    times | 4 +.
+    [D2.11] [D2.12] (+ 1 2) is 1 | 2 +, and (+ (* 2 3) 4) is 2 | 3
+    * | 4 +.
     """
-    assert run("(+ 1 2)\n(+ (times 2 3) 4)\n") == "3\n10\n"
+    assert run("(+ 1 2)\n(+ (* 2 3) 4)\n") == "3\n10\n"
 
 
 def test_a_constructor_runs_backwards_through_its_composition() -> None:

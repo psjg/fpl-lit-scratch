@@ -2,6 +2,6 @@
 scale-all : xs k -- ys
 	→k
 	each
-		k times
+		k *
 1 2 3 | 2 scale-all	; → 2 4 6
 

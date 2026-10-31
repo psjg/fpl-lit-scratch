@@ -7,6 +7,6 @@ signal/
 
 main : -- +in/mouse +out/screen
 	../mouse/in position →pos
-	pos [ 2 times ] each →scaled	; was: pos [ 2 * ] signal/lift
+	pos [ 2 * ] each →scaled	; was: pos [ 2 * ] signal/lift
 	scaled ../screen/out [draw] each
 

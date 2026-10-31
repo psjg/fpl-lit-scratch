@@ -51,10 +51,10 @@ def test_fold_and_scan_thread_a_state_through_the_items(xs: list[int]) -> None:
 
 def test_a_scan_then_a_fold_counts_the_leading_run() -> None:
     """
-    [D1.2] depth: leading tabs, as tab = [and] scan [+] fold; times is
+    [D1.2] depth: leading tabs, as tab = [and] scan [+] fold; * is
     and on 0 and 1.
     """
-    assert run("1 1 0 1 [times] scan [+] fold\n") == "2\n"
+    assert run("1 1 0 1 [*] scan [+] fold\n") == "2\n"
 
 
 @pytest.mark.parametrize(
@@ -71,18 +71,18 @@ def test_a_scan_then_a_fold_counts_the_leading_run() -> None:
         ),
         ("f : c -- x\n\tif\n\t\t2\n\t\t3\n1 f\n0 f\n", "2\n3\n"),
         ("0 [1 +] 3 repeat\n", "3\n"),
-        ("f : x -- x\n\t3 repeat\n\t\t2 times\n1 f\n", "8\n"),
+        ("f : x -- x\n\t3 repeat\n\t\t2 *\n1 f\n", "8\n"),
         ("0 [1 +] 0 repeat\n", "0\n"),
-        ("1 2 3 [dup times] each\n", "1 4 9\n"),
+        ("1 2 3 [dup *] each\n", "1 4 9\n"),
         ("1 2 [enclose] each\n", "⟨ [ 1 ] [ 2 ] ⟩\n"),
         ("⟨ 1 2 ⟩ [1 +] each\n", "⟨ 2 3 ⟩\n"),
         ("⟨⟩ [1 +] each\n", "⟨⟩\n"),
         ("⟨⟩ [+] scan\n", "⟨⟩\n"),
         ("⟨ [1] [2] ⟩ [,] fold\n", "[ 1 | 2 ]\n"),
         ("1 2 [+] fold\n", "3\n"),
-        ("!\n\t3 dup times\n", "9\n"),
+        ("!\n\t3 dup *\n", "9\n"),
         ("swap-args\n\t5\n\t2\n\t-\n", "-3\n"),
-        ("f : xs -- ys\n\teach\n\t\t2 times\n1 2 3 f\n", "2 4 6\n"),
+        ("f : xs -- ys\n\teach\n\t\t2 *\n1 2 3 f\n", "2 4 6\n"),
     ],
 )
 def test_control_words_run_the_quotations_they_take(

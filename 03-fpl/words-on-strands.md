@@ -16,11 +16,10 @@ decision.
 
 ## Multiplication has the glyph spelling
 
-`times` stays; `*` is added beside it (walker, 2026-10-31).
+`*` replaces `times` (walker and corpus, 2026-10-31; S32 had spelled APL verbs in English).
 
 ```fpl
 2 3 * |- 6
-2 3 times |- 6
 1 2 3 4 | 1 2 3 4 * |- 1 4 9 16
 ```
 

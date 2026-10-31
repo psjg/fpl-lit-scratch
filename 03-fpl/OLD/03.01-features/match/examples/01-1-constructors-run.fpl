@@ -9,8 +9,8 @@ rect : w h -- shape
 
 area : shape -- n
 	match
-		( circle r ∈ pos )	r dup times π times	; guard: an ascription in the pattern, no `when`
+		( circle r ∈ pos )	r dup * π *	; guard: an ascription in the pattern, no `when`
 		( circle 0 )	0	; a literal matches by equality
-		( rect w h )	w h times
+		( rect w h )	w h *
 		_	?	; wildcard row; its body is a goal the elaborator reports (S40)
 

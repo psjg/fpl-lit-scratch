@@ -598,7 +598,7 @@ SHAPES = (
     "circle : r -- shape\n\t#circle swap pair\nrect : w h -- "
     "shape\n\t#rect swap pair pair\n"
 )
-AREA = "area : ( circle r ) -- n\n\tr dup times\n"
+AREA = "area : ( circle r ) -- n\n\tr dup *\n"
 
 
 @given(st.integers(0, 9))
@@ -657,7 +657,7 @@ def test_a_head_group_looks_its_constructor_up_from_its_own_definition() -> (
     nested = (
         "b/\n\tcircle : r -- shape\n\t\t#circle swap pair\n"
         "\tc/\n\t\tcircle : r -- shape\n\t\t\t#other swap pair\n"
-        "\tarea : ( circle r ) -- n\n\t\tr dup times\n"
+        "\tarea : ( circle r ) -- n\n\t\tr dup *\n"
     )
     assert run(nested + "3 b/circle b/area\n") == "9\n"
     with pytest.raises(FplError, match=r"^ERROR: 7:2 no row matches$"):
@@ -998,7 +998,7 @@ def test_a_redefined_type_word_is_disjoint_from_nothing(
 P7 = (
     SHAPES
     + AREA
-    + "area : ( rect w h ) -- n\n\tw h times\narea : s -- n\n\tdrop 0\n"
+    + "area : ( rect w h ) -- n\n\tw h *\narea : s -- n\n\tdrop 0\n"
 )
 
 

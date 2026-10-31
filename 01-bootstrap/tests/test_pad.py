@@ -53,7 +53,7 @@ TICKS = count()
 TTY = Tty(now=lambda: AT, timer=lambda: float(next(TICKS)))
 #: A timer that stands still too, so no preview runs out of time.
 STILL = Tty(now=lambda: AT, timer=lambda: 0.0)
-SQ = "sq : n -- n\n\tdup times\n"
+SQ = "sq : n -- n\n\tdup *\n"
 POOL = (SQ, "3 sq", "x", "1 [", "f : -- x\n\t2", "f", "1 | 2 +", "", "\t5")
 #: The cells a buffer keeps one part for each: an empty cell writes a
 #: bar with no text, which the reader drops.
@@ -187,7 +187,7 @@ def test_a_buffer_is_read_as_cells_and_synced_from_the_first_change() -> None:
     """
     before = pad(SQ.rstrip("\n"), "3 sq", "x")
     text = buffer(before, TTY)
-    assert chunks(text) == ["sq : n -- n\n\tdup times", "3 sq", "x"]
+    assert chunks(text) == ["sq : n -- n\n\tdup *", "3 sq", "x"]
     assert synced(before, text, CTX, TTY) == before
     edited = text.replace("3 sq", "4 sq").replace("\nx ; \n", "\n\nx\n\n")
     after = synced(before, edited, CTX, TTY)

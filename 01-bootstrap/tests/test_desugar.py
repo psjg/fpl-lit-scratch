@@ -278,10 +278,10 @@ def test_children_are_quotations_before_the_head() -> None:
 @pytest.mark.parametrize(
     ("source", "printed"),
     [
-        ("times\n\t1 | 2 +\n\t3 | 4 +\n", "21\n"),
+        ("*\n\t1 | 2 +\n\t3 | 4 +\n", "21\n"),
         ("-\n\t10\n\t1\n", "9\n"),
-        ("+ dup times\n\t1\n\t2\n", "9\n"),
-        ("times\n\t+\n\t\t1\n\t\t2\n\t4\n", "12\n"),
+        ("+ dup *\n\t1\n\t2\n", "9\n"),
+        ("*\n\t+\n\t\t1\n\t\t2\n\t4\n", "12\n"),
         ("f : x -- y\n\t+\n\t\t1\n5 f\n", "6\n"),
         ("1 + +\n\t10\n\t20\n", "31\n"),
     ],
@@ -307,7 +307,7 @@ def test_a_child_under_a_value_slot_runs_at_once(
         ("1 | 2\n\t+\n", "[ + ] 1 | 2\n"),
         ("dup\n\t1\n\t2\n", "[ 1 ] 2 | 2\n"),
         ("dup\n\t+\n", "[ + ] [ + ]\n"),
-        ("+ dup times\n\t1\n\t2\n\t3\n", "[ 1 ] 25\n"),
+        ("+ dup *\n\t1\n\t2\n\t3\n", "[ 1 ] 25\n"),
         (
             "mk : x --\n\tdrop\nwrap : t: [] -- t\nmk wrap\n\t1 | 2 +\n\t3\n",
             "[ 1 | 2 + ]\n",
@@ -476,9 +476,9 @@ def test_a_slot_type_is_not_a_slot() -> None:
 def test_parentheses_rotate_the_head_to_the_end() -> None:
     """
     draft2 examples/09-rotates.fpl:2-3: (+ 1 2) is 1 | 2 + = 3, (+
-    (times 2 3) 4) is 10.
+    (* 2 3) 4) is 10.
     """
-    assert run("(+ 1 2)\n(+ (times 2 3) 4)\n") == "3\n10\n"
+    assert run("(+ 1 2)\n(+ (* 2 3) 4)\n") == "3\n10\n"
 
 
 @pytest.mark.parametrize(
@@ -496,10 +496,10 @@ def test_parentheses_rotate_the_head_to_the_end() -> None:
         ("⟨⟩\n", "⟨⟩\n"),
         ("0.0000001\n", "0.0000001\n"),
         (
-            "123456789012345 | 123456789012345 times\n",
+            "123456789012345 | 123456789012345 *\n",
             "15241578753238669120562399025\n",
         ),
-        ("1 2 | 10 times\n", "10 20\n"),
+        ("1 2 | 10 *\n", "10 20\n"),
         (": : --\n1\t2 : 3\n", "1 | 2 | 3\n"),
     ],
 )
@@ -558,8 +558,8 @@ def test_a_numeral_longer_than_digits_is_refused_at_its_position(
     [
         ("9" * 4096 + " | 1 +\n", "ERROR: 1:4102 number too large"),
         ("-" + "9" * 4096 + " | 1 -\n", "ERROR: 1:4103 number too large"),
-        ("10" + " dup times" * 12 + "\n", "ERROR: 1:118 number too large"),
-        ("9.9" + " dup times" * 13 + "\n", "ERROR: 1:129 number too large"),
+        ("10" + " dup *" * 12 + "\n", "ERROR: 1:74 number too large"),
+        ("9.9" + " dup *" * 13 + "\n", "ERROR: 1:81 number too large"),
     ],
     ids=["10^4096", "-10^4096", "squared", "a decimal squared"],
 )
@@ -576,7 +576,7 @@ def test_a_result_of_more_than_digits_digits_is_refused_at_the_word(
     assert str(caught.value) == error
 
 
-@given(bounded, bounded, st.sampled_from(["+", "-", "times", "*"]))
+@given(bounded, bounded, st.sampled_from(["+", "-", "*"]))
 def test_arithmetic_prints_its_result_or_refuses_it(
     x: int, y: int, word: str
 ) -> None:
@@ -584,7 +584,7 @@ def test_arithmetic_prints_its_result_or_refuses_it(
     Any two integers the language can write meet as a printed number or
     as the refusal, never as a Python error.
     """
-    z = {"+": x + y, "-": x - y, "times": x * y, "*": x * y}[word]
+    z = {"+": x + y, "-": x - y, "*": x * y}[word]
     expected = f"{z}\n" if abs(z) < 10**DIGITS else "ERROR number too large"
     assert outcome(f"{x} | {y} {word}\n") == expected
 

@@ -5,6 +5,6 @@ circle : r -- shape
 	#circle swap pair
 area : shape -- a
 	unpair swap | #circle #rect index
-	| [ dup times π times ] [ [times] fold ] agenda
+	| [ dup * π * ] [ [*] fold ] agenda
 3 4 rect rect inverse	; → 3 4
 

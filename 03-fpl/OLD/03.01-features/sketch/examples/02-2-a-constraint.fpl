@@ -8,7 +8,7 @@ fd/
 puzzle : -- sol +st
 	fresh →x  fresh →y
 	x 1 9 range ∈   y 1 9 range ∈
-	x y + 10 unify   x 2 times y unify
+	x y + 10 unify   x 2 * y unify
 	[ x y ] distribute
 	| #x x pair #y y pair dict
 
