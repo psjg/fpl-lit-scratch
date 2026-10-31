@@ -133,30 +133,31 @@ the one the walker already has.
    already rounds (table). Exactness is the narrowest here: 16 to 17 digits, so the product of two
    money amounts of 9 digits each already overflows the coefficient. The refusal costs a check per
    operation (a wide multiply and a range test), which the five-instruction path does not have.
-5. **IEEE decimal64, read from the free sources, not from the standard.** The standard is sold
-   (resellers list IEEE 754-2019 at roughly €114 to €186; no free official copy found) and was not
-   read. Read instead: Cowlishaw, Schwarz, Smith and Webb, [A Decimal Floating-point
-   Specification](https://www.speleotrove.com/mfc/files/cowlishaw2001-decimal-specification.pdf)
-   (IBM, 2001, a proposal), and Cowlishaw's [Arith16 slides](https://www.speleotrove.com/decimal/decArith16-charts.pdf)
-   (2003). What they say, and what they do not:
-   - It is the same family as DEC64: a sign, an integer coefficient and a decimal exponent, "integers
-     always have exponent = 0", numbers with equal exponents "need no alignment for addition", and
-     "the core operations when no rounding occurs are simple integer operations; integer arithmetic
-     is a subset" (slides). Crockford's fast path is this idea.
-   - It differs in three things the sources do say: rounding is "correct rounding, as in IEEE
-     754/854" with a round-half-up mode added (DEC64: ties away from zero, one rule); "a rounded
-     normal number will always have maximum digits" (DEC64 does not normalise); exponent range
-     must exceed 5 times the precision in digits, 10 times recommended (spec 2001, section 8;
-     DEC64's 254 values against 17 digits is about 15 times, my arithmetic).
-   - The 2001 proposal is not the final format: it gives a 64-bit word an 11-bit exponent and
-     a 52-bit integer, 13 to 15 digits depending on the encoding (its Table 3), and leaves
-     the choice between BCD and compressed encodings open. The final decimal64 (16 digits is what
-     a search snippet states, a prior) is in the sold standard and is not in these sources.
-   - Neither source describes the status flags or the NaN set; the usual account that IEEE has
-     inexact and other flags is a prior.
-   So the claim "IEEE decimal64 has the flags DEC64 lacks, which suits an exactness obligation"
-   stays a prior. It matters less now: with no trap (point 2) the flag is not wanted. Whether a
-   target prefers it over DEC64 is a later question, to be measured on a target.
+5. **IEEE decimal64, read from the standard.** The text is ISO/IEC 60559:2020, which is IEEE Std
+   754-2019 (his own copy; the standard is sold, resellers list it at roughly €89 to €268 by
+   edition and are not checked against the shops). Clause numbers are the standard's.
+   - Table 3.6: decimal64 is 64 bits, `p` = 16 digits, `emax` = 384 (and `emin` = 1 − `emax`, clause
+     3.3), so exponents run to about ±384 against DEC64's ±127; a 13-bit combination field and a
+     50-bit trailing significand. A NOTE says implementations choose binary or decimal encoding of
+     the significand and the standard does not say how that choice is communicated.
+   - 3.5.1: a value has a cohort of representations `(s, q, c)` and `(s, q + 1, c / 10)`; zero has
+     one representation per exponent. This is DEC64's "not normalised" and its 255 zeros, said
+     with more care (and with a sign on zero, which DEC64 does not have).
+   - Exceptional cases give flags and non-stop results: five status flags (inexact, underflow,
+     overflow, divideByZero, invalid; clause 7). Division of a finite non-zero by zero is `∞`
+     with the divideByZero flag (7.3), `0 ÷ 0` and `∞ ÷ ∞` are invalid and give a quiet NaN
+     (7.2), overflow and inexact results are rounded under the rounding-direction attribute. DEC64
+     has one `nan` for all of it and no flags.
+   - The same family as DEC64: Cowlishaw's earlier [proposal](https://www.speleotrove.com/mfc/files/cowlishaw2001-decimal-specification.pdf)
+     (2001) and [slides](https://www.speleotrove.com/decimal/decArith16-charts.pdf) (2003) state
+     the idea both share: integers have exponent 0, equal exponents need no alignment, and without
+     rounding the operations are integer operations. The 2001 proposal is not the final format
+     (52-bit integer, 11-bit exponent, 13 to 15 digits).
+   Consequence for FPL: the flags are the trap he does not want, so what IEEE decimal64 adds over
+   DEC64 is range and `∞`, not something the kernel can use; what it shares with DEC64 is the
+   rounded-by-default result, which point 2 keeps out by the static bound. Both are plugs with the
+   same obligation (the program's values stay inside the plug's range and digits). Which one a
+   target prefers is a question for a target, with a measurement.
 6. **His answer, 13:07: pluggable, side by side.** DEC64 is one plug among several for the `Dec`
    sort, as IEEE binary floating point is one for a smooth sort: each representation states the
    conditions under which it implements the sort (range, exactness, which operations are total),
