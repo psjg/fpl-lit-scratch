@@ -5,6 +5,7 @@ checks, :func:`stacks` evaluates, and :func:`printed` renders. The
 command line and the tests use these steps alone or together.
 """
 
+import re
 from collections.abc import Callable, Iterable
 
 from fpl.ast_core import Judgment, Run, Statement
@@ -15,6 +16,9 @@ from fpl.eval import Stack, evaluate
 from fpl.parse import parse
 from fpl.print import render
 from fpl.types import Goal, elaborate, reported
+
+OPENS = re.compile(r"\s*\|-\s+!")
+"""How a line opens that may close a program that does not read."""
 
 #: Each run line's source line number with the stack it leaves.
 type Lines = tuple[tuple[int, Stack], ...]
@@ -166,7 +170,9 @@ def run(source: str, report: Callable[[str], None] = silent) -> str:
     line. A closing fail judgment ``|- ! err/<tag> “message”``
     (:func:`fpl.desugar.closing`) turns the failure it names into
     output: what the lines before it printed, then its fail line,
-    which pasted back as the closing line is the same judgment.
+    which pasted back as the closing line is the same judgment. That
+    holds for a program that does not even read: its closing line is
+    then found in the text (:func:`sealed`).
 
     Args:
         source: The program text.
@@ -192,8 +198,13 @@ def run(source: str, report: Callable[[str], None] = silent) -> str:
         Traceback (most recent call last):
         fpl.errors.NoFailError: |- ! err/check/no-fail 2:1 ...
     """
-    program, judgment = closing(parse(source))
     left: list[Stack] = []
+    try:
+        program, judgment = closing(parse(source))
+    except FplError as error:
+        if (judgment := sealed(source)) is None:
+            raise
+        return judged(judgment, error, left)
     try:
         statements, goals = elaborated(program)
         for goal in goals:
@@ -208,6 +219,51 @@ def run(source: str, report: Callable[[str], None] = silent) -> str:
             judgment.span, f"expected {judgment.tag}, the program passed"
         )
     return output(left)
+
+
+def sealed(source: str) -> Judgment | None:
+    r"""Read the closing fail judgment of a program that does not parse.
+
+    The parsed program is not there to take the judgment off, so it is
+    found in the text: a line that opens with ``|- !``, tried from the
+    last one back. That line and the lines after it are parsed on their
+    own, at their own line numbers, and :func:`fpl.desugar.closing`
+    reads the judgment. A tail that does not read is no closing line
+    (the ``|- !`` stood inside a string or a comment, or something after
+    it is broken) and the search moves back; the read error of the
+    lines before the closing line is then the failure it judges.
+
+    Args:
+        source: The program text, which did not parse.
+
+    Returns:
+        The judgment, or None when no line opens with ``|- !``, no such
+        tail reads, or code follows the one that does.
+
+    Raises:
+        :exc:`~fpl.errors.FplError`: The judgment is malformed.
+
+    Examples:
+        >>> sealed("[ 1\n|- ! err/read/unclosed\n").tag
+        'err/read/unclosed'
+        >>> boxed = "[\n|- ! err/read/unclosed\n⟦\n|- ! err/no-row\n⟧\n"
+        >>> sealed(boxed).tag
+        'err/read/unclosed'
+        >>> sealed("[ 1\n|- ! err/read/unclosed\n1\n") is None
+        True
+        >>> sealed("[ 1\n") is None
+        True
+    """
+    lines = source.split("\n")
+    for at in reversed(range(len(lines))):
+        if not OPENS.match(lines[at]):
+            continue
+        try:
+            tail = parse("\n" * at + "\n".join(lines[at:]))
+        except FplError:
+            continue
+        return closing(tail)[1]
+    return None
 
 
 def judged(judgment: Judgment, error: FplError, left: list[Stack]) -> str:

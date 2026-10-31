@@ -180,6 +180,66 @@ def test_the_lines_before_a_judged_failure_still_print() -> None:
     )
 
 
+UNCLOSED = "[ 1 2 +\n"
+UNCLOSED_LINE = "|- ! err/read/unclosed 1:1 “[ never closed”\n"
+
+
+def test_a_program_that_does_not_read_is_judged_by_its_closing_line() -> None:
+    assert run(UNCLOSED + UNCLOSED_LINE) == UNCLOSED_LINE
+
+
+def test_the_closing_line_of_an_unread_program_may_be_followed_by_trivia() -> (
+    None
+):
+    assert (
+        run(UNCLOSED + "\n" + UNCLOSED_LINE + ";; after\n\n") == UNCLOSED_LINE
+    )
+
+
+def test_a_wrong_judgment_on_an_unread_program_fails_at_its_own_line() -> None:
+    with pytest.raises(UnmatchedFailError) as caught:
+        run(UNCLOSED + "\n|- ! err/read/unclosed 2:1\n")
+    assert str(caught.value) == (
+        "|- ! err/check/unmatched-fail 3:1"
+        " “check failed: expected 2:1, got 1:1”"
+    )
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        UNCLOSED,
+        UNCLOSED + "1 |- ! err/read/unclosed\n",
+        UNCLOSED + UNCLOSED_LINE + "1\n",
+    ],
+)
+def test_an_unread_program_without_a_closing_line_raises_its_read_error(
+    source: str,
+) -> None:
+    assert refusal(source).startswith("|- ! err/read/unclosed 1:1 ")
+
+
+def test_a_closing_line_inside_a_comment_is_not_the_closing_line() -> None:
+    boxed = UNCLOSED + UNCLOSED_LINE + "⟦\n|- ! err/no-row\n⟧\n"
+    assert run(boxed) == UNCLOSED_LINE
+
+
+def test_a_tail_that_does_not_read_leaves_the_first_error() -> None:
+    assert refusal(UNCLOSED + UNCLOSED_LINE + "1 “\n").startswith(
+        "|- ! err/read/unclosed "
+    )
+
+
+def test_the_closing_line_may_hold_more_space_before_the_bang() -> None:
+    assert run(UNCLOSED + "|-\t!  err/read/unclosed\n") == UNCLOSED_LINE
+
+
+def test_a_broken_closing_line_of_an_unread_program_is_the_failure() -> None:
+    assert refusal(UNCLOSED + "|- ! err/read/unclosed “\n").startswith(
+        "|- ! err/read/unclosed 2:"
+    )
+
+
 @pytest.mark.parametrize(
     "source", ["|- ! err/no-row\n1\n", "1 |- ! err/no-row\n"]
 )
