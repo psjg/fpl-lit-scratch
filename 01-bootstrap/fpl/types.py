@@ -283,6 +283,64 @@ def stepping(table: tuple[tuple[Kind, Kind], ...]) -> Cases:
 
 type Rows = tuple[tuple[Kind, Kind, Kind], ...]
 
+#: The sort ``+`` leaves, as (left, right, result), most specific first.
+#: Nats and negatives are closed under it; the sum of a positive and a
+#: negative is any ``Int``. A ``Zero`` rises to both covers, so a row of
+#: ``Nat0`` or ``Neg0`` also takes it.
+PLUS: Rows = (
+    (Kind.ZERO, Kind.ZERO, Kind.ZERO),
+    (Kind.NAT1, Kind.NAT0, Kind.NAT1),
+    (Kind.NAT0, Kind.NAT1, Kind.NAT1),
+    (Kind.NAT0, Kind.NAT0, Kind.NAT0),
+    (Kind.NEG1, Kind.NEG0, Kind.NEG1),
+    (Kind.NEG0, Kind.NEG1, Kind.NEG1),
+    (Kind.NEG0, Kind.NEG0, Kind.NEG0),
+    (Kind.INT, Kind.INT, Kind.INT),
+)
+#: The sort ``-`` leaves. The naturals are not closed under it:
+#: ``3 | 2 -`` is an ``Int``, so only a minuend and a subtrahend of
+#: opposite sign keep a sign (this settles what DI-0070 left open).
+MINUS: Rows = (
+    (Kind.ZERO, Kind.ZERO, Kind.ZERO),
+    (Kind.NAT1, Kind.NEG0, Kind.NAT1),
+    (Kind.NAT0, Kind.NEG1, Kind.NAT1),
+    (Kind.NAT0, Kind.NEG0, Kind.NAT0),
+    (Kind.NEG1, Kind.NAT0, Kind.NEG1),
+    (Kind.NEG0, Kind.NAT1, Kind.NEG1),
+    (Kind.NEG0, Kind.NAT0, Kind.NEG0),
+    (Kind.INT, Kind.INT, Kind.INT),
+)
+#: The sort ``times`` leaves: a ``Zero`` factor gives ``Zero``, else
+#: the sign is the product of the signs, ``Nat0`` or ``Neg0`` where a
+#: factor may be 0.
+TIMES: Rows = (
+    (Kind.ZERO, Kind.INT, Kind.ZERO),
+    (Kind.INT, Kind.ZERO, Kind.ZERO),
+    (Kind.NAT1, Kind.NAT1, Kind.NAT1),
+    (Kind.NEG1, Kind.NEG1, Kind.NAT1),
+    (Kind.NAT1, Kind.NEG1, Kind.NEG1),
+    (Kind.NEG1, Kind.NAT1, Kind.NEG1),
+    (Kind.NAT0, Kind.NAT0, Kind.NAT0),
+    (Kind.NEG0, Kind.NEG0, Kind.NAT0),
+    (Kind.NAT0, Kind.NEG0, Kind.NEG0),
+    (Kind.NEG0, Kind.NAT0, Kind.NEG0),
+    (Kind.INT, Kind.INT, Kind.INT),
+)
+
+
+def closing(table: Rows) -> Cases:
+    """Return the arrow of a closed arithmetic word from its table.
+
+    The general arrow stays ``NUMBERS``: an input, a ``Value`` and a
+    ``Number`` (a decimal may be one) leave a ``Number``.
+    """
+    return Cases(
+        NUMBERS.ins,
+        NUMBERS.outs,
+        tuple(Arrow((a, b), (left,)) for a, b, left in table),
+    )
+
+
 #: A ``Zero`` divisor sticks the six division words: the term stays as
 #: a value of no number sort (:class:`~fpl.ast_core.Stuck`). The row
 #: comes first, before a row whose divisor a ``Zero`` rises to.
@@ -358,9 +416,9 @@ ARROWS: dict[str, Arrow] = {
         for name, e in EFFECTS.items()
         if name not in CONTROLS and name not in HOLES
     },
-    "+": NUMBERS,
-    "-": NUMBERS,
-    "times": NUMBERS,
+    "+": closing(PLUS),
+    "-": closing(MINUS),
+    "times": closing(TIMES),
     "succ": stepping(SUCC),
     "pred": stepping(PRED),
     "kdiv": dividing(STUCK + QUOTIENT),

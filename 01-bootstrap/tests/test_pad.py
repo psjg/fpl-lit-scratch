@@ -77,7 +77,7 @@ def test_a_turn_is_written_as_the_repl_writes_one() -> None:
     assert turns(pad(SQ, "3 sq", "1 | 2 +\n4 sq", "1 drop", "[ 1 2 ]")) == [
         (),
         ("|- 9 : Number",),
-        ("|- 3 : Number", "|- 16 : Number"),
+        ("|- 3 : Nat1", "|- 16 : Number"),
         ("",),
         ("|- [ 1 2 ] : Value",),
     ]
@@ -132,7 +132,7 @@ def test_an_error_stops_no_cell_and_adds_nothing_to_the_state() -> None:
     cells = pad("x", "1 | 2 +", "sq : n -- n\n\tdup nope", "3 sq")
     assert [cell.status for cell in cells] == ["error", "ok", "error", "error"]
     assert cells[0].turns == ("ERROR: 1:1 unknown word: x", ";;! x", ";;! ^")
-    assert cells[1].turns == ("|- 3 : Number",)
+    assert cells[1].turns == ("|- 3 : Nat1",)
     assert cells[3].turns[0] == "ERROR: 1:3 unknown word: sq"
 
 
@@ -173,7 +173,7 @@ def test_a_cell_holds_the_inputs_the_repl_would_group() -> None:
         "ERROR: 1:1 unknown word: x",
         ";;! x",
         ";;! ^",
-        "|- 2 : Number",
+        "|- 2 : Nat1",
     )
     assert len(cell.log.events) == 4
 
@@ -279,7 +279,7 @@ def test_the_ghost_follows_the_last_text_line_of_its_cell() -> None:
     text = buffer(cells, TTY) + "1 | 2 +\n4 sq\n\n"
     at = text.index("1 | 2 +")
     assert preview(cells, text, at, CTX, STILL) == Ghost(
-        line_of(text, "4 sq"), "ok", "|- 3 : Number  |- 16 : Number"
+        line_of(text, "4 sq"), "ok", "|- 3 : Nat1  |- 16 : Number"
     )
 
 
@@ -318,7 +318,7 @@ def test_a_preview_is_bounded_in_time() -> None:
     """
     loop = pad("f : -- x\n\tf")
     many = buffer(loop, TTY) + "1 | 2 +\nf\nf\nf"
-    first = Ghost(line_of(many, "f") + 2, "fuel", "|- 3 : Number  " + CUT)
+    first = Ghost(line_of(many, "f") + 2, "fuel", "|- 3 : Nat1  " + CUT)
     assert preview(loop, many, len(many), CTX, TTY, seconds=2.5) == first
     cut = Ghost(first.line, "fuel", CUT)
     assert preview(loop, many, len(many), CTX, TTY, seconds=0.5) == cut
@@ -342,7 +342,7 @@ def test_shaded_keeps_results_and_errors() -> None:
     without its carets, notes and blank empty stacks.
     """
     (ok,) = pad("1 | 2 +")
-    assert shaded(ok, 4) == Ghost(4, "ok", "|- 3 : Number")
+    assert shaded(ok, 4) == Ghost(4, "ok", "|- 3 : Nat1")
     (error,) = pad("x")
     assert shaded(error, 0) == Ghost(0, "error", "ERROR: 1:1 unknown word: x")
     changed = pad("f : -- x\n\t2", "f", "f : -- x\n\t3")[2]
