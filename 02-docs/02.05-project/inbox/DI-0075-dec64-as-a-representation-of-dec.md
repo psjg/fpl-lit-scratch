@@ -198,6 +198,28 @@ the one the walker already has.
    spelling of the three kinds, and whether `fixed` may be left to the planner to split between
    DEC64 and decimal64.
 
+8. **Von Neumann's argument, read.** From Burks, Goldstine and von Neumann, *Preliminary
+   discussion of the logical design of an electronic computing instrument* (IAS, 1946; read in the
+   HTML transcription taken from von Neumann's Collected Works, 1963, hosted at
+   [MIT CSAIL](https://people.csail.mit.edu/ledlie/resources/papers/1963/neuman63.html), so
+   the edition is the Collected Works', not checked against the 1946 or 1947 print; the Deep Blue
+   and IAS copies exist but blocked a download).
+   - Section 5.3 names the two reasons for a floating decimal point (keep the significant digits
+     of a sum or product; free the operator from choosing scale factors) and answers: the time
+     spent on scale factors is "a very small percentage" of the time to prepare a problem; the
+     first reason is "somewhat illusory", since a floating word spends storage that could carry
+     more digits; and long precision, built from fixed multiples of the word length, is harder
+     with a floating point.
+   - Section 6.6.7 reframes the choice: it is not built in or unused, it is built in or
+     programmed from the operations the machine has. A floating point also repeats a scale factor
+     in every number, where one factor often serves a whole set of numbers; it can be programmed
+     out of shifts when needed.
+   What it says to this note: DEC64 and decimal64 put one exponent in every number, which is the
+   redundancy he names; the `scaled` kind is his one scale factor per set; the `exact` kind is
+   his long precision built from primitives (limbs of integers); and a floating plug is
+   something programmed out of the others when a target asks, not a basis. Where we differ: he
+   leaves the scale analysis to the programmer, and here the planner computes the bound.
+
 Outcome: the pluggable reading and the hole as the way to choose are his; the interface of a plug,
 the kinds of plug and the static bound of point 2 are open. No code was written; the model and the converted assembly live outside the repository.
 
