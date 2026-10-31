@@ -205,6 +205,19 @@ the kind he does not want; it is the one the walker already has.
    page. Not designed here: the word's name and its rounding rule (DEC64 rounds ties away from
    zero, IEEE offers directions).
 
+9. **Against floats written in a power of two.** [DI-0070](DI-0070-nat-number-and-the-base-of-a-float.md)
+   asks that a float be written out in a power-of-two base, with no decimal point in the normal
+   form, and his wish is that the programmer writes such a float explicitly (`m × 2^e`). The plugs
+   above do not touch that. `Dec` is an exact, discrete sort: `0.1` in it is exactly one tenth, and
+   DEC64, decimal64 and the bignum are only ways to store it; the exponent inside a DEC64 word is
+   not something the programmer writes. "Floating" in DEC64 names the storage, not the sort. A
+   binary float with rounding stays outside the kernel, as DI-0074 point 5 has it, and is the
+   thing written in a power of two; von Neumann's scale factor in point 6 is binary too. So the one
+   place the two meet is DI-0074 point 1: DI-0070's "no decimal point in the normal form" must then
+   narrow to floats if `Dec` keeps its own normal form with a point (reading (b) there), and if
+   reading (a) is taken instead (`0.1` as a spelling of `1/10`, no `Dec` sort) then the plug kinds
+   above apply to `Rat` and not to `Dec`. Open with DI-0074, not decided here.
+
 Outcome: the representation reading, the absence of a trap, the pluggable `Dec`, the hole as the
 way to choose and `scaled` as a kind of its own are his. Open: the surface spelling of the three
 kinds, whether the planner may split `fixed` between DEC64 and decimal64, the name and rule of the
