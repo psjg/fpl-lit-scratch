@@ -15,3 +15,4 @@
 * [ADR-0012 The pipeline is an inspectable computation graph that several executors run](ADR-0012-pipeline-is-a-computation-graph.md) - draft: one graph, many interpreters
 * [ADR-0013 Events observe the compiler; they do not carry its dependencies](ADR-0013-events-observe-not-drive.md) - draft: no event spaghetti
 * [ADR-0014 One composition operator at every level of a pass](ADR-0014-one-composition-operator-at-every-level.md) - accepted: compose a stage only when it meets the pass contract
+* [ADR-0015 Modifiers take the word before them](ADR-0015-modifiers-take-the-word-before-them.md) - draft: pervasion plus modifiers on the preceding word; quotations where nothing pervades
