@@ -157,8 +157,10 @@ elements long" (`foldl (-) 0 [1..1000000]` overflowed a 1 MB stack, `foldl'` gav
 sum); the docs say "you always want to use either foldl' or foldr instead".
 
 The rule in the array family: the fold follows the reading direction of the language
-(APL, J, BQN read right to left and fold from the right; K, Lisp, Python read left to
-right and fold from the left). FPL reads left to right. In postfix both folds are plain
+(APL, J, BQN read right to left and fold from the right; Lisp and Python read left to
+right and fold from the left; K and q are the exception: "the order of evaluation is
+strictly right to left" (kx syntax reference) while Over folds from the left, read
+for [02.05.17](../notes/02.05.17-array-models.md)). FPL reads left to right. In postfix both folds are plain
 sequences: the word between the items is the left fold, the word after them, repeated,
 the right fold.
 
@@ -247,6 +249,19 @@ line (option: both, so a passing `L |- R` prints its cost); `|=` was his first a
 night ("|- en |= toevoegen... voor een dit volgt uit en dit bewijst") and was left unwired
 on both days. The `!`, the `err/` path with `/` as namespace, `err/out-of-gas` and `err/no-row`
 with 408 and 404, and the round trip agree.
+
+His remarks of 10-31 (through the array-models session, recorded here, nothing decided):
+`!` carries two meanings, `force` in the walker (`CONTROLS` in `eval.py`) and the fail
+marker on the judgment line (02.03.01); once `L |- R` is an input check both stand on one
+line. Both have alternatives, `err` for the fail marker and `eval`, `force` or `apply` for
+the control word; open which one moves. He finds `[ ]` and `[quote]` ugly and prefers
+pervasion plus a mask word plus a modifier that takes the following word (J, Uiua) over
+quotations; the off-side rule is already the main quotation form in
+[02.04.05](../../02.04-explanation/02.04.05-syntax-rationale.md) and the S34 lambda
+`[ →y →x ... ]` is the safe, spelled-out section. Found while reading: the table in 02.04.05
+says "no macro system, no quasiquote" where its S30 section describes quasiquote with `$`
+as unquote; to resolve there. `$` is identity, cell, unquote and pin everywhere (FON, S30,
+S35, the walker's pins), never a quote.
 
 On rank (10-29, verbatim): "uh krijgen we straks conflicten met het box model stel we
 willen een box model... willen we een box model? net zoals J en UIuia ik heb ook de
