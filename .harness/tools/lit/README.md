@@ -292,8 +292,16 @@ They are the next work on this layer, not ideas:
    each member on the page carries its number. `Zelfde als…` on a card arms a pick whose end
    joins the chain. Still open: the PDT's link types (textual, grammatical) as sub-labels
    (`coref/text`), and a gutter column of the chains.
-3. **Querying across layers** (Müller's objection, PML-TQ's answer): which claim has no
-   attack, which focus is never resumed.
+3. **Querying across layers: built 2026-11-01** (Müller's objection, PML-TQ's answer).
+   Terms `[!]key:value`, all to hold, a negation a condition met zero times: `label:` (at or
+   under a scope), `layer:`, `by:`, `text:`, `has:R` (an R row ends at it), `gives:R` (one
+   starts from it); a fact on a page address speaks for the address. `lit facts --query Q
+   PAGE` prints what it finds; the field under the margin's filters fades the rest. One
+   language, two readers, held together by `tests/query_cases.json`, which both
+   `facts.query` and the overlay's block (run in node, `tests/test_query_js.py`) must
+   answer alike. Examples: `label:claim !has:attacks` (a claim no one attacks),
+   `label:tfa/f !has:resumes` (a focus no clause takes up). Still open: or, transitive
+   chains (PML-TQ's `{4,}`).
 4. **The graph, step two.** The chunks of a page, the places they are used and the files they
    tangle to, as nodes beside the rows: a `lit graph` export that joins the web lit already
    reads with the sidecar, and the same panel drawing it.

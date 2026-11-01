@@ -23,6 +23,9 @@
     lit facts --export PAGE [--item LABEL=PAGE@COMMIT] [--out FILE]
                                  the sidecar's hand rows in the
                                  program's shape, as one JSON array
+    lit facts --query Q PAGE     the hand rows of PAGE that query Q
+                                 finds, one per line: id, labels, text
+                                 or note (facts.parse_query)
     lit anchor --verify [PAGE ...]
                                  each hand row with a commit has its
                                  text at its place there (asks git)
@@ -50,6 +53,7 @@ import sys
 import time
 from collections.abc import Sequence
 from pathlib import Path
+from typing import cast
 
 from lit import facts, lint, readable, run, web
 
@@ -333,8 +337,33 @@ def cmd_export(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_query(args: argparse.Namespace) -> int:
+    """Print the hand rows of one page that a query finds."""
+    if len(args.pages) != 1:
+        return usage("--query needs one PAGE")
+    rows, bad = facts.generate(Path(args.pages[0]), args.root)
+    if bad:
+        return report(bad, "facts", 1)
+    hand = [r for r in rows if "kind" not in r]
+    try:
+        found = set(facts.query(hand, args.query))
+    except ValueError as e:
+        return usage(f"--query: {e}")
+    for r in hand:
+        if r.get("id") in found:
+            ls = r.get("labels")
+            labels = (
+                ",".join(cast("list[str]", ls)) if facts.strings(ls) else ""
+            )
+            said = str(r.get("text") or r.get("note") or "").replace("\n", " ")
+            print(f"{r['id']}\t{labels}\t{said[:80]}")
+    return 0
+
+
 def cmd_facts(args: argparse.Namespace) -> int:
-    """Write each page's fact layer, or import or export hand rows."""
+    """Write, query, import or export a page's fact layer."""
+    if args.query is not None:
+        return cmd_query(args)
     if args.source is not None:
         return cmd_import(args)
     if args.export is not None:
@@ -507,6 +536,7 @@ def parser() -> argparse.ArgumentParser:
     mode = p.add_mutually_exclusive_group()
     mode.add_argument("--import", dest="source", type=Path)
     mode.add_argument("--export", type=Path)
+    mode.add_argument("--query")
     p.add_argument("--item", type=label)
     p.add_argument("--out", type=Path)
     p.add_argument("pages", nargs="*")

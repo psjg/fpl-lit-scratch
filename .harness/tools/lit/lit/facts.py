@@ -1122,10 +1122,108 @@ def layer(row: Row, rows: Mapping[str, Row]) -> str:
         return named.get(kind, "tfa")
     if kind in RELATIONS:
         return "relation"
-    targets = cast("list[str]", row.get("targets") or [""])
-    up = rows.get(targets[0])
+    ts = row.get("targets")
+    up = rows.get(cast("list[str]", ts)[0]) if strings(ts) and ts else None
     spanlike = up is None or "item" in up or first(up) == "parts"
     return "fact" if spanlike else "thread"
+
+
+QUERY_KEYS = ("label", "layer", "by", "text", "has", "gives")
+LAYERS = ("span", "fact", "thread", "argument", "tfa", "coref", "relation")
+
+
+def parse_query(q: str) -> list[tuple[bool, str, str, int]]:
+    """A query's terms: ``(negated, key, value, column)``, all to hold.
+
+    A query is terms apart by spaces, each ``[!]key:value`` (after
+    PML-TQ, Pajas and Stepanek 2009: conditions joined by and, a
+    negation as a condition met zero times). Keys: ``label`` (a label at
+    or under a scope), ``layer``, ``by``, ``text`` (in the text or the
+    note, lower-cased, not case folded), ``has:R`` (an R row ends at
+    it) and ``gives:R``
+    (an R row starts from it). A strict reader: any other spelling is a
+    `ValueError` naming its column, counted from 1.
+    """
+    out = []
+    for m in re.finditer(
+        r"[^ ]+", q
+    ):  # terms apart by U+0020 only, as the overlay
+        term, col = m.group(), m.start() + 1
+        neg = term.startswith("!")
+        key, colon, value = term[neg:].partition(":")
+        if not colon or not re.fullmatch(r"[a-z]+", key):
+            raise ValueError(f"no key:value at {col}")
+        if key not in QUERY_KEYS:
+            raise ValueError(f"unknown key {key!r} at {col}")
+        if not value:
+            raise ValueError(f"empty value at {col}")
+        if key in {"has", "gives"} and value not in RELATIONS | SETS:
+            raise ValueError(f"{value!r} is no relation or set at {col}")
+        if key == "layer" and value not in LAYERS:
+            raise ValueError(f"{value!r} is no layer at {col}")
+        out.append((neg, key, value, col))
+    return out
+
+
+def query(rows: list[Row], q: str) -> list[str]:
+    """The ids of the rows every term of `q` holds for, in row order.
+
+    ``has`` and ``gives`` look at the row and, for a fact on a page
+    address, at that address too: a topic-focus value is about its
+    clause, so
+    ``label:tfa/f !has:resumes`` is a focus no clause takes up. A
+    relation's ends are its targets after the first; a set's are all.
+    """
+    terms = parse_query(q)
+    by = {
+        cast("str", r["id"]): r for r in rows if isinstance(r.get("id"), str)
+    }
+    ends: dict[str, set[str]] = {}
+    starts: dict[str, set[str]] = {}
+    for r in rows:
+        kind, ts = first(r), r.get("targets")
+        if not strings(ts) or not ts:
+            continue
+        t = cast("list[str]", ts)
+        for x in t if kind in SETS else t[1:]:
+            ends.setdefault(kind, set()).add(x)
+        if kind in RELATIONS:
+            starts.setdefault(kind, set()).add(t[0])
+
+    def about(r: Row) -> set[str]:
+        # a fact on an address speaks for the address; one on a row, or
+        # a relation, only for itself
+        ts = r.get("targets")
+        t0 = cast("list[str]", ts)[:1] if strings(ts) else []
+        own = "item" in r or first(r) in RELATIONS | SETS
+        up = [] if own or not t0 or t0[0] in by else t0
+        return {cast("str", r.get("id")), *up}
+
+    def holds(r: Row, key: str, value: str) -> bool:
+        labels = (
+            cast("list[str]", r.get("labels"))
+            if strings(r.get("labels"))
+            else []
+        )
+        said = [r.get("text"), r.get("note")]
+        words = " ".join(x for x in said if isinstance(x, str)).lower()
+        return {
+            "label": lambda: any(
+                x == value or x.startswith(value + "/") for x in labels
+            ),
+            "layer": lambda: layer(r, by) == value,
+            "by": lambda: r.get("by") == value,
+            "text": lambda: value.lower() in words,
+            "has": lambda: bool(about(r) & ends.get(value, set())),
+            "gives": lambda: bool(about(r) & starts.get(value, set())),
+        }[key]()
+
+    return [
+        cast("str", r["id"])
+        for r in rows
+        if isinstance(r.get("id"), str)
+        and all(holds(r, k, v) != neg for neg, k, v, _ in terms)
+    ]
 
 
 def validate(

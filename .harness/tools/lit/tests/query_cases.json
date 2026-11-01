@@ -1,0 +1,292 @@
+{
+ "rows": [
+  {
+   "id": "s1",
+   "item": "p.md",
+   "text": "Tabs are columns.",
+   "labels": [
+    "claim"
+   ],
+   "by": "PSJ"
+  },
+  {
+   "id": "s2",
+   "item": "p.md",
+   "text": "A tab is one level.",
+   "labels": [
+    "fn/claim/strong"
+   ]
+  },
+  {
+   "id": "s3",
+   "item": "p.md",
+   "text": "Spaces are for alignment.",
+   "labels": [
+    "fn/example"
+   ]
+  },
+  {
+   "id": "a1",
+   "labels": [
+    "attacks"
+   ],
+   "targets": [
+    "s3",
+    "s2"
+   ]
+  },
+  {
+   "id": "u1",
+   "labels": [
+    "attacks"
+   ],
+   "targets": [
+    "s1",
+    "a1"
+   ]
+  },
+  {
+   "id": "f1",
+   "labels": [
+    "note"
+   ],
+   "note": "see the tabs page",
+   "targets": [
+    "s1"
+   ],
+   "by": "claude-opus-5-5"
+  },
+  {
+   "id": "t1",
+   "labels": [
+    "tfa/f"
+   ],
+   "targets": [
+    "b1s1c2"
+   ]
+  },
+  {
+   "id": "t2",
+   "labels": [
+    "tfa/f"
+   ],
+   "targets": [
+    "b1s2c1"
+   ]
+  },
+  {
+   "id": "r1",
+   "labels": [
+    "resumes"
+   ],
+   "targets": [
+    "b1s3c1",
+    "b1s1c2"
+   ]
+  },
+  {
+   "id": "k1",
+   "labels": [
+    "coref"
+   ],
+   "targets": [
+    "s1",
+    "s2"
+   ]
+  },
+  {
+   "id": "m1",
+   "labels": [
+    "attacks",
+    7
+   ],
+   "targets": [
+    "a",
+    "x"
+   ]
+  },
+  {
+   "id": "m2",
+   "targets": 7,
+   "text": null
+  },
+  {
+   "id": "m3",
+   "item": "p.md",
+   "text": "Straße"
+  }
+ ],
+ "cases": [
+  {
+   "q": "label:claim",
+   "ids": [
+    "s1"
+   ]
+  },
+  {
+   "q": "label:fn/claim",
+   "ids": [
+    "s2"
+   ]
+  },
+  {
+   "q": "label:fn",
+   "ids": [
+    "s2",
+    "s3"
+   ]
+  },
+  {
+   "q": "label:fn/claim !has:attacks",
+   "ids": []
+  },
+  {
+   "q": "label:claim !has:attacks",
+   "ids": [
+    "s1"
+   ]
+  },
+  {
+   "q": "has:attacks",
+   "ids": [
+    "s2",
+    "a1"
+   ]
+  },
+  {
+   "q": "gives:attacks",
+   "ids": [
+    "s1",
+    "s3"
+   ]
+  },
+  {
+   "q": "label:tfa/f !has:resumes",
+   "ids": [
+    "t2"
+   ]
+  },
+  {
+   "q": "label:tfa/f has:resumes",
+   "ids": [
+    "t1"
+   ]
+  },
+  {
+   "q": "layer:argument",
+   "ids": [
+    "a1",
+    "u1"
+   ]
+  },
+  {
+   "q": "layer:span has:coref",
+   "ids": [
+    "s1",
+    "s2"
+   ]
+  },
+  {
+   "q": "by:PSJ",
+   "ids": [
+    "s1"
+   ]
+  },
+  {
+   "q": "text:TABS",
+   "ids": [
+    "s1",
+    "f1"
+   ]
+  },
+  {
+   "q": "  label:claim   by:PSJ ",
+   "ids": [
+    "s1"
+   ]
+  },
+  {
+   "q": "",
+   "ids": [
+    "s1",
+    "s2",
+    "s3",
+    "a1",
+    "u1",
+    "f1",
+    "t1",
+    "t2",
+    "r1",
+    "k1",
+    "m1",
+    "m2",
+    "m3"
+   ]
+  },
+  {
+   "q": "colour:red",
+   "error": "unknown key 'colour' at 1"
+  },
+  {
+   "q": "label:",
+   "error": "empty value at 1"
+  },
+  {
+   "q": "label:claim nonsense",
+   "error": "no key:value at 13"
+  },
+  {
+   "q": "!!label:claim",
+   "error": "no key:value at 1"
+  },
+  {
+   "q": "has:wobbles",
+   "error": "'wobbles' is no relation or set at 1"
+  },
+  {
+   "q": "layer:sky",
+   "error": "'sky' is no layer at 1"
+  },
+  {
+   "q": "layer:fact",
+   "ids": [
+    "f1",
+    "m1",
+    "m2"
+   ]
+  },
+  {
+   "q": "layer:argument",
+   "ids": [
+    "a1",
+    "u1"
+   ]
+  },
+  {
+   "q": "text:none",
+   "ids": []
+  },
+  {
+   "q": "text:STRASSE",
+   "ids": []
+  },
+  {
+   "q": "text:STRAßE",
+   "ids": [
+    "m3"
+   ]
+  },
+  {
+   "q": "text:😀 nope",
+   "error": "no key:value at 8"
+  },
+  {
+   "q": "label:claimby:PSJ",
+   "ids": []
+  },
+  {
+   "q": "label:claim\tby:PSJ",
+   "ids": []
+  }
+ ]
+}

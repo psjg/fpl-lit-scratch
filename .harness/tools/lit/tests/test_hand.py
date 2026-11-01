@@ -497,3 +497,18 @@ def test_layer_is_read_from_the_labels() -> None:
 def cast_id(row: facts.Row) -> str:
     """A test row's id."""
     return str(row["id"])
+
+
+CASES = json.loads((Path(__file__).parent / "query_cases.json").read_text())
+
+
+@pytest.mark.parametrize(
+    "case", CASES["cases"], ids=lambda c: c["q"] or "empty"
+)
+def test_query_answers_each_shared_case(case: dict[str, object]) -> None:
+    """The query cases the overlay runs too (tests/test_query_js.py)."""
+    if "error" in case:
+        with pytest.raises(ValueError, match=str(case["error"])):
+            facts.query(CASES["rows"], str(case["q"]))
+    else:
+        assert facts.query(CASES["rows"], str(case["q"])) == case["ids"]
