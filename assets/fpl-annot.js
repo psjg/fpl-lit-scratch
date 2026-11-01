@@ -154,10 +154,11 @@
  * links. "Zelfde als…" on a card arms a pick; its end joins the chain.
  *
  * Querying across the layers (after PML-TQ, Pajas and Stepanek 2009):
- * a field under the filters takes terms [!]key:value, all to hold, the
- * same language as lit facts --query (facts.parse_query, facts.query)
- * and tested against the same cases (tests/query_cases.json): what it
- * finds stays, the rest fades.
+ * a field under the filters takes terms [!]key:value, all to hold, in
+ * groups apart by "|" of which one must hold, and has:R+N or gives:R+N
+ * for a chain of at least N R edges; the same language as lit facts
+ * --query (facts.parse_query, facts.query) and tested against the same
+ * cases (tests/query_cases.json): what it finds stays, the rest fades.
  */
 (() => {
   "use strict";
@@ -647,6 +648,7 @@
     const SETS = new Set(["coref", "parts"]);
     const KEYS = ["label", "layer", "by", "text", "has", "gives"];
     const LAYERS = ["span", "fact", "thread", "argument", "tfa", "coref", "relation"];
+    const CHAIN_BUDGET = 100000;   // steps one chain walk may take, rather than freeze the tab (lit's facts.CHAIN_BUDGET)
     const strs = (v) => Array.isArray(v) && v.every((x) => typeof x === "string");
     const first = (r) => (strs(r.labels) && r.labels.length ? r.labels[0] : "");
     function layer(r, by) {   // lit's facts.layer
@@ -660,47 +662,87 @@
       const up = strs(r.targets) && r.targets.length ? by.get(r.targets[0]) : undefined;
       return up !== undefined && !("item" in up) && first(up) !== "parts" ? "thread" : "fact";
     }
-    function parse(q) {
-      const out = [];
+    function parse(q) {   // groups of [neg, key, value, chain length, column]; a row is found when one group holds
+      const groups = [[]];
+      let bar = 0;   // the column of the last "|", 0 before any
       for (const m of q.matchAll(/[^ ]+/g)) {   // terms apart by U+0020 only, as lit
         const term = m[0], col = [...q.slice(0, m.index)].length + 1, neg = term.startsWith("!");   // columns in code points
+        if (term === "|") {   // "|" closes a group (PML-TQ's or)
+          if (!groups[groups.length - 1].length) throw new Error(`empty group at ${col}`);
+          groups.push([]);
+          bar = col;
+          continue;
+        }
         const rest = term.slice(neg ? 1 : 0), i = rest.indexOf(":");
-        const key = i < 0 ? "" : rest.slice(0, i), value = i < 0 ? "" : rest.slice(i + 1);
+        const key = i < 0 ? "" : rest.slice(0, i);
+        let value = i < 0 ? "" : rest.slice(i + 1), n = 0;
         if (i < 0 || !/^[a-z]+$/.test(key)) throw new Error(`no key:value at ${col}`);
         if (!KEYS.includes(key)) throw new Error(`unknown key '${key}' at ${col}`);
         if (!value) throw new Error(`empty value at ${col}`);
-        if ((key === "has" || key === "gives") && !RELS.has(value) && !SETS.has(value)) throw new Error(`'${value}' is no relation or set at ${col}`);
+        if (key === "has" || key === "gives") {   // R or R+N, N from 1 without leading zeros, past nine digits 1e9
+          const p = value.indexOf("+"), length = p < 0 ? "" : value.slice(p + 1);
+          if (p >= 0) value = value.slice(0, p);
+          if (!RELS.has(value) && !SETS.has(value)) throw new Error(`'${value}' is no relation or set at ${col}`);
+          if (p >= 0 && !/^[1-9][0-9]*$/.test(length)) throw new Error(`bad chain length at ${col}`);
+          n = p < 0 ? 0 : length.length > 9 ? 1e9 : Number(length);
+        }
         if (key === "layer" && !LAYERS.includes(value)) throw new Error(`'${value}' is no layer at ${col}`);
-        out.push([neg, key, value]);
+        groups[groups.length - 1].push([neg, key, value, n, col]);
       }
-      return out;
+      if (bar && !groups[groups.length - 1].length) throw new Error(`empty group at ${bar}`);
+      return groups;
     }
     function query(rows, q) {
-      const terms = parse(q), by = new Map(rows.filter((r) => typeof r.id === "string").map((r) => [r.id, r]));
-      const ends = new Map(), starts = new Map(), add = (m, k, x) => m.set(k, (m.get(k) ?? new Set()).add(x));
-      for (const r of rows) {
+      const groups = parse(q), by = new Map(rows.filter((r) => typeof r.id === "string").map((r) => [r.id, r]));
+      const add = (m, k, x) => m.set(k, (m.get(k) ?? new Set()).add(x));
+      const back = new Map(), ahead = new Map();   // kind -> node -> the nodes an edge joins it to, into it / out of it
+      const link = (m, k, a, b) => { if (!m.has(k)) m.set(k, new Map()); add(m.get(k), a, b); };
+      for (const r of rows) {   // lit's facts.relation_edges: no node joins itself
         const k = first(r), t = r.targets;
         if (!strs(t) || !t.length) continue;
-        for (const x of SETS.has(k) ? t : t.slice(1)) add(ends, k, x);
-        if (RELS.has(k)) add(starts, k, t[0]);
+        const edges = SETS.has(k) ? t.flatMap((a) => t.filter((b) => a !== b).map((b) => [a, b])) : t.slice(1).filter((b) => b !== t[0]).map((b) => [t[0], b]);
+        for (const [a, b] of edges) { link(ahead, k, a, b); link(back, k, b, a); }
       }
+      const reaches = (step, x, n) => {   // lit's facts.reaches: x reaches n other nodes, a count that stops there
+        const reach = new Set([x]), todo = [x];
+        while (todo.length && reach.size <= n) {   // pop outside step?.get(), which would skip it when step is undefined
+          const at = todo.pop();
+          for (const y of step?.get(at) ?? []) if (!reach.has(y)) { reach.add(y); todo.push(y); }
+        }
+        return reach.size > n;
+      };
+      const chain = (step, x, n, col) => {   // lit's facts.chained: a simple path of at least n edges from x along step
+        if (!reaches(step, x, n)) return false;   // too few nodes for n edges: no at once
+        const path = [x], seen = new Set([x]), nexts = [(step.get(x) ?? new Set()).values()];   // a walk on a stack of its own
+        let budget = CHAIN_BUDGET;
+        while (nexts.length) {
+          const it = nexts[nexts.length - 1];
+          let s = it.next();
+          while (!s.done && seen.has(s.value)) s = it.next();
+          if (s.done) { nexts.pop(); seen.delete(path.pop()); continue; }
+          if (path.length === n) return true;
+          if (--budget < 0) throw new Error(`chain too long to search at ${col}`);
+          path.push(s.value); seen.add(s.value); nexts.push((step.get(s.value) ?? new Set()).values());
+        }
+        return false;
+      };
       const about = (r) => {   // a fact on an address speaks for the address; one on a row, or a relation, only for itself
         const t0 = strs(r.targets) && r.targets.length ? r.targets[0] : null;
         const own = "item" in r || RELS.has(first(r)) || SETS.has(first(r));
         return own || !t0 || by.has(t0) ? [r.id] : [r.id, t0];
       };
-      const holds = (r, key, v) => {
+      const holds = (r, key, v, n, col) => {   // bare has:R is has:R+1; bare gives:R is gives:R+1 for a relation, never for a set
         const labels = strs(r.labels) ? r.labels : [];
         switch (key) {
           case "label": return labels.some((x) => x === v || x.startsWith(v + "/"));
           case "layer": return layer(r, by) === v;
           case "by": return r.by === v;
           case "text": return [r.text, r.note].filter((x) => typeof x === "string").join(" ").toLowerCase().includes(v.toLowerCase());
-          case "has": return about(r).some((x) => ends.get(v)?.has(x));
-          default: return about(r).some((x) => starts.get(v)?.has(x));
+          case "has": return about(r).some((x) => chain(back.get(v), x, n || 1, col));
+          default: return Boolean(n || RELS.has(v)) && about(r).some((x) => chain(ahead.get(v), x, n || 1, col));
         }
       };
-      return rows.filter((r) => typeof r.id === "string" && terms.every(([neg, k, v]) => holds(r, k, v) !== neg)).map((r) => r.id);
+      return rows.filter((r) => typeof r.id === "string" && groups.some((g) => g.every(([neg, k, v, n, col]) => holds(r, k, v, n, col) !== neg))).map((r) => r.id);
     }
     return { parse, query };
   })();
