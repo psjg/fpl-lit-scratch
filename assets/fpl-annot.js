@@ -149,6 +149,12 @@
  * the page carries its chain's number, as the PDT links an anaphor to its
  * antecedent (Mikulova et al. 2006, ch. 9) and a chain follows from the
  * links. "Zelfde als…" on a card arms a pick; its end joins the chain.
+ *
+ * Querying across the layers (after PML-TQ, Pajas and Stepanek 2009):
+ * a field under the filters takes terms [!]key:value, all to hold, the
+ * same language as lit facts --query (facts.parse_query, facts.query)
+ * and tested against the same cases (tests/query_cases.json): what it
+ * finds stays, the rest fades.
  */
 (() => {
   "use strict";
@@ -354,6 +360,7 @@
     for (const m of body.querySelectorAll("mark.fact")) m.replaceWith(...m.childNodes);
     body.normalize();
     all = rows();
+    if (asked) try { found = new Set(QUERY.query(all, asked)); } catch { found = null; }   // an edit changes what the query finds
     state = {};
     for (const row of all) {
       if (typeof row.text !== "string" || !row.text.trim()) continue;
@@ -405,7 +412,21 @@
         c.onclick = () => { const o = offLayers(); o.has(l) ? o.delete(l) : o.add(l); offLayers(o); draw(); };
         c.onkeydown = (e) => { if (e.key === " " || e.key === "Enter") { e.preventDefault(); c.onclick(); } };
         return c; }));
-    control.append(row, layers);
+    const field = el("input", { className: "fpl-query", placeholder: "zoek: label:claim !has:attacks", value: asked, autocomplete: "off", spellcheck: false });
+    const said = el("small", { className: "fpl-query-said" }, found ? `${found.size} gevonden` : "");
+    const ask = () => {
+      asked = field.value.replace(/^ +| +$/g, "");   // only U+0020 apart, as the parser
+      try { found = asked ? new Set(QUERY.query(all, asked)) : null; field.classList.remove("is-bad"); field.title = ""; }
+      catch (e) { found = null; fade(); field.classList.add("is-bad"); field.title = e.message; said.textContent = e.message; return; }
+      layout();
+      control.querySelector(".fpl-query")?.focus();
+    };
+    field.onkeydown = (e) => {
+      e.stopPropagation();   // j, k, a and Esc belong to the page, not while typing a query
+      if (e.key === "Enter") ask();
+      if (e.key === "Escape") { field.value = ""; ask(); }
+    };
+    control.append(row, layers, el("div", { className: "fpl-query-row" }, field, said));
   }
 
   /* ---- what a card shows ---- */
@@ -589,6 +610,88 @@
   }, true);
 
   /* ---- the graph: rows and what they name, laid out by force ---- */
+
+  /* query: begin. Self-contained: tests/test_query_js.py runs this block in node against tests/query_cases.json. */
+  const QUERY = (() => {
+    const RELS = new Set(["because", "supports", "attacks", "contradicts", "supersedes", "checkedBy", "cites", "resumes"]);
+    const SETS = new Set(["coref", "parts"]);
+    const KEYS = ["label", "layer", "by", "text", "has", "gives"];
+    const LAYERS = ["span", "fact", "thread", "argument", "tfa", "coref", "relation"];
+    const strs = (v) => Array.isArray(v) && v.every((x) => typeof x === "string");
+    const first = (r) => (strs(r.labels) && r.labels.length ? r.labels[0] : "");
+    function layer(r, by) {   // lit's facts.layer
+      const k = first(r);
+      if ("item" in r) return "span";
+      if (k === "parts") return "span";
+      if (k === "coref") return "coref";
+      if (k === "resumes" || k.startsWith("tfa/")) return "tfa";
+      if (k === "supports" || k === "attacks") return "argument";
+      if (RELS.has(k)) return "relation";
+      const up = strs(r.targets) && r.targets.length ? by.get(r.targets[0]) : undefined;
+      return up !== undefined && !("item" in up) && first(up) !== "parts" ? "thread" : "fact";
+    }
+    function parse(q) {
+      const out = [];
+      for (const m of q.matchAll(/[^ ]+/g)) {   // terms apart by U+0020 only, as lit
+        const term = m[0], col = [...q.slice(0, m.index)].length + 1, neg = term.startsWith("!");   // columns in code points
+        const rest = term.slice(neg ? 1 : 0), i = rest.indexOf(":");
+        const key = i < 0 ? "" : rest.slice(0, i), value = i < 0 ? "" : rest.slice(i + 1);
+        if (i < 0 || !/^[a-z]+$/.test(key)) throw new Error(`no key:value at ${col}`);
+        if (!KEYS.includes(key)) throw new Error(`unknown key '${key}' at ${col}`);
+        if (!value) throw new Error(`empty value at ${col}`);
+        if ((key === "has" || key === "gives") && !RELS.has(value) && !SETS.has(value)) throw new Error(`'${value}' is no relation or set at ${col}`);
+        if (key === "layer" && !LAYERS.includes(value)) throw new Error(`'${value}' is no layer at ${col}`);
+        out.push([neg, key, value]);
+      }
+      return out;
+    }
+    function query(rows, q) {
+      const terms = parse(q), by = new Map(rows.filter((r) => typeof r.id === "string").map((r) => [r.id, r]));
+      const ends = new Map(), starts = new Map(), add = (m, k, x) => m.set(k, (m.get(k) ?? new Set()).add(x));
+      for (const r of rows) {
+        const k = first(r), t = r.targets;
+        if (!strs(t) || !t.length) continue;
+        for (const x of SETS.has(k) ? t : t.slice(1)) add(ends, k, x);
+        if (RELS.has(k)) add(starts, k, t[0]);
+      }
+      const about = (r) => {   // a fact on an address speaks for the address; one on a row, or a relation, only for itself
+        const t0 = strs(r.targets) && r.targets.length ? r.targets[0] : null;
+        const own = "item" in r || RELS.has(first(r)) || SETS.has(first(r));
+        return own || !t0 || by.has(t0) ? [r.id] : [r.id, t0];
+      };
+      const holds = (r, key, v) => {
+        const labels = strs(r.labels) ? r.labels : [];
+        switch (key) {
+          case "label": return labels.some((x) => x === v || x.startsWith(v + "/"));
+          case "layer": return layer(r, by) === v;
+          case "by": return r.by === v;
+          case "text": return [r.text, r.note].filter((x) => typeof x === "string").join(" ").toLowerCase().includes(v.toLowerCase());
+          case "has": return about(r).some((x) => ends.get(v)?.has(x));
+          default: return about(r).some((x) => starts.get(v)?.has(x));
+        }
+      };
+      return rows.filter((r) => typeof r.id === "string" && terms.every(([neg, k, v]) => holds(r, k, v) !== neg)).map((r) => r.id);
+    }
+    return { parse, query };
+  })();
+  /* query: end */
+  let asked = "", found = null;   // the query in the field, and the ids it finds (null: no query)
+  /** Fade what the query does not find: a card stays when its row or a row in it is found, a span when its card stays. */
+  function fade() {
+    for (const n of document.querySelectorAll(".fpl-faded")) n.classList.remove("fpl-faded");
+    if (!found) return;
+    const stays = new Set();   // a row found, and the rows its thread hangs from, up to a span or an address
+    for (const id of found) for (let r = all.find((x) => x.id === id), been = new Set(); r && !been.has(r.id); been.add(r.id), r = all.find((x) => x.id === r.targets?.[0])) {
+      stays.add(r.id);
+      for (const g of groupOf(r.id)) stays.add(g);
+    }
+    for (const c of document.querySelectorAll(".fpl-card")) {   // inline cards too, on a narrow screen
+      const ids = [c.dataset.id, ...[...c.querySelectorAll("[data-fact]")].map((x) => x.dataset.fact)];
+      if (!ids.some((i) => stays.has(i))) c.classList.add("fpl-faded");
+    }
+    for (const m of body.querySelectorAll("mark.fact")) if (!stays.has(m.dataset.id)) m.classList.add("fpl-faded");
+    for (const e of body.querySelectorAll("[data-tfa-row]")) if (!found.has(e.dataset.tfaRow)) e.classList.add("fpl-faded");
+  }
 
   const SETKINDS = new Set(["coref", "parts"]);
   /**
@@ -1009,6 +1112,7 @@
       }
     }
     lens();   // last: the cards placed inline move the clauses it measures
+    fade();
   }
 
   /** A line from the end of each span to its card, in the span's colour. */
@@ -1123,12 +1227,12 @@
   }
   function lens() {
     chainMarks();
-    for (const e of body.querySelectorAll("[data-tfa]")) delete e.dataset.tfa;
+    for (const e of body.querySelectorAll("[data-tfa]")) { delete e.dataset.tfa; delete e.dataset.tfaRow; }
     document.querySelector(".fpl-arcs")?.remove();
     if (mode() === "lezen" || offLayers().has("tfa")) return;
     for (const r of all) {
       const v = TFA.includes(r.labels?.[0]) && r.labels[0], e = v && document.getElementById(r.targets?.[0]);
-      if (e && body.contains(e)) e.dataset.tfa = v.slice(4);
+      if (e && body.contains(e)) { e.dataset.tfa = v.slice(4); e.dataset.tfaRow = r.id; }
     }
     const arcs = all.filter((r) => r.labels?.[0] === "resumes" && r.targets?.length === 2 && shows(r))
       .map((r) => [r, ...r.targets.map((t) => document.getElementById(t))])

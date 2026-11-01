@@ -261,3 +261,13 @@ body.fpl-picking .fpl-c[id], body.fpl-picking .fpl-s[id] { cursor: crosshair; }
 
 /* the coref lens: each member carries its chain's number */
 .fpl-chain { font: 700 .58em var(--bs-font-sans-serif, sans-serif); color: var(--fpl-mine); margin-left: .1em; user-select: none; }
+
+/* querying across the layers */
+.fpl-query-row { display: flex; align-items: baseline; gap: .4rem; margin-top: .3rem; }
+.fpl-query { flex: 1; min-width: 0; font: .78rem ui-monospace, SFMono-Regular, monospace; padding: .15rem .4rem;
+  border: 1px solid var(--fpl-rule); border-radius: 4px; background: var(--fpl-bg); color: var(--fpl-fg); }
+.fpl-query.is-bad { border-color: var(--fpl-con); }
+.fpl-query-said { color: var(--fpl-mute); white-space: nowrap; }
+.fpl-card.fpl-faded { opacity: .25; }
+mark.fact.fpl-faded { text-decoration-color: transparent; }
+.fpl-c[data-tfa].fpl-faded, .fpl-s[data-tfa].fpl-faded { background: none; box-shadow: none; }
