@@ -137,6 +137,9 @@
  * an undercut has something to aim at (AIF); a fact hangs from what it is
  * about. "Graph" in the margin's head shows the page, "Graph" on a card
  * that row and what lies within two steps; a click on a node goes there.
+ * Beside the rows stand the page's chunks and the files they tangle to,
+ * from <stem>.graph.json (lit graph, written at publish): a chunk uses
+ * chunks, tangles to a file, and a row may name a chunk.
  *
  * Discontinuous spans: a parts row bundles span rows as the pieces of
  * one span (Mueller 2005 keeps such a span as several token ranges). Its
@@ -699,11 +702,15 @@
    * names; a relation row (or set) is a node between its ends, a fact an
    * edge to what it is about. Edges carry the relation's label.
    */
+  let code = null;   // the page's code graph (lit graph), when the site shipped one
+  const coded = (snap ? Promise.resolve(snap.graph ?? null) : fetch(`${stem}.graph.json`).then((r) => (r.ok ? r.json() : null)))
+    .catch(() => null).then((g) => { code = g && Array.isArray(g.nodes) && Array.isArray(g.edges) ? g : null; });
   function graphOf() {
     const nodes = new Map(), edges = [];
+    const kinds = new Map((code?.nodes ?? []).map((n) => [n.id, n.kind]));
     const kindOf = (id) => {
       const r = all.find((x) => x.id === id);
-      return r ? layerOf(r) : document.getElementById(id) ? "address" : "elders";
+      return r ? layerOf(r) : kinds.get(id) ?? (document.getElementById(id) ? "address" : "elders");
     };
     const node = (id) => nodes.get(id) ?? nodes.set(id, { id, kind: kindOf(id), x: 0, y: 0, dx: 0, dy: 0 }).get(id);
     for (const r of all.filter(shows)) {
@@ -716,7 +723,27 @@
       } else if (SETKINDS.has(k)) for (const t of ts) edges.push({ a: node(r.id), b: node(t), label: k });
       else if (ts[0]) edges.push({ a: node(r.id), b: node(ts[0]), label: "over" });
     }
+    for (const n of code?.nodes ?? []) node(n.id).label = n.label;
+    // a tangle edge carries no word, its width says how many lines it gives (many labels at one file hide each other)
+    for (const e of code?.edges ?? []) edges.push({ a: node(e.a), b: node(e.b), label: e.label === "tangles" ? "" : e.label, lines: e.n ?? 0 });
     return { nodes: [...nodes.values()], edges };
+  }
+  /**
+   * The code block a chunk stands in: the k-th block whose header names
+   * it (k from the chunk id). The header is the block's first line,
+   * <<[number ]name, read as lit's web.HEAD reads it and normalised as
+   * web.norm does; a use (<<name>>) inside another block is no header.
+   */
+  function chunkBlock(id) {
+    const n = code?.nodes.find((x) => x.id === id);
+    if (!n || n.kind !== "chunk") return null;
+    const norm = (x) => x.split(/\s+/).filter(Boolean).join(" ");
+    const head = (b) => {
+      const m = /^<<([^<>\n]+)/.exec(b.textContent.replace(/^\s+/, ""));
+      return m ? norm(m[1].replace(/^[\d.]+\s+/, "").replace(/>>\+?=?\s*$/, "")) : null;
+    };
+    const k = Number(id.split(":").at(-1)) || 1;
+    return [...body.querySelectorAll('.fpl-p[data-kind="C"]')].filter((b) => head(b) === norm(n.label))[k - 1] ?? null;
   }
   /** The part of a graph within two steps of an id. */
   function near({ nodes, edges }, id, steps = 2) {
@@ -760,11 +787,12 @@
     }
   }
   /** Open the graph over the page: all of it, or the part around an id. Esc or a click outside closes it. */
-  function graph(id) {
+  async function graph(id) {
+    await coded;   // the code graph first: a panel drawn before it came would lack the chunks
     document.querySelector(".fpl-graph")?.remove();
     const g = id ? near(graphOf(), id) : graphOf();
     const css = getComputedStyle(document.documentElement);
-    const color = (n) => css.getPropertyValue({ span: "--fpl-vers", argument: "--fpl-con", tfa: "--fpl-lost",
+    const color = (n) => css.getPropertyValue({ chunk: "--fpl-fg", file: "--fpl-mine", span: "--fpl-vers", argument: "--fpl-con", tfa: "--fpl-lost",
       coref: "--fpl-mine", relation: "--fpl-mute", address: "--fpl-mute", elders: "--fpl-rule" }[n.kind] ?? "--fpl-fg").trim() || "#888";
     const W = Math.max(320, Math.min(innerWidth - 32, 1100)), H = Math.max(240, Math.min(innerHeight - 96, 760)), dpr = devicePixelRatio || 1;
     const opener = document.activeElement;
@@ -777,7 +805,7 @@
     const close = () => { panel.remove(); opener?.focus?.(); };
     /** Where a node goes: its own place, else that of what it is about, followed up its first targets. */
     const goal = (nid, been = new Set()) => {
-      const e = place(nid);
+      const e = place(nid) ?? chunkBlock(nid);
       if (e || been.has(nid)) return e;
       been.add(nid);
       const r = all.find((x) => x.id === nid);
@@ -797,6 +825,7 @@
     ctx.lineWidth = 1;
     for (const e of g.edges) {
       ctx.strokeStyle = css.getPropertyValue("--fpl-rule").trim() || "#ccc";
+      ctx.lineWidth = e.lines ? 1 + Math.log2(e.lines) : 1;
       ctx.beginPath(); ctx.moveTo(e.a.x, e.a.y); ctx.lineTo(e.b.x, e.b.y); ctx.stroke();
       if (e.label) { ctx.fillStyle = css.getPropertyValue("--fpl-mute").trim() || "#777"; ctx.fillText(e.label, (e.a.x + e.b.x) / 2 + 3, (e.a.y + e.b.y) / 2 - 3); }
     }
@@ -808,7 +837,9 @@
       else ctx.arc(n.x, n.y, n.id === id ? 8 : 5, 0, 2 * Math.PI);
       ctx.fill();
       ctx.fillStyle = css.getPropertyValue("--fpl-fg").trim() || "#222";
-      ctx.fillText(n.id.length > 28 ? n.id.slice(0, 27) + "…" : n.id, n.x + 8, n.y + 4);
+      const name = n.label ?? n.id;   // a chunk or file by its name, a row by its id
+      if (n.kind === "chunk" || n.kind === "file") { ctx.fillStyle = color(n); ctx.fillRect(n.x - 4, n.y - 4, 8, 8); ctx.fillStyle = css.getPropertyValue("--fpl-fg").trim() || "#222"; }
+      ctx.fillText(name.length > 28 ? name.slice(0, 27) + "…" : name, n.x + 8, n.y + 4);
     }
     cv.onclick = (ev) => {
       const r = cv.getBoundingClientRect(), x = ev.clientX - r.left, y = ev.clientY - r.top;
