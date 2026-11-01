@@ -24,6 +24,7 @@
                                  the sidecar's hand rows in the
                                  program's shape, as one JSON array
     lit facts --query Q PAGE     the hand rows of PAGE that query Q
+    lit facts --argdown ID PAGE  the argument tree on ID, as Argdown
                                  finds, one per line: id, labels, text
                                  or note (facts.parse_query)
     lit graph [PAGE ...]         each page's chunks, their uses and the
@@ -363,10 +364,26 @@ def cmd_query(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_argdown(args: argparse.Namespace) -> int:
+    """Print the argument tree on one claim of a page as Argdown."""
+    if len(args.pages) != 1:
+        return usage("--argdown needs one PAGE")
+    rows, bad = facts.generate(Path(args.pages[0]), args.root)
+    if bad:
+        return report(bad, "facts", 1)
+    try:
+        sys.stdout.write(facts.argdown(rows, args.argdown))
+    except ValueError as e:
+        return usage(f"--argdown: {e}")
+    return 0
+
+
 def cmd_facts(args: argparse.Namespace) -> int:
     """Write, query, import or export a page's fact layer."""
     if args.query is not None:
         return cmd_query(args)
+    if args.argdown is not None:
+        return cmd_argdown(args)
     if args.source is not None:
         return cmd_import(args)
     if args.export is not None:
@@ -551,6 +568,7 @@ def parser() -> argparse.ArgumentParser:
     mode.add_argument("--import", dest="source", type=Path)
     mode.add_argument("--export", type=Path)
     mode.add_argument("--query")
+    mode.add_argument("--argdown")
     p.add_argument("--item", type=label)
     p.add_argument("--out", type=Path)
     p.add_argument("pages", nargs="*")

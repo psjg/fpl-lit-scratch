@@ -512,3 +512,74 @@ def test_query_answers_each_shared_case(case: dict[str, object]) -> None:
             facts.query(CASES["rows"], str(case["q"]))
     else:
         assert facts.query(CASES["rows"], str(case["q"])) == case["ids"]
+
+
+WEIGHED: list[facts.Row] = [
+    {"id": "c", "item": "p.md", "start": 2, "end": 6, "text": "Demo"},
+    {"id": "p", "note": "a [premise]", "targets": ["c"]},
+    {"id": "o", "note": "an\nobjection", "targets": ["c"]},
+    {"id": "s", "labels": ["supports"], "targets": ["p", "c"], "weight": 4},
+    {"id": "a", "labels": ["attacks"], "targets": ["o", "c"]},
+    {"id": "u", "labels": ["attacks"], "targets": ["o", "s"], "weight": 1},
+    {"id": "b", "labels": ["supports"], "targets": ["c", "p"]},
+    {"id": "w0", "labels": ["supports"], "targets": ["o", "p"], "weight": 0},
+    {"id": "w6", "labels": ["attacks"], "targets": ["o", "p"], "weight": 6},
+    {
+        "id": "wb",
+        "labels": ["supports"],
+        "targets": ["o", "p"],
+        "weight": True,
+    },
+    {"id": "wn", "labels": ["note"], "targets": ["c"], "weight": 3},
+]
+
+
+def test_a_weight_is_one_to_five_on_an_arguing_row() -> None:
+    """Kialo's impact: an integer 1 to 5, only where a row argues."""
+    got = facts.validate(WEIGHED, "p.facts.json", {"p.md": "# Demo"}, set())
+    assert {(f.line, f.rule) for f in got} == {
+        (8, "lit-facts-argument"),
+        (9, "lit-facts-argument"),
+        (10, "lit-facts-field"),
+        (11, "lit-facts-argument"),
+    }
+
+
+def test_argdown_writes_the_tree_with_weights_and_undercuts() -> None:
+    """Arguments named by row, ``<_`` on an inference, a cycle named."""
+    rows = WEIGHED[:7]
+    assert facts.argdown(rows, "c") == (
+        "[c]: Demo\n"
+        "  <+ <s>: a (premise) {weight: 4}\n"
+        "    <_ <u>: an objection {weight: 1}\n"
+        "    <+ <b>: Demo\n"
+        "      <+ <s>\n"
+        "      <- <a>\n"
+        "  <- <a>: an objection\n"
+    )
+    with pytest.raises(ValueError, match="names no row"):
+        facts.argdown(rows, "nothing")
+
+
+def test_argdown_keeps_undercuts_shared_premises_and_text() -> None:
+    """An arguing root is an argument; a shared premise grounds both."""
+    rows: list[facts.Row] = [
+        {"id": "c", "note": "claim {weight: 5} #tag"},
+        {"id": "p", "note": "premise"},
+        {"id": "o", "note": "objection"},
+        {"id": "s1", "labels": ["supports"], "targets": ["p", "c"]},
+        {"id": "s2", "labels": ["supports"], "targets": ["p", "c"]},
+        {"id": "t", "labels": ["attacks"], "targets": ["o", "p"]},
+        {"id": "u", "labels": ["attacks"], "targets": ["o", "s1"]},
+    ]
+    assert facts.argdown(rows, "c") == (
+        "[c]: claim (weight: 5) # tag\n"
+        "  <+ <s1>: premise\n"
+        "    <_ <u>: objection\n"
+        "    <- <t>: objection\n"
+        "  <+ <s2>: premise\n"
+        "    <- <t>\n"
+    )
+    assert facts.argdown(rows, "s1") == (
+        "<s1>: premise\n  <_ <u>: objection\n  <- <t>: objection\n"
+    )

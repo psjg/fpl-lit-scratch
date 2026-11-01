@@ -202,6 +202,17 @@ premise may serve two claims; a card shows the tree read from its row as `Argume
 attack, a cycle marked where it closes. `Steunt…` and `Valt aan…` on a card arm a pick: the
 next click on a span, card, fact or branch is the end of a new row, and Esc cancels it.
 
+An arguing row may carry a `weight`, an integer 1 to 5 (Kialo's impact): how much the reader
+thinks the inference bears. `lit facts` refuses a weight outside 1 to 5 or on a row that does
+not argue (`lit-facts-argument`). The tree shows it as five dots after the branch, the count
+adds `gewicht 4 : 2` (the weights for and against, summed one level down), and the graph draws
+the edge that wide. On a row of the browser a dot sets the weight and the lit last dot clears
+it; a sidecar row's weight changes only through `lit facts`. `lit facts --argdown ID PAGE`
+prints the tree on `ID` as Argdown (https://argdown.org/syntax/): the claim as `[ID]`, each
+arguing row as an argument `<row>` described by its source and carrying `{weight: n}`, `<+`
+for a support, `<-` for an attack, and `<_` for an attack on an inference, since Argdown's
+undercut holds between arguments only. A row met again is named without its description.
+
 ### Layers
 
 The rows stack in layers after the Prague Dependency Treebank (Pajas & Štěpánek 2008, PML,

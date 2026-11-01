@@ -536,6 +536,7 @@ FIELDS: dict[str, type] = {
     "targets": list,
     "commit": str,
     "by": str,
+    "weight": int,
     "createdAt": int,
     "updatedAt": int,
 }
@@ -550,6 +551,9 @@ STAMPS = ("createdAt", "updatedAt")
 # its own an ``attacks`` row may aim at it (an undercut: the inference
 # is attacked, not its premise or its conclusion).
 ARGUING = frozenset({"supports", "attacks"})
+# How much an arguing row bears, 1 to 5 (Kialo's impact): a reader's
+# judgement of the inference, kept on the row that stands for it.
+WEIGHTS = range(1, 6)
 # A clause that takes up an earlier one (Danes 1974, thematic
 # progression): ``targets[0]``, the bound clause, -> ``targets[1]``.
 RESUMES = "resumes"
@@ -940,7 +944,7 @@ def field_faults(row: Row) -> Iterator[str]:
             ]
         ):
             yield f"label {odd[0]!r} is no name/scope/... path"
-        elif key in {"note", "commit", "by", *QUOTE, *STAMPS} and (
+        elif key in {"note", "commit", "by", "weight", *QUOTE, *STAMPS} and (
             type(value) is not want
         ):
             yield f"{key} must be a {want.__name__}"
@@ -1019,13 +1023,15 @@ def argument_faults(row: Row) -> Iterator[str]:
     """What keeps a ``supports`` or ``attacks`` row from arguing.
 
     It reads ``targets[0]`` -> ``targets[1:]``: one source, at least one
-    end, none of them the row itself or its own source. Nothing for any
+    end, none of them the row itself or its own source. A ``weight``
+    is 1 to 5 and only an arguing row bears one. Nothing else for any
     other row.
     """
     labels, targets = row.get("labels"), row.get("targets", [])
-    if not strings(labels) or not cast("list[str]", labels)[:1]:
+    kind = first(row)
+    yield from weight_faults(row, kind)
+    if not strings(labels) or not kind:
         return
-    kind = cast("list[str]", labels)[0]
     if kind not in ARGUING | {RESUMES} or not strings(targets):
         return
     ts = cast("list[str]", targets)
@@ -1037,6 +1043,15 @@ def argument_faults(row: Row) -> Iterator[str]:
         yield f"{kind} row {row.get('id')!r} names itself"
     elif ts[0] in ts[1:]:
         yield f"{kind} runs from {ts[0]!r} to itself"
+
+
+def weight_faults(row: Row, kind: str) -> Iterator[str]:
+    """A weight off an arguing row, or outside 1 to 5."""
+    weight = row.get("weight")
+    if "weight" in row and kind not in ARGUING:
+        yield "only a supports or attacks row has a weight"
+    elif type(weight) is int and weight not in WEIGHTS:
+        yield f"weight {weight} is not 1 to 5"
 
 
 def first(row: Row) -> str:
@@ -1126,6 +1141,91 @@ def layer(row: Row, rows: Mapping[str, Row]) -> str:
     up = rows.get(cast("list[str]", ts)[0]) if strings(ts) and ts else None
     spanlike = up is None or "item" in up or first(up) == "parts"
     return "fact" if spanlike else "thread"
+
+
+def argdown(rows: list[Row], claim: str) -> str:
+    """The argument tree on ``claim`` as Argdown text (argdown.org).
+
+    The claim is a statement ``[claim]``, or an argument ``<claim>``
+    when it is an arguing row itself; each arguing row that ends at it
+    is an argument named by the row's id, ``<+ <r>`` when it supports
+    and ``<- <r>`` when it attacks, described by what its source says
+    and carrying its ``{weight: n}``. Under an argument come first the
+    rows that end at the row itself, the inference (``<_`` for an
+    attack: Argdown's undercut, which holds only between arguments;
+    ``<+`` for a support), then those that end at its source. A row met
+    again is named and not described, so the text grows with the rows
+    and stops at a cycle, as the tree on the page does; a premise two
+    arguments share names its grounds under both. Argdown's markup in a
+    text (brackets, braces, a tag's ``#``) is defused.
+
+    Raises:
+        ValueError: when no row or address is ``claim``.
+    """
+    byid = {
+        cast("str", r["id"]): r for r in rows if isinstance(r.get("id"), str)
+    }
+    if claim not in byid and not ADDRESS.fullmatch(claim):
+        raise ValueError(f"{claim!r} names no row")
+
+    def says(rid: str) -> str:
+        return defused(byid.get(rid, {}), rid)
+
+    def tree(rid: str, depth: int, inference: bool, expand: bool) -> None:
+        for r in grounds(rows, rid):
+            name = cast("str", r["id"])
+            src = cast("list[str]", r["targets"])[0]
+            sign = "+" if first(r) == "supports" else "_" if inference else "-"
+            line = f"{'  ' * depth}<{sign} <{name}>"
+            if name in drawn or not expand:
+                out.append(line)
+                continue
+            drawn.add(name)
+            out.append(f"{line}: {says(src)}{weight(r)}")
+            below(name, src, depth + 1)
+
+    def below(name: str, src: str, depth: int) -> None:
+        tree(name, depth, True, True)
+        tree(src, depth, False, src not in drawn)
+        drawn.add(src)
+
+    drawn = {claim}
+    root = byid.get(claim, {})
+    if first(root) in ARGUING and strings(root.get("targets")):
+        src = cast("list[str]", root["targets"])[0]
+        out = [f"<{claim}>: {says(src)}{weight(root)}"]
+        below(claim, src, 1)
+    else:
+        out = [f"[{claim}]: {says(claim)}"]
+        tree(claim, 1, False, True)
+    return "\n".join(out) + "\n"
+
+
+def defused(row: Row, rid: str) -> str:
+    """What a row says on one line, its Argdown markup defused."""
+    said = " ".join(str(row.get("note") or row.get("text") or rid).split())
+    return re.sub(r"#(?=\S)", "# ", said.translate(DEFUSE))
+
+
+def grounds(rows: list[Row], rid: str) -> list[Row]:
+    """The arguing rows that end at ``rid``."""
+    return [
+        r
+        for r in rows
+        if first(r) in ARGUING
+        and strings(ts := r.get("targets"))
+        and rid in cast("list[str]", ts)[1:]
+    ]
+
+
+def weight(row: Row) -> str:
+    """An arguing row's weight as Argdown data, or ``""``."""
+    return f" {{weight: {row['weight']}}}" if "weight" in row else ""
+
+
+# The Argdown markup a text must not carry: a title's brackets, the
+# braces of data. A tag's ``#`` is split from its word instead.
+DEFUSE = str.maketrans("[]{}", "()()")
 
 
 QUERY_KEYS = ("label", "layer", "by", "text", "has", "gives")
@@ -1534,7 +1634,7 @@ def ground(
 # The keys a row of the annotation program may carry over, besides
 # its id and its span, in the order a sidecar row writes them: ``by``
 # is who wrote it, a person's name or an agent's model id.
-TOOL_KEYS = ("labels", "note", "targets", "by", *STAMPS)
+TOOL_KEYS = ("labels", "note", "targets", "by", "weight", *STAMPS)
 
 
 @dataclass(frozen=True)
@@ -1613,6 +1713,10 @@ def import_faults(row: Row, seen: set[str]) -> Iterator[str]:
         yield "targets must be a list of strings"
     if "by" in row and not isinstance(row["by"], str):
         yield "by must be a string"
+    if "weight" in row and (
+        type(row["weight"]) is not int or row["weight"] not in WEIGHTS
+    ):
+        yield "weight must be an integer 1 to 5"
     for key in STAMPS:
         if key in row and type(row[key]) is not int:
             yield f"{key} must be an integer"
