@@ -104,11 +104,26 @@
  * row, grounds under the claim, undercuts under the inference they
  * attack. "Steunt…" and "Valt aan…" on a card arm a pick: the next
  * click on a span, a card, a fact or a branch of a tree is the end.
+ *
+ * Layers, after the Prague Dependency Treebank's stacked annotation:
+ * only a span anchors in the text, every other row names an id. A row's
+ * layer is read from what it is, as lit's facts.layer reads it (span,
+ * fact, thread, argument, tfa, coref, relation), and a row of chips
+ * under the label filter hides a layer. A coref row groups ids that name
+ * one referent: hovering one lights the others. The tfa lens marks a
+ * clause t (bound), c (bound, contrastive) or f (not bound), after the
+ * t-layer manual (Mikulova et al. 2006): Alt-click a clause cycles its
+ * value. A resumes row says a clause takes up an earlier one (Danes
+ * 1974); Alt-Shift-click a clause arms the pick, and the left gutter
+ * draws each such link as an arc, so the thematic progression shows.
  */
 (() => {
   "use strict";
   const LABELS = ["reason", "claim", "question", "history", "slop", "good",
-    "because", "supports", "attacks", "contradicts", "cites", "checkedBy"];
+    "because", "supports", "attacks", "contradicts", "cites", "checkedBy",
+    "resumes", "coref", "parts", "tfa/t", "tfa/c", "tfa/f"];
+  const LAYERS = ["span", "fact", "thread", "argument", "tfa", "coref", "relation"];
+  const RELATIONS = new Set(["because", "supports", "attacks", "contradicts", "supersedes", "checkedBy", "cites", "resumes"]);
   const AROUND = 32;
   const SKIP = "script, style, button, .fpl-annot-ui";
   const QUOTE = { "‘": "'", "’": "'", "“": '"', "”": '"' };
@@ -143,6 +158,13 @@
     try {
       if (set) localStorage.setItem("fpl-annot:hide", JSON.stringify([...set]));
       return new Set(JSON.parse(localStorage.getItem("fpl-annot:hide") || "[]"));
+    } catch { return set ?? new Set(); }
+  };
+
+  const offLayers = (set) => {
+    try {
+      if (set) localStorage.setItem("fpl-annot:layers", JSON.stringify([...set]));
+      return new Set(JSON.parse(localStorage.getItem("fpl-annot:layers") || "[]"));
     } catch { return set ?? new Set(); }
   };
 
@@ -240,16 +262,30 @@
     const e = at && !all.some((r) => r.id === at) && document.getElementById(at);
     return e && body.contains(e) ? [e] : [];
   }
-  const addressed = (r) => typeof r.text !== "string" && anchorsOf(r.id).length > 0;
+  // a tfa row is drawn by the lens on its clause, not as a card
+  const addressed = (r) => typeof r.text !== "string" && layerOf(r) !== "tfa" && anchorsOf(r.id).length > 0;
 
   /** Every row, the sidecar's first, each marked mine when it is local. */
   const rows = () => [...sidecar, ...local().map((r) => ({ ...r, mine: true }))];
   let all = [], state = {};
 
-  /** The labels a span is filtered by: its own and those of the facts about it. */
+  /** A row's layer, read as lit's facts.layer reads it: never written down. */
+  function layerOf(r) {
+    const k = r.labels?.[0] ?? "";
+    if (typeof r.text === "string" || k === "parts") return "span";
+    if (k === "supports" || k === "attacks") return "argument";
+    if (k === "resumes" || k.startsWith("tfa/")) return "tfa";
+    if (k === "coref") return "coref";
+    if (RELATIONS.has(k)) return "relation";
+    const up = all.find((x) => x.id === r.targets?.[0]);
+    return up && typeof up.text !== "string" && up.labels?.[0] !== "parts" ? "thread" : "fact";
+  }
+  const shows = (r) => !offLayers().has(layerOf(r));
+
+  /** The labels a span is filtered by: its own and those of the facts about it, in the layers shown. */
   function labelsOf(row) {
     const got = new Set(row.labels ?? []);
-    const walk = (id) => { for (const r of all.filter((x) => typeof x.text !== "string" && x.targets?.[0] === id)) {
+    const walk = (id) => { for (const r of all.filter((x) => typeof x.text !== "string" && x.targets?.[0] === id && shows(x))) {
       for (const l of r.labels ?? []) got.add(l); walk(r.id); } };
     walk(row.id);
     return got.size ? got : new Set([NONE]);
@@ -289,7 +325,14 @@
         c.onkeydown = (e) => { if (e.key === " " || e.key === "Enter") { e.preventDefault(); c.onclick(); } };
         return c; }),
       off.size ? button("alles", () => { hidden(new Set()); draw(); }, "fpl-link") : null);
-    control.append(row);
+    const offL = offLayers(), present = new Set(all.map(layerOf));
+    const layers = el("div", { className: "fpl-chips fpl-filter fpl-layers" }, el("small", {}, "lagen"),
+      ...LAYERS.filter((l) => present.has(l) && l !== "span").map((l) => {
+        const c = chip(l, offL.has(l) ? "is-off" : "is-on"); c.tabIndex = 0;
+        c.onclick = () => { const o = offLayers(); o.has(l) ? o.delete(l) : o.add(l); offLayers(o); draw(); };
+        c.onkeydown = (e) => { if (e.key === " " || e.key === "Enter") { e.preventDefault(); c.onclick(); } };
+        return c; }));
+    control.append(row, layers);
   }
 
   /* ---- what a card shows ---- */
@@ -298,7 +341,7 @@
     const [head, sub] = label.split(/\/(.*)/);
     return el("span", { className: "fpl-chip " + cls }, head, sub ? el("small", {}, "/" + sub) : null);
   };
-  const facts = (id) => all.filter((r) => typeof r.text !== "string" && r.targets?.[0] === id);
+  const facts = (id) => all.filter((r) => typeof r.text !== "string" && r.targets?.[0] === id && shows(r));
 
   /** A fact about something: a relation line or labels, its note, and the facts about it. */
   const reply = (id, at) => button("Reageer", (ev) => {
@@ -360,7 +403,7 @@
   const ARGUING = ["supports", "attacks"];
   const kindOf = (r) => ARGUING.includes(r.labels?.[0]) ? r.labels[0] : null;
   /** The supports and attacks rows ending at an id: a claim's grounds and attackers, an inference's undercuts. */
-  const grounds = (id) => all.filter((r) => kindOf(r) && (r.targets ?? []).slice(1).includes(id));
+  const grounds = (id) => all.filter((r) => kindOf(r) && shows(r) && (r.targets ?? []).slice(1).includes(id));
   /** One line of what an id says: its row's note or text, else the text where it shows, else the id. */
   function gist(id) {
     const r = all.find((x) => x.id === id);
@@ -431,15 +474,17 @@
   /** The pick's click: the row under it, from the innermost of a branch, a fact, a card, a span or a block. */
   document.addEventListener("click", (ev) => {
     if (!picking) return;
-    const at = ev.target.closest?.("li[data-id], [data-fact], .fpl-card, mark.fact, .fpl-p[id]");
+    const at = ev.target.closest?.(picking.kind === "resumes" ? ".fpl-c[id], .fpl-s[id]:not(:has(.fpl-c))"
+      : "li[data-id], [data-fact], .fpl-card, mark.fact, .fpl-c[id], .fpl-s[id], .fpl-p[id]");
     if (!at) return;
     ev.preventDefault();
-    ev.stopPropagation();
-    const to = at.dataset.fact ?? (at.matches(".fpl-p") ? at.id : at.dataset.id);
+    ev.stopImmediatePropagation();   // the Alt listener below must not see a pick's click
+    const to = at.dataset.fact ?? (at.matches(".fpl-p, .fpl-s, .fpl-c") ? at.id : at.dataset.id);
     const { from, kind } = picking;
     unpick();
     picked = performance.now();
     if (to === from) { toast("Een rij argumenteert niet over zichzelf"); return; }
+    if (all.some((r) => r.labels?.[0] === kind && r.targets?.[0] === from && r.targets?.[1] === to)) { toast("Die rij is er al"); return; }
     save({ targets: [from, to] }, { note: "", labels: [kind] });
     opened.add(to);
     draw();
@@ -561,6 +606,8 @@
     else mine.push({ id: `a-${now.toString(36)}${Math.random().toString(36).slice(2, 6)}`,
       item, commit, by: by() || undefined, targets: [], ...done, createdAt: now });
     keep(mine);
+    const l = layerOf(done), off = offLayers();
+    if (off.delete(l)) { offLayers(off); toast(`Laag ${l} weer aan`); }
   }
 
   /** Open the editor for a row, in its card or in a new card at the given height. */
@@ -650,7 +697,7 @@
     }
     if (mode() === "lezen") return;
     if (full) margin.append(head());
-    const spans = all.filter((r) => (typeof r.text === "string" || addressed(r)) && passes(r) && (full || open.has(r.id)));
+    const spans = all.filter((r) => (typeof r.text === "string" || addressed(r)) && shows(r) && passes(r) && (full || open.has(r.id)));
     if (!spans.length) return;
     const lost = spans.filter((r) => state[r.id] !== "vers");
     const found = spans.map((r) => ({ r, m: anchorsOf(r.id)[0] })).filter((x) => x.m)
@@ -683,6 +730,7 @@
         (m.closest("p, li, pre, h1, h2, h3, h4, td, th, blockquote") ?? m).after(c);
       }
     }
+    lens();   // last: the cards placed inline move the clauses it measures
   }
 
   /** A line from the end of each span to its card, in the span's colour. */
@@ -737,6 +785,69 @@
     for (const n of [...body.querySelectorAll("mark.fact, .is-hot"), ...margin.querySelectorAll(".fpl-card"), ...lines.children])
       n.classList.toggle("is-hot", !!id && n.dataset.id === id);
     if (id) for (const e of anchorsOf(id)) if (!e.matches("mark.fact")) e.classList.add("is-hot");
+    for (const n of body.querySelectorAll(".fpl-coref")) n.classList.remove("fpl-coref");
+    if (id) for (const t of corefOf(id)) for (const e of [...marksOf(t), document.getElementById(t)])
+      if (e && body.contains(e)) e.classList.add("fpl-coref");
+  }
+  /** The other ids a coref row (in a shown layer) groups with an id. */
+  function corefOf(id) {   // the whole chain: sets sharing a member are one referent
+    const sets = all.filter((r) => r.labels?.[0] === "coref" && shows(r) && Array.isArray(r.targets));
+    const got = new Set([id]);
+    for (let grew = true; grew;) {
+      grew = false;
+      for (const r of sets) if (r.targets.some((t) => got.has(t)))
+        for (const t of r.targets) if (!got.has(t)) { got.add(t); grew = true; }
+    }
+    got.delete(id);
+    return got;
+  }
+
+  /* ---- the tfa lens: t, c, f on clauses, and the resumes arcs ---- */
+
+  const TFA = ["tfa/t", "tfa/c", "tfa/f"];
+  /** Mark each clause with its value and draw the arcs; nothing in Lezen or with the tfa layer off. */
+  function lens() {
+    for (const e of body.querySelectorAll("[data-tfa]")) delete e.dataset.tfa;
+    document.querySelector(".fpl-arcs")?.remove();
+    if (mode() === "lezen" || offLayers().has("tfa")) return;
+    for (const r of all) {
+      const v = TFA.includes(r.labels?.[0]) && r.labels[0], e = v && document.getElementById(r.targets?.[0]);
+      if (e && body.contains(e)) e.dataset.tfa = v.slice(4);
+    }
+    const arcs = all.filter((r) => r.labels?.[0] === "resumes" && r.targets?.length === 2 && shows(r))
+      .map((r) => [r, ...r.targets.map((t) => document.getElementById(t))])
+      .filter(([, a, b]) => a && b && body.contains(a) && body.contains(b) && seen(a) !== seen(b));   // one band: no arc
+    if (!arcs.length) return;
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.classList.add("fpl-arcs");
+    const H = document.documentElement.scrollHeight;
+    svg.setAttribute("width", "100%"); svg.setAttribute("height", H);
+    const left = Math.max(body.getBoundingClientRect().left + scrollX - 8, 44);
+    for (const [r, a, b] of arcs) {
+      const [ya, yb] = [a, b].map((e) => { const r = seen(e).getBoundingClientRect(); return r.top + scrollY + r.height / 2; });
+      const bow = Math.min(40, 8 + Math.abs(ya - yb) / 12);
+      const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      path.setAttribute("d", `M ${left} ${ya} C ${left - bow} ${ya}, ${left - bow} ${yb}, ${left} ${yb}`);
+      path.dataset.id = r.id;
+      path.append(Object.assign(document.createElementNS("http://www.w3.org/2000/svg", "title"),
+        { textContent: `${r.targets[0]} resumes ${r.targets[1]}${r.mine ? " (klik: weg)" : ""}` }));
+      if (r.mine) path.onclick = () => { keep(local().filter((x) => x.id !== r.id)); draw(); toast(`${r.id} weg`); };
+      svg.append(path);
+    }
+    document.body.append(svg);
+  }
+  /** Alt-click a clause: its value goes t, c, f, none; one row of this browser per clause holds it. */
+  function cycle(id) {
+    const marks = (r) => r.targets?.[0] === id && TFA.includes(r.labels?.[0]);
+    const mine = local(), at = mine.findIndex(marks);
+    const filed = sidecar.some(marks);   // the sidecar's value is cleared there, not here
+    const cur = [...all].reverse().find(marks)?.labels[0] ?? null;
+    const next = TFA[(TFA.indexOf(cur) + 1)] ?? (filed ? TFA[0] : null);
+    if (at >= 0) mine.splice(at, 1);
+    keep(mine);
+    if (next) save({ targets: [id] }, { note: "", labels: [next] });
+    draw();
+    toast(next ? `${id}: ${next}` : `${id}: geen tfa`);
   }
 
   /* ---- bands: blocks folded to a hairline per line, the page one scroll ---- */
@@ -956,7 +1067,7 @@
     if (mode() === "lezen") return;
     const per = new Map();
     for (const r of all) {
-      const t = trunk(r), b = passes(t) && anchorsOf(t.id)[0]?.closest(".fpl-p");   // passes: as the stand draws it
+      const t = trunk(r), b = shows(r) && layerOf(r) !== "tfa" && passes(t) && anchorsOf(t.id)[0]?.closest(".fpl-p");   // passes: as the stand draws it
       if (b) per.set(b, (per.get(b) ?? 0) + 1);
     }
     const c = [...per.values()].sort((x, y) => x - y), cut = (q) => c[Math.ceil(q * c.length) - 1];
@@ -1034,7 +1145,7 @@
 
   /** A selection in the body opens the editor for a new quote row; a click on a mark lights or edits it. */
   function pointerDone(ev) {
-    if (picking || performance.now() - picked < 500) return;   // a pick owns its whole gesture
+    if (picking || ev.altKey || performance.now() - picked < 500) return;   // a pick or an Alt gesture owns its click
     const target = ev.target instanceof Element ? ev.target : null;
     if (target?.closest(".fpl-annot-ui")) return;
     const sel = getSelection();
@@ -1089,6 +1200,18 @@
     }
     return ev.clientX >= r.left - 2 && ev.clientX <= r.left + w + 2 && ev.clientY >= r.top && ev.clientY <= r.bottom ? unit.id : null;
   }
+  /** Alt-click a clause cycles its tfa value; Alt-Shift-click arms a resumes pick from it. */
+  document.addEventListener("click", (ev) => {
+    if (!ev.altKey || picking || mode() === "lezen") return;
+    const c = ev.target.closest?.(".fpl-c[id]") ?? ev.target.closest?.(".fpl-s[id]");   // a one-clause sentence has no .fpl-c
+    if (!c || !body.contains(c)) return;
+    ev.preventDefault();
+    ev.stopImmediatePropagation();
+    if (!ev.shiftKey) { cycle(c.id); return; }
+    picking = { from: c.id, kind: "resumes" };
+    document.body.classList.add("fpl-picking");
+    toast(`Klik de eerdere bijzin die ${c.id} weer opneemt. Esc breekt af.`);
+  }, true);
   document.addEventListener("click", (ev) => {
     const id = numberAt(ev);
     if (!id) return;
@@ -1104,6 +1227,12 @@
   document.addEventListener("touchend", (ev) => setTimeout(() => pointerDone(ev), 0));
   body.addEventListener("mouseover", (ev) => { const m = ev.target.closest?.("mark.fact"); if (m && !editing) hot(m.dataset.id); });
   body.addEventListener("mouseout", (ev) => { if (ev.target.closest?.("mark.fact") && !editing) hot(null); });
+  body.addEventListener("mouseover", (ev) => {   // an address in a coref row lights its chain too
+    const u = !ev.target.closest?.("mark.fact") && ev.target.closest?.(".fpl-c[id], .fpl-s[id], .fpl-p[id]");
+    for (const n of body.querySelectorAll(".fpl-coref")) n.classList.remove("fpl-coref");
+    if (u) for (const t of corefOf(u.id)) for (const e of [...marksOf(t), document.getElementById(t)])
+      if (e && body.contains(e)) e.classList.add("fpl-coref");
+  });
   document.addEventListener("keydown", (ev) => {
     if (ev.key === "Escape" && editing) { closeEditor(); layout(); return; }
     if (ev.key === "Escape" && picking) { unpick(); toast("Afgebroken"); return; }

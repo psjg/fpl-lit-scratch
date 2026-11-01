@@ -227,3 +227,15 @@ body.fpl-numbered .fpl-s:hover .fpl-c::before { opacity: 1; }
 .fpl-arg-under { margin-top: .2rem; color: var(--fpl-mute); font-style: italic; }
 .fpl-arg-under > .fpl-arg { font-style: normal; color: var(--fpl-fg); }
 body.fpl-picking mark.fact, body.fpl-picking .fpl-card, body.fpl-picking [data-fact], body.fpl-picking li[data-id] { cursor: crosshair; }
+
+/* layers, coref, and the tfa lens */
+.fpl-layers small { color: var(--fpl-mute); margin-right: .2rem; }
+mark.fact.fpl-coref, .fpl-coref { outline: 1px dashed var(--fpl-vers); outline-offset: 1px; }
+.fpl-c[data-tfa="t"], .fpl-s[data-tfa="t"] { background: var(--fpl-wash); }
+.fpl-c[data-tfa="c"], .fpl-s[data-tfa="c"] { background: rgba(154, 123, 47, .14); }
+.fpl-c[data-tfa="f"], .fpl-s[data-tfa="f"] { box-shadow: inset 0 -2px 0 var(--fpl-fg); }
+body.fpl-numbered .fpl-c[data-tfa]::before { content: attr(data-n) attr(data-tfa); opacity: 1; font-weight: 700; }
+.fpl-arcs { position: absolute; top: 0; left: 0; pointer-events: none; z-index: 1; overflow: visible; }
+.fpl-arcs path { fill: none; stroke: var(--fpl-mute); stroke-width: 1; opacity: .7; pointer-events: stroke; }
+.fpl-arcs path:hover { stroke-width: 2; opacity: 1; cursor: pointer; }
+body.fpl-picking .fpl-c[id], body.fpl-picking .fpl-s[id] { cursor: crosshair; }
