@@ -202,6 +202,59 @@ premise may serve two claims; a card shows the tree read from its row as `Argume
 attack, a cycle marked where it closes. `Steunt…` and `Valt aan…` on a card arm a pick: the
 next click on a span, card, fact or branch is the end of a new row, and Esc cancels it.
 
+### Layers
+
+The rows stack in layers after the Prague Dependency Treebank (Pajas & Štěpánek 2008, PML,
+https://aclanthology.org/C08-1085/). One rule holds them apart: **only a span anchors in the
+text; every other row names an id**, a row's, a generated span's, a ledger row's or a page
+address (`[<heading>/…/]b<n>[s<n>[c<n>]]`, the heading a path, each number from 1, which lit
+takes by its shape and the page resolves). A row without `item` that carries `text`, `prefix`
+or `suffix` is refused already (`lit-facts-span`). Müller (2005,
+https://aclanthology.org/P05-3028/) keeps the other side: each level a self-contained module,
+markables that do not point at markables of another level, their order and containment read
+from the base data, and links kept apart as set and pointer relations, so that a query need
+not speak in representation details. The answer here is a query over the layers later
+(PML-TQ's shape, Pajas & Štěpánek 2009), not a second anchoring.
+
+A row's layer is read from what it is and never written down (`facts.layer`, and `layerOf`
+in the overlay): `span` (it names an item, or it is a `parts` set), `argument` (`supports`,
+`attacks`), `tfa` (`tfa/t`, `tfa/c`, `tfa/f`, `resumes`), `coref`, `relation` (any other
+relation), `thread` (a fact whose first target is a row that is no span), else `fact`. A row of
+chips under the label filter hides a layer.
+
+- **Sets** group instead of pointing. `coref` is Müller's set relation, undirected and
+  transitive: its targets name one referent, and hovering one (a span, a card, a clause)
+  lights the whole chain. `parts` holds what Müller keeps as a markable of several token
+  ranges: its targets, spans (a sidecar span, a generated span or a ledger row), are the pieces
+  of one discontinuous span. Both need two members at least, each once (`lit-facts-set`).
+- **Topic-focus** after the t-layer manual (Mikulová et al. 2006, ch. 10): one value per
+  clause, `tfa/t` bound, `tfa/c` bound and contrastive, `tfa/f` not bound; topic and focus as
+  wholes are not marked, they follow (`lit-facts-tfa`: the value is the row's first label, one
+  value, one target, no unit marked twice). Alt-click a clause (a sentence of one clause has
+  none of its own, so the sentence) cycles its value; the lens washes it. A value the sidecar
+  holds is changed there: the browser can override it, not clear it.
+- **Thematic progression** after Daneš (1974): a `resumes` row runs from one clause to one
+  other (`lit-facts-argument`: exactly two targets), by convention from a clause to the earlier
+  one whose matter it takes up; nothing checks the order. Alt-Shift-click a clause, then click
+  the earlier one; the left gutter draws each link as an arc, and a click on an arc of this
+  browser removes it. An arc whose two ends fold into one band is not drawn.
+
+### Not yet built (decided 2026-11-01, keep)
+
+These are in the model now and gated, but the overlay does not draw them yet, or not fully.
+They are the next work on this layer, not ideas:
+
+1. **Discontinuous spans.** A `parts` row is read and gated, but the overlay still draws each
+   part as its own span with its own card. To build: one card for the `parts` row, its parts
+   underlined together and lit together, a row about the span naming the `parts` row; a
+   selection that skips text (Alt-drag adds a part) to write one.
+2. **Coreference as a layer of its own.** A `coref` row is read, gated and lit on hover. To
+   build: chains across the page (PDT's coreference links, Mikulová et al. 2006 ch. 9), a
+   `coref` lens that numbers each chain in the gutter, and writing a link by pick as
+   `resumes` is written.
+3. **Querying across layers** (Müller's objection, PML-TQ's answer): which claim has no
+   attack, which focus is never resumed.
+
 ## Layout
 
 - [lit/web.py](lit/web.py): reading a page, and the tangle. Standard library only, so the

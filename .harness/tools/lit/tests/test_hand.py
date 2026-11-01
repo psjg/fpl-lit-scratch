@@ -429,3 +429,63 @@ def test_generate_without_a_sidecar_gives_generated_rows_only(
     assert bad == []
     assert rows
     assert all("commit" not in r for r in rows)
+
+
+LAYERED: list[facts.Row] = [
+    {"id": "a", "item": "p.md", "start": 0, "end": 1, "text": "#"},
+    {"id": "b", "item": "p.md", "start": 2, "end": 6, "text": "Demo"},
+    {"id": "g1", "labels": ["parts"], "targets": ["a", "b"]},
+    {"id": "g2", "labels": ["parts"], "targets": ["a", "f"]},
+    {"id": "g3", "labels": ["coref"], "targets": ["a", "a"]},
+    {"id": "f", "labels": ["tfa/t"], "targets": ["top/sub/b1s1c1"]},
+    {"id": "f2", "labels": ["tfa/x"], "targets": ["b2"]},
+    {"id": "f3", "labels": ["tfa/t", "tfa/f"], "targets": ["b2"]},
+    {"id": "f4", "labels": ["tfa/c"], "targets": ["b2", "b3s4"]},
+    {"id": "r", "labels": ["resumes"], "targets": ["b2s1c1", "b1s1c2"]},
+    {"id": "x", "targets": ["top/b1x"]},
+    {"id": "t", "labels": ["note"], "targets": ["f"]},
+    {"id": "s", "labels": ["supports"], "targets": ["a", "b"]},
+    {"id": "c", "labels": ["coref"], "targets": ["a", "b2s1c1"]},
+    {"id": "u", "labels": ["note"], "targets": ["g1"]},
+    {"id": "f5", "labels": ["tfa/f"], "targets": ["top/sub/b1s1c1"]},
+    {"id": "r2", "labels": ["resumes"], "targets": ["b2s1c1"]},
+    {"id": "f6", "labels": ["tfa/t"], "targets": None},
+    {"id": "g4", "labels": ["parts"], "targets": ["a", "chunk:m.py:1"]},
+    {"id": "f7", "labels": ["claim", "tfa/t"], "targets": ["b9"]},
+    {"id": "y", "targets": ["b0"]},
+]
+
+
+def test_sets_tfa_and_addresses_are_gated() -> None:
+    """Sets need two members (parts: spans); tfa one value, one unit."""
+    known = {"chunk:m.py:1"}
+    got = facts.validate(LAYERED, "p.facts.json", {"p.md": "# Demo"}, known)
+    assert {(f.line, f.rule) for f in got} == {
+        (4, "lit-facts-set"),
+        (5, "lit-facts-set"),
+        (7, "lit-facts-tfa"),
+        (8, "lit-facts-tfa"),
+        (9, "lit-facts-tfa"),
+        (11, "lit-facts-target"),
+        (16, "lit-facts-tfa"),
+        (17, "lit-facts-argument"),
+        (18, "lit-facts-field"),
+        (18, "lit-facts-tfa"),
+        (20, "lit-facts-tfa"),
+        (21, "lit-facts-target"),
+    }
+
+
+def test_layer_is_read_from_the_labels() -> None:
+    """No layer field: each layer is read from what the row is."""
+    by = {cast_id(r): r for r in LAYERED}
+    assert [facts.layer(r, by) for r in LAYERED] == [
+        "span", "span", "span", "span", "coref", "tfa", "tfa", "tfa",
+        "tfa", "tfa", "fact", "thread", "argument", "coref", "fact",
+        "tfa", "tfa", "tfa", "span", "fact", "fact",
+    ]  # fmt: skip
+
+
+def cast_id(row: facts.Row) -> str:
+    """A test row's id."""
+    return str(row["id"])

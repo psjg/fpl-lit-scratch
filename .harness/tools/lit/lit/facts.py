@@ -550,13 +550,37 @@ STAMPS = ("createdAt", "updatedAt")
 # its own an ``attacks`` row may aim at it (an undercut: the inference
 # is attacked, not its premise or its conclusion).
 ARGUING = frozenset({"supports", "attacks"})
+# A clause that takes up an earlier one (Danes 1974, thematic
+# progression): ``targets[0]``, the bound clause, -> ``targets[1]``.
+RESUMES = "resumes"
 RELATIONS = ARGUING | {
     "because",
     "contradicts",
     "supersedes",
     "checkedBy",
     "cites",
+    RESUMES,
 }
+# Rows that group rather than point. ``coref`` is Mueller (2005)'s set
+# relation, undirected and transitive: its targets name one referent.
+# ``parts`` holds what Mueller keeps as a span of several token ranges:
+# its targets, spans, are the pieces of one discontinuous span, and a
+# row about that span names the ``parts`` row. Both are read and gated
+# here; drawing a ``parts`` row as one span is the overlay's, still to
+# come (README, "Not yet built").
+SETS = frozenset({"coref", "parts"})
+# Topic-focus articulation as the Prague t-layer marks it (Mikulova et
+# al. 2006, ch. 10): one value per unit, ``t`` contextually bound, ``c``
+# bound and contrastive, ``f`` not bound; topic and focus as wholes
+# follow from these and from the order, and are not marked.
+TFA = frozenset({"tfa/t", "tfa/c", "tfa/f"})
+# An address essay.lua gives a block, sentence or clause, under the
+# path of its heading: ``[<heading>/.../]b<n>[s<n>[c<n>]]``, each number
+# from 1. lit does not number the page, so a target of this shape is
+# taken here and resolved by the page.
+ADDRESS = re.compile(
+    r"(?:[^/\s]+/)*" r"b[1-9]\d*" r"(?:s[1-9]\d*(?:c[1-9]\d*)?)?"
+)
 COLUMNS = ("id", "topic", "date", "who", "decision", "reason")
 VERS, MOVED, TWICE, STALE = "vers", "verplaatst", "dubbel", "stale"
 
@@ -969,11 +993,11 @@ def span_faults(row: Row, texts: Mapping[str, str]) -> Iterator[str]:
 
 
 def target_faults(row: Row, names: Collection[str]) -> Iterator[str]:
-    """Each target that names no row, generated span or ledger row."""
+    """Each target naming no row, generated span, ledger or address."""
     targets = row.get("targets", [])
     if strings(targets):
         for t in cast("list[str]", targets):
-            if t not in names:
+            if t not in names and not ADDRESS.fullmatch(t):
                 yield f"target {t!r} names nothing"
 
 
@@ -988,15 +1012,106 @@ def argument_faults(row: Row) -> Iterator[str]:
     if not strings(labels) or not cast("list[str]", labels)[:1]:
         return
     kind = cast("list[str]", labels)[0]
-    if kind not in ARGUING or not strings(targets):
+    if kind not in ARGUING | {RESUMES} or not strings(targets):
         return
     ts = cast("list[str]", targets)
-    if len(ts) < 2:
+    if kind == RESUMES and len(ts) != 2:
+        yield f"resumes runs from one clause to one, {len(ts)} given"
+    elif len(ts) < 2:
         yield f"{kind} needs a source and at least one end, {len(ts)} given"
     elif row.get("id") in ts:
         yield f"{kind} row {row.get('id')!r} names itself"
     elif ts[0] in ts[1:]:
         yield f"{kind} runs from {ts[0]!r} to itself"
+
+
+def first(row: Row) -> str:
+    """A row's first label, or ``""``."""
+    labels = row.get("labels")
+    return cast("list[str]", labels)[0] if strings(labels) and labels else ""
+
+
+def set_faults(row: Row, spans: Collection[str]) -> Iterator[str]:
+    """What keeps a ``coref`` or ``parts`` row from being a set.
+
+    Two members at least, none twice, not itself; a ``parts`` row's
+    members are span rows, the pieces of one discontinuous span.
+    """
+    kind, targets = first(row), row.get("targets", [])
+    if kind not in SETS or not strings(targets):
+        return
+    ts = cast("list[str]", targets)
+    if len(set(ts)) < 2 or len(set(ts)) < len(ts):
+        yield f"{kind} needs two members at least, each once"
+    elif row.get("id") in ts:
+        yield f"{kind} row {row.get('id')!r} names itself"
+    elif kind == "parts" and (odd := [t for t in ts if t not in spans]):
+        yield f"parts are span rows, {odd[0]!r} is none"
+
+
+def tfa_faults(row: Row) -> Iterator[str]:
+    """What is wrong with a row's topic-focus value."""
+    labels = row.get("labels")
+    if not strings(labels):
+        return
+    marks = [x for x in cast("list[str]", labels) if x.startswith("tfa/")]
+    if not marks:
+        return
+    if first(row) not in marks:
+        yield "a topic-focus value is a row's first label"
+    elif odd := [x for x in marks if x not in TFA]:
+        yield f"{odd[0]!r} is none of tfa/t, tfa/c, tfa/f"
+    elif len(marks) > 1:
+        yield f"one unit has one topic-focus value, {len(marks)} given"
+    elif (
+        not strings(t := row.get("targets", []))
+        or len(cast("list[str]", t)) != 1
+    ):
+        yield "a topic-focus value marks one unit, its one target"
+
+
+def twice_marked(rows: list[Row], where: str) -> list[web.Finding]:
+    """A ``lit-facts-tfa`` finding for each unit marked twice."""
+    seen: dict[str, int] = {}
+    out: list[web.Finding] = []
+    for n, row in enumerate(rows, 1):
+        labels, targets = row.get("labels"), row.get("targets")
+        if not (strings(labels) and strings(targets) and targets):
+            continue
+        ls, ts = cast("list[str]", labels), cast("list[str]", targets)
+        if not any(x in TFA for x in ls):
+            continue
+        if ts[0] in seen:
+            m = f"{ts[0]!r} has a topic-focus value at row {seen[ts[0]]}"
+            out.append(web.Finding(where, n, "lit-facts-tfa", m))
+        else:
+            seen[ts[0]] = n
+    return out
+
+
+def layer(row: Row, rows: Mapping[str, Row]) -> str:
+    """The layer a row is in, read from what it is, never written down.
+
+    A span (it names an item, or it is a ``parts`` set of spans); an
+    ``argument`` (supports, attacks); ``tfa`` (a topic-focus value, or
+    a clause resuming another); ``coref``; another ``relation``; a
+    ``thread`` (a fact whose first target is a row that is no span);
+    else a ``fact``. One spelling: a layer field beside the labels could
+    disagree with them.
+    """
+    kind = first(row)
+    named = {"parts": "span", "coref": "coref", RESUMES: "tfa"}
+    named |= dict.fromkeys(ARGUING, "argument")
+    if "item" in row:
+        return "span"
+    if kind in named or kind.startswith("tfa/"):
+        return named.get(kind, "tfa")
+    if kind in RELATIONS:
+        return "relation"
+    targets = cast("list[str]", row.get("targets") or [""])
+    up = rows.get(targets[0])
+    spanlike = up is None or "item" in up or first(up) == "parts"
+    return "fact" if spanlike else "thread"
 
 
 def validate(
@@ -1016,11 +1131,14 @@ def validate(
 
     Returns:
         ``lit-facts-id``, ``lit-facts-field``, ``lit-facts-span``,
-        ``lit-facts-target`` and ``lit-facts-argument`` findings, row
-        by row.
+        ``lit-facts-target``, ``lit-facts-argument``, ``lit-facts-set``
+        and ``lit-facts-tfa`` findings, row by row.
     """
     ids: Counter[object] = Counter(r.get("id") for r in rows)
     names = {i for i in ids if isinstance(i, str)} | set(known)
+    spans = {
+        i for r in rows if "item" in r and isinstance(i := r.get("id"), str)
+    } | set(known)
     out: list[web.Finding] = []
     for n, row in enumerate(rows, 1):
         for rule, faults in (
@@ -1029,8 +1147,11 @@ def validate(
             ("lit-facts-span", span_faults(row, texts)),
             ("lit-facts-target", target_faults(row, names)),
             ("lit-facts-argument", argument_faults(row)),
+            ("lit-facts-set", set_faults(row, spans)),
+            ("lit-facts-tfa", tfa_faults(row)),
         ):
             out += [web.Finding(where, n, rule, m) for m in faults]
+    out += twice_marked(rows, where)
     return out
 
 
