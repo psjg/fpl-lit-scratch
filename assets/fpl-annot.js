@@ -130,6 +130,13 @@
  * they are readings, as Empson reads one passage several ways at once,
  * and so are facts on one span with different labels. A row that passes
  * the filter shows its group.
+ *
+ * The graph: every row of the page and everything a row names, in the
+ * layers shown, laid out by a force model (Fruchterman and Reingold 1991)
+ * on a canvas. A relation row is a node of its own, a small diamond, so
+ * an undercut has something to aim at (AIF); a fact hangs from what it is
+ * about. "Graph" in the margin's head shows the page, "Graph" on a card
+ * that row and what lies within two steps; a click on a node goes there.
  */
 (() => {
   "use strict";
@@ -448,7 +455,8 @@
     const ends = (r) => (r.targets ?? []).slice(typeof r.text === "string" ? 0 : 1);
     for (const t of new Set([row, ...readings, ...facts(row.id)].flatMap(ends)))
       if (place(t)) card.append(button(`Toon beide · ${t}`, (ev) => { ev.stopPropagation(); both(row.id, t); }, "fpl-reply"));
-    card.append(el("div", { className: "fpl-bar fpl-argue" }, reply(row.id, card), argue(row.id, "supports"), argue(row.id, "attacks")));
+    card.append(el("div", { className: "fpl-bar fpl-argue" }, reply(row.id, card), argue(row.id, "supports"), argue(row.id, "attacks"),
+      button("Graph", (ev) => { ev.stopPropagation(); graph(row.id); }, "fpl-reply")));
     card.onmouseenter = () => hot(row.id);
     card.onmouseleave = () => hot(null);
     card.onclick = (ev) => {
@@ -553,6 +561,141 @@
     toast(`${from} ${kind} ${to}`);
   }, true);
 
+  /* ---- the graph: rows and what they name, laid out by force ---- */
+
+  const SETKINDS = new Set(["coref", "parts"]);
+  /**
+   * The page's graph in the layers shown: a node per row and per id a row
+   * names; a relation row (or set) is a node between its ends, a fact an
+   * edge to what it is about. Edges carry the relation's label.
+   */
+  function graphOf() {
+    const nodes = new Map(), edges = [];
+    const kindOf = (id) => {
+      const r = all.find((x) => x.id === id);
+      return r ? layerOf(r) : document.getElementById(id) ? "address" : "elders";
+    };
+    const node = (id) => nodes.get(id) ?? nodes.set(id, { id, kind: kindOf(id), x: 0, y: 0, dx: 0, dy: 0 }).get(id);
+    for (const r of all.filter(shows)) {
+      node(r.id);
+      const k = r.labels?.[0] ?? "", ts = (r.targets ?? []).filter(Boolean);
+      if (typeof r.text === "string") continue;
+      if (RELATIONS.has(k)) {
+        if (ts[0]) edges.push({ a: node(ts[0]), b: node(r.id), label: "" });
+        for (const t of ts.slice(1)) edges.push({ a: node(r.id), b: node(t), label: k });
+      } else if (SETKINDS.has(k)) for (const t of ts) edges.push({ a: node(r.id), b: node(t), label: k });
+      else if (ts[0]) edges.push({ a: node(r.id), b: node(ts[0]), label: "over" });
+    }
+    return { nodes: [...nodes.values()], edges };
+  }
+  /** The part of a graph within two steps of an id. */
+  function near({ nodes, edges }, id, steps = 2) {
+    const keep = new Set([id]);
+    for (let i = 0; i < steps; i++) {   // breadth first: a round reaches one step past the last, no further
+      const was = new Set(keep);
+      for (const e of edges) if (was.has(e.a.id) || was.has(e.b.id)) { keep.add(e.a.id); keep.add(e.b.id); }
+    }
+    return { nodes: nodes.filter((n) => keep.has(n.id)), edges: edges.filter((e) => keep.has(e.a.id) && keep.has(e.b.id)) };
+  }
+  /**
+   * Fruchterman-Reingold, a fixed number of rounds from a circle (the same
+   * layout every time for the same rows): neighbours pull, all push, a
+   * weak gravity holds the loose parts of the graph near the middle
+   * (without it they drift to the walls), and the step cools to nothing.
+   * The right edge keeps room for the labels drawn right of each node.
+   * k and GRAV measured 2026-11-01 on the lex page (28 nodes, 22 edges):
+   * at 0.6 and 2 no node rests on a wall and no two lie within 12 px;
+   * gravity 0.5 left 16 nodes on the walls, 1.2 with k 0.8 left 19.
+   */
+  function settleGraph({ nodes, edges }, w, h, rounds = 300) {
+    const k = Math.sqrt((w * h) / Math.max(nodes.length, 1)) * 0.6, GRAV = 2;
+    nodes.forEach((n, i) => { const a = (2 * Math.PI * i) / nodes.length; n.x = w / 2 + (w / 3) * Math.cos(a); n.y = h / 2 + (h / 3) * Math.sin(a); });
+    for (let t = 0; t < rounds; t++) {
+      for (const n of nodes) { n.dx = 0; n.dy = 0; }
+      for (let i = 0; i < nodes.length; i++) for (let j = i + 1; j < nodes.length; j++) {
+        const p = nodes[i], q = nodes[j], dx = p.x - q.x, dy = p.y - q.y, d = Math.hypot(dx, dy) || 0.01, f = (k * k) / d;
+        p.dx += (dx / d) * f; p.dy += (dy / d) * f; q.dx -= (dx / d) * f; q.dy -= (dy / d) * f;
+      }
+      for (const { a, b } of edges) {
+        const dx = a.x - b.x, dy = a.y - b.y, d = Math.hypot(dx, dy) || 0.01, f = (d * d) / k;
+        a.dx -= (dx / d) * f; a.dy -= (dy / d) * f; b.dx += (dx / d) * f; b.dy += (dy / d) * f;
+      }
+      for (const n of nodes) { n.dx += (w / 2 - n.x) * GRAV; n.dy += (h / 2 - n.y) * GRAV; }
+      const temp = (w / 10) * (1 - t / rounds);
+      for (const n of nodes) {
+        const d = Math.hypot(n.dx, n.dy) || 0.01;
+        n.x = Math.min(w - 150, Math.max(20, n.x + (n.dx / d) * Math.min(d, temp)));
+        n.y = Math.min(h - 20, Math.max(20, n.y + (n.dy / d) * Math.min(d, temp)));
+      }
+    }
+  }
+  /** Open the graph over the page: all of it, or the part around an id. Esc or a click outside closes it. */
+  function graph(id) {
+    document.querySelector(".fpl-graph")?.remove();
+    const g = id ? near(graphOf(), id) : graphOf();
+    const css = getComputedStyle(document.documentElement);
+    const color = (n) => css.getPropertyValue({ span: "--fpl-vers", argument: "--fpl-con", tfa: "--fpl-lost",
+      coref: "--fpl-mine", relation: "--fpl-mute", address: "--fpl-mute", elders: "--fpl-rule" }[n.kind] ?? "--fpl-fg").trim() || "#888";
+    const W = Math.max(320, Math.min(innerWidth - 32, 1100)), H = Math.max(240, Math.min(innerHeight - 96, 760)), dpr = devicePixelRatio || 1;
+    const opener = document.activeElement;
+    const cv = el("canvas", { width: W * dpr, height: H * dpr });
+    cv.style.width = `${W}px`; cv.style.height = `${H}px`;
+    const panel = el("div", { className: "fpl-annot-ui fpl-graph", role: "dialog", "aria-label": "Graph" },
+      el("div", { className: "fpl-bar" }, el("b", {}, id ? `Graph rond ${id}` : "Graph van de pagina"),
+        el("span", { className: "fpl-mute" }, ` · ${g.nodes.length} knopen · ${g.edges.length} kanten`), el("span", { className: "fpl-space" }),
+        button("Sluit", () => close())), cv);
+    const close = () => { panel.remove(); opener?.focus?.(); };
+    /** Where a node goes: its own place, else that of what it is about, followed up its first targets. */
+    const goal = (nid, been = new Set()) => {
+      const e = place(nid);
+      if (e || been.has(nid)) return e;
+      been.add(nid);
+      const r = all.find((x) => x.id === nid);
+      return r?.targets?.[0] ? goal(r.targets[0], been) : null;
+    };
+    const go = (n) => {
+      const e = goal(n.id);
+      if (!e) { toast(`${n.id} staat niet op deze pagina`); return; }
+      close();
+      seen(e).scrollIntoView({ block: "center", behavior: "smooth" });
+      hot(n.id);
+    };
+    settleGraph(g, W, H);
+    const ctx = cv.getContext("2d");
+    ctx.scale(dpr, dpr);
+    ctx.font = "11px system-ui, sans-serif";
+    ctx.lineWidth = 1;
+    for (const e of g.edges) {
+      ctx.strokeStyle = css.getPropertyValue("--fpl-rule").trim() || "#ccc";
+      ctx.beginPath(); ctx.moveTo(e.a.x, e.a.y); ctx.lineTo(e.b.x, e.b.y); ctx.stroke();
+      if (e.label) { ctx.fillStyle = css.getPropertyValue("--fpl-mute").trim() || "#777"; ctx.fillText(e.label, (e.a.x + e.b.x) / 2 + 3, (e.a.y + e.b.y) / 2 - 3); }
+    }
+    for (const n of g.nodes) {
+      ctx.fillStyle = color(n);
+      const rel = n.kind === "relation" || n.kind === "argument" && all.find((x) => x.id === n.id && typeof x.text !== "string" && (x.targets ?? []).length > 1);
+      ctx.beginPath();
+      if (rel) { ctx.moveTo(n.x, n.y - 6); ctx.lineTo(n.x + 6, n.y); ctx.lineTo(n.x, n.y + 6); ctx.lineTo(n.x - 6, n.y); ctx.closePath(); }
+      else ctx.arc(n.x, n.y, n.id === id ? 8 : 5, 0, 2 * Math.PI);
+      ctx.fill();
+      ctx.fillStyle = css.getPropertyValue("--fpl-fg").trim() || "#222";
+      ctx.fillText(n.id.length > 28 ? n.id.slice(0, 27) + "…" : n.id, n.x + 8, n.y + 4);
+    }
+    cv.onclick = (ev) => {
+      const r = cv.getBoundingClientRect(), x = ev.clientX - r.left, y = ev.clientY - r.top;
+      const hit = g.nodes.find((n) => Math.hypot(n.x - x, n.y - y) < 9);
+      if (hit) go(hit);
+    };
+    // the same nodes as buttons, for a keyboard or a screen reader: the canvas is pixels only
+    cv.setAttribute("aria-hidden", "true");
+    panel.append(el("details", { className: "fpl-graph-list" }, el("summary", {}, "Knopen als lijst"),
+      el("div", { className: "fpl-chips" }, ...g.nodes.map((n) => button(`${n.id} · ${n.kind}`, () => go(n), "fpl-link")))));
+    panel.close = close;
+    panel.tabIndex = -1;
+    document.body.append(panel);
+    panel.focus();
+    panel.dataset.nodes = g.nodes.map((n) => `${n.id}@${Math.round(n.x)},${Math.round(n.y)}`).join(" ");   // for tests: where each node landed
+  }
+
   /** The head of the margin: counts and the three buttons. */
   function head() {
     const spans = all.filter((r) => typeof r.text === "string" || addressed(r));
@@ -568,6 +711,7 @@
       el("div", { className: "fpl-bar" },
         el("input", { className: "fpl-byme", value: by(), placeholder: "jij", title: "Wie schrijft: komt als by op elke rij",
           onchange: (ev) => by(ev.target.value.trim()) }),
+        button("Graph", () => graph(null)),
         button("Export", () => { exportRows(); cmd.hidden = false; }),
         button("Import", () => file.click()),
         mine ? button("Clear", () => clear(h)) : null, file),
@@ -1340,6 +1484,8 @@
       if (e && body.contains(e)) e.classList.add("fpl-coref");
   });
   document.addEventListener("keydown", (ev) => {
+    const g = document.querySelector(".fpl-graph");   // an open graph takes Esc first, wherever focus is
+    if (ev.key === "Escape" && g) { g.close(); return; }
     if (ev.key === "Escape" && editing) { closeEditor(); layout(); return; }
     if (ev.key === "Escape" && picking) { unpick(); toast("Afgebroken"); return; }
     if (ev.key === "Escape" && bands.length && !ev.target.closest?.("input, textarea, [contenteditable]")) {

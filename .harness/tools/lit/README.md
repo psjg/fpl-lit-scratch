@@ -265,6 +265,16 @@ Empson reads one passage several ways at once (*Seven Types of Ambiguity*, 1930;
 1947 edition), and so are several facts with different labels on one span. A row that passes
 the filter shows its whole group.
 
+### The graph
+
+`Graph` in the margin's head draws every row of the page and every id a row names, in the
+layers shown, on a canvas laid out by force (Fruchterman & Reingold 1991,
+https://doi.org/10.1002/spe.4380211102), the same layout each time for the same rows. A
+relation row is a node of its own, a small diamond between its ends, so an undercut has a node
+to aim at; a fact hangs from what it is about (`over`). `Graph` on a card draws that row and
+what lies within two steps. A click on a node closes the graph and goes to the node's place on
+the page; Esc closes it. Plain JavaScript, no outside assets.
+
 ### Not yet built (decided 2026-11-01, keep)
 
 These are in the model now and gated, but the overlay does not draw them yet, or not fully.
@@ -280,6 +290,9 @@ They are the next work on this layer, not ideas:
    `resumes` is written.
 3. **Querying across layers** (Müller's objection, PML-TQ's answer): which claim has no
    attack, which focus is never resumed.
+4. **The graph, step two.** The chunks of a page, the places they are used and the files they
+   tangle to, as nodes beside the rows: a `lit graph` export that joins the web lit already
+   reads with the sidecar, and the same panel drawing it.
 
 ## Layout
 
