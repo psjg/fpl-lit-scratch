@@ -200,3 +200,14 @@ body.fpl-numbered .fpl-s:hover .fpl-c::before { opacity: 1; }
 .fpl-band:focus-within::after { opacity: 1; }
 .fpl-band:focus-visible, .fpl-grip:focus-visible { outline: 2px solid var(--fpl-mine); outline-offset: 1px; }
 @media (hover: none) { .fpl-grip { opacity: 1; } }
+
+/* density: a bar in a block's gutter (or a band's), three greys by how many rows hang from it (fpl-annot.js heat);
+   the padding widens the bar's hover target, the grey stays in the content box */
+.fpl-heat { position: absolute; top: 0; bottom: 0; left: calc(-.35rem - 6px); width: 3px; padding: 0 3px; box-sizing: content-box;
+  background: var(--fpl-mute) content-box; cursor: help; }
+.fpl-heat[data-level="1"] { opacity: .25; }
+.fpl-heat[data-level="2"] { opacity: .55; }
+.fpl-heat[data-level="3"] { opacity: .9; }
+
+/* close reading: the sentence under the cursor (j / k), washed like a hot span */
+.fpl-s.fpl-here { background: var(--fpl-vers-wash); }

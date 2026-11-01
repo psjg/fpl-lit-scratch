@@ -87,6 +87,13 @@
  * card whose row points at another place on the page has "Toon beide",
  * which folds what lies between the two so both are in view. A span
  * inside a band draws its line, and places its card, at the band.
+ *
+ * Close reading. Outside Lezen each block carries a bar in its left
+ * gutter, shaded by how many rows hang from it (after Zyto 2012, where
+ * the most annotated regions of a text showed where readers stumbled).
+ * And j and k move a reading cursor sentence by sentence (after Miall
+ * 1994): the sentence is washed, its address is the URL's hash, so a
+ * reload returns to it, and Enter opens the editor for a fact on it.
  */
 (() => {
   "use strict";
@@ -520,6 +527,8 @@
     document.body.classList.toggle("fpl-numbered", mode() !== "lezen");
     for (const c of body.querySelectorAll(".fpl-inline")) c.remove();
     scrunch();
+    if (reading?.closest(".fpl-scrunched")) read(null);   // folded away: nothing to read or write on
+    heat();
     margin.replaceChildren();
     lines.replaceChildren();
     margin.style.minHeight = "";
@@ -820,6 +829,86 @@
     (fold.length ? bandOf(us[i + 1]) : us[i]).scrollIntoView({ block: "center", behavior: "smooth" });
   }
 
+  /* ---- density: how many rows each block carries, in its gutter ---- */
+
+  /** The row a thread hangs from: a fact or reply followed up its first target to a span's or an address's row. */
+  function trunk(r, been = new Set()) {
+    const up = typeof r.text !== "string" && all.find((x) => x.id === r.targets?.[0]);
+    return up && !been.has(r.id) ? trunk(up, been.add(r.id)) : r;
+  }
+
+  /**
+   * Shade each block's gutter bar by the rows that hang from it: a span's
+   * row, the facts about it and their replies, all depths, of the threads
+   * whose root the filter lets through (as layout draws them). A folded block counts toward its band's
+   * bar. The three greys are cut at the terciles of the page's non-zero
+   * block counts, so a shade ranks a block against this page, not against
+   * a fixed scale; a band's sum may pass the top cut and is then darkest.
+   * Off in Lezen, which shows nothing.
+   */
+  function heat() {
+    for (const h of body.querySelectorAll(".fpl-heat")) h.remove();
+    if (mode() === "lezen") return;
+    const per = new Map();
+    for (const r of all) {
+      const t = trunk(r), b = passes(t) && anchorsOf(t.id)[0]?.closest(".fpl-p");   // passes: as the stand draws it
+      if (b) per.set(b, (per.get(b) ?? 0) + 1);
+    }
+    const c = [...per.values()].sort((x, y) => x - y), cut = (q) => c[Math.ceil(q * c.length) - 1];
+    const [t1, t2] = [cut(1 / 3), cut(2 / 3)], where = new Map();
+    for (const [b, n] of per) where.set(seen(b), (where.get(seen(b)) ?? 0) + n);
+    for (const [at, n] of where) {
+      const bar = el("span", { className: "fpl-annot-ui fpl-heat", title: `${n} ${n === 1 ? "rij" : "rijen"}` });
+      bar.dataset.level = n <= t1 ? 1 : n <= t2 ? 2 : 3;
+      at.prepend(bar);
+    }
+  }
+
+  /* ---- close reading: a cursor on one sentence, moved by keystroke ---- */
+
+  let reading = null;   // the sentence the cursor is on (fpl-here), or null
+  /**
+   * Put the cursor on a sentence, or take it away (null); the hash names
+   * it. The page scrolls only when the sentence has left the window (or
+   * slid under a fixed bar at its top, EDGE pixels), and then brings it to
+   * the middle, so the next steps read on without scrolling.
+   */
+  const EDGE = 64;
+  function read(s) {
+    mark(s);
+    history.replaceState(history.state, "", s ? `#${s.id}` : location.pathname + location.search);
+    const r = s?.getBoundingClientRect();
+    if (r && (r.top < EDGE || r.bottom > innerHeight)) s.scrollIntoView({ block: "center" });
+  }
+  /** The cursor alone moved, hash and scroll left as they are. */
+  function mark(s) {
+    reading?.classList.remove("fpl-here");
+    reading = s;
+    s?.classList.add("fpl-here");
+  }
+  /**
+   * The cursor follows the hash wherever it changes: at load, on in-page
+   * navigation (hashchange), after a click on a number (replaceState,
+   * which fires nothing). A hash that is not a showing sentence takes the
+   * cursor away and stays.
+   */
+  function sync() {
+    const e = document.getElementById(decodeURIComponent(location.hash.slice(1)));
+    mark(e?.matches(".fpl-s") && !e.closest(".fpl-scrunched") ? e : null);
+  }
+  addEventListener("hashchange", sync);
+  /**
+   * The cursor to the next (d = 1) or previous (d = -1) sentence that
+   * shows: folded ones are passed over, so a band is jumped. Without a
+   * cursor (or with one in a fold) it starts at the first sentence in view.
+   */
+  function step(d) {
+    const ss = [...body.querySelectorAll(".fpl-s")].filter((s) => !s.closest(".fpl-scrunched"));
+    const i = ss.indexOf(reading);
+    if (i < 0) read(ss.find((s) => s.getBoundingClientRect().bottom > 0) ?? ss.at(-1) ?? null);
+    else read(ss[Math.max(0, Math.min(ss.length - 1, i + d))]);
+  }
+
   /* ---- selecting and clicking ---- */
 
   /** The shown index of a range's first character and past its last. */
@@ -900,6 +989,7 @@
     ev.preventDefault();
     getSelection()?.removeAllRanges();
     history.replaceState(null, "", `#${id}`);
+    sync();
     const url = location.href;
     navigator.clipboard?.writeText(url).then(() => toast(`Adres gekopieerd: #${id}`), () => toast(`#${id}`));
     if (mode() === "kantlijn") edit({ targets: [id] }, null, document.getElementById(id).getBoundingClientRect());
@@ -912,6 +1002,16 @@
     if (ev.key === "Escape" && editing) { closeEditor(); layout(); return; }
     if (ev.key === "Escape" && bands.length && !ev.target.closest?.("input, textarea, [contenteditable]")) {
       setBands(bands.slice(0, -1));
+      return;
+    }
+    const typing = ev.defaultPrevented || ev.target.closest?.("input, textarea, select, [contenteditable], .fpl-editor");
+    if (ev.key === "Escape" && reading && !typing) { read(null); return; }
+    if (typing || ev.metaKey || ev.ctrlKey || ev.altKey || ev.shiftKey) return;
+    if (ev.key === "j" || ev.key === "k") { ev.preventDefault(); step(ev.key === "j" ? 1 : -1); return; }
+    if (ev.key === "Enter" && reading && !ev.target.closest?.("button, a, [role=button]")) {
+      ev.preventDefault();
+      if (mode() === "kantlijn") edit({ targets: [reading.id] }, null, reading.getBoundingClientRect());
+      else toast("Een feit schrijf je in de stand Kantlijn (a)");
       return;
     }
     if (ev.key === "a" && !ev.metaKey && !ev.ctrlKey && !ev.altKey
@@ -930,5 +1030,6 @@
   document.body.append(pop);
   (snap ? Promise.resolve(snap.rows) : fetch(`${stem}.facts.json`).then((r) => (r.ok ? r.json() : [])))
     .catch(() => [])
-    .then((got) => { sidecar = Array.isArray(got) ? got : []; draw(); persist(); });
+    .then((got) => { sidecar = Array.isArray(got) ? got : []; draw(); persist();
+      sync(); });
 })();
