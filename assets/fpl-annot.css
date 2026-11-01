@@ -224,6 +224,10 @@ body.fpl-numbered .fpl-s:hover .fpl-c::before { opacity: 1; }
 .fpl-arg-node:hover, .fpl-arg-node:focus-visible { text-decoration: underline; }
 .fpl-arg-node b { display: inline-block; width: .8em; }
 .fpl-arg-attacks > .fpl-arg-node b { color: var(--fpl-con); }
+.fpl-weight { margin-left: 1.3em; font-size: .6rem; letter-spacing: .1em; color: var(--fpl-rule); }
+.fpl-weight .on { color: var(--fpl-mute); }
+.fpl-weight button { all: unset; cursor: pointer; }
+.fpl-weight button:hover, .fpl-weight button:focus-visible { color: var(--fpl-ink, currentColor); }
 .fpl-arg-under { margin-top: .2rem; color: var(--fpl-mute); font-style: italic; }
 .fpl-arg-under > .fpl-arg { font-style: normal; color: var(--fpl-fg); }
 body.fpl-picking mark.fact, body.fpl-picking .fpl-card, body.fpl-picking [data-fact], body.fpl-picking li[data-id] { cursor: crosshair; }

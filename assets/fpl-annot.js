@@ -553,7 +553,7 @@
         const e = place(src);
         e ? seen(e).scrollIntoView({ block: "center", behavior: "smooth" }) : toast(`${src} staat niet op deze pagina`);
       };
-      li.append(go);
+      li.append(go, weigh(rel));
       if (rel.note) li.append(el("p", { className: "fpl-note" }, rel.note));
       if (path.has(src) || path.has(rel.id)) li.append(el("span", { className: "fpl-lost" }, "kring"));
       else if (drawn.has(rel.id) || drawn.has(src)) li.append(el("span", { className: "fpl-lost" }, "zie boven"));
@@ -567,14 +567,41 @@
     }
     return ul;
   }
+  /**
+   * A branch's weight, 1 to 5 (Kialo's impact), as five dots. On a row
+   * of ours a dot sets it and the lit last dot clears it; a sidecar row
+   * shows its weight and only `lit facts' changes it.
+   */
+  function weigh(rel) {
+    const w = rel.weight ?? 0;
+    const box = el("span", { className: "fpl-weight", title: w ? `gewicht ${w}` : "geen gewicht" });
+    for (let n = 1; n <= 5; n++) {
+      const dot = el(rel.mine ? "button" : "span", { className: n <= w ? "on" : "" }, "●");
+      if (rel.mine) {
+        dot.type = "button";
+        dot.title = n === w ? "gewicht weg" : `gewicht ${n}`;
+        dot.onclick = (ev) => {
+          if (picking) return;
+          ev.stopPropagation();
+          save(rel, { weight: n === w ? undefined : n });   // undefined: JSON drops the key
+          draw();
+        };
+      }
+      box.append(dot);
+    }
+    return box;
+  }
   const opened = new Set();   // the ids whose tree is open, kept across draws
   /** A claim's count, "2 voor · 1 tegen", over its tree; null when nothing argues about it. */
   function argBox(id) {
     const g = grounds(id);
     if (!g.length) return null;
-    const pro = g.filter((r) => kindOf(r) === "supports").length;
+    const pro = g.filter((r) => kindOf(r) === "supports");
+    const sum = (rs) => rs.reduce((n, r) => n + (r.weight ?? 0), 0);
+    const con = g.filter((r) => kindOf(r) === "attacks");
+    const weighed = g.some((r) => r.weight) ? ` · gewicht ${sum(pro)} : ${sum(con)}` : "";
     const d = el("details", { className: "fpl-args" },
-      el("summary", {}, `Argument · ${pro} voor · ${g.length - pro} tegen`), argTree(id, new Set([id]), new Set([id])));
+      el("summary", {}, `Argument · ${pro.length} voor · ${con.length} tegen${weighed}`), argTree(id, new Set([id]), new Set([id])));
     d.open = opened.has(id);
     // a new box set open fires toggle too: only a change by hand lays out again
     d.ontoggle = () => { if (d.open === opened.has(id)) return; d.open ? opened.add(id) : opened.delete(id); layout(); };
@@ -719,7 +746,7 @@
       if (typeof r.text === "string") continue;
       if (RELATIONS.has(k)) {
         if (ts[0]) edges.push({ a: node(ts[0]), b: node(r.id), label: "" });
-        for (const t of ts.slice(1)) edges.push({ a: node(r.id), b: node(t), label: k });
+        for (const t of ts.slice(1)) edges.push({ a: node(r.id), b: node(t), label: k, w: r.weight ?? 0 });
       } else if (SETKINDS.has(k)) for (const t of ts) edges.push({ a: node(r.id), b: node(t), label: k });
       else if (ts[0]) edges.push({ a: node(r.id), b: node(ts[0]), label: "over" });
     }
@@ -825,7 +852,7 @@
     ctx.lineWidth = 1;
     for (const e of g.edges) {
       ctx.strokeStyle = css.getPropertyValue("--fpl-rule").trim() || "#ccc";
-      ctx.lineWidth = e.lines ? 1 + Math.log2(e.lines) : 1;
+      ctx.lineWidth = e.lines ? 1 + Math.log2(e.lines) : e.w ? e.w : 1;
       ctx.beginPath(); ctx.moveTo(e.a.x, e.a.y); ctx.lineTo(e.b.x, e.b.y); ctx.stroke();
       if (e.label) { ctx.fillStyle = css.getPropertyValue("--fpl-mute").trim() || "#777"; ctx.fillText(e.label, (e.a.x + e.b.x) / 2 + 3, (e.a.y + e.b.y) / 2 - 3); }
     }
