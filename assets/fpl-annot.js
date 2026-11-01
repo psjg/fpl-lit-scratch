@@ -146,6 +146,13 @@
  * pieces are underlined as before but light together and share one card,
  * the parts row's, where a fact about the whole hangs. Alt-select text to
  * add a piece, again for the next, and Enter bundles them; Esc stops.
+ * The card lists the pieces as chips in order. On a parts row of ours
+ * "Deel erbij…" arms the next Alt-selects to join that row, until Esc,
+ * Enter or leaving Kantlijn, and text a shown bundle's piece covers is
+ * refused; a chip's × lets its piece go as a loose span; with one piece
+ * left the bundle goes (lit refuses a one-member set), and a fact on it,
+ * kept, names nothing shown (the ask counts them; lit refuses them too).
+ * A sidecar row's chips only read.
  *
  * The coref lens: coref rows that share a member are one chain (a
  * union-find over the sets), numbered in page order, and each member on
@@ -385,7 +392,7 @@
     const spans = all.filter((r) => typeof r.text === "string"), cur = mode();
     const seg = el("div", { className: "fpl-seg", role: "radiogroup" },
       ...MODES.map((m) => button(m === "lezen" ? "Lezen" : m === "spans" ? `Spans · ${spans.length}` : "Kantlijn",
-        () => { mode(m); draw(); }, m === cur ? "is-on" : "")));
+        () => { if (m !== "kantlijn") disarm(); mode(m); draw(); }, m === cur ? "is-on" : "")));
     control.replaceChildren(seg);
     if (cur === "lezen") return;
     const off = hidden();
@@ -473,8 +480,7 @@
       row.by ? el("span", { className: "fpl-by" }, row.by) : null,
       st === "stale" ? el("span", { className: "fpl-lost" }, "niet meer gevonden")
         : st === "dubbel" ? el("span", { className: "fpl-lost" }, "meer dan één keer gevonden") : null));
-    if (row.labels?.[0] === "parts") card.append(el("div", { className: "fpl-excerpt" },
-      row.targets.map((t) => plain(all.find((r) => r.id === t)?.text ?? t).replace(/\s+/g, " ").trim().slice(0, 70)).join(" … ")));
+    if (row.labels?.[0] === "parts") card.append(piecesOf(row, card));
     else if (st !== "vers") card.append(el("div", { className: "fpl-excerpt" }, plain(row.text)));
     else if (typeof row.text !== "string") card.append(el("div", { className: "fpl-excerpt" },
       `${row.targets[0]}: ${anchorsOf(row.id)[0].textContent.replace(/\s+/g, " ").trim().slice(0, 140)}`));
@@ -507,16 +513,43 @@
     for (const t of new Set([row, ...readings, ...facts(row.id)].flatMap(ends)))
       if (place(t)) card.append(button(`Toon beide · ${t}`, (ev) => { ev.stopPropagation(); both(row.id, t); }, "fpl-reply"));
     card.append(el("div", { className: "fpl-bar fpl-argue" }, reply(row.id, card), argue(row.id, "supports"), argue(row.id, "attacks"), argue(row.id, "coref"),
+      row.labels?.[0] === "parts" && row.mine ? button("Deel erbij…", (ev) => { ev.stopPropagation(); arm(row.id); }, "fpl-reply fpl-arm") : null,
       button("Graph", (ev) => { ev.stopPropagation(); graph(row.id); }, "fpl-reply")));
     card.onmouseenter = () => hot(row.id);
     card.onmouseleave = () => hot(null);
     card.onclick = (ev) => {
-      if (ev.target.closest("button, a, .fpl-editor")) return;
+      if (ev.target.closest("button, a, .fpl-editor, .fpl-ask")) return;
       const m = anchorsOf(row.id)[0];
       m && seen(m).scrollIntoView({ block: "center", behavior: "smooth" });
       if (row.mine && m) edit(row, card);
     };
     return card;
+  }
+
+  /**
+   * The pieces of a parts row as chips, in its order. On a row of ours a
+   * chip's × lets the piece go, a loose span again; the last but one
+   * asks first, since a bundle of one is none and goes whole.
+   */
+  function piecesOf(row, card) {
+    const text = (t) => { const r = all.find((x) => x.id === t);
+      return typeof r?.text === "string" ? plain(r.text).trim().slice(0, 40) : t; };
+    return el("div", { className: "fpl-pieces" }, ...(row.targets ?? []).map((t, i) => el("span",
+      { className: `fpl-chip fpl-piece ${state[t] === "vers" ? "" : "is-lost"}`, title: t }, el("span", { className: "fpl-gist" }, text(t)),
+      row.mine ? button("×", (ev) => {
+        ev.stopPropagation();
+        const rest = row.targets.filter((_, j) => j !== i);
+        if (rest.length > 1) { save(row, { targets: rest }); draw(); return; }
+        if (card.querySelector(".fpl-ask")) return;
+        const n = all.filter((r) => typeof r.text !== "string" && r.targets?.[0] === row.id).length;   // kept, they name nothing then
+        const left = n ? ` ${n} ${n > 1 ? "feiten" : "feit"} over de bundel ${n > 1 ? "blijven" : "blijft"} bewaard maar ${n > 1 ? "wijzen" : "wijst"} dan nergens heen.` : "";
+        const ask = el("div", { className: "fpl-bar fpl-ask" }, `Dan blijft één deel over: de bundel opheffen?${left}`,
+          button("Ja, hef op", () => { save(row, "delete"); if (adding === row.id) adding = null; draw();
+            toast(`Bundel opgeheven: de delen zijn losse spans${n ? ` · ${n} ${n > 1 ? "feiten wijzen" : "feit wijst"} nergens heen` : ""}`); }, "fpl-go"),
+          button("Nee", () => { ask.remove(); layout(); }));
+        card.append(ask);
+        if (wide()) makeRoom(card);
+      }, "fpl-unpiece") : null)));
   }
 
   /* ---- arguments: supports and attacks rows between rows ---- */
@@ -615,6 +648,7 @@
   const ASK = { supports: ["Steunt…", "steunt"], attacks: ["Valt aan…", "aanvalt"], coref: ["Zelfde als…", "zelfde is als"] };
   const argue = (from, kind) => button(ASK[kind][0], (ev) => {
     ev.stopPropagation();
+    adding = null;   // one armed gesture at a time
     picking = { from, kind };
     document.body.classList.add("fpl-picking");
     toast(`Klik wat ${from} ${ASK[kind][1]}: een span, kaart, feit, tak of bijzin. Esc breekt af.`);
@@ -622,7 +656,7 @@
   const unpick = () => { picking = null; document.body.classList.remove("fpl-picking"); };
   /** The pick's click: the row under it, from the innermost of a branch, a fact, a card, a span or a block. */
   document.addEventListener("click", (ev) => {
-    if (!picking) return;
+    if (!picking || ev.target.closest?.(".fpl-arm")) return;   // "Deel erbij…" ends the pick itself (arm)
     const at = ev.target.closest?.(picking.kind === "resumes" ? ".fpl-c[id], .fpl-s[id]:not(:has(.fpl-c))"
       : "li[data-id], [data-fact], .fpl-card, mark.fact, .fpl-c[id], .fpl-s[id], .fpl-p[id]");
     if (!at) return;
@@ -1040,7 +1074,7 @@
     form.append(el("div", { className: "fpl-excerpt" }, about), fast, note, chips, keys);
     form.onsubmit = (ev) => { ev.preventDefault(); onDone({ note: note.value.trim(), labels: [...on] }); };
     form.onkeydown = (e) => {
-      if (e.key === "Escape") { e.stopPropagation(); onDone(null); }
+      if (e.key === "Escape") { e.stopPropagation(); onDone(null); disarm(); }
       if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) form.requestSubmit();
     };
     setTimeout(() => note.focus(), 0);
@@ -1707,6 +1741,22 @@
   }
   let pieces = [];   // the span rows Alt-selected so far, bundled by Enter
   let pieced = 0;    // when the last piece was taken
+  let adding = null; // the id of a parts row of ours the next pieces join, armed by "Deel erbij…"
+  /** Esc, Enter, the editor's Esc or leaving Kantlijn: the armed parts row takes no more pieces. */
+  function disarm() {
+    if (!adding) return;
+    toast(`Gestopt: ${adding} heeft ${local().find((r) => r.id === adding)?.targets.length ?? 0} delen`);
+    adding = null;
+  }
+  /** "Deel erbij…": the next Alt-selects join this parts row, until Esc or Enter. */
+  function arm(id) {
+    if (mode() !== "kantlijn") { toast("Delen schrijf je in de stand Kantlijn (a)"); return; }
+    if (picking) unpick();
+    const loose = pieces.length ? ": de losse delen blijven losse spans" : "";
+    pieces = [];
+    adding = id;
+    toast(`Delen erbij voor ${id}${loose} · Alt-selecteer het volgende · Esc stopt`);
+  }
   /** Alt-select: the selection becomes a span row of this browser, the next piece of a discontinuous span. */
   function piece(sel) {
     pieced = performance.now();   // this gesture is a selection, whatever comes of it: its click is no Alt-click
@@ -1717,9 +1767,25 @@
     const ix = shown(), [s, e] = bounds(ix, range);
     sel.removeAllRanges();
     if (s >= e) return;
+    const pr = adding && local().find((r) => r.id === adding);
+    if (adding && !pr) adding = null;   // the bundle went meanwhile: this starts a new one
+    if (pr) {   // a fresh row is in no bundle, so the test is by place: text a piece of a shown bundle already covers
+      const owner = all.filter((r) => r.labels?.[0] === "parts" && (shows(r) || r.id === pr.id)).find((p) => p.targets.some((t) => {
+        const r = all.find((x) => x.id === t), at = typeof r?.text === "string" && find(ix, r);
+        return Array.isArray(at) && at[0] < e && s < at[1];
+      }));
+      if (owner) { toast(`Dat is al een deel van ${owner.id}`); return; }
+    }
     save({ text: ix.flat.slice(s, e), prefix: ix.flat.slice(Math.max(0, s - AROUND), s), suffix: ix.flat.slice(e, e + AROUND) },
       { note: "", labels: [] });
-    pieces.push(local().at(-1).id);
+    const id = local().at(-1).id;
+    if (pr) {
+      save(pr, { targets: [...pr.targets, id] });
+      draw();
+      toast(`Deel ${pr.targets.length + 1} van ${pr.id} · Alt-selecteer het volgende · Esc stopt`);
+      return;
+    }
+    pieces.push(id);
     draw();
     toast(`Deel ${pieces.length}${pieces.length > 1 ? ": Enter bundelt" : ""} · Alt-selecteer het volgende · Esc stopt`);
   }
@@ -1760,6 +1826,7 @@
     ev.preventDefault();
     ev.stopImmediatePropagation();
     if (!ev.shiftKey) { cycle(c.id); return; }
+    adding = null;   // one armed gesture at a time
     picking = { from: c.id, kind: "resumes" };
     document.body.classList.add("fpl-picking");
     toast(`Klik de eerdere bijzin die ${c.id} weer opneemt. Esc breekt af.`);
@@ -1788,8 +1855,15 @@
   document.addEventListener("keydown", (ev) => {
     const g = document.querySelector(".fpl-graph");   // an open graph takes Esc first, wherever focus is
     if (ev.key === "Escape" && g) { g.close(); return; }
-    if (ev.key === "Escape" && editing) { closeEditor(); layout(); return; }
+    if (ev.key === "Escape" && editing) { closeEditor(); layout(); disarm(); return; }
     if (ev.key === "Escape" && picking) { unpick(); toast("Afgebroken"); return; }
+    if (adding && (ev.key === "Escape" || ev.key === "Enter") && !ev.defaultPrevented
+      && !ev.target.closest?.(ev.key === "Enter" ? "input, textarea, select, [contenteditable], button, a, [role=button], .fpl-chip, summary"
+        : "input, textarea, select, [contenteditable]")) {
+      ev.preventDefault();
+      disarm();
+      return;
+    }
     if (pieces.length && (ev.key === "Escape" || ev.key === "Enter") && !ev.defaultPrevented
       && !ev.target.closest?.("input, textarea, select, [contenteditable], button, a, [role=button], .fpl-chip, summary")) {
       ev.preventDefault();
@@ -1813,7 +1887,9 @@
     }
     if (ev.key === "a" && !ev.metaKey && !ev.ctrlKey && !ev.altKey
       && !ev.target.closest?.("input, textarea, [contenteditable]")) {
-      mode(MODES[(MODES.indexOf(mode()) + 1) % MODES.length]);
+      const m = MODES[(MODES.indexOf(mode()) + 1) % MODES.length];
+      if (m !== "kantlijn") disarm();
+      mode(m);
       draw();
     }
   });

@@ -97,6 +97,13 @@ body.fpl-numbered .fpl-s:hover .fpl-c::before { opacity: 1; }
 .fpl-chip.is-mine { background: var(--fpl-mine-wash); border-color: transparent; color: var(--fpl-mine); }
 .fpl-chip.is-on { background: var(--fpl-mine-wash); border-color: var(--fpl-mine); color: var(--fpl-mine); }
 .fpl-editor .fpl-chip { cursor: pointer; }
+/* the pieces of a discontinuous span, in order; × lets one go */
+.fpl-pieces { display: flex; flex-wrap: wrap; gap: .3rem; margin: .2rem 0; }
+.fpl-piece { display: inline-flex; align-items: center; min-width: 0; max-width: 100%; font-weight: 400; font-style: italic; color: var(--fpl-mute); }
+.fpl-gist { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.fpl-piece.is-lost { text-decoration: line-through; text-decoration-color: var(--fpl-lost); }
+.fpl-unpiece { font: inherit; font-style: normal; flex-shrink: 0; margin-left: .3rem; padding: 0; border: 0; background: none; color: var(--fpl-mute); cursor: pointer; }
+.fpl-unpiece:hover, .fpl-unpiece:focus-visible { color: var(--fpl-lost); }
 .fpl-note { margin: .3rem 0 0; }
 .fpl-by { color: var(--fpl-fg); font-weight: 600; }
 .fpl-fact > .fpl-who { margin-top: .35rem; }
