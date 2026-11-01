@@ -26,6 +26,9 @@
     lit facts --query Q PAGE     the hand rows of PAGE that query Q
                                  finds, one per line: id, labels, text
                                  or note (facts.parse_query)
+    lit graph [PAGE ...]         each page's chunks, their uses and the
+                                 files they tangle to, as
+                                 <page stem>.graph.json beside it
     lit anchor --verify [PAGE ...]
                                  each hand row with a commit has its
                                  text at its place there (asks git)
@@ -398,6 +401,17 @@ def show(repo: Path, commit: str, item: str) -> str | None:
     return done.stdout if done.returncode == 0 else None
 
 
+def cmd_graph(args: argparse.Namespace) -> int:
+    """Write each page's code graph beside it (facts.graph)."""
+    findings: list[web.Finding] = []
+    for path in paths(args.root, args.pages):
+        g, bad = facts.graph(path, args.root)
+        findings += bad
+        text = json.dumps(g, ensure_ascii=False, indent=1) + "\n"
+        path.with_suffix(".graph.json").write_text(text, encoding="utf-8")
+    return report(findings, "graph", 1)
+
+
 def cmd_anchor(args: argparse.Namespace) -> int:
     """Each valid hand row with a commit, against git."""
     named = paths(args.root, args.pages)
@@ -541,6 +555,9 @@ def parser() -> argparse.ArgumentParser:
     p.add_argument("--out", type=Path)
     p.add_argument("pages", nargs="*")
     p.set_defaults(fn=cmd_facts)
+    p = sub.add_parser("graph")
+    p.add_argument("pages", nargs="*")
+    p.set_defaults(fn=cmd_graph)
     p = sub.add_parser("anchor")
     p.add_argument("--verify", action="store_true", required=True)
     p.add_argument("pages", nargs="*")

@@ -1395,6 +1395,57 @@ class Here:
         return [self.place(r, texts) for r in rows], []
 
 
+def graph(
+    path: Path, root: Path
+) -> tuple[dict[str, object], list[web.Finding]]:
+    """A page's code as a graph, for the overlay beside its rows.
+
+    Nodes: each chunk (its id as in the fact layer, its name, its
+    section) and each file it tangles to (``file:<path>``). Edges: a
+    chunk ``uses`` the chunks its body names (``<<name>>``, every chunk
+    of that name), and ``tangles`` to a file with the number of lines it
+    gives it, read from the tangle rows. Generated, never committed:
+    `lit graph' writes it beside the page and the site ships it.
+    """
+    rows, bad = generate(path, root)
+    page = web.read(path.as_posix(), path.read_text(encoding="utf-8"))
+    # a use naming no chunk leaves a hole in the graph; the web's other
+    # findings are `lit check's, not this graph's
+    holes = [
+        f for f in web.tangle(page)[1] if f.message.endswith(">> undefined")
+    ]
+    bad += holes
+    named: dict[str, list[str]] = {}
+    found = list(chunk_ids(page))
+    for _, c, cid in found:
+        named.setdefault(web.norm(c.name), []).append(cid)
+    nodes: list[dict[str, object]] = [
+        {"id": cid, "kind": "chunk", "label": c.name, "section": n}
+        for n, c, cid in found
+    ]
+    edges: list[dict[str, object]] = []
+    for _, c, cid in found:
+        used = [
+            web.norm(m["name"]) for b in c.body if (m := web.USE.fullmatch(b))
+        ]  # normalised as the tangler reads them
+        for name in dict.fromkeys(used):
+            edges += [
+                {"a": cid, "b": u, "label": "uses"}
+                for u in named.get(name, [])
+            ]
+    lines: dict[tuple[str, str], int] = {}
+    for r in rows:
+        ts = r.get("targets")
+        if r.get("kind") == "tangle" and strings(ts) and ts:
+            key = (cast("list[str]", ts)[0], cast("str", r["item"]))
+            lines[key] = lines.get(key, 0) + 1
+    for f in dict.fromkeys(item for _, item in lines):
+        nodes.append({"id": f"file:{f}", "kind": "file", "label": f})
+    for (cid, f), n in lines.items():
+        edges.append({"a": cid, "b": f"file:{f}", "label": "tangles", "n": n})
+    return {"nodes": nodes, "edges": edges}, bad
+
+
 def generate(path: Path, root: Path) -> tuple[list[Row], list[web.Finding]]:
     """A page's fact layer: every generated span and each hand row.
 

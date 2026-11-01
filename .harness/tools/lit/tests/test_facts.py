@@ -291,3 +291,34 @@ def test_ids_are_url_safe(monkeypatch: pytest.MonkeyPatch) -> None:
         kind, *parts = s.id.split(":")
         assert kind in {"chunk", "p", "def", "ex", "refusal", "test", "tangle"}
         assert all(safe.fullmatch(p) for p in parts), s.id
+
+
+def test_graph_joins_chunks_by_use_and_to_their_file(tmp_path: Path) -> None:
+    """Both files use the two Functions chunks; one file is tangled."""
+    (tmp_path / ".git").mkdir()
+    path = page(tmp_path, "p.md", DEMO)
+    page(tmp_path, "tests/test_m.py", TESTS)
+    g, bad = facts.graph(path, tmp_path)
+    assert bad == []
+    nodes = g["nodes"]
+    edges = g["edges"]
+    assert isinstance(nodes, list)
+    assert isinstance(edges, list)
+    assert Counter(n["kind"] for n in nodes) == {"chunk": 4, "file": 1}
+    uses = [(e["a"], e["b"]) for e in edges if e["label"] == "uses"]
+    assert len({a for a, _ in uses}) == 2  # the two file chunks
+    assert len(uses) == 4  # each uses both chunks named Functions
+    tangled = [e for e in edges if e["label"] == "tangles"]
+    assert sum(e["n"] for e in tangled) == 7  # one per tangle row
+    files = {n["id"] for n in nodes if n["kind"] == "file"}
+    assert {e["b"] for e in tangled} == files
+
+
+def test_graph_reports_a_use_that_names_no_chunk(tmp_path: Path) -> None:
+    """A missing chunk leaves a hole: a finding, not a silent gap."""
+    (tmp_path / ".git").mkdir()
+    path = page(
+        tmp_path, "p.md", DEMO.replace("<<Functions>>\n", "<<Gone>>\n", 1)
+    )
+    _, bad = facts.graph(path, tmp_path)
+    assert [f.message for f in bad] == ["<<Gone>> undefined"]

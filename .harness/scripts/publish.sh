@@ -14,6 +14,8 @@ scratch=https://github.com/psjg/fpl-lit-scratch.git
 
 html() {
   python3 "$top/.harness/scripts/homepage.py"
+  # each page's code graph beside it (lit graph), generated, never committed
+  (cd "$top/01-bootstrap" && PYTHONPATH="$top/.harness/tools/lit" "$top/.harness/.venv/bin/python" -m lit graph)
   quarto render
 }
 

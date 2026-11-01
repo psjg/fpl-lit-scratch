@@ -48,3 +48,6 @@ mutants/
 # What make graph writes: the OKF bundle as Turtle (.harness/tools/okfgraph)
 /build/
 
+
+# lit graph writes each page's code graph beside it; generated at publish
+01-bootstrap/**/*.graph.json

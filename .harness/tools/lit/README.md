@@ -302,9 +302,14 @@ They are the next work on this layer, not ideas:
    answer alike. Examples: `label:claim !has:attacks` (a claim no one attacks),
    `label:tfa/f !has:resumes` (a focus no clause takes up). Still open: or, transitive
    chains (PML-TQ's `{4,}`).
-4. **The graph, step two.** The chunks of a page, the places they are used and the files they
-   tangle to, as nodes beside the rows: a `lit graph` export that joins the web lit already
-   reads with the sidecar, and the same panel drawing it.
+4. **The graph, step two: built 2026-11-01.** `lit graph [PAGE ...]` writes
+   `<page stem>.graph.json` beside each page: its chunks (ids as in the fact layer), the files
+   they tangle to, `uses` edges from a chunk to every chunk its body names, and `tangles` edges
+   with the number of lines given, read from the tangle rows (lit tangles a page's first Python
+   file only, so one file per page today). Generated at publish (`publish.sh html`), shipped by
+   `_quarto-site.yml`, ignored by git. The overlay adds them to its graph: a chunk as a square,
+   a tangle edge as wide as log2 of its lines, a click on a chunk goes to its code block; a row
+   that names a chunk joins the two.
 
 ## Layout
 
