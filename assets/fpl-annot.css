@@ -11,6 +11,7 @@
   --fpl-vers: #2f7d6b; --fpl-vers-wash: rgba(47, 125, 107, .12);
   --fpl-mine: #3b63c4; --fpl-mine-wash: rgba(59, 99, 196, .12);
   --fpl-lost: #9a7b2f;
+  --fpl-con: #b4443c;
   --fpl-rule: var(--bs-border-color, #dee2e6);
   --fpl-mute: var(--bs-secondary-color, #6c757d);
   --fpl-bg: var(--bs-body-bg, #fff);
@@ -21,6 +22,7 @@
   --fpl-vers: #63b89f; --fpl-vers-wash: rgba(99, 184, 159, .16);
   --fpl-mine: #8aa6ee; --fpl-mine-wash: rgba(138, 166, 238, .18);
   --fpl-lost: #cfa85a;
+  --fpl-con: #e0857c;
 }
 
 /* spans: a thin line under the text, a wash when its card is near */
@@ -211,3 +213,17 @@ body.fpl-numbered .fpl-s:hover .fpl-c::before { opacity: 1; }
 
 /* close reading: the sentence under the cursor (j / k), washed like a hot span */
 .fpl-s.fpl-here { background: var(--fpl-vers-wash); }
+
+/* arguments: a claim's tree, + supports and − attacks, undercuts under the inference */
+.fpl-argue { display: flex; gap: .8rem; }
+.fpl-args { margin-top: .4rem; font-size: .8rem; }
+.fpl-args > summary { cursor: pointer; color: var(--fpl-mute); font-weight: 600; }
+.fpl-arg { list-style: none; margin: .2rem 0 0; padding-left: .55rem; border-left: 1px solid var(--fpl-rule); }
+.fpl-arg li { margin-top: .25rem; }
+.fpl-arg-node { all: unset; cursor: pointer; display: block; line-height: 1.35; }
+.fpl-arg-node:hover, .fpl-arg-node:focus-visible { text-decoration: underline; }
+.fpl-arg-node b { display: inline-block; width: .8em; }
+.fpl-arg-attacks > .fpl-arg-node b { color: var(--fpl-con); }
+.fpl-arg-under { margin-top: .2rem; color: var(--fpl-mute); font-style: italic; }
+.fpl-arg-under > .fpl-arg { font-style: normal; color: var(--fpl-fg); }
+body.fpl-picking mark.fact, body.fpl-picking .fpl-card, body.fpl-picking [data-fact], body.fpl-picking li[data-id] { cursor: crosshair; }

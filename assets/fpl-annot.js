@@ -94,11 +94,21 @@
  * And j and k move a reading cursor sentence by sentence (after Miall
  * 1994): the sentence is washed, its address is the URL's hash, so a
  * reload returns to it, and Enter opens the editor for a fact on it.
+ *
+ * Arguments, after the Argument Interchange Format (Chesnevar et al.
+ * 2006): a claim never points at a claim. A supports or attacks row
+ * stands between them, read targets[0] -> targets[1:], and has an id of
+ * its own, so an attacks row may aim at it: an undercut, which attacks
+ * the inference rather than its premise. The data stays a graph (a
+ * premise may serve two claims); a card shows the tree read from its
+ * row, grounds under the claim, undercuts under the inference they
+ * attack. "Steunt…" and "Valt aan…" on a card arm a pick: the next
+ * click on a span, a card, a fact or a branch of a tree is the end.
  */
 (() => {
   "use strict";
   const LABELS = ["reason", "claim", "question", "history", "slop", "good",
-    "because", "supports", "contradicts", "cites", "checkedBy"];
+    "because", "supports", "attacks", "contradicts", "cites", "checkedBy"];
   const AROUND = 32;
   const SKIP = "script, style, button, .fpl-annot-ui";
   const QUOTE = { "‘": "'", "’": "'", "“": '"', "”": '"' };
@@ -306,6 +316,8 @@
     else if (r.labels?.length)
       f.append(el("div", { className: "fpl-chips" }, ...r.labels.map((l) => chip(l, cls))));
     if (r.note) f.append(el("p", { className: "fpl-note" }, r.note));
+    const box = argBox(r.id);
+    if (box) f.append(box);
     f.append(reply(r.id));
     for (const sub of facts(r.id)) f.append(Object.assign(factView(sub, cls), { className: "fpl-fact fpl-sub" }));
     return f;
@@ -326,10 +338,12 @@
     if (row.labels?.length) card.append(el("div", { className: "fpl-chips" }, ...row.labels.map((l) => chip(l, cls))));
     if (row.note) card.append(el("p", { className: "fpl-note" }, row.note));
     for (const r of facts(row.id)) card.append(factView(r, cls));
+    const box = argBox(row.id);
+    if (box) card.append(box);
     const ends = (r) => (r.targets ?? []).slice(typeof r.text === "string" ? 0 : 1);
     for (const t of new Set([row, ...facts(row.id)].flatMap(ends)))
       if (place(t)) card.append(button(`Toon beide · ${t}`, (ev) => { ev.stopPropagation(); both(row.id, t); }, "fpl-reply"));
-    card.append(reply(row.id, card));
+    card.append(el("div", { className: "fpl-bar fpl-argue" }, reply(row.id, card), argue(row.id, "supports"), argue(row.id, "attacks")));
     card.onmouseenter = () => hot(row.id);
     card.onmouseleave = () => hot(null);
     card.onclick = (ev) => {
@@ -340,6 +354,97 @@
     };
     return card;
   }
+
+  /* ---- arguments: supports and attacks rows between rows ---- */
+
+  const ARGUING = ["supports", "attacks"];
+  const kindOf = (r) => ARGUING.includes(r.labels?.[0]) ? r.labels[0] : null;
+  /** The supports and attacks rows ending at an id: a claim's grounds and attackers, an inference's undercuts. */
+  const grounds = (id) => all.filter((r) => kindOf(r) && (r.targets ?? []).slice(1).includes(id));
+  /** One line of what an id says: its row's note or text, else the text where it shows, else the id. */
+  function gist(id) {
+    const r = all.find((x) => x.id === id);
+    const s = r?.note || (typeof r?.text === "string" ? plain(r.text) : "") || place(id)?.textContent || "";
+    return s.replace(/\s+/g, " ").trim().slice(0, 120) || id;
+  }
+  /**
+   * The tree read from an id: each ground a branch, + when it supports
+   * and − when it attacks; under a branch first the attacks and supports
+   * of its inference, then the grounds of its premise. An id met again
+   * on its own path is a cycle (the graph allows one) and stops there;
+   * one drawn before elsewhere in the tree (a premise two claims share)
+   * shows once more, unexpanded, so the tree grows with the rows and not
+   * with the paths through them.
+   */
+  function argTree(id, path, drawn) {
+    const ul = el("ul", { className: "fpl-arg" });
+    for (const rel of grounds(id)) {
+      const src = rel.targets[0], k = kindOf(rel);
+      const li = el("li", { className: `fpl-arg-${k}` });
+      li.dataset.id = rel.id;
+      const go = el("button", { type: "button", className: "fpl-arg-node", title: `${rel.id}: ${src}` },
+        el("b", {}, k === "supports" ? "+" : "−"), " ", gist(src));
+      go.onclick = (ev) => {
+        if (picking) return;
+        ev.stopPropagation();
+        const e = place(src);
+        e ? seen(e).scrollIntoView({ block: "center", behavior: "smooth" }) : toast(`${src} staat niet op deze pagina`);
+      };
+      li.append(go);
+      if (rel.note) li.append(el("p", { className: "fpl-note" }, rel.note));
+      if (path.has(src) || path.has(rel.id)) li.append(el("span", { className: "fpl-lost" }, "kring"));
+      else if (drawn.has(rel.id) || drawn.has(src)) li.append(el("span", { className: "fpl-lost" }, "zie boven"));
+      else {
+        drawn.add(rel.id).add(src);
+        const deeper = new Set([...path, rel.id, src]);
+        if (grounds(rel.id).length) li.append(el("div", { className: "fpl-arg-under" }, "op de gevolgtrekking", argTree(rel.id, deeper, drawn)));
+        if (grounds(src).length) li.append(argTree(src, deeper, drawn));
+      }
+      ul.append(li);
+    }
+    return ul;
+  }
+  const opened = new Set();   // the ids whose tree is open, kept across draws
+  /** A claim's count, "2 voor · 1 tegen", over its tree; null when nothing argues about it. */
+  function argBox(id) {
+    const g = grounds(id);
+    if (!g.length) return null;
+    const pro = g.filter((r) => kindOf(r) === "supports").length;
+    const d = el("details", { className: "fpl-args" },
+      el("summary", {}, `Argument · ${pro} voor · ${g.length - pro} tegen`), argTree(id, new Set([id]), new Set([id])));
+    d.open = opened.has(id);
+    // a new box set open fires toggle too: only a change by hand lays out again
+    d.ontoggle = () => { if (d.open === opened.has(id)) return; d.open ? opened.add(id) : opened.delete(id); layout(); };
+    d.onclick = (ev) => { if (!picking) ev.stopPropagation(); };
+    return d;
+  }
+
+  let picking = null;   // {from, kind}: the next click on a row ends a new supports or attacks row from it
+  let picked = 0;       // when the last pick landed: the gesture's late touchend (pointerDone) is swallowed
+  const argue = (from, kind) => button(kind === "supports" ? "Steunt…" : "Valt aan…", (ev) => {
+    ev.stopPropagation();
+    picking = { from, kind };
+    document.body.classList.add("fpl-picking");
+    toast(`Klik wat ${from} ${kind === "supports" ? "steunt" : "aanvalt"}: een span, kaart, feit of tak. Esc breekt af.`);
+  }, "fpl-reply");
+  const unpick = () => { picking = null; document.body.classList.remove("fpl-picking"); };
+  /** The pick's click: the row under it, from the innermost of a branch, a fact, a card, a span or a block. */
+  document.addEventListener("click", (ev) => {
+    if (!picking) return;
+    const at = ev.target.closest?.("li[data-id], [data-fact], .fpl-card, mark.fact, .fpl-p[id]");
+    if (!at) return;
+    ev.preventDefault();
+    ev.stopPropagation();
+    const to = at.dataset.fact ?? (at.matches(".fpl-p") ? at.id : at.dataset.id);
+    const { from, kind } = picking;
+    unpick();
+    picked = performance.now();
+    if (to === from) { toast("Een rij argumenteert niet over zichzelf"); return; }
+    save({ targets: [from, to] }, { note: "", labels: [kind] });
+    opened.add(to);
+    draw();
+    toast(`${from} ${kind} ${to}`);
+  }, true);
 
   /** The head of the margin: counts and the three buttons. */
   function head() {
@@ -929,6 +1034,7 @@
 
   /** A selection in the body opens the editor for a new quote row; a click on a mark lights or edits it. */
   function pointerDone(ev) {
+    if (picking || performance.now() - picked < 500) return;   // a pick owns its whole gesture
     const target = ev.target instanceof Element ? ev.target : null;
     if (target?.closest(".fpl-annot-ui")) return;
     const sel = getSelection();
@@ -1000,6 +1106,7 @@
   body.addEventListener("mouseout", (ev) => { if (ev.target.closest?.("mark.fact") && !editing) hot(null); });
   document.addEventListener("keydown", (ev) => {
     if (ev.key === "Escape" && editing) { closeEditor(); layout(); return; }
+    if (ev.key === "Escape" && picking) { unpick(); toast("Afgebroken"); return; }
     if (ev.key === "Escape" && bands.length && !ev.target.closest?.("input, textarea, [contenteditable]")) {
       setBands(bands.slice(0, -1));
       return;
