@@ -239,3 +239,12 @@ body.fpl-numbered .fpl-c[data-tfa]::before { content: attr(data-n) attr(data-tfa
 .fpl-arcs path { fill: none; stroke: var(--fpl-mute); stroke-width: 1; opacity: .7; pointer-events: stroke; }
 .fpl-arcs path:hover { stroke-width: 2; opacity: 1; cursor: pointer; }
 body.fpl-picking .fpl-c[id], body.fpl-picking .fpl-s[id] { cursor: crosshair; }
+
+/* labels: quick chips, the offer, readings side by side */
+.fpl-quick { margin-bottom: .3rem; }
+.fpl-quick small, .fpl-filter small { color: var(--fpl-mute); margin-right: .2rem; }
+.fpl-offer { display: flex; gap: .5rem; align-items: center; }
+.fpl-offer button { font: inherit; font-weight: 600; background: none; border: 1px solid var(--fpl-rule); border-radius: 999px; padding: 0 .5rem; cursor: pointer; color: inherit; }
+.fpl-readings { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .3rem; }
+.fpl-reading { flex: 1 1 7rem; min-width: 0; padding: .25rem .4rem; border: 1px solid var(--fpl-rule); border-radius: 4px; margin-top: 0; }
+.fpl-reading.mine { cursor: pointer; border-color: var(--fpl-mine); }

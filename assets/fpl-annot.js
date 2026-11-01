@@ -116,12 +116,41 @@
  * value. A resumes row says a clause takes up an earlier one (Danes
  * 1974); Alt-Shift-click a clause arms the pick, and the left gutter
  * draws each such link as an arc, so the thematic progression shows.
+ *
+ * Labels are free paths, a name scoped by names to any depth (fn/claim,
+ * slop/beeld/dood), after Marshall (1997: no fixed palette of marks)
+ * and VIKI (Marshall et al. 1994: types arise from examples, structure
+ * comes on demand). The
+ * editor ranks its chips by use, on this page and in this browser across
+ * the site; the seeds under fn/ only start the list and sink, never go.
+ * Striking a scope in the filter strikes everything under it. When three
+ * rows on a page share a label, the margin offers it once as a quick
+ * chip, one click in the editor of an address; nothing is imposed. Rows
+ * on one address share one card, side by side; with different labels
+ * they are readings, as Empson reads one passage several ways at once,
+ * and so are facts on one span with different labels. A row that passes
+ * the filter shows its group.
  */
 (() => {
   "use strict";
   const LABELS = ["reason", "claim", "question", "history", "slop", "good",
     "because", "supports", "attacks", "contradicts", "cites", "checkedBy",
-    "resumes", "coref", "parts", "tfa/t", "tfa/c", "tfa/f"];
+    "resumes", "coref", "parts", "tfa/t", "tfa/c", "tfa/f",
+    "fn/definition", "fn/example", "fn/transition", "fn/claim", "fn/evidence", "fn/aside", "fn/hedge"];
+  const LABEL = /^[^/ \t\n\r\f\v]+(?:\/[^/ \t\n\r\f\v]+)*$/;   // lit's facts.LABEL, whitespace spelt out alike
+  /** A label and every scope above it: fn/claim/strong gives fn, fn/claim, fn/claim/strong. */
+  const scopes = (l) => l.split("/").map((_, i, a) => a.slice(0, i + 1).join("/"));
+  /** Whether a label lies at or under a scope. */
+  const under = (l, p) => l === p || l.startsWith(p + "/");
+  const store = (k, d) => (set) => {
+    try {
+      if (set !== undefined) localStorage.setItem(k, JSON.stringify(set));
+      return JSON.parse(localStorage.getItem(k) || "null") ?? d;
+    } catch { return set ?? d; }
+  };
+  const tally = store("fpl-annot:used", {});        // label -> times saved in this browser, site-wide
+  const quick = store("fpl-annot:quick", []);       // labels confirmed as quick chips
+  const declined = store("fpl-annot:declined", []); // labels whose offer was turned down
   const LAYERS = ["span", "fact", "thread", "argument", "tfa", "coref", "relation"];
   const RELATIONS = new Set(["because", "supports", "attacks", "contradicts", "supersedes", "checkedBy", "cites", "resumes"]);
   const AROUND = 32;
@@ -290,7 +319,7 @@
     walk(row.id);
     return got.size ? got : new Set([NONE]);
   }
-  const passes = (row) => { const off = hidden(); return [...labelsOf(row)].some((l) => !off.has(l)); };
+  const passes = (row) => { const off = [...hidden()]; return [...labelsOf(row)].some((l) => !off.some((h) => under(l, h))); };
 
   /** Remove the marks, draw every row the stand and the filter allow, and lay the margin out. */
   function draw() {
@@ -318,10 +347,23 @@
     control.replaceChildren(seg);
     if (cur === "lezen") return;
     const off = hidden();
-    const labels = [...new Set(spans.flatMap((r) => [...labelsOf(r)]))].sort((a, b) => a === NONE ? 1 : b === NONE ? -1 : a.localeCompare(b));
+    const bySegment = (a, b) => {   // children right after their scope: slop, slop/beeld, slop-ish
+      const x = a.split("/"), y = b.split("/");
+      for (let i = 0; i < Math.min(x.length, y.length); i++) if (x[i] !== y[i]) return x[i].localeCompare(y[i]);
+      return x.length - y.length;
+    };
+    const labels = [...new Set(all.filter((r) => typeof r.text === "string" || addressed(r))   // spans and rows on addresses
+      .flatMap((r) => [...labelsOf(r)].flatMap(scopes)))]
+      .sort((a, b) => a === NONE ? 1 : b === NONE ? -1 : bySegment(a, b));
     const row = el("div", { className: "fpl-chips fpl-filter" },
-      ...labels.map((l) => { const c = chip(l, off.has(l) ? "is-off" : "is-on"); c.tabIndex = 0;
-        c.onclick = () => { const o = hidden(); o.has(l) ? o.delete(l) : o.add(l); hidden(o); draw(); };
+      ...labels.map((l) => { const struck = [...off].some((h) => under(l, h));
+        const c = chip(l, struck ? "is-off" : "is-on"); c.tabIndex = 0;
+        c.style.marginLeft = `${(l.split("/").length - 1) * 0.6}rem`;
+        c.onclick = () => {
+          const o = hidden(), above = [...o].find((h) => h !== l && under(l, h));
+          if (above) { toast(`Zet eerst ${above} aan`); return; }   // struck by its scope: the scope decides
+          o.has(l) ? o.delete(l) : o.add(l); hidden(o); draw();
+        };
         c.onkeydown = (e) => { if (e.key === " " || e.key === "Enter") { e.preventDefault(); c.onclick(); } };
         return c; }),
       off.size ? button("alles", () => { hidden(new Set()); draw(); }, "fpl-link") : null);
@@ -378,13 +420,33 @@
     if (st !== "vers") card.append(el("div", { className: "fpl-excerpt" }, plain(row.text)));
     else if (typeof row.text !== "string") card.append(el("div", { className: "fpl-excerpt" },
       `${row.targets[0]}: ${anchorsOf(row.id)[0].textContent.replace(/\s+/g, " ").trim().slice(0, 140)}`));
-    if (row.labels?.length) card.append(el("div", { className: "fpl-chips" }, ...row.labels.map((l) => chip(l, cls))));
-    if (row.note) card.append(el("p", { className: "fpl-note" }, row.note));
-    for (const r of facts(row.id)) card.append(factView(r, cls));
-    const box = argBox(row.id);
+    const readings = typeof row.text === "string" ? []
+      : all.filter((r) => r !== row && addressed(r) && shows(r) && r.targets[0] === row.targets[0]);
+    if (readings.length) {
+      const differ = new Set([row, ...readings].map((r) => r.labels?.[0] ?? "")).size > 1;
+      card.append(el("div", { className: "fpl-rel" }, el("b", {}, `${readings.length + 1} ${differ ? "lezingen" : "rijen"}`)),
+        // each reading is a whole fact: its replies, its argument, data-fact for a pick
+        el("div", { className: "fpl-readings" }, ...[row, ...readings].map((r) => {
+          const v = factView(r, r.mine ? "is-mine" : "is-vers");
+          v.className = "fpl-fact fpl-reading" + (r.mine ? " mine" : "");
+          if (r.mine) v.onclick = (ev) => { if (picking || ev.target.closest("button, a, details")) return; ev.stopPropagation(); edit(r, card); };
+          return v;
+        })));
+    } else {
+      if (row.labels?.length) card.append(el("div", { className: "fpl-chips" }, ...row.labels.map((l) => chip(l, cls))));
+      if (row.note) card.append(el("p", { className: "fpl-note" }, row.note));
+    }
+    const fs = readings.length ? [] : facts(row.id), plainFacts = fs.filter((r) => !(r.targets ?? []).slice(1).length && r.labels?.length);
+    const tops = new Set(plainFacts.map((r) => r.labels[0]));
+    if (plainFacts.length > 1 && tops.size > 1) {   // facts on one span with different labels: readings
+      card.append(el("div", { className: "fpl-rel" }, el("b", {}, `${plainFacts.length} lezingen`)),
+        el("div", { className: "fpl-readings" }, ...plainFacts.map((r) => Object.assign(factView(r, cls), { className: "fpl-fact fpl-reading" }))));
+      for (const r of fs.filter((x) => !plainFacts.includes(x))) card.append(factView(r, cls));
+    } else for (const r of fs) card.append(factView(r, cls));
+    const box = readings.length ? null : argBox(row.id);   // a reading's factView drew it
     if (box) card.append(box);
     const ends = (r) => (r.targets ?? []).slice(typeof r.text === "string" ? 0 : 1);
-    for (const t of new Set([row, ...facts(row.id)].flatMap(ends)))
+    for (const t of new Set([row, ...readings, ...facts(row.id)].flatMap(ends)))
       if (place(t)) card.append(button(`Toon beide · ${t}`, (ev) => { ev.stopPropagation(); both(row.id, t); }, "fpl-reply"));
     card.append(el("div", { className: "fpl-bar fpl-argue" }, reply(row.id, card), argue(row.id, "supports"), argue(row.id, "attacks")));
     card.onmouseenter = () => hot(row.id);
@@ -559,7 +621,12 @@
    */
   function editor(row, onDone) {
     const on = new Set(row.labels ?? []);
-    const seen = [...new Set([...LABELS, ...sidecar.flatMap((r) => r.labels ?? [])])];
+    // Maps, not objects: a label may be any name, __proto__ and constructor too
+    const used = new Map(), t = new Map(Object.entries(tally()));
+    for (const r of all) for (const l of r.labels ?? []) used.set(l, (used.get(l) ?? 0) + 1);
+    const rank = (l) => (used.get(l) ?? 0) + (Number(t.get(l)) || 0);
+    const seen = [...new Set([...LABELS, ...used.keys(), ...t.keys()])]
+      .map((l, i) => [l, i]).sort((a, b) => rank(b[0]) - rank(a[0]) || a[1] - b[1]).map(([l]) => l);   // by use, then seed order
     const form = el("form", { className: "fpl-editor" });
     const note = el("textarea", { placeholder: "Notitie", value: row.note ?? "", rows: 2 });
     const chips = el("div", { className: "fpl-chips" });
@@ -574,7 +641,11 @@
       }), more);
     render();
     more.onkeydown = (e) => {
-      if (e.key === "Enter" && more.value.trim()) { e.preventDefault(); on.add(more.value.trim()); more.value = ""; render(); }
+      if (e.key !== "Enter" || !more.value.trim()) return;
+      e.preventDefault();
+      const l = more.value.trim();
+      if (!LABEL.test(l)) { toast("Een label is naam/scope/…: geen spatie, geen leeg stuk"); return; }
+      on.add(l); more.value = ""; render();
     };
     const keys = el("div", { className: "fpl-bar fpl-keys" },
       row.id ? button("Verwijder", () => onDone("delete")) : null,
@@ -585,7 +656,14 @@
     const about = typeof row.text === "string" ? row.text
       : parent ? `Reactie op ${t0}: ${(parent.note || parent.text || (parent.labels ?? []).join(" ")).replace(/\s+/g, " ").slice(0, 140)}`
       : `${t0}: ${document.getElementById(t0)?.textContent.replace(/\s+/g, " ").trim().slice(0, 140) ?? ""}`;
-    form.append(el("div", { className: "fpl-excerpt" }, about), note, chips, keys);
+    const fast = typeof row.text !== "string" && !row.id && quick().length
+      ? el("div", { className: "fpl-chips fpl-quick" }, el("small", {}, "snel"),
+        ...quick().map((l) => { const b = chip(l, "is-on"); b.tabIndex = 0;
+          b.onclick = () => onDone({ note: note.value.trim(), labels: [...new Set([l, ...on])] });
+          b.onkeydown = (e) => { if (e.key === " " || e.key === "Enter") { e.preventDefault(); e.stopPropagation(); b.onclick(); } };
+          return b; }))
+      : null;
+    form.append(el("div", { className: "fpl-excerpt" }, about), fast, note, chips, keys);
     form.onsubmit = (ev) => { ev.preventDefault(); onDone({ note: note.value.trim(), labels: [...on] }); };
     form.onkeydown = (e) => {
       if (e.key === "Escape") { e.stopPropagation(); onDone(null); }
@@ -609,11 +687,37 @@
     const l = layerOf(done), off = offLayers();
     if (off.delete(l)) { offLayers(off); toast(`Laag ${l} weer aan`); }
   }
+  /** A save from the editor: what the reader typed or picked counts toward the ranking and the offer. */
+  function typed(row, got) {
+    save(row, got);
+    if (got === "delete") return;
+    const t = new Map(Object.entries(tally())), added = (got.labels ?? []).filter((x) => !(row.labels ?? []).includes(x));
+    for (const x of added) t.set(x, (Number(t.get(x)) || 0) + 1);
+    tally(Object.fromEntries(t));
+    offer(added);
+  }
+  /**
+   * Offer a label as a quick chip once three rows of the page carry it
+   * (VIKI: the tool recognises a type, the user confirms it). The offer
+   * stays until answered, one at a time; a yes and a no are both kept,
+   * so a label is asked about until it has an answer, then never again.
+   */
+  function offer(labels) {
+    if (document.querySelector(".fpl-offer")) return;
+    const rowsNow = rows();
+    const l = labels.find((x) => !quick().includes(x) && !declined().includes(x)
+      && rowsNow.filter((r) => r.labels?.includes(x)).length >= 3);
+    if (!l) return;
+    const say = (yes) => { (yes ? quick : declined)([...(yes ? quick() : declined()), l]); box.remove(); if (yes) toast(`${l} is een snelchip`); };
+    const box = el("div", { className: "fpl-annot-ui fpl-toast fpl-offer" }, `Drie keer ${l}: als snelchip op een adres?`,
+      button("Ja", () => say(true)), button("Nee", () => say(false)));
+    document.body.append(box);
+  }
 
   /** Open the editor for a row, in its card or in a new card at the given height. */
   function edit(row, card, rect) {
     closeEditor();
-    const done = (got) => { closeEditor(); if (got) { save(row, got); draw(); } else layout(); };
+    const done = (got) => { closeEditor(); if (got) { typed(row, got); draw(); } else layout(); };
     const form = editor(row, done);
     if (wide()) {
       const c = card ?? el("div", { className: "fpl-card mine fpl-editing" });
@@ -697,7 +801,9 @@
     }
     if (mode() === "lezen") return;
     if (full) margin.append(head());
-    const spans = all.filter((r) => (typeof r.text === "string" || addressed(r)) && shows(r) && passes(r) && (full || open.has(r.id)));
+    const heads = new Set();   // one card per address: its other rows are readings in it
+    const spans = all.filter((r) => (typeof r.text === "string" || addressed(r)) && shows(r) && passes(r) && (full || open.has(r.id)))
+      .filter((r) => typeof r.text === "string" || (!heads.has(r.targets[0]) && heads.add(r.targets[0])));
     if (!spans.length) return;
     const lost = spans.filter((r) => state[r.id] !== "vers");
     const found = spans.map((r) => ({ r, m: anchorsOf(r.id)[0] })).filter((x) => x.m)
