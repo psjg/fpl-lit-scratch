@@ -280,10 +280,12 @@ the page; Esc closes it. Plain JavaScript, no outside assets.
 These are in the model now and gated, but the overlay does not draw them yet, or not fully.
 They are the next work on this layer, not ideas:
 
-1. **Discontinuous spans.** A `parts` row is read and gated, but the overlay still draws each
-   part as its own span with its own card. To build: one card for the `parts` row, its parts
-   underlined together and lit together, a row about the span naming the `parts` row; a
-   selection that skips text (Alt-drag adds a part) to write one.
+1. **Discontinuous spans: built 2026-11-01.** A `parts` row has one card; its pieces are
+   underlined as spans, light together, and have no cards of their own; a fact about the whole
+   names the `parts` row. Alt-select text adds a piece (a span row of this browser), again for
+   the next, and Enter bundles them and opens the editor for a fact on the whole; Esc stops and
+   leaves the pieces as loose spans. Still open: a piece of a piece, and adding a piece to an
+   existing `parts` row.
 2. **Coreference as a layer of its own.** A `coref` row is read, gated and lit on hover. To
    build: chains across the page (PDT's coreference links, Mikulová et al. 2006 ch. 9), a
    `coref` lens that numbers each chain in the gutter, and writing a link by pick as

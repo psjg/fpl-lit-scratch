@@ -137,6 +137,12 @@
  * an undercut has something to aim at (AIF); a fact hangs from what it is
  * about. "Graph" in the margin's head shows the page, "Graph" on a card
  * that row and what lies within two steps; a click on a node goes there.
+ *
+ * Discontinuous spans: a parts row bundles span rows as the pieces of
+ * one span (Mueller 2005 keeps such a span as several token ranges). Its
+ * pieces are underlined as before but light together and share one card,
+ * the parts row's, where a fact about the whole hangs. Alt-select text to
+ * add a piece, again for the next, and Enter bundles them; Esc stops.
  */
 (() => {
   "use strict";
@@ -290,7 +296,16 @@
     el("button", { type: "button", onclick, className }, text);
   const marksOf = (id) => body.querySelectorAll(`mark.fact[data-id="${CSS.escape(id)}"]`);
   /** What a row is drawn at: its marks, or the addressed element it is about. */
+  /** The shown parts row a span row is a piece of, or undefined. */
+  const partsOf = (id) => all.find((r) => r.labels?.[0] === "parts" && shows(r) && r.targets?.includes(id));
+  /** A parts row and its pieces, from any of them; else just the id. */
+  const groupOf = (id) => {
+    const p = all.find((r) => r.id === id && r.labels?.[0] === "parts") ?? partsOf(id);
+    return p ? [p.id, ...p.targets] : [id];
+  };
   function anchorsOf(id) {
+    const pr = all.find((r) => r.id === id && r.labels?.[0] === "parts");
+    if (pr) return (pr.targets ?? []).flatMap((t) => [...marksOf(t)]);   // a discontinuous span: its pieces' marks
     const ms = marksOf(id);
     if (ms.length) return [...ms];
     const row = all.find((r) => r.id === id);
@@ -338,9 +353,12 @@
       if (typeof row.text !== "string" || !row.text.trim()) continue;
       const ix = shown(), at = find(ix, row);
       state[row.id] = typeof at === "string" ? at : "vers";
-      if (typeof at !== "string" && mode() !== "lezen" && passes(row)) wrap(ix, at[0], at[1], row);
+      const p = partsOf(row.id);   // a piece shows when its whole does
+      if (typeof at !== "string" && mode() !== "lezen" && (p ? passes(p) : passes(row))) wrap(ix, at[0], at[1], row);
     }
     for (const row of all) if (addressed(row)) state[row.id] = "vers";
+    for (const p of all.filter((r) => r.labels?.[0] === "parts"))   // a whole is found only when every piece is
+      state[p.id] = (p.targets ?? []).every((t) => state[t] === "vers") ? "vers" : "stale";
     layout();
   }
 
@@ -424,7 +442,9 @@
       row.by ? el("span", { className: "fpl-by" }, row.by) : null,
       st === "stale" ? el("span", { className: "fpl-lost" }, "niet meer gevonden")
         : st === "dubbel" ? el("span", { className: "fpl-lost" }, "meer dan één keer gevonden") : null));
-    if (st !== "vers") card.append(el("div", { className: "fpl-excerpt" }, plain(row.text)));
+    if (row.labels?.[0] === "parts") card.append(el("div", { className: "fpl-excerpt" },
+      row.targets.map((t) => plain(all.find((r) => r.id === t)?.text ?? t).replace(/\s+/g, " ").trim().slice(0, 70)).join(" … ")));
+    else if (st !== "vers") card.append(el("div", { className: "fpl-excerpt" }, plain(row.text)));
     else if (typeof row.text !== "string") card.append(el("div", { className: "fpl-excerpt" },
       `${row.targets[0]}: ${anchorsOf(row.id)[0].textContent.replace(/\s+/g, " ").trim().slice(0, 140)}`));
     const readings = typeof row.text === "string" ? []
@@ -946,8 +966,8 @@
     if (mode() === "lezen") return;
     if (full) margin.append(head());
     const heads = new Set();   // one card per address: its other rows are readings in it
-    const spans = all.filter((r) => (typeof r.text === "string" || addressed(r)) && shows(r) && passes(r) && (full || open.has(r.id)))
-      .filter((r) => typeof r.text === "string" || (!heads.has(r.targets[0]) && heads.add(r.targets[0])));
+    const spans = all.filter((r) => (typeof r.text === "string" || addressed(r) || r.labels?.[0] === "parts") && shows(r) && passes(r) && (full || open.has(r.id)))
+      .filter((r) => typeof r.text === "string" ? !partsOf(r.id) : r.labels?.[0] === "parts" || (!heads.has(r.targets[0]) && heads.add(r.targets[0])));
     if (!spans.length) return;
     const lost = spans.filter((r) => state[r.id] !== "vers");
     const found = spans.map((r) => ({ r, m: anchorsOf(r.id)[0] })).filter((x) => x.m)
@@ -1032,8 +1052,9 @@
 
   /** The span, card and line of one row light up together. */
   function hot(id) {
+    const group = new Set(id ? groupOf(id) : []);   // a piece lights its whole, the whole its pieces
     for (const n of [...body.querySelectorAll("mark.fact, .is-hot"), ...margin.querySelectorAll(".fpl-card"), ...lines.children])
-      n.classList.toggle("is-hot", !!id && n.dataset.id === id);
+      n.classList.toggle("is-hot", group.has(n.dataset.id));
     if (id) for (const e of anchorsOf(id)) if (!e.matches("mark.fact")) e.classList.add("is-hot");
     for (const n of body.querySelectorAll(".fpl-coref")) n.classList.remove("fpl-coref");
     if (id) for (const t of corefOf(id)) for (const e of [...marksOf(t), document.getElementById(t)])
@@ -1395,14 +1416,15 @@
 
   /** A selection in the body opens the editor for a new quote row; a click on a mark lights or edits it. */
   function pointerDone(ev) {
-    if (picking || ev.altKey || performance.now() - picked < 500) return;   // a pick or an Alt gesture owns its click
+    if (picking || performance.now() - picked < 500) return;   // a pick owns its whole gesture
     const target = ev.target instanceof Element ? ev.target : null;
     if (target?.closest(".fpl-annot-ui")) return;
     const sel = getSelection();
+    if (ev.altKey) { if (sel.rangeCount && !sel.isCollapsed) piece(sel); return; }   // Alt: a piece, or an Alt-click
     if (!sel.rangeCount || sel.isCollapsed) {
       const m = target?.closest("mark.fact");
       if (!m) { if (editing) { closeEditor(); layout(); } return; }
-      const row = all.find((r) => r.id === m.dataset.id);
+      const own = all.find((r) => r.id === m.dataset.id), row = partsOf(own.id) ?? own;   // a piece answers for its whole
       if (mode() !== "kantlijn") {
         open.has(row.id) ? open.delete(row.id) : (open.clear(), open.add(row.id));
         layout();
@@ -1434,6 +1456,37 @@
     edit(seed, null, at);
     hot("draft");
   }
+  let pieces = [];   // the span rows Alt-selected so far, bundled by Enter
+  let pieced = 0;    // when the last piece was taken
+  /** Alt-select: the selection becomes a span row of this browser, the next piece of a discontinuous span. */
+  function piece(sel) {
+    pieced = performance.now();   // this gesture is a selection, whatever comes of it: its click is no Alt-click
+    if (mode() !== "kantlijn") { sel.removeAllRanges(); toast("Delen schrijf je in de stand Kantlijn (a)"); return; }
+    const range = sel.getRangeAt(0);
+    if (!body.contains(range.commonAncestorContainer)
+      || [...body.querySelectorAll(".fpl-scrunched")].some((l) => range.intersectsNode(l))) { sel.removeAllRanges(); return; }
+    const ix = shown(), [s, e] = bounds(ix, range);
+    sel.removeAllRanges();
+    if (s >= e) return;
+    save({ text: ix.flat.slice(s, e), prefix: ix.flat.slice(Math.max(0, s - AROUND), s), suffix: ix.flat.slice(e, e + AROUND) },
+      { note: "", labels: [] });
+    pieces.push(local().at(-1).id);
+    draw();
+    toast(`Deel ${pieces.length}${pieces.length > 1 ? ": Enter bundelt" : ""} · Alt-selecteer het volgende · Esc stopt`);
+  }
+  /** Enter: the pieces become one span, a parts row, and the editor opens for a fact about it. */
+  function bundle() {
+    const live = new Set(local().filter((r) => typeof r.text === "string").map((r) => r.id));
+    const ps = pieces.filter((id) => live.has(id));   // a piece deleted meanwhile is no piece
+    pieces = [];
+    if (ps.length < 2) { toast("Minder dan twee delen over: niets gebundeld"); draw(); return; }
+    save({ targets: ps }, { note: "", labels: ["parts"] });
+    const id = local().at(-1).id;
+    draw();
+    const m = anchorsOf(id)[0];
+    edit({ targets: [id] }, null, (m ?? body).getBoundingClientRect());
+  }
+
   /** The address under a click on a number drawn before a block or sentence, or null. */
   function numberAt(ev) {
     const t = ev.target instanceof Element ? ev.target : null;
@@ -1452,7 +1505,7 @@
   }
   /** Alt-click a clause cycles its tfa value; Alt-Shift-click arms a resumes pick from it. */
   document.addEventListener("click", (ev) => {
-    if (!ev.altKey || picking || mode() === "lezen") return;
+    if (!ev.altKey || picking || mode() === "lezen" || performance.now() - pieced < 500) return;
     const c = ev.target.closest?.(".fpl-c[id]") ?? ev.target.closest?.(".fpl-s[id]");   // a one-clause sentence has no .fpl-c
     if (!c || !body.contains(c)) return;
     ev.preventDefault();
@@ -1488,6 +1541,13 @@
     if (ev.key === "Escape" && g) { g.close(); return; }
     if (ev.key === "Escape" && editing) { closeEditor(); layout(); return; }
     if (ev.key === "Escape" && picking) { unpick(); toast("Afgebroken"); return; }
+    if (pieces.length && (ev.key === "Escape" || ev.key === "Enter") && !ev.defaultPrevented
+      && !ev.target.closest?.("input, textarea, select, [contenteditable], button, a, [role=button], .fpl-chip, summary")) {
+      ev.preventDefault();
+      if (ev.key === "Enter" && pieces.length > 1) bundle();
+      else { toast(pieces.length > 1 ? "Gestopt: de delen blijven losse spans" : "Gestopt"); pieces = []; }
+      return;
+    }
     if (ev.key === "Escape" && bands.length && !ev.target.closest?.("input, textarea, [contenteditable]")) {
       setBands(bands.slice(0, -1));
       return;
