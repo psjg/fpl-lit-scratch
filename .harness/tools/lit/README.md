@@ -239,6 +239,32 @@ chips under the label filter hides a layer.
   the earlier one; the left gutter draws each link as an arc, and a click on an arc of this
   browser removes it. An arc whose two ends fold into one band is not drawn.
 
+### Labels
+
+Labels are free. A label is a name scoped by names to any depth, `fn/claim`,
+`slop/beeld/dood` (`lit-facts-field` refuses an empty segment or a space). Only the reserved
+kinds are vocabulary: a relation or set as the first label (`supports`, `coref`, …) and the
+`tfa/` scope, which their own gates read. This follows
+Marshall: no fixed palette of marks (1997, https://doi.org/10.1145/263690.263806), and types
+that arise from examples, with structure available on demand (Marshall, Shipman & Coombs, VIKI, 1994,
+https://doi.org/10.1145/192757.192759). The editor ranks its chips by use, the rows of the page
+plus the times this browser saved each label anywhere on the site; the seeds, among them the
+rhetorical functions under `fn/` (`fn/definition`, `fn/example`, `fn/transition`, `fn/claim`,
+`fn/evidence`, `fn/aside`, `fn/hedge`), only start the list: unused, they sink, they never go.
+The filter lists every scope above a label, and striking a scope strikes all below it.
+
+When three rows of a page carry a label written in the editor, the margin offers it as a quick
+chip, and the offer stays until it is answered; a yes puts it at the top of the editor of an
+address (a sentence number, a clause), saved with one click, and a no is kept too, so each
+label is asked about until it has an answer. Rows made by an Alt-click or a pick count
+neither toward the ranking nor toward an offer. The tool proposes, the reader decides.
+
+Several rows on one address share one card, side by side, each whole (its replies, its
+argument, its other ends for Toon beide). With different first labels they are readings, as
+Empson reads one passage several ways at once (*Seven Types of Ambiguity*, 1930; read in the
+1947 edition), and so are several facts with different labels on one span. A row that passes
+the filter shows its whole group.
+
 ### Not yet built (decided 2026-11-01, keep)
 
 These are in the model now and gated, but the overlay does not draw them yet, or not fully.

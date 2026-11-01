@@ -453,6 +453,10 @@ LAYERED: list[facts.Row] = [
     {"id": "g4", "labels": ["parts"], "targets": ["a", "chunk:m.py:1"]},
     {"id": "f7", "labels": ["claim", "tfa/t"], "targets": ["b9"]},
     {"id": "y", "targets": ["b0"]},
+    {"id": "l1", "labels": ["fn/claim/strong/very"], "targets": ["a"]},
+    {"id": "l2", "labels": ["fn//claim"], "targets": ["a"]},
+    {"id": "l3", "labels": ["fn/"], "targets": ["a"]},
+    {"id": "l4", "labels": ["two words"], "targets": ["a"]},
 ]
 
 
@@ -473,6 +477,9 @@ def test_sets_tfa_and_addresses_are_gated() -> None:
         (18, "lit-facts-tfa"),
         (20, "lit-facts-tfa"),
         (21, "lit-facts-target"),
+        (23, "lit-facts-field"),
+        (24, "lit-facts-field"),
+        (25, "lit-facts-field"),
     }
 
 
@@ -482,7 +489,8 @@ def test_layer_is_read_from_the_labels() -> None:
     assert [facts.layer(r, by) for r in LAYERED] == [
         "span", "span", "span", "span", "coref", "tfa", "tfa", "tfa",
         "tfa", "tfa", "fact", "thread", "argument", "coref", "fact",
-        "tfa", "tfa", "tfa", "span", "fact", "fact",
+        "tfa", "tfa", "tfa", "span", "fact", "fact", "fact", "fact",
+        "fact", "fact",
     ]  # fmt: skip
 
 

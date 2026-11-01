@@ -574,6 +574,14 @@ SETS = frozenset({"coref", "parts"})
 # bound and contrastive, ``f`` not bound; topic and focus as wholes
 # follow from these and from the order, and are not marked.
 TFA = frozenset({"tfa/t", "tfa/c", "tfa/f"})
+# A label: a name, or a name scoped by names (``fn/claim``,
+# ``slop/beeld/dood``), to any depth; no segment empty or holding space.
+# Labels are free, after Marshall (1997: no fixed palette; 1994: types
+# arise from use): their shape is gated, and of their vocabulary only
+# the reserved kinds (a relation or set as the first label, the
+# ``tfa/`` scope), which the gates below read. Whitespace is spelt
+# out, so that the overlay's pattern accepts exactly the same labels.
+LABEL = re.compile(r"[^/ \t\n\r\f\v]+(?:/[^/ \t\n\r\f\v]+)*")
 # An address essay.lua gives a block, sentence or clause, under the
 # path of its heading: ``[<heading>/.../]b<n>[s<n>[c<n>]]``, each number
 # from 1. lit does not number the page, so a target of this shape is
@@ -926,6 +934,12 @@ def field_faults(row: Row) -> Iterator[str]:
             yield f"{key!r} is no key of a row"
         elif key in {"labels", "targets"} and not strings(value):
             yield f"{key} must be a list of strings"
+        elif key == "labels" and (
+            odd := [
+                x for x in cast("list[str]", value) if not LABEL.fullmatch(x)
+            ]
+        ):
+            yield f"label {odd[0]!r} is no name/scope/... path"
         elif key in {"note", "commit", "by", *QUOTE, *STAMPS} and (
             type(value) is not want
         ):
