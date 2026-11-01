@@ -286,10 +286,12 @@ They are the next work on this layer, not ideas:
    the next, and Enter bundles them and opens the editor for a fact on the whole; Esc stops and
    leaves the pieces as loose spans. Still open: a piece of a piece, and adding a piece to an
    existing `parts` row.
-2. **Coreference as a layer of its own.** A `coref` row is read, gated and lit on hover. To
-   build: chains across the page (PDT's coreference links, Mikulová et al. 2006 ch. 9), a
-   `coref` lens that numbers each chain in the gutter, and writing a link by pick as
-   `resumes` is written.
+2. **Coreference as a layer of its own: built 2026-11-01.** `coref` rows that share a member
+   are one chain (union-find), as PDT links an anaphor to its antecedent and a chain follows
+   (Mikulová et al. 2006 ch. 9); chains are numbered by where their first member stands, and
+   each member on the page carries its number. `Zelfde als…` on a card arms a pick whose end
+   joins the chain. Still open: the PDT's link types (textual, grammatical) as sub-labels
+   (`coref/text`), and a gutter column of the chains.
 3. **Querying across layers** (Müller's objection, PML-TQ's answer): which claim has no
    attack, which focus is never resumed.
 4. **The graph, step two.** The chunks of a page, the places they are used and the files they

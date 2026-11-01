@@ -258,3 +258,6 @@ body.fpl-picking .fpl-c[id], body.fpl-picking .fpl-s[id] { cursor: crosshair; }
 .fpl-graph canvas { display: block; cursor: pointer; }
 .fpl-graph .fpl-bar { display: flex; align-items: baseline; gap: .3rem; margin-bottom: .3rem; }
 .fpl-graph .fpl-mute { color: var(--fpl-mute); }
+
+/* the coref lens: each member carries its chain's number */
+.fpl-chain { font: 700 .58em var(--bs-font-sans-serif, sans-serif); color: var(--fpl-mine); margin-left: .1em; user-select: none; }

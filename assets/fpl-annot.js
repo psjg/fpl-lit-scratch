@@ -143,6 +143,12 @@
  * pieces are underlined as before but light together and share one card,
  * the parts row's, where a fact about the whole hangs. Alt-select text to
  * add a piece, again for the next, and Enter bundles them; Esc stops.
+ *
+ * The coref lens: coref rows that share a member are one chain (a
+ * union-find over the sets), numbered in page order, and each member on
+ * the page carries its chain's number, as the PDT links an anaphor to its
+ * antecedent (Mikulova et al. 2006, ch. 9) and a chain follows from the
+ * links. "Zelfde als…" on a card arms a pick; its end joins the chain.
  */
 (() => {
   "use strict";
@@ -475,7 +481,7 @@
     const ends = (r) => (r.targets ?? []).slice(typeof r.text === "string" ? 0 : 1);
     for (const t of new Set([row, ...readings, ...facts(row.id)].flatMap(ends)))
       if (place(t)) card.append(button(`Toon beide · ${t}`, (ev) => { ev.stopPropagation(); both(row.id, t); }, "fpl-reply"));
-    card.append(el("div", { className: "fpl-bar fpl-argue" }, reply(row.id, card), argue(row.id, "supports"), argue(row.id, "attacks"),
+    card.append(el("div", { className: "fpl-bar fpl-argue" }, reply(row.id, card), argue(row.id, "supports"), argue(row.id, "attacks"), argue(row.id, "coref"),
       button("Graph", (ev) => { ev.stopPropagation(); graph(row.id); }, "fpl-reply")));
     card.onmouseenter = () => hot(row.id);
     card.onmouseleave = () => hot(null);
@@ -554,11 +560,12 @@
 
   let picking = null;   // {from, kind}: the next click on a row ends a new supports or attacks row from it
   let picked = 0;       // when the last pick landed: the gesture's late touchend (pointerDone) is swallowed
-  const argue = (from, kind) => button(kind === "supports" ? "Steunt…" : "Valt aan…", (ev) => {
+  const ASK = { supports: ["Steunt…", "steunt"], attacks: ["Valt aan…", "aanvalt"], coref: ["Zelfde als…", "zelfde is als"] };
+  const argue = (from, kind) => button(ASK[kind][0], (ev) => {
     ev.stopPropagation();
     picking = { from, kind };
     document.body.classList.add("fpl-picking");
-    toast(`Klik wat ${from} ${kind === "supports" ? "steunt" : "aanvalt"}: een span, kaart, feit of tak. Esc breekt af.`);
+    toast(`Klik wat ${from} ${ASK[kind][1]}: een span, kaart, feit, tak of bijzin. Esc breekt af.`);
   }, "fpl-reply");
   const unpick = () => { picking = null; document.body.classList.remove("fpl-picking"); };
   /** The pick's click: the row under it, from the innermost of a branch, a fact, a card, a span or a block. */
@@ -949,6 +956,7 @@
     scrunch();
     if (reading?.closest(".fpl-scrunched")) read(null);   // folded away: nothing to read or write on
     heat();
+    lens();   // now as well as at the end: an early return below must not leave the lens of another stand
     margin.replaceChildren();
     lines.replaceChildren();
     margin.style.minHeight = "";
@@ -1077,7 +1085,44 @@
 
   const TFA = ["tfa/t", "tfa/c", "tfa/f"];
   /** Mark each clause with its value and draw the arcs; nothing in Lezen or with the tfa layer off. */
+  /**
+   * The coref chains in the layers shown: sets that share a member are
+   * one chain (union-find), each chain its members in page order, the
+   * chains numbered by where their first member stands.
+   */
+  function chains() {
+    const up = new Map(), find = (x) => { while (up.get(x) !== x) { up.set(x, up.get(up.get(x))); x = up.get(x); } return x; };
+    for (const r of all.filter((x) => x.labels?.[0] === "coref" && shows(x) && Array.isArray(x.targets)))
+      for (const t of r.targets) { if (!up.has(t)) up.set(t, t); up.set(find(t), find(r.targets[0])); }
+    const groups = new Map();
+    for (const x of up.keys()) groups.set(find(x), [...(groups.get(find(x)) ?? []), x]);
+    const at = (id) => anchorsOf(id)[0] ?? place(id);   // page order is document order; a member not on the page goes last
+    const order = (a, b) => {
+      const x = at(a), y = at(b);
+      if (!x || !y) return !x - !y;
+      return x === y ? 0 : x.compareDocumentPosition(y) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1;
+    };
+    return [...groups.values()].map((g) => g.sort(order)).sort((a, b) => order(a[0], b[0]));
+  }
+  /** Number each member of each chain on the page; off in Lezen or with the coref layer off. */
+  function chainMarks() {
+    for (const e of body.querySelectorAll(".fpl-chain")) e.remove();
+    if (mode() === "lezen" || offLayers().has("coref")) return;
+    const got = new Map();   // element -> its chain numbers
+    chains().forEach((g, i) => {
+      for (const id of g) {
+        const e = anchorsOf(id).at(-1) ?? place(id);   // a span split in marks, a whole of pieces, an address: its last anchor
+        if (e && body.contains(e)) got.set(e, [...(got.get(e) ?? []), i + 1]);
+      }
+    });
+    // a number of its own (fpl-annot-ui: no text of the page), so no pseudo-element of the page is taken over
+    for (const [e, ns] of got) {
+      const sup = el("sup", { className: "fpl-annot-ui fpl-chain" }, ns.join(","));
+      e.matches(".fpl-p") ? e.append(sup) : e.after(sup);
+    }
+  }
   function lens() {
+    chainMarks();
     for (const e of body.querySelectorAll("[data-tfa]")) delete e.dataset.tfa;
     document.querySelector(".fpl-arcs")?.remove();
     if (mode() === "lezen" || offLayers().has("tfa")) return;
