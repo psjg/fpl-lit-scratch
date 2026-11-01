@@ -156,6 +156,10 @@ ROWS: list[facts.Row] = [
     },
     {"id": "f9", "targets": ["s8"], "commit": SHA, "by": 3},
     {"id": "f10", "targets": ["f9"], "commit": SHA, "by": "PSJ"},
+    {"id": "r14", "labels": ["supports"], "targets": ["f10"]},
+    {"id": "r15", "labels": ["attacks"], "targets": ["f10", "f10"]},
+    {"id": "r16", "labels": ["attacks"], "targets": ["f9", "r16"]},
+    {"id": "r17", "labels": ["attacks"], "targets": ["f9", "r14"]},
 ]
 
 
@@ -181,6 +185,9 @@ def test_validate_names_each_fault_at_its_row() -> None:
         (10, "lit-facts-field"),
         (11, "lit-facts-field"),
         (12, "lit-facts-field"),
+        (14, "lit-facts-argument"),
+        (15, "lit-facts-argument"),
+        (16, "lit-facts-argument"),
     }
     assert [f.message for f in got if f.line == 12] == ["by must be a str"]
     messages = [f.message for f in got if f.line == 2]

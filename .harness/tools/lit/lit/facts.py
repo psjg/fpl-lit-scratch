@@ -543,6 +543,20 @@ SPAN = ("item", "start", "end", "text")
 QUOTE = ("prefix", "suffix")
 # The two times of a row, in milliseconds since the epoch.
 STAMPS = ("createdAt", "updatedAt")
+# The labels that make a row a relation, its targets read from -> to.
+# Two of them argue, after the Argument Interchange Format (Chesnevar
+# et al. 2006): a claim never points at a claim, a ``supports`` or
+# ``attacks`` row stands between them, and since that row has an id of
+# its own an ``attacks`` row may aim at it (an undercut: the inference
+# is attacked, not its premise or its conclusion).
+ARGUING = frozenset({"supports", "attacks"})
+RELATIONS = ARGUING | {
+    "because",
+    "contradicts",
+    "supersedes",
+    "checkedBy",
+    "cites",
+}
 COLUMNS = ("id", "topic", "date", "who", "decision", "reason")
 VERS, MOVED, TWICE, STALE = "vers", "verplaatst", "dubbel", "stale"
 
@@ -963,6 +977,28 @@ def target_faults(row: Row, names: Collection[str]) -> Iterator[str]:
                 yield f"target {t!r} names nothing"
 
 
+def argument_faults(row: Row) -> Iterator[str]:
+    """What keeps a ``supports`` or ``attacks`` row from arguing.
+
+    It reads ``targets[0]`` -> ``targets[1:]``: one source, at least one
+    end, none of them the row itself or its own source. Nothing for any
+    other row.
+    """
+    labels, targets = row.get("labels"), row.get("targets", [])
+    if not strings(labels) or not cast("list[str]", labels)[:1]:
+        return
+    kind = cast("list[str]", labels)[0]
+    if kind not in ARGUING or not strings(targets):
+        return
+    ts = cast("list[str]", targets)
+    if len(ts) < 2:
+        yield f"{kind} needs a source and at least one end, {len(ts)} given"
+    elif row.get("id") in ts:
+        yield f"{kind} row {row.get('id')!r} names itself"
+    elif ts[0] in ts[1:]:
+        yield f"{kind} runs from {ts[0]!r} to itself"
+
+
 def validate(
     rows: list[Row],
     where: str,
@@ -979,8 +1015,9 @@ def validate(
         known: The ids of the page's generated spans and ledger rows.
 
     Returns:
-        ``lit-facts-id``, ``lit-facts-field``, ``lit-facts-span`` and
-        ``lit-facts-target`` findings, row by row.
+        ``lit-facts-id``, ``lit-facts-field``, ``lit-facts-span``,
+        ``lit-facts-target`` and ``lit-facts-argument`` findings, row
+        by row.
     """
     ids: Counter[object] = Counter(r.get("id") for r in rows)
     names = {i for i in ids if isinstance(i, str)} | set(known)
@@ -991,6 +1028,7 @@ def validate(
             ("lit-facts-field", field_faults(row)),
             ("lit-facts-span", span_faults(row, texts)),
             ("lit-facts-target", target_faults(row, names)),
+            ("lit-facts-argument", argument_faults(row)),
         ):
             out += [web.Finding(where, n, rule, m) for m in faults]
     return out

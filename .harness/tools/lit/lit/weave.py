@@ -86,10 +86,7 @@ BLOCK = re.compile(
     r"(?:[ \t]*(?:#{1,6}|[-+*]|\d{1,9}[.)]|>|\|)(?=[ \t]|$))*[ \t]*"
 )
 RULE = re.compile(r"[-=*_:|\s]*")
-# The labels that make a row a relation, its targets read from -> to.
-RELATIONS = frozenset(
-    {"because", "supports", "contradicts", "supersedes", "checkedBy", "cites"}
-)
+RELATIONS = facts.RELATIONS
 MARKED = frozenset({facts.VERS, facts.MOVED})
 
 

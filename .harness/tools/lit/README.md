@@ -191,6 +191,17 @@ span. A row with neither text nor targets is refused. `lit facts --export` gives
 back, a row without text under the page's label. Where the window has no margin column (a
 phone) each card folds under the block its span is in, and the editor is a popover.
 
+Arguments follow the Argument Interchange Format (Chesñevar et al. 2006,
+https://doi.org/10.1017/S0269888906001044): a claim never points at a claim. A `supports` or
+`attacks` row stands between them, its targets read source -> ends, and since it has an id of
+its own an `attacks` row may aim at it, an undercut that attacks the inference rather than its
+premise. `lit facts` refuses an arguing row with fewer than two targets, one that names itself,
+or one that runs from a row to that row (`lit-facts-argument`). The rows stay a graph, so one
+premise may serve two claims; a card shows the tree read from its row as `Argument · 2 voor ·
+1 tegen`, grounds under the claim (+ supports, − attacks), undercuts under the inference they
+attack, a cycle marked where it closes. `Steunt…` and `Valt aan…` on a card arm a pick: the
+next click on a span, card, fact or branch is the end of a new row, and Esc cancels it.
+
 ## Layout
 
 - [lit/web.py](lit/web.py): reading a page, and the tangle. Standard library only, so the
