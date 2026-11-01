@@ -180,3 +180,23 @@ body.fpl-numbered .fpl-s:hover .fpl-c::before { opacity: 1; }
 .fpl-files .fpl-place { display: inline-block; min-width: 2.6rem; font-variant-numeric: tabular-nums; color: var(--fpl-mute); font-size: .85rem; }
 .fpl-files .fpl-addr { font-size: .78rem; font-weight: 600; color: var(--fpl-vers); text-decoration: none; margin-right: .2rem; }
 .fpl-files .fpl-addr:hover { text-decoration: underline; }
+
+/* a band: blocks folded away, one hairline per text line they showed (fpl-annot.js scrunch);
+   the padding is room for the pointer and the grips, the hairlines stay in the content box */
+.fpl-scrunched { display: none !important; }
+.fpl-band { position: relative; box-sizing: content-box; height: calc(var(--lines) * var(--fpl-pitch));   /* both set by the script */
+  padding: .3rem 0; margin: .6rem 0; cursor: pointer; user-select: none; --fpl-hair: var(--fpl-rule); --fpl-thin: min(1px, calc(var(--fpl-pitch) / 2));
+  background: repeating-linear-gradient(to bottom, var(--fpl-hair) 0 var(--fpl-thin), transparent var(--fpl-thin) var(--fpl-pitch)) content-box; }
+.fpl-band:hover { --fpl-hair: var(--fpl-mute); }
+.fpl-band::after { content: attr(data-range); position: absolute; right: 0; bottom: 100%; padding: 0 .3rem; white-space: nowrap;
+  font-size: .7rem; color: var(--fpl-mute); background: var(--fpl-bg); opacity: 0; transition: opacity .12s; pointer-events: none; }
+.fpl-band:hover::after { opacity: 1; }
+.fpl-grip { position: absolute; left: 50%; width: 2.4rem; height: .5rem; margin-left: -1.2rem; border-radius: 999px; box-sizing: border-box;
+  border: 1px solid var(--fpl-mute); background: var(--fpl-bg); cursor: ns-resize; touch-action: none; opacity: 0; transition: opacity .12s; }
+.fpl-grip-top { top: -.25rem; }
+.fpl-grip-bottom { bottom: -.25rem; }
+.fpl-band:hover .fpl-grip, .fpl-band:focus-within .fpl-grip, .fpl-grip:active { opacity: 1; }
+.fpl-band:focus-within { --fpl-hair: var(--fpl-mute); }
+.fpl-band:focus-within::after { opacity: 1; }
+.fpl-band:focus-visible, .fpl-grip:focus-visible { outline: 2px solid var(--fpl-mine); outline-offset: 1px; }
+@media (hover: none) { .fpl-grip { opacity: 1; } }

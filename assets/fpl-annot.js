@@ -73,6 +73,20 @@
  * A line carries the type of the edge it draws: the first label of the
  * first fact about the span, else the span's own. localStorage["fpl-annot:mode"] keeps the stand
  * and "fpl-annot:hide" the labels switched off, for the whole site.
+ *
+ * Bands (after LiquidText's collapse, Tashman & Edwards, CHI 2011). A
+ * band folds the blocks from one block address to another, both ends
+ * included, into one hairline per text line they showed, so the reader
+ * still sees how much is folded and where, and the page stays one
+ * scroll. Headings, lists and tables between the two blocks fold with
+ * them. Its grips, at its top and bottom edge, fold blocks in or let
+ * them out a whole block at a time as the pointer passes them; a click
+ * opens it, Escape opens the newest. The bands are in the URL as
+ * ?scrunch=a..b,c..d (block ids such as the-plan/b3) and in
+ * localStorage["fpl-annot:scrunch:" + item]; at load the URL wins. A
+ * card whose row points at another place on the page has "Toon beide",
+ * which folds what lies between the two so both are in view. A span
+ * inside a band draws its line, and places its card, at the band.
  */
 (() => {
   "use strict";
@@ -305,13 +319,16 @@
     if (row.labels?.length) card.append(el("div", { className: "fpl-chips" }, ...row.labels.map((l) => chip(l, cls))));
     if (row.note) card.append(el("p", { className: "fpl-note" }, row.note));
     for (const r of facts(row.id)) card.append(factView(r, cls));
+    const ends = (r) => (r.targets ?? []).slice(typeof r.text === "string" ? 0 : 1);
+    for (const t of new Set([row, ...facts(row.id)].flatMap(ends)))
+      if (place(t)) card.append(button(`Toon beide · ${t}`, (ev) => { ev.stopPropagation(); both(row.id, t); }, "fpl-reply"));
     card.append(reply(row.id, card));
     card.onmouseenter = () => hot(row.id);
     card.onmouseleave = () => hot(null);
     card.onclick = (ev) => {
       if (ev.target.closest("button, a, .fpl-editor")) return;
       const m = anchorsOf(row.id)[0];
-      m?.scrollIntoView({ block: "center", behavior: "smooth" });
+      m && seen(m).scrollIntoView({ block: "center", behavior: "smooth" });
       if (row.mine && m) edit(row, card);
     };
     return card;
@@ -502,6 +519,7 @@
     drawControl();
     document.body.classList.toggle("fpl-numbered", mode() !== "lezen");
     for (const c of body.querySelectorAll(".fpl-inline")) c.remove();
+    scrunch();
     margin.replaceChildren();
     lines.replaceChildren();
     margin.style.minHeight = "";
@@ -522,6 +540,7 @@
     if (!spans.length) return;
     const lost = spans.filter((r) => state[r.id] !== "vers");
     const found = spans.map((r) => ({ r, m: anchorsOf(r.id)[0] })).filter((x) => x.m)
+      .map((x) => ({ r: x.r, m: seen(x.m) }))
       .sort((a, b) => a.m.getBoundingClientRect().top - b.m.getBoundingClientRect().top);
     if (wide()) {
       let y = full ? margin.firstElementChild.offsetHeight + GAP : 0;
@@ -559,9 +578,8 @@
     lines.setAttribute("height", h);
     lines.replaceChildren();
     for (const c of margin.querySelectorAll(".fpl-card[data-id]")) {
-      const ms = anchorsOf(c.dataset.id);
-      if (!ms.length) continue;
-      const rects = ms.flatMap((m) => [...m.getClientRects()]);
+      const rects = anchorsOf(c.dataset.id).map(seen).flatMap((m) => [...m.getClientRects()]);
+      if (!rects.length) continue;
       const last = rects[rects.length - 1], cr = c.getBoundingClientRect();
       // from under the end of the span, along the gap below its line out of
       // the text, then in one curve to the card; the type sits before the card
@@ -607,6 +625,201 @@
     if (id) for (const e of anchorsOf(id)) if (!e.matches("mark.fact")) e.classList.add("is-hot");
   }
 
+  /* ---- bands: blocks folded to a hairline per line, the page one scroll ---- */
+
+  const SCRUNCH = "fpl-annot:scrunch:" + item;
+  /**
+   * A hairline every PITCH pixels, unless the band would be taller than
+   * TALL of the window: then its lines draw closer, so that a band never
+   * keeps its two ends (Toon beide) out of one view.
+   */
+  const PITCH = 3, TALL = 0.3;
+  /**
+   * The bands, oldest first, each the ids of its first and last block:
+   * the URL's ?scrunch= when it has one, else this browser's for the page
+   * (a single id is a band of one block). scrunch() keeps it settled:
+   * resolved, each pair in page order, no two overlapping.
+   */
+  let bands = (() => {
+    let s = new URLSearchParams(location.search).get("scrunch");
+    if (s == null) try { s = localStorage.getItem(SCRUNCH); } catch { /* no storage */ }
+    return (s || "").split(",").filter(Boolean).map((p) => { const [a, b = a] = p.split(".."); return [a, b]; });
+  })();
+  let held = false;   // a grip is down: the click that ends its drag does not open the band
+
+  /** The addressed blocks (essay.lua's fpl-p), in page order: a band's ends are two of them. */
+  const units = () => [...body.querySelectorAll(".fpl-p")];
+  /** Every block of the page, addressed or not (headings, lists, tables), in page order. */
+  const leaves = () => [...body.querySelectorAll(":scope > *, section > *")]
+    .filter((e) => !e.matches("section, script, style, .fpl-annot-ui, .fpl-card"));
+  /** The band a folded element is in, or null; seen() is where an element shows. */
+  const bandOf = (e) => {
+    const l = e.closest(".fpl-scrunched");
+    return l && body.querySelector(`.fpl-band[data-k="${l.dataset.band}"]`);
+  };
+  const seen = (e) => bandOf(e) ?? e;
+  /** A block's address as the page numbers it: 1.2.1.3 §4, or §5:C for code. */
+  const addr = (u) => `${u.dataset.addr ?? ""} §${u.dataset.n}${u.dataset.kind === "C" ? ":C" : ""}`.trim();
+
+  /**
+   * The text lines a block shows now: for each paragraph or code block in
+   * it (else the block itself, a heading or a list) its height over its
+   * line height.
+   */
+  function linesOf(e) {
+    const parts = e.querySelectorAll("p, pre");
+    let n = 0;
+    for (const x of parts.length ? parts : [e]) {
+      const cs = getComputedStyle(x);
+      n += Math.round(x.offsetHeight / (parseFloat(cs.lineHeight) || 1.2 * parseFloat(cs.fontSize)));
+    }
+    return Math.max(1, n);
+  }
+
+  /** The bands as [first, last] indices into us; unresolved ones dropped, one overlapped merged into the later. */
+  function settle(us) {
+    const out = [];
+    for (const ends of bands) {
+      let [i, j] = ends.map((id) => us.indexOf(document.getElementById(id)?.closest(".fpl-p"))).sort((x, y) => x - y);
+      if (i < 0) continue;
+      for (let k = out.length - 1; k >= 0; k--) {
+        const [p, q] = out[k];
+        if (p <= j && i <= q) { i = Math.min(i, p); j = Math.max(j, q); out.splice(k, 1); }
+      }
+      out.push([i, j]);
+    }
+    return out;
+  }
+
+  /**
+   * Draw the bands. Every element from a band's first block to its last
+   * is measured at the page's current width, then hidden (fpl-scrunched,
+   * data-band = the band's index, data-lines = its count), and the band
+   * stands before the first of them: --lines hairlines --fpl-pitch apart,
+   * its range in data-range for the hover. All of it within one task, so
+   * the reader never sees the blocks unfold; a resize or a font load
+   * counts afresh.
+   */
+  function scrunch() {
+    for (const b of body.querySelectorAll(".fpl-band")) b.remove();
+    const us = units(), ls = leaves(), got = settle(us);
+    bands = got.map(([i, j]) => [us[i].id, us[j].id]);
+    const folds = got.map(([i, j]) => ls.slice(ls.indexOf(us[i]), ls.indexOf(us[j]) + 1));
+    for (const l of ls) l.classList.remove("fpl-scrunched");
+    for (const l of folds.flat()) l.dataset.lines = linesOf(l);   // unfolded for the measure, folded below before a paint
+    folds.forEach((fold, k) => {
+      const [i, j] = got[k], n = fold.reduce((s, l) => s + +l.dataset.lines, 0);
+      const range = `${addr(us[i])} – ${addr(us[j])} · ${j - i + 1} blok${j > i ? "ken" : ""}, ${n} regels`;
+      const open = () => setBands(bands.filter((_, x) => x !== k));
+      const band = el("div", { className: "fpl-annot-ui fpl-band", tabIndex: 0, role: "button", ariaLabel: `Band ${range}: open`,
+        onclick: () => { if (!held) open(); },
+        onkeydown: (ev) => { if (ev.target === band && (ev.key === "Enter" || ev.key === " ")) { ev.preventDefault(); open(); } } },
+      grip(k, "top"), grip(k, "bottom"));
+      Object.assign(band.dataset, { k, range });
+      band.style.setProperty("--lines", n);
+      band.style.setProperty("--fpl-pitch", `${Math.min(PITCH, (TALL * innerHeight) / n)}px`);
+      for (const l of fold) { l.classList.add("fpl-scrunched"); l.dataset.band = k; }
+      fold[0].before(band);
+    });
+  }
+
+  /**
+   * A grip on a band's top or bottom edge. Dragged, the edge moves to the
+   * block boundary nearest the pointer's travel since the press: outward
+   * over the blocks as they stood then, inward over the band's hairlines.
+   * It stops before another band, so bands never merge under the pointer.
+   * The drag follows its band by its ends, not its place in the list, and
+   * lets go when the band is gone (Escape, a click elsewhere). Focused,
+   * the arrow keys move the edge one block.
+   */
+  function grip(k, edge) {
+    const g = el("span", { className: `fpl-grip fpl-grip-${edge}`, tabIndex: 0, role: "button",
+      ariaLabel: `${edge === "top" ? "Boven" : "Onder"}rand van de band: pijltjes schuiven een blok` });
+    g.onkeydown = (ev) => {
+      const d = { ArrowUp: -1, ArrowDown: 1 }[ev.key];
+      if (!d) return;
+      ev.preventDefault();
+      ev.stopPropagation();
+      const us = units(), [i, j] = bands[k].map((id) => us.indexOf(document.getElementById(id)));
+      const [a, b] = edge === "top" ? [i + d, j] : [i, j + d], grows = (edge === "top") === (d < 0);
+      const t = edge === "top" ? a : b;
+      if (a > b || !us[t] || (grows && us[t].classList.contains("fpl-scrunched"))) return;
+      setBands(bands.map((x, y) => (y === k ? [us[a].id, us[b].id] : x)));
+      body.querySelector(`.fpl-band[data-k="${k}"] .fpl-grip-${edge}`)?.focus();
+    };
+    g.onpointerdown = (ev) => {
+      ev.preventDefault();
+      ev.stopPropagation();
+      const band = g.parentElement, r = band.getBoundingClientRect(), y0 = ev.clientY;
+      const us = units(), ls = leaves(), [i, j] = bands[k].map((id) => us.indexOf(document.getElementById(id)));
+      const pitch = parseFloat(band.style.getPropertyValue("--fpl-pitch"));
+      const base = ls.indexOf(us[i]), y = [0];   // y[x]: the hairlines above the band's x-th element
+      for (let x = base; x <= ls.indexOf(us[j]); x++) y.push(y.at(-1) + +ls[x].dataset.lines * pitch);
+      const stops = [];   // [travel from the press, first block, last block]
+      for (let t = i; t <= j; t++)
+        stops.push(edge === "top" ? [y[ls.indexOf(us[t]) - base], t, j] : [y[ls.indexOf(us[t]) - base + 1] - y.at(-1), i, t]);
+      const free = (t) => us[t] && !us[t].classList.contains("fpl-scrunched");
+      if (edge === "top") for (let t = i - 1; free(t); t--) stops.push([us[t].getBoundingClientRect().top - r.top, t, j]);
+      else for (let t = j + 1; free(t); t++) stops.push([us[t].getBoundingClientRect().bottom - r.bottom, i, t]);
+      held = true;
+      let ends = bands[k];
+      const move = (e) => {
+        const at = bands.findIndex(([p, q]) => p === ends[0] && q === ends[1]);
+        if (at < 0) { up(); return; }
+        const dy = e.clientY - y0;
+        const [, a, b] = stops.reduce((best, s) => (Math.abs(s[0] - dy) < Math.abs(best[0] - dy) ? s : best));
+        if (us[a].id === ends[0] && us[b].id === ends[1]) return;
+        bands[at] = ends = [us[a].id, us[b].id];
+        layout();
+      };
+      const up = () => {
+        removeEventListener("pointermove", move);
+        removeEventListener("pointerup", up);
+        removeEventListener("pointercancel", up);
+        persist();
+        setTimeout(() => { held = false; });
+      };
+      addEventListener("pointermove", move);
+      addEventListener("pointerup", up);
+      addEventListener("pointercancel", up);
+    };
+    return g;
+  }
+
+  /** Write the bands to the URL (?scrunch=a..b,c..d, kept readable) and to this browser. */
+  function persist() {
+    const s = bands.map(([a, b]) => (a === b ? a : `${a}..${b}`)).join(","), u = new URL(location.href);
+    if (s) u.searchParams.set("scrunch", s); else u.searchParams.delete("scrunch");
+    u.search = u.search.replace(/%2[CF]/gi, decodeURIComponent);
+    history.replaceState(history.state, "", u);
+    try { if (s) localStorage.setItem(SCRUNCH, s); else localStorage.removeItem(SCRUNCH); } catch { /* no storage */ }
+  }
+  /** Take a new list of bands: lay the page out with them, then keep them. */
+  function setBands(list) { bands = list; layout(); persist(); }
+
+  /** Where an id shows on the page: a row's span, else the element with that id; null when neither. */
+  const place = (id) => {
+    const e = anchorsOf(id)[0] ?? document.getElementById(id);
+    return e && body.contains(e) ? e : null;
+  };
+  /**
+   * Toon beide: fold every block between a row's span and another place
+   * into a band, so both are in view. A band over either end opens, also
+   * when nothing lies between to fold; bands between the two join the
+   * new one (settle).
+   */
+  function both(from, to) {
+    const us = units();
+    const [i, j] = [from, to].map((id) => us.indexOf(place(id)?.closest(".fpl-p"))).sort((x, y) => x - y);
+    if (i < 0) { toast("Niet op deze pagina"); return; }
+    const covers = (b, x) => { const [p, q] = b.map((id) => us.indexOf(document.getElementById(id))); return p <= x && x <= q; };
+    const kept = bands.filter((b) => !covers(b, i) && !covers(b, j));
+    const fold = j - i >= 2 ? [[us[i + 1].id, us[j - 1].id]] : [];
+    if (!fold.length && kept.length === bands.length) { toast("Ze staan al samen in beeld"); return; }
+    setBands([...kept, ...fold]);
+    (fold.length ? bandOf(us[i + 1]) : us[i]).scrollIntoView({ block: "center", behavior: "smooth" });
+  }
+
   /* ---- selecting and clicking ---- */
 
   /** The shown index of a range's first character and past its last. */
@@ -649,6 +862,12 @@
     if (mode() !== "kantlijn") return;
     const range = sel.getRangeAt(0);
     if (!body.contains(range.commonAncestorContainer)) return;
+    if ([...body.querySelectorAll(".fpl-scrunched")].some((l) => range.intersectsNode(l))) {
+      // shown() keeps folded text (the quote finder needs it whole), so the quote would hold what was never seen
+      sel.removeAllRanges();
+      toast("De selectie loopt door een band: open die eerst");
+      return;
+    }
     const ix = shown(), [s, e] = bounds(ix, range);
     if (s >= e) return;
     const seed = { text: ix.flat.slice(s, e), prefix: ix.flat.slice(Math.max(0, s - AROUND), s),
@@ -691,6 +910,10 @@
   body.addEventListener("mouseout", (ev) => { if (ev.target.closest?.("mark.fact") && !editing) hot(null); });
   document.addEventListener("keydown", (ev) => {
     if (ev.key === "Escape" && editing) { closeEditor(); layout(); return; }
+    if (ev.key === "Escape" && bands.length && !ev.target.closest?.("input, textarea, [contenteditable]")) {
+      setBands(bands.slice(0, -1));
+      return;
+    }
     if (ev.key === "a" && !ev.metaKey && !ev.ctrlKey && !ev.altKey
       && !ev.target.closest?.("input, textarea, [contenteditable]")) {
       mode(MODES[(MODES.indexOf(mode()) + 1) % MODES.length]);
@@ -707,5 +930,5 @@
   document.body.append(pop);
   (snap ? Promise.resolve(snap.rows) : fetch(`${stem}.facts.json`).then((r) => (r.ok ? r.json() : [])))
     .catch(() => [])
-    .then((got) => { sidecar = Array.isArray(got) ? got : []; draw(); });
+    .then((got) => { sidecar = Array.isArray(got) ? got : []; draw(); persist(); });
 })();
