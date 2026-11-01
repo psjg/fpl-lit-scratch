@@ -300,8 +300,10 @@ They are the next work on this layer, not ideas:
    one piece each, until Esc, Enter or leaving Kantlijn (a bundle in the making is dropped first,
    its pieces left loose; text a piece of a shown bundle already covers is refused); a chip's × takes its piece out of the targets and leaves the span row as a loose
    span. Down to one piece, it asks and then deletes the `parts` row, since a one-member set is
-   refused (`lit-facts-set`); a fact on that row is kept and names nothing shown, the ask says
-   how many, and lit refuses it (`lit-facts-target`) until it goes or names something. A sidecar
+   refused (`lit-facts-set`); a fact on that row is kept, the ask says how many, and it shows
+   as a lost card at the top of the margin ("wijst nergens heen", with the id that is gone),
+   counted under `kwijt` in the head, as any fact whose row is gone: open it to delete or
+   rewrite it, since lit refuses it (`lit-facts-target`) until it names something. A sidecar
    `parts` row lists its chips read-only. Still open: a piece of a piece.
 2. **Coreference as a layer of its own: built 2026-11-01.** `coref` rows that share a member
    are one chain (union-find), as PDT links an anaphor to its antecedent and a chain follows

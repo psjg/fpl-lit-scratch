@@ -151,7 +151,8 @@
  * Enter or leaving Kantlijn, and text a shown bundle's piece covers is
  * refused; a chip's × lets its piece go as a loose span; with one piece
  * left the bundle goes (lit refuses a one-member set), and a fact on it,
- * kept, names nothing shown (the ask counts them; lit refuses them too).
+ * kept, gets a lost card like any fact whose row is gone (the ask counts
+ * them; lit refuses them until they name something).
  * A sidecar row's chips only read.
  *
  * The coref lens: coref rows that share a member are one chain (a
@@ -338,6 +339,26 @@
   }
   // a tfa row is drawn by the lens on its clause, not as a card
   const addressed = (r) => typeof r.text !== "string" && layerOf(r) !== "tfa" && anchorsOf(r.id).length > 0;
+  /**
+   * A fact whose row is gone (an unbundled parts row, a deleted span):
+   * no text, its first target shaped as a row id (lit's generated ids
+   * carry a colon, a ledger is L-..., a file has a slash, an address is
+   * b1s2c3) that names no row and no place on the page. It gets a lost
+   * card, as a span not found does, so it can be moved or deleted
+   * rather than sit unseen until lit refuses it. Worked out once per
+   * set of rows.
+   */
+  const ROWLIKE = /^(?!L-[A-Z0-9]+$)(?![^/\s]*b[1-9]\d*(?:s[1-9]\d*(?:c[1-9]\d*)?)?$)[^:/\s]+$/;
+  let orphans = { of: null, ids: new Set() };
+  const orphan = (r) => {
+    if (orphans.of !== all) {
+      const ids = new Set(all.map((x) => x.id));
+      orphans = { of: all, ids: new Set(all.filter((x) => typeof x.text !== "string" && !RELATIONS.has(x.labels?.[0] ?? "")
+        && !SETKINDS.has(x.labels?.[0] ?? "") && layerOf(x) !== "tfa" && typeof x.targets?.[0] === "string"
+        && ROWLIKE.test(x.targets[0]) && !ids.has(x.targets[0]) && !place(x.targets[0])).map((x) => x.id)) };
+    }
+    return orphans.ids.has(r.id);
+  };
 
   /** Every row, the sidecar's first, each marked mine when it is local. */
   const rows = () => [...sidecar, ...local().map((r) => ({ ...r, mine: true }))];
@@ -473,14 +494,16 @@
 
   /** The card of a span: its labels and note, then the facts about it. */
   function cardOf(row) {
-    const st = state[row.id], cls = row.mine ? "is-mine" : "is-vers";
+    const gone = orphan(row), st = gone ? "weg" : state[row.id], cls = row.mine ? "is-mine" : "is-vers";
     const card = el("div", { className: `fpl-card ${row.mine ? "mine" : ""} ${st !== "vers" ? "lost" : ""}` });
     card.dataset.id = row.id;
     card.append(el("div", { className: "fpl-who" }, el("span", { className: "fpl-dot" }), el("span", {}, row.id),
       row.by ? el("span", { className: "fpl-by" }, row.by) : null,
       st === "stale" ? el("span", { className: "fpl-lost" }, "niet meer gevonden")
-        : st === "dubbel" ? el("span", { className: "fpl-lost" }, "meer dan één keer gevonden") : null));
+        : st === "dubbel" ? el("span", { className: "fpl-lost" }, "meer dan één keer gevonden")
+        : gone ? el("span", { className: "fpl-lost" }, "wijst nergens heen") : null));
     if (row.labels?.[0] === "parts") card.append(piecesOf(row, card));
+    else if (gone) card.append(el("div", { className: "fpl-excerpt" }, el("code", {}, row.targets[0]), " bestaat niet meer"));
     else if (st !== "vers") card.append(el("div", { className: "fpl-excerpt" }, plain(row.text)));
     else if (typeof row.text !== "string") card.append(el("div", { className: "fpl-excerpt" },
       `${row.targets[0]}: ${anchorsOf(row.id)[0].textContent.replace(/\s+/g, " ").trim().slice(0, 140)}`));
@@ -521,7 +544,7 @@
       if (ev.target.closest("button, a, .fpl-editor, .fpl-ask")) return;
       const m = anchorsOf(row.id)[0];
       m && seen(m).scrollIntoView({ block: "center", behavior: "smooth" });
-      if (row.mine && m) edit(row, card);
+      if (row.mine && (m || gone)) edit(row, card);   // a lost fact of ours: open it to delete or rewrite
     };
     return card;
   }
@@ -963,7 +986,7 @@
   /** The head of the margin: counts and the three buttons. */
   function head() {
     const spans = all.filter((r) => typeof r.text === "string" || addressed(r));
-    const lost = spans.filter((r) => state[r.id] !== "vers").length, mine = local().length;
+    const lost = spans.filter((r) => state[r.id] !== "vers").length + all.filter(orphan).length, mine = local().length;
     const file = el("input", { type: "file", accept: ".json", hidden: true });
     file.onchange = () => file.files[0]?.text().then(merge);
     const cmd = el("div", { className: "fpl-cmd", hidden: true });
@@ -1211,10 +1234,10 @@
     if (mode() === "lezen") return;
     if (full) margin.append(head());
     const heads = new Set();   // one card per address: its other rows are readings in it
-    const spans = all.filter((r) => (typeof r.text === "string" || addressed(r) || r.labels?.[0] === "parts") && shows(r) && passes(r) && (full || open.has(r.id)))
-      .filter((r) => typeof r.text === "string" ? !partsOf(r.id) : r.labels?.[0] === "parts" || (!heads.has(r.targets[0]) && heads.add(r.targets[0])));
+    const spans = all.filter((r) => (typeof r.text === "string" || addressed(r) || orphan(r) || r.labels?.[0] === "parts") && shows(r) && passes(r) && (full || open.has(r.id)))
+      .filter((r) => typeof r.text === "string" ? !partsOf(r.id) : r.labels?.[0] === "parts" || orphan(r) || (!heads.has(r.targets[0]) && heads.add(r.targets[0])));
     if (!spans.length) return;
-    const lost = spans.filter((r) => state[r.id] !== "vers");
+    const lost = spans.filter((r) => state[r.id] !== "vers" || orphan(r));
     const found = spans.map((r) => ({ r, m: anchorsOf(r.id)[0] })).filter((x) => x.m)
       .map((x) => ({ r: x.r, m: seen(x.m) }))
       .sort((a, b) => a.m.getBoundingClientRect().top - b.m.getBoundingClientRect().top);
