@@ -1231,75 +1231,207 @@ DEFUSE = str.maketrans("[]{}", "()()")
 QUERY_KEYS = ("label", "layer", "by", "text", "has", "gives")
 LAYERS = ("span", "fact", "thread", "argument", "tfa", "coref", "relation")
 
+# A query term: (negated, key, value, chain length, column). The
+# chain length is 0 for a bare ``has:R`` or ``gives:R`` and other keys.
+type Term = tuple[bool, str, str, int, int]
 
-def parse_query(q: str) -> list[tuple[bool, str, str, int]]:
-    """A query's terms: ``(negated, key, value, column)``, all to hold.
+
+def parse_query(q: str) -> list[list[Term]]:
+    """A query's groups of terms: a row is found when one group holds.
 
     A query is terms apart by spaces, each ``[!]key:value`` (after
     PML-TQ, Pajas and Stepanek 2009: conditions joined by and, a
     negation as a condition met zero times). Keys: ``label`` (a label at
     or under a scope), ``layer``, ``by``, ``text`` (in the text or the
-    note, lower-cased, not case folded), ``has:R`` (an R row ends at
-    it) and ``gives:R``
-    (an R row starts from it). A strict reader: any other spelling is a
-    `ValueError` naming its column, counted from 1.
+    note, lower-cased, not case folded), ``has:R`` (an R row ends at it)
+    and ``gives:R`` (an R row starts from it).
+
+    A term that is exactly ``|`` closes a group: the query holds for a
+    row when every term of at least one group does (disjunctive normal
+    form, PML-TQ's or). ``has:R+N`` and ``gives:R+N``, ``N`` a decimal
+    from 1 without leading zeros, ask for a chain of at least ``N`` R
+    edges ending or starting there (see `query`). An empty query is
+    one group of no terms, which every row meets.
+
+    A strict reader: any other spelling is a `ValueError` naming its
+    column, counted from 1 in code points; a ``|`` at either end or next
+    to another is ``empty group`` at that ``|``.
     """
-    out = []
+    groups: list[list[Term]] = [[]]
+    bar = 0  # the column of the last ``|``, 0 before any
     for m in re.finditer(
         r"[^ ]+", q
     ):  # terms apart by U+0020 only, as the overlay
         term, col = m.group(), m.start() + 1
-        neg = term.startswith("!")
-        key, colon, value = term[neg:].partition(":")
-        if not colon or not re.fullmatch(r"[a-z]+", key):
-            raise ValueError(f"no key:value at {col}")
-        if key not in QUERY_KEYS:
-            raise ValueError(f"unknown key {key!r} at {col}")
-        if not value:
-            raise ValueError(f"empty value at {col}")
-        if key in {"has", "gives"} and value not in RELATIONS | SETS:
-            raise ValueError(f"{value!r} is no relation or set at {col}")
-        if key == "layer" and value not in LAYERS:
-            raise ValueError(f"{value!r} is no layer at {col}")
-        out.append((neg, key, value, col))
-    return out
+        if term != "|":
+            groups[-1].append(parse_term(term, col))
+        elif not groups[-1]:
+            raise ValueError(f"empty group at {col}")
+        else:
+            groups.append([])
+            bar = col
+    if bar and not groups[-1]:
+        raise ValueError(f"empty group at {bar}")
+    return groups
+
+
+def parse_term(term: str, col: int) -> Term:
+    """One ``[!]key:value`` term of a query, read at column `col`."""
+    neg = term.startswith("!")
+    key, colon, value = term[neg:].partition(":")
+    if not colon or not re.fullmatch(r"[a-z]+", key):
+        raise ValueError(f"no key:value at {col}")
+    if key not in QUERY_KEYS:
+        raise ValueError(f"unknown key '{key}' at {col}")
+    if not value:
+        raise ValueError(f"empty value at {col}")
+    n = 0
+    if key in {"has", "gives"}:
+        value, n = parse_chain(value, col)
+    if key == "layer" and value not in LAYERS:
+        raise ValueError(f"'{value}' is no layer at {col}")
+    return (neg, key, value, n, col)
+
+
+def parse_chain(value: str, col: int) -> tuple[str, int]:
+    r"""A ``has`` or ``gives`` value, ``R`` or ``R+N``: R, N (0 bare).
+
+    ``N`` is ``[1-9][0-9]*``, written so rather than ``\d`` and `int`
+    alone, which take other digits and ``1_0``: the overlay's reader
+    takes ASCII only. Past nine digits it reads as ``10**9``, which no
+    page reaches either: `int` refuses more than 4300 digits, and the
+    overlay's `Number` rounds past ``2**53``.
+    """
+    value, plus, length = value.partition("+")
+    if value not in RELATIONS | SETS:
+        raise ValueError(f"'{value}' is no relation or set at {col}")
+    if plus and not re.fullmatch(r"[1-9][0-9]*", length):
+        raise ValueError(f"bad chain length at {col}")
+    if not plus:
+        return value, 0
+    return value, int(length) if len(length) <= 9 else 10**9
+
+
+# Per kind, the edges of each node: kind -> node -> the nodes it joins,
+# a dict for a set kept in the order the edges came, as the overlay's
+# `Set`: a walk then tries them in the same order in both readers.
+type Edges = dict[str, dict[str, dict[str, None]]]
+
+# The steps one chain walk may take before it gives up with an error,
+# rather than freeze the overlay's tab: a simple path is a search that
+# can grow as the factorial of a set's members.
+CHAIN_BUDGET = 100_000
+
+
+def relation_edges(rows: list[Row]) -> tuple[Edges, Edges]:
+    """Each kind's edges, into each node and out of it.
+
+    An edge runs from a relation row's first target to each of the
+    others; a set's members are joined both ways, each to every other.
+    A node never joins itself, so a row with one target, or one member
+    named twice, bears no edge.
+    """
+    back: Edges = {}
+    ahead: Edges = {}
+    for r in rows:
+        kind, ts = first(r), r.get("targets")
+        if not strings(ts):
+            continue
+        t = cast("list[str]", ts)
+        pairs = (
+            [(a, b) for a in t for b in t if a != b]
+            if kind in SETS
+            else [(t[0], b) for b in t[1:] if b != t[0]]
+        )
+        for a, b in pairs:
+            ahead.setdefault(kind, {}).setdefault(a, {})[b] = None
+            back.setdefault(kind, {}).setdefault(b, {})[a] = None
+    return back, ahead
+
+
+def reaches(step: Mapping[str, Mapping[str, None]], x: str, n: int) -> bool:
+    """Whether `x` reaches `n` other nodes along `step`.
+
+    The count stops at `n`, so it costs no more than the answer needs.
+    """
+    reach, todo = {x}, [x]
+    while todo and len(reach) <= n:
+        for y in step.get(todo.pop(), {}):
+            if y not in reach:
+                reach.add(y)
+                todo.append(y)
+    return len(reach) > n
+
+
+def chained(
+    step: Mapping[str, Mapping[str, None]], x: str, n: int, col: int
+) -> bool:
+    """Whether a path of at least `n` edges along `step` leaves `x`.
+
+    The path is simple, no node twice, so a cycle does not lengthen it.
+    It needs ``n + 1`` nodes, so when `x` `reaches` too few the answer
+    is no at once (a set of eleven holds no path of eleven edges). Else
+    a depth-first walk, kept on a stack of its own rather than Python's,
+    stops at `n` edges, or past `CHAIN_BUDGET` steps with ``chain too
+    long to search`` at `col`.
+    """
+    if not reaches(step, x, n):
+        return False
+    path, seen = [x], {x}
+    nexts = [iter(step.get(x, {}))]
+    budget = CHAIN_BUDGET
+    while nexts:
+        y = next((y for y in nexts[-1] if y not in seen), None)
+        if y is None:
+            nexts.pop()
+            seen.discard(path.pop())
+            continue
+        if len(path) == n:
+            return True
+        budget -= 1
+        if budget < 0:
+            raise ValueError(f"chain too long to search at {col}")
+        path.append(y)
+        seen.add(y)
+        nexts.append(iter(step.get(y, {})))
+    return False
 
 
 def query(rows: list[Row], q: str) -> list[str]:
-    """The ids of the rows every term of `q` holds for, in row order.
+    """The ids of the rows one group of `q` wholly holds for, in order.
 
     ``has`` and ``gives`` look at the row and, for a fact on a page
     address, at that address too: a topic-focus value is about its
-    clause, so
-    ``label:tfa/f !has:resumes`` is a focus no clause takes up. A
-    relation's ends are its targets after the first; a set's are all.
+    clause, so ``label:tfa/f !has:resumes`` is a focus no clause takes
+    up. A relation's ends are its targets after the first; a set's are
+    all.
+
+    Chains run along `relation_edges`. ``has:R+N`` holds when a chain of
+    at least ``N`` R edges ends at the row, or at the address it speaks
+    for (the widening applies to the chain's end only; the nodes before
+    are ids as written), and ``gives:R+N`` when one starts there, as
+    `chained` walks them, cheap for a page's tens to hundreds of rows.
+    A bare ``has:R`` is ``has:R+1``, one edge ending there, so a row
+    that bears no edge (one target, or a target that is also the first)
+    gives it nothing. A bare ``gives:R`` is ``gives:R+1`` for a relation
+    and never holds for a set's member, where ``gives:R+1`` does.
     """
-    terms = parse_query(q)
+    groups = parse_query(q)
     by = {
         cast("str", r["id"]): r for r in rows if isinstance(r.get("id"), str)
     }
-    ends: dict[str, set[str]] = {}
-    starts: dict[str, set[str]] = {}
-    for r in rows:
-        kind, ts = first(r), r.get("targets")
-        if not strings(ts) or not ts:
-            continue
-        t = cast("list[str]", ts)
-        for x in t if kind in SETS else t[1:]:
-            ends.setdefault(kind, set()).add(x)
-        if kind in RELATIONS:
-            starts.setdefault(kind, set()).add(t[0])
+    back, ahead = relation_edges(rows)
 
-    def about(r: Row) -> set[str]:
+    def about(r: Row) -> list[str]:
         # a fact on an address speaks for the address; one on a row, or
         # a relation, only for itself
         ts = r.get("targets")
         t0 = cast("list[str]", ts)[:1] if strings(ts) else []
         own = "item" in r or first(r) in RELATIONS | SETS
         up = [] if own or not t0 or t0[0] in by else t0
-        return {cast("str", r.get("id")), *up}
+        return [cast("str", r.get("id")), *up]
 
-    def holds(r: Row, key: str, value: str) -> bool:
+    def holds(r: Row, key: str, value: str, n: int, col: int) -> bool:
         labels = (
             cast("list[str]", r.get("labels"))
             if strings(r.get("labels"))
@@ -1314,15 +1446,26 @@ def query(rows: list[Row], q: str) -> list[str]:
             "layer": lambda: layer(r, by) == value,
             "by": lambda: r.get("by") == value,
             "text": lambda: value.lower() in words,
-            "has": lambda: bool(about(r) & ends.get(value, set())),
-            "gives": lambda: bool(about(r) & starts.get(value, set())),
+            "has": lambda: any(
+                chained(back.get(value, {}), x, n or 1, col) for x in about(r)
+            ),
+            "gives": lambda: (
+                bool(n or value in RELATIONS)
+                and any(
+                    chained(ahead.get(value, {}), x, n or 1, col)
+                    for x in about(r)
+                )
+            ),
         }[key]()
 
     return [
         cast("str", r["id"])
         for r in rows
         if isinstance(r.get("id"), str)
-        and all(holds(r, k, v) != neg for neg, k, v, _ in terms)
+        and any(
+            all(holds(r, k, v, n, c) != neg for neg, k, v, n, c in group)
+            for group in groups
+        )
     ]
 
 

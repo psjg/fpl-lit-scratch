@@ -306,13 +306,26 @@ They are the next work on this layer, not ideas:
 3. **Querying across layers: built 2026-11-01** (Müller's objection, PML-TQ's answer).
    Terms `[!]key:value`, all to hold, a negation a condition met zero times: `label:` (at or
    under a scope), `layer:`, `by:`, `text:`, `has:R` (an R row ends at it), `gives:R` (one
-   starts from it); a fact on a page address speaks for the address. `lit facts --query Q
-   PAGE` prints what it finds; the field under the margin's filters fades the rest. One
-   language, two readers, held together by `tests/query_cases.json`, which both
-   `facts.query` and the overlay's block (run in node, `tests/test_query_js.py`) must
-   answer alike. Examples: `label:claim !has:attacks` (a claim no one attacks),
-   `label:tfa/f !has:resumes` (a focus no clause takes up). Still open: or, transitive
-   chains (PML-TQ's `{4,}`).
+   starts from it); a fact on a page address speaks for the address. A term that is just
+   `|` splits the query into groups, and a row is found when every term of one group holds
+   (PML-TQ's or, in disjunctive normal form); a `|` at either end or beside another is an
+   error. `has:R+N` and `gives:R+N` ask for a chain of at least N R edges ending or
+   starting there (PML-TQ's `{N,}`): an edge runs from a relation's first target to each of
+   the others, and both ways between the members of a set; a chain visits no node twice,
+   so a cycle does not lengthen it, and only its end is widened to the address a fact
+   speaks for. Bare `has:R` is `has:R+1`, one edge ending there; bare `gives:R` is
+   `gives:R+1` for a relation and never holds for a set's member. A node never joins itself,
+   so a row with one target, or one naming its first target again, bears no edge and is
+   found by neither form. A chain longer than the nodes its end reaches is no at once;
+   past 100 000 steps a walk stops with `chain too long to search at COL` (a simple path is
+   a search that grows as the factorial of a set's members), and `N` past nine digits reads
+   as 10⁹. `lit facts --query Q PAGE` prints what
+   it finds; the field under the margin's filters fades the rest. One language, two
+   readers, held together by `tests/query_cases.json`, which both `facts.query` and the
+   overlay's block (run in node, `tests/test_query_js.py`) must answer alike. Examples:
+   `label:claim !has:attacks` (a claim no one attacks), `label:tfa/f !has:resumes` (a
+   focus no clause takes up), `label:claim | label:question` (either), `has:supports+3`
+   (the end of three supports in a row).
 4. **The graph, step two: built 2026-11-01.** `lit graph [PAGE ...]` writes
    `<page stem>.graph.json` beside each page: its chunks (ids as in the fact layer), the files
    they tangle to, `uses` edges from a chunk to every chunk its body names, and `tangles` edges

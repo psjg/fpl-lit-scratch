@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import json
+import re
 import subprocess
 from collections import Counter
 from pathlib import Path
+from typing import cast
 
 import pytest
-from support import lit, md, page
+from support import CASES, EDGELESS, PAIRS, chain_rows, lit, md, page
 
 from lit import facts, web
 
@@ -499,19 +501,39 @@ def cast_id(row: facts.Row) -> str:
     return str(row["id"])
 
 
-CASES = json.loads((Path(__file__).parent / "query_cases.json").read_text())
-
-
 @pytest.mark.parametrize(
-    "case", CASES["cases"], ids=lambda c: c["q"] or "empty"
+    "case", CASES["cases"], ids=lambda c: c["q"][:40] or "empty"
 )
 def test_query_answers_each_shared_case(case: dict[str, object]) -> None:
     """The query cases the overlay runs too (tests/test_query_js.py)."""
+    rows = cast("list[facts.Row]", case.get("rows", CASES["rows"]))
     if "error" in case:
-        with pytest.raises(ValueError, match=str(case["error"])):
-            facts.query(CASES["rows"], str(case["q"]))
+        with pytest.raises(ValueError, match=re.escape(str(case["error"]))):
+            facts.query(rows, str(case["q"]))
     else:
-        assert facts.query(CASES["rows"], str(case["q"])) == case["ids"]
+        assert facts.query(rows, str(case["q"])) == case["ids"]
+
+
+@pytest.mark.parametrize(
+    "rows", [CASES["rows"], EDGELESS], ids=["shared", "edgeless"]
+)
+@pytest.mark.parametrize(("bare", "one"), PAIRS)
+def test_query_bare_term_answers_as_one_edge(
+    rows: list[facts.Row], bare: str, one: str
+) -> None:
+    """``has:R`` finds what ``has:R+1`` does; ``gives:R`` so for a
+    relation."""
+    assert facts.query(rows, bare) == facts.query(rows, one)
+
+
+def test_query_walks_a_chain_past_the_call_stack() -> None:
+    """A chain of 1500 edges: an answer, not a `RecursionError`."""
+    rows = chain_rows(1500)
+    want = [f"k{i}" for i in range(1100, 1501)]
+    assert facts.query(rows, "layer:span has:supports+1100") == want
+    assert facts.query(rows, "gives:supports+1400") == [
+        f"k{i}" for i in range(101)
+    ]
 
 
 WEIGHED: list[facts.Row] = [
