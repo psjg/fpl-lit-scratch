@@ -418,10 +418,10 @@
     return [4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s, -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
       -0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s];
   };
-  /** An OKLCH colour as #rrggbb, its chroma lowered until sRGB holds it. */
+  /** An OKLCH colour as #rrggbb, its chroma lowered until sRGB holds it (at none, a grey of its lightness). */
   const hex = (L, C, h) => {
     let c = lrgb(L, C, h);
-    while (c.some((v) => v < -1e-4 || v > 1 + 1e-4)) c = lrgb(L, C -= 0.002, h);
+    while (C > 0 && c.some((v) => v < -1e-4 || v > 1 + 1e-4)) c = lrgb(L, C = Math.max(0, C - 0.002), h);
     const enc = (x) => (x = Math.min(1, Math.max(0, x)), x <= 0.0031308 ? 12.92 * x : 1.055 * x ** (1 / 2.4) - 0.055);
     return "#" + c.map((v) => Math.round(enc(v) * 255).toString(16).padStart(2, "0")).join("");
   };
@@ -461,7 +461,9 @@
     const fresh = scopes(label).filter((s) => !hue.has(s));
     if (fresh.length) { fresh.forEach(placeHue); sighted([...sighted(), ...fresh]); }
     const d = label.split("/").length - 1;
-    return hex(BANDS[roots.indexOf(label.split("/")[0]) % 2] - 0.08 * d, 0.13 - 0.02 * d, hue.get(label));
+    // eight levels down the band would reach black: a deep label stops at 0.2 and grey
+    const L = BANDS[roots.indexOf(label.split("/")[0]) % 2] - 0.08 * d;
+    return hex(Math.max(0.2, L), Math.max(0, 0.13 - 0.02 * d), hue.get(label));
   }
   window.fplAnnotColour = colourOf;   // for the headless tests, and a console
   // the layers drawn by CSS (tfa washes, resumes arcs, chain numbers) take the colours their buttons show
