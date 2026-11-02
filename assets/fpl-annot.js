@@ -46,7 +46,8 @@
  * menu's Exporteer rijen downloads that array as <stem>.annot.json
  * (JSON.stringify(rows, null, 1)) and shows the lit command that takes
  * it in; Importeer rijen merges a file of rows into it by id; Wis mijn
- * rijen empties it, after asking. Exporteer logboek waits for the log.
+ * rijen empties it, after asking. Exporteer logboek downloads the log
+ * (below) as <stem>.log.json.
  *
  * Finding a quote. The page's text nodes are read into one string, the
  * shown text: a backtick dropped, a curly quote read as a straight one,
@@ -225,8 +226,13 @@
  * layers shown, laid out by a force model (Fruchterman and Reingold 1991)
  * on a canvas. A relation row is a node of its own, a small diamond, so
  * an undercut has something to aim at (AIF); a fact hangs from what it is
- * about. "Graph" in the bar shows the page, "Graph" on a card
- * that row and what lies within two steps; a click on a node goes there.
+ * about. "Graph" in the bar shows the page; "Graph" on a card (board J)
+ * a popover left of the card, as large as what it holds: that row and
+ * what lies within two steps, read as the card's meta line reads it (a
+ * relation between two ends an edge with its verb, an undercut's target
+ * a diamond, the thread left in the card), each node named by its first
+ * words, never an id, and a button Hele pagina; a click on a node goes
+ * there.
  * Beside the rows stand the page's chunks and the files they tangle to,
  * from <stem>.graph.json (lit graph, written at publish): a chunk uses
  * chunks, tangles to a file, and a row may name a chunk.
@@ -264,6 +270,11 @@
  * The count line says how many it found, or why the query does not
  * parse; a query asked in Lezen turns to Spans, where there is
  * something to find.
+ *
+ * The log (feedback 7): window.fplAnnotLog keeps the last 200 acts,
+ * {t, action, target, ok, reason}, what the reader did and every
+ * refusal with the reason its toast gave; a selection outside Kantlijn
+ * and a quote not found are logged without a toast. Nothing is sent.
  */
 (() => {
   "use strict";
@@ -313,6 +324,50 @@
   const column = document.getElementById("quarto-margin-sidebar");
 
   let sidecar = [];
+
+  /*
+   * The log (feedback 7): what the reader did and what the margin
+   * refused, with the reason it gave, as window.fplAnnotLog, an array of
+   * the last LOGMAX entries, oldest first:
+   *
+   *   { t,        the time in ms
+   *     action,   a Dutch verb: verbind, rek, bewaar, vouw, zoek, stand…
+   *     target,   the row, address, label or stand it was about, or null
+   *     ok,       false for a refusal
+   *     reason }  why it was refused, as its toast said it; else null
+   *
+   * Every refusal goes through refuse(), which logs it and shows its
+   * toast; an act done goes through did() or log(). A wheel turned is
+   * one act: an entry of vouw replaces the one before it when both say
+   * the same ok within a second and a half. The
+   * log lives in this page only: nothing is stored or sent, and
+   * Exporteer logboek in the menu downloads it as <stem>.log.json.
+   */
+  const LOGMAX = 200;
+  const LIVE = new Set(["vouw"]);
+  const journal = [];
+  window.fplAnnotLog = journal;
+  const unanchored = new Set();   // rows whose quote was not found, logged once
+  function log(action, target = null, ok = true, reason = null) {
+    const t = Date.now(), last = journal.at(-1);
+    if (LIVE.has(action) && last?.action === action && last.ok === ok
+      && t - last.t < 1500) journal.pop();
+    journal.push({ t, action, target, ok, reason });
+    if (journal.length > LOGMAX) journal.splice(0, journal.length - LOGMAX);
+  }
+  /** A refusal: logged with its reason, which a toast shows. */
+  function refuse(action, target, reason) {
+    log(action, target, false, reason);
+    toast(reason);
+  }
+  /** An act done: logged, and a toast says so when there is text. */
+  function did(action, target, text) {
+    log(action, target);
+    if (text) toast(text);
+  }
+  const LINKS = "Verbinden doe je in de stand Kantlijn (a)";
+  const PARTS = "Delen schrijf je in de stand Kantlijn (a)";
+  const NEXT = "Alt-selecteer het volgende · Esc stopt";
 
   const MODES = ["lezen", "spans", "kantlijn"];
   const NONE = "zonder label";
@@ -516,6 +571,11 @@
       if (typeof row.text !== "string" || !row.text.trim()) continue;
       const ix = shown(), at = find(ix, row);
       state[row.id] = typeof at === "string" ? at : "vers";
+      if (typeof at === "string" && !unanchored.has(row.id)) {
+        unanchored.add(row.id);
+        log("anker", row.id, false, at === "dubbel"
+          ? "staat meer dan eens in de tekst" : "staat niet meer in de tekst");
+      }
       const p = wholeOf(row.id);   // a piece shows when its whole does
       if (typeof at !== "string" && mode() !== "lezen" && (p ? passes(p) : passes(row))) wrap(ix, at[0], at[1], row);
     }
@@ -568,7 +628,10 @@
   };
 
   const STANDS = { lezen: "Lezen", spans: "Spans", kantlijn: "Kantlijn" };
-  const stand = (m) => { if (m !== "kantlijn") disarm(); mode(m); draw(); };
+  const stand = (m) => {
+    if (m !== "kantlijn") disarm();
+    mode(m); draw(); log("stand", m);
+  };
   const tabs = el("div", { className: "fpl-tabs", role: "tablist", ariaLabel: "Stand" },
     ...MODES.map((m) => Object.assign(button(STANDS[m], () => stand(m), "fpl-tab"), { role: "tab" })));
   const picker = el("select", { className: "fpl-stand", ariaLabel: "Stand", onchange: () => stand(picker.value) },
@@ -603,6 +666,7 @@
     asked = field.value.replace(/^ +| +$/g, "");   // only U+0020 apart, as the parser
     try { found = asked ? new Set(QUERY.query(all, asked)) : null; bad = ""; }
     catch (e) { found = null; bad = e.message; }
+    log("zoek", asked || null, !bad, bad || null);
     field.classList.toggle("is-bad", !!bad);
     search.classList.toggle("is-on", !!asked);
     field.title = bad;
@@ -698,7 +762,11 @@
   }
   /** Close the menu, the filter panel and a card's menu. */
   function shut() {
-    if (link?.open) { link = null; drawAim(); hot(null); toast("Niet verbonden"); }   // the chooser closed unanswered
+    if (link?.open) {   // the chooser closed unanswered
+      const from = link.from;
+      link = null; drawAim(); hot(null);
+      did("breek af", from, "Niet verbonden");
+    }
     for (const [pop, btn] of [[menu, moreBtn], [panel, filterBtn]]) { pop.hidden = true; btn.ariaExpanded = "false"; btn.classList.remove("is-open"); }
     cardMenu.hidden = true;
     if (menuOf) for (const b of margin.querySelectorAll(".fpl-card-more")) b.ariaExpanded = "false";
@@ -743,8 +811,10 @@
         c.style.marginLeft = `${(l.split("/").length - 1) * 0.6}rem`;
         return toggle(c, () => {
           const o = hidden(), above = [...o].find((h) => h !== l && under(l, h));
-          if (above) { toast(`Zet eerst ${above} aan`); return; }   // struck by its scope: the scope decides
+          // struck by its scope: the scope decides
+          if (above) { refuse("filter", l, `Zet eerst ${above} aan`); return; }
           o.has(l) ? o.delete(l) : o.add(l); hidden(o); draw();
+          log("filter", l);
         });
       })) : el("p", { className: "fpl-panel-none" }, "Nog geen labels op deze pagina"),
       el("p", { className: "fpl-panel-head" }, "Lagen"),
@@ -771,6 +841,9 @@
       ...[0, 1, 2, 3].map((n) => Object.assign(button(String(n), () => { setContext(n); fillMenu(); }), { ariaPressed: String(n === context) })));
     const exp = entry("export", "Exporteer rijen", () => { exportRows(); fillMenu("export"); }, why(mine ? `${mine} van jou` : "geen van jou"));
     const wipe = entry("wipe", "Wis mijn rijen op deze pagina…", () => fillMenu("wipe"), mine ? null : why("geen"), "fpl-danger");
+    const acts = journal.length === 1 ? "1 actie" : `${journal.length} acties`;
+    const record = entry("log", "Exporteer logboek",
+      () => { exportLog(); fillMenu(); }, why(acts));
     menu.classList.remove("fpl-keysheet");
     menu.replaceChildren(...[
       el("label", { className: "fpl-item" }, ico("name"), "Naam", name),
@@ -779,7 +852,7 @@
       mine ? exp : none(exp),
       ask === "export" ? el("p", { className: "fpl-cmd" }, "Dan, vanuit 01-bootstrap/: ",
         el("code", {}, `lit facts --import ${stem}.annot.json --item ${item}=${item}@${commit}`)) : null,
-      none(entry("log", "Exporteer logboek", null, why("nog niet"))),
+      journal.length ? record : none(record),
       el("hr"),
       entry("fold", "Vouw tot de spans", () => { shut(); squeeze(); }),
       el("div", { className: "fpl-item" }, ico("context"), "Context", ctx),
@@ -787,7 +860,10 @@
       entry("keys", "Sneltoetsen", () => keysheet(), el("kbd", {}, "?")),
       ask === "wipe"
         ? el("div", { className: "fpl-item fpl-confirm" }, `${rows} van jou wissen?`,
-          button("Wis", () => { localStorage.removeItem(key); shut(); draw(); toast(`${rows} gewist`); }, "fpl-go fpl-danger"),
+          button("Wis", () => {
+            localStorage.removeItem(key); shut(); draw();
+            did("wis", item, `${rows} gewist`);
+          }, "fpl-go fpl-danger"),
           button("Nee", () => fillMenu()))
         : mine ? wipe : none(wipe)].filter(Boolean));
   }
@@ -879,7 +955,11 @@
     b.ariaExpanded = String(told.has(k));
     b.onclick = (ev) => {
       ev.stopPropagation();
-      if (!d.decision) { toast(`Besluit ${d.id} staat niet in ${stem}.decisions.tsv`); return; }
+      if (!d.decision) {
+        refuse("besluit", `L-${d.id}`,
+          `Besluit ${d.id} staat niet in ${stem}.decisions.tsv`);
+        return;
+      }
       told.has(k) ? told.delete(k) : told.add(k);
       openId = owner;
       layout();
@@ -1005,8 +1085,12 @@
       if (e.key !== "Enter" || e.isComposing) return;
       e.preventDefault();
       const note = field.value.trim();
-      if (!note) { toast("Leeg antwoord: typ eerst iets"); return; }
-      save({ targets: [field.dataset.to] }, { note, labels: [] });
+      if (!note) {
+        refuse("antwoord", field.dataset.to, "Leeg antwoord: typ eerst iets");
+        return;
+      }
+      const to = field.dataset.to;
+      log("antwoord", save({ targets: [to] }, { note, labels: [] }));
       openId = id;
       draw();
       margin.querySelector(`.fpl-card[data-id="${CSS.escape(id)}"] .fpl-answer input`)?.focus({ preventScroll: true });
@@ -1159,9 +1243,16 @@
       .filter((t) => place(t) && t !== row.id).slice(0, 3);
     const mine = !!row.mine, n = replies(row.id);
     const del = entry("wipe", "Verwijder", () => {
-      if (!mine) { toast("Een rij uit de sidecar verwijder je met lit facts, niet hier"); return; }
+      if (!mine) {
+        refuse("verwijder", row.id,
+          "Een rij uit de sidecar verwijder je met lit facts, niet hier");
+        return;
+      }
       del.replaceWith(el("div", { className: "fpl-item fpl-confirm" }, n ? `Verwijderen? ${n} ${n === 1 ? "reactie wijst" : "reacties wijzen"} dan nergens heen.` : "Verwijderen?",
-        button("Verwijder", () => { shut(); save(row, "delete"); openId = null; draw(); toast("Verwijderd"); }, "fpl-danger"),
+        button("Verwijder", () => {
+          shut(); save(row, "delete"); openId = null; draw();
+          did("verwijder", row.id, "Verwijderd");
+        }, "fpl-danger"),
         button("Nee", () => fillCardMenu(row))));
       cardMenu.querySelector(".fpl-confirm button")?.focus();
     }, mine ? null : el("small", {}, "uit de sidecar"));
@@ -1211,13 +1302,21 @@
       row.mine ? button("×", (ev) => {
         ev.stopPropagation();
         const rest = row.targets.filter((_, j) => j !== i);
-        if (rest.length > 1) { save(row, { targets: rest }); draw(); return; }
+        if (rest.length > 1) {
+          save(row, { targets: rest }); draw();
+          log("deel los", row.targets[i]);
+          return;
+        }
         if (card.querySelector(".fpl-ask")) return;
         const n = all.filter((r) => typeof r.text !== "string" && r.targets?.[0] === row.id).length;   // kept, they name nothing then
         const left = n ? ` ${n} ${n > 1 ? "feiten" : "feit"} over de bundel ${n > 1 ? "blijven" : "blijft"} bewaard maar ${n > 1 ? "wijzen" : "wijst"} dan nergens heen.` : "";
         const ask = el("div", { className: "fpl-bar fpl-ask" }, `Dan blijft één deel over: de bundel opheffen?${left}`,
-          button("Ja, hef op", () => { save(row, "delete"); if (adding === row.id) adding = null; draw();
-            toast(`Bundel opgeheven: de delen zijn losse spans${n ? ` · ${n} ${n > 1 ? "feiten wijzen" : "feit wijst"} nergens heen` : ""}`); }, "fpl-go"),
+          button("Ja, hef op", () => {
+            save(row, "delete"); if (adding === row.id) adding = null; draw();
+            const lost = n > 1 ? "feiten wijzen" : "feit wijst";
+            did("bundel op", row.id, "Bundel opgeheven: de delen zijn "
+              + `losse spans${n ? ` · ${n} ${lost} nergens heen` : ""}`);
+          }, "fpl-go"),
           button("Nee", () => { ask.remove(); layout(); }));
         card.append(ask);
         if (wide()) makeRoom(card);
@@ -1259,7 +1358,11 @@
         if (picking) return;
         ev.stopPropagation();
         const e = place(src);
-        e ? seen(e).scrollIntoView({ block: "center", behavior: "smooth" }) : toast(`${src} staat niet op deze pagina`);
+        if (!e) {
+          refuse("ga naar", src, `${src} staat niet op deze pagina`);
+          return;
+        }
+        seen(e).scrollIntoView({ block: "center", behavior: "smooth" });
       };
       li.append(go, weigh(rel));
       if (rel.note) li.append(el("p", { className: "fpl-note" }, rel.note));
@@ -1292,6 +1395,7 @@
           if (picking) return;
           ev.stopPropagation();
           save(rel, { weight: n === w ? undefined : n });   // undefined: JSON drops the key
+          log("gewicht", rel.id);
           draw();
         };
       }
@@ -1358,7 +1462,8 @@
     document.body.classList.add("fpl-picking");
     hot(from);
     drawAim();
-    toast(`Verbind “${clip(said(from), 28)}”: klik het andere eind, of Tab en Enter. Esc breekt af.`);
+    did("kies eind", from, `Verbind “${clip(said(from), 28)}”: klik het `
+      + "andere eind, of Tab en Enter. Esc breekt af.");
   };
   const unpick = () => {
     picking = null;
@@ -1375,7 +1480,10 @@
     const to = aimOf(at), { from, kind } = picking;
     picked = performance.now();
     if (!kind) {
-      if (to === from) { toast("Dat is hetzelfde eind: kies een ander"); return; }
+      if (to === from) {
+        refuse("verbind", from, "Dat is hetzelfde eind: kies een ander");
+        return;
+      }
       chooser(from, to, { x: ev.pageX, y: ev.pageY }, false);
       return;
     }
@@ -1386,12 +1494,18 @@
   /** Save a row of a kind from -> to, unless it is there already; its toast names both ends by their text. */
   function connect(from, to, kind) {
     picked = performance.now();
-    if (to === from) { toast("Een rij argumenteert niet over zichzelf"); return; }
-    if (all.some((r) => r.labels?.[0] === kind && r.targets?.[0] === from && r.targets?.[1] === to)) { toast("Die rij is er al"); return; }
-    save({ targets: [from, to] }, { note: "", labels: [kind] });
+    if (to === from) {
+      refuse("verbind", from, "Een rij argumenteert niet over zichzelf");
+      return;
+    }
+    const twin = (r) => r.labels?.[0] === kind && r.targets?.[0] === from
+      && r.targets?.[1] === to;
+    if (all.some(twin)) { refuse("verbind", from, "Die rij is er al"); return; }
+    const id = save({ targets: [from, to] }, { note: "", labels: [kind] });
     opened.add(to);
     draw();
-    toast(`“${clip(said(from), 24)}” ${VERB[kind] ?? kind} “${clip(said(to), 24)}”`);
+    did("verbind", id, `“${clip(said(from), 24)}” ${VERB[kind] ?? kind} `
+      + `“${clip(said(to), 24)}”`);
   }
 
   /** The chooser's kinds in their keys' order, each with its icon: verbindt is lit's relates. */
@@ -1444,14 +1558,20 @@
     ev.stopPropagation();
     const { from } = picking;
     if (ev.key === "Enter") {
-      if (!link?.to) { toast("Kies eerst het andere eind: Tab of een klik"); return true; }
+      if (!link?.to) {
+        refuse("verbind", from, "Kies eerst het andere eind: Tab of een klik");
+        return true;
+      }
       const m = anchorsOf(link.to).at(-1), e = m ? seen(m) : cardEl(link.to) ?? document.getElementById(link.to);
       const r = e.getBoundingClientRect();
       chooser(from, link.to, m ? { x: r.right + scrollX, y: r.top + scrollY + r.height / 2 } : { x: r.left + scrollX, y: r.top + scrollY + HEAD }, false);
       return true;
     }
     const ids = [...new Set([...document.querySelectorAll(".fpl-card[data-id]")].map((c) => c.dataset.id))].filter((id) => id !== "draft" && id !== from);
-    if (!ids.length) { toast("Geen ander eind op deze pagina"); return true; }
+    if (!ids.length) {
+      refuse("verbind", from, "Geen ander eind op deze pagina");
+      return true;
+    }
     const i = ids.indexOf(link.to), n = ids.length;
     link.to = ids[i < 0 ? (back ? n - 1 : 0) : (i + (back ? n - 1 : 1)) % n];
     drawAim();
@@ -1521,7 +1641,10 @@
         drawAim();
         return;
       }
-      if (!drag.told) { drag.told = true; toast(`${SIDECAR}; slepen verbindt`); }
+      if (!drag.told) {
+        drag.told = true;
+        refuse("rek", st.id, `${SIDECAR}; slepen verbindt`);
+      }
     } else if (st && st.end !== st.e) { st.end = st.e; paintStretch(); }   // off its text: the span as it was
     const to = aimAt(ev.clientX, ev.clientY);
     link.x = ev.pageX;
@@ -1551,8 +1674,10 @@
     link = null;
     drawAim();
     hot(null);
-    toast(!up ? "Slepen afgebroken" : !to ? "Losgelaten naast een span, kaart of feit: niets verbonden"
-      : st && !st.row.mine ? `${SIDECAR}; niets verbonden` : "Losgelaten op de eigen span: niets verbonden");
+    refuse("verbind", d.from, !up ? "Slepen afgebroken"
+      : !to ? "Losgelaten naast een span, kaart of feit: niets verbonden"
+        : st && !st.row.mine ? `${SIDECAR}; niets verbonden`
+          : "Losgelaten op de eigen span: niets verbonden");
   }
   /** Esc while a knob is carried: the stretch put back and the connect let go; the drop that follows does nothing. */
   function cancelDrag() {
@@ -1563,7 +1688,7 @@
     drawAim();
     hot(null);
     document.body.classList.remove("fpl-dragging");
-    toast(moved ? "Teruggezet" : "Slepen afgebroken");
+    did("breek af", drag.from, moved ? "Teruggezet" : "Slepen afgebroken");
   }
   const DRAG = [["pointermove", dragMove], ["pointerup", dragEnd], ["pointercancel", dragEnd]];
 
@@ -1693,23 +1818,37 @@
   function keepStretch() {
     const st = stretching;
     if (!st) return;
-    if (st.end === st.e) { dropStretch(); toast("Losgelaten op de eigen span: niets veranderd"); return; }
+    if (st.end === st.e) {
+      dropStretch();
+      refuse("rek", st.id, "Losgelaten op de eigen span: niets veranderd");
+      return;
+    }
     const { flat } = st.ix, n = words(flat.slice(st.s, st.end)) - words(flat.slice(st.s, st.e));
     const got = { text: flat.slice(st.s, st.end), prefix: flat.slice(Math.max(0, st.s - AROUND), st.s), suffix: flat.slice(st.end, st.end + AROUND) };
-    if (!Array.isArray(find(st.ix, { ...st.row, ...got }))) { dropStretch(); toast("Zo staat de tekst vaker op de pagina: niet gerekt"); return; }
+    if (!Array.isArray(find(st.ix, { ...st.row, ...got }))) {
+      dropStretch();
+      refuse("rek", st.id, "Zo staat de tekst vaker op de pagina: niet gerekt");
+      return;
+    }
     stretching = null;
     tip.remove();
     save(st.row, got);
     draw();
-    toast(n > 0 ? `${n} ${n === 1 ? "woord" : "woorden"} erbij` : n < 0 ? `${-n} ${n === -1 ? "woord" : "woorden"} eraf` : "Gerekt");
+    const w = (k) => `${k} ${k === 1 ? "woord" : "woorden"}`;
+    did("rek", st.row.id, n > 0 ? `${w(n)} erbij`
+      : n < 0 ? `${w(-n)} eraf` : "Gerekt");
   }
   /** Shift and an arrow on a focused knob: its span's end a word on (d 1) or back (d -1), shown as a drag shows it. */
   function nudge(id, d) {
     if (stretching?.id !== id) {
       dropStretch();
       const st = stretchOf(id);
-      if (!st) { toast("Hier valt niets te rekken: dit eind is geen span in de tekst"); return; }
-      if (!st.row.mine) { toast(SIDECAR); return; }
+      if (!st) {
+        refuse("rek", id,
+          "Hier valt niets te rekken: dit eind is geen span in de tekst");
+        return;
+      }
+      if (!st.row.mine) { refuse("rek", id, SIDECAR); return; }
       stretching = { ...st, keys: true };
       hot(id);
     }
@@ -1717,7 +1856,12 @@
     let i = st.end;
     if (d > 0) { while (i < st.hi && flat[i] === " ") i++; while (i < st.hi && flat[i] !== " ") i++; }
     else { while (i > st.s && flat[i - 1] !== " ") i--; while (i > st.s && flat[i - 1] === " ") i--; }
-    if (i === st.end || i <= st.s) { toast(d > 0 ? "Het blok houdt hier op: verder rekt de span niet" : "Een span houdt minstens één woord"); return; }
+    if (i === st.end || i <= st.s) {
+      refuse("rek", id, d > 0
+        ? "Het blok houdt hier op: verder rekt de span niet"
+        : "Een span houdt minstens één woord");
+      return;
+    }
     st.end = i;
     paintStretch();
   }
@@ -1937,11 +2081,242 @@
       }
     }
   }
-  /** Open the graph over the page: all of it, or the part around an id. Esc or a click outside closes it. */
+  /**
+   * Where a node goes: its own place, else that of what it is about,
+   * followed up its first targets.
+   */
+  function goal(nid, been = new Set()) {
+    const e = place(nid) ?? chunkBlock(nid);
+    if (e || been.has(nid)) return e;
+    been.add(nid);
+    const r = all.find((x) => x.id === nid);
+    return r?.targets?.[0] ? goal(r.targets[0], been) : null;
+  }
+  /** Close a graph and go to a node, lit; or say why not. */
+  function goTo(nid, close) {
+    const e = goal(nid);
+    if (!e) {
+      refuse("ga naar", nid, `${nid} staat niet op deze pagina`);
+      return;
+    }
+    close();
+    seen(e).scrollIntoView({ block: "center", behavior: "smooth" });
+    hot(nid);
+    log("ga naar", nid);
+  }
+
+  /**
+   * The graph of one card (board J, feedback 9), read so that it and the
+   * card's meta line agree: the card's row and what lies within two
+   * steps of it, where a relation that joins its ends is an edge with its
+   * verb, unless a relation aims at it (an undercut keeps its diamond,
+   * as in the page's graph), and the messages of the card's thread, which
+   * the card shows, are left out.
+   */
+  function aroundOf(id) {
+    const g = graphOf(), at = new Map(g.nodes.map((n) => [n.id, n]));
+    if (!at.has(id)) at.set(id, { id });
+    const rels = facts(id).filter(relates).map((r) => r.id);
+    const thread = new Set();   // messages on it or its relations, replies
+    for (const todo = [id, ...rels]; todo.length;) {
+      for (const r of facts(todo.pop())) {
+        if (relates(r) || thread.has(r.id)) continue;
+        thread.add(r.id);
+        todo.push(r.id);
+      }
+    }
+    const kept = (e) => !thread.has(e.a.id) && !thread.has(e.b.id);
+    const two = near({ nodes: [...at.values()], edges: g.edges.filter(kept) },
+      id);
+    const in2 = new Map(two.nodes.map((n) => [n.id, n]));
+    let { edges } = two;
+    for (const r of all.filter((x) => in2.has(x.id) && relates(x)
+      && typeof x.text !== "string" && RELATIONS.has(x.labels?.[0]))) {
+      const n = in2.get(r.id), [from, ...to] = r.targets;
+      if (![from, ...to].every((t) => in2.has(t))) continue;   // an end too far
+      const into = edges.filter((e) => e.b === n && e.a.id !== from);
+      if (into.some((e) => RELATIONS.has(e.label))) continue;   // undercut
+      edges = edges.filter((e) => e.a !== n && e.b !== n).concat(to.map((t) =>
+        ({ a: in2.get(from), b: in2.get(t), label: verb(r) })));
+      in2.delete(r.id);
+    }
+    return { nodes: [...in2.values()], edges };
+  }
+  /** What a node of a card's graph is called: its first words, never an id. */
+  function nodeName(nid, own) {
+    const r = all.find((x) => x.id === nid), d = decision(nid);
+    const span = typeof r?.text === "string";
+    if (nid === own) return span ? "deze span" : "deze kaart";
+    if (d) return d.decision || d.topic || `besluit ${d.id}`;
+    const c = code?.nodes.find((x) => x.id === nid);
+    if (c) return c.label ?? named(nid);
+    if (r && !span && RELATIONS.has(r.labels?.[0])) return verb(r);
+    if (r) return said(nid);
+    return place(nid) ? said(nid) : named(nid) || "iets dat weg is";
+  }
+  /**
+   * Open the graph of a card as a popover beside it (board J), sized to
+   * what it holds: one column per step from the card, its own node
+   * first, each node named under it and each edge by its verb above it.
+   * One edge or none says how to connect more. "Hele pagina" opens the
+   * page's graph; a node goes there; Esc, × or a click elsewhere closes
+   * it, and the card's Graph again too. While it is up around.id names
+   * the card, which hot() keeps lit, as board J draws it.
+   */
+  async function around(id) {
+    await coded;
+    const was = document.querySelector(".fpl-graph");
+    if (was) was.close();
+    if (was?.dataset.id === id) return;
+    const g = aroundOf(id);
+    const card = document.querySelector(
+      `.fpl-card[data-id="${CSS.escape(id)}"]`);
+    const btn = card?.querySelector('[aria-label="Graph van deze kaart"]');
+    const col = new Map([[id, 0]]);
+    for (let d = 0; d < 2; d++) for (const e of g.edges)
+      for (const [p, q] of [[e.a, e.b], [e.b, e.a]])
+        if (col.get(p.id) === d && !col.has(q.id)) col.set(q.id, d + 1);
+    g.nodes = g.nodes.filter((n) => col.has(n.id));   // a fold may strand one
+    g.edges = g.edges.filter((e) => col.has(e.a.id) && col.has(e.b.id));
+    const cols = [0, 1, 2]
+      .map((c) => g.nodes.filter((n) => col.get(n.id) === c))
+      .filter((c) => c.length);
+    const PITCH = 174, ROW = 52, rows = Math.max(...cols.map((c) => c.length));
+    const lone = g.nodes.length === 1, top = lone ? 12 : 26;   // no edge label
+    const W = 224 + (cols.length > 2 ? PITCH : 0);
+    const H = top + 38 + (rows - 1) * ROW;
+    cols.forEach((c, x) => c.forEach((n, y) => {
+      n.x = 22 + x * PITCH;
+      n.y = top + ((rows - c.length) / 2 + y) * ROW;
+      n.col = x;
+    }));
+    const NS = "http://www.w3.org/2000/svg";
+    const svg = (tag, attrs, text) => {
+      const e = document.createElementNS(NS, tag);
+      for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v);
+      if (text) e.textContent = text;
+      return e;
+    };
+    const pic = svg("svg", { class: "fpl-g", width: W, height: H,
+      viewBox: `0 0 ${W} ${H}`, role: "group" });
+    const pen = document.createElement("canvas").getContext("2d");
+    pen.font = `600 11px ${getComputedStyle(document.body).fontFamily}`;
+    const boxes = [];   // what a word may not cover: dots and names
+    const free = (q) => !boxes.some((o) => q[0] < o[2] && o[0] < q[2]
+      && q[1] < o[3] && o[1] < q[3]);
+    const last = cols.length - 1;
+    for (const n of g.nodes) {
+      const r = all.find((x) => x.id === n.id), name = nodeName(n.id, id);
+      const hue = typeof r?.text === "string" ? (r.mine ? "mine" : "vers") : "";
+      const rel = !!r && relates(r) && typeof r.text !== "string"
+        && RELATIONS.has(r.labels?.[0]);
+      const node = svg("g", { class: `fpl-gnode ${hue}`, tabindex: 0,
+        role: "button", "aria-label": `Ga naar ${name}` });
+      node.append(rel
+        ? svg("path", { d: `M${n.x} ${n.y - 6}l6 6-6 6-6-6z` })
+        : svg("circle", { cx: n.x, cy: n.y, r: n.id === id ? 7 : 5 }));
+      const end = n.col === last && last > 0;
+      const word = clip(name, last > 1 ? 18 : 24);
+      const lx = n.col === 0 ? n.x - 18 : end ? n.x + 14 : n.x;
+      const lw = pen.measureText(word).width;
+      const x0 = n.col === 0 ? lx : end ? lx - lw : lx - lw / 2;
+      boxes.push([n.x - 8, n.y - 8, n.x + 8, n.y + 8],
+        [x0, n.y + 16, x0 + lw, n.y + 29]);
+      node.append(svg("text", { class: "fpl-gl", y: n.y + 26, x: lx,
+        "text-anchor": n.col === 0 ? "start" : end ? "end" : "middle" }, word));
+      node.onclick = () => goTo(n.id, close);
+      node.onkeydown = (ev) => {
+        if (ev.key !== "Enter" && ev.key !== " ") return;
+        ev.preventDefault();
+        goTo(n.id, close);
+      };
+      pic.append(node);
+    }
+    /*
+     * The edges, under the nodes; a verb stands above its edge's middle
+     * (board J), else at the first of a few places along it, above or
+     * under, where it covers no dot, name or other verb.
+     */
+    const ALONG = [0.5, 0.35, 0.65, 0.25, 0.75];
+    for (const e of g.edges) {   // the same column: a bow to the right
+      const { a, b } = e, bow = a.col === b.col;
+      const via = bow ? `Q${a.x + 40} ${(a.y + b.y) / 2} ` : "L";
+      pic.prepend(svg("path", { class: "fpl-gx",
+        d: `M${a.x} ${a.y}${via}${b.x} ${b.y}` }));
+      if (!e.label) continue;
+      const word = clip(VERB[e.label] ?? e.label, 18);
+      const w = pen.measureText(word).width;
+      const spots = ALONG.flatMap((t) => [-8, 15].map((dy) => [
+        bow ? a.x + 30 : a.x + t * (b.x - a.x), a.y + t * (b.y - a.y) + dy]));
+      const [sx, sy] = spots.find(([x, y]) =>
+        free([x - w / 2, y - 9, x + w / 2, y + 3])) ?? spots[0];
+      boxes.push([sx - w / 2, sy - 9, sx + w / 2, sy + 3]);
+      pic.append(svg("text", { class: "fpl-ge", x: sx, y: sy,
+        "text-anchor": "middle" }, word));
+    }
+    const nn = g.nodes.length, ne = g.edges.length;
+    const own = g.edges.filter((e) => e.a.id === id || e.b.id === id).length;
+    const hint = ne > own || ne > 1 ? null
+      : `${ne ? "Verder nog" : "Nog"} niets verbonden. Sleep het `
+        + "bolletje achter de span naar een andere span.";
+    const x = el("button", { type: "button", className: "fpl-ib",
+      ariaLabel: "Sluit de graph", title: "Sluit", onclick: () => close() },
+    ico("clear"));
+    const panel = el("section", { role: "dialog",
+      className: "fpl-annot-ui fpl-graph fpl-around",
+      ariaLabel: "Graph rond deze kaart" },
+    el("header", { className: "fpl-bar" },
+      el("b", {}, `Rond “${clip(said(id), 24)}”`), x),
+    el("div", { className: "fpl-sub" },
+      el("span", {}, `${nn} ${nn === 1 ? "knoop" : "knopen"} · `
+        + `${ne} ${ne === 1 ? "kant" : "kanten"}`),
+      button("Hele pagina", () => { close(); graph(null); }, "fpl-link")),
+    pic, hint ? el("p", {}, hint) : null);
+    panel.dataset.id = id;
+    panel.style.width = `${W + 26}px`;
+    const opener = document.activeElement;
+    const off = (ev) => {
+      if (!panel.contains(ev.target) && !btn?.contains(ev.target)) close();
+    };
+    const close = () => {
+      panel.remove();
+      around.id = null;
+      hot(null);
+      removeEventListener("pointerdown", off, true);
+      if (btn) btn.ariaExpanded = "false";
+      const at = document.activeElement;
+      if (!at || at === document.body || panel.contains(at))
+        opener?.focus?.({ preventScroll: true });
+    };
+    panel.close = close;
+    panel.tabIndex = -1;
+    document.body.append(panel);
+    const r = card?.getBoundingClientRect(), w = W + 26;
+    const left = r && r.left - 8 - w >= 8;
+    const under = (btn ?? card)?.getBoundingClientRect();
+    const right = under ? Math.min(under.right, innerWidth - 8)
+      : innerWidth - 16;
+    const x0 = left ? r.left - 8 - w : Math.max(8, right - w);
+    const y0 = left ? r.top - 6 : under ? under.bottom + 6 : 120;
+    panel.style.left = `${scrollX + x0}px`;
+    panel.style.top = `${scrollY + y0}px`;
+    if (btn) btn.ariaExpanded = "true";
+    around.id = id;
+    hot(id);
+    addEventListener("pointerdown", off, true);
+    panel.focus({ preventScroll: true });
+    log("graph", id);
+  }
+
+  /**
+   * Open a card's graph (around), or the page's over the page; Esc or a
+   * click outside closes it.
+   */
   async function graph(id) {
+    if (id) return around(id);
     await coded;   // the code graph first: a panel drawn before it came would lack the chunks
-    document.querySelector(".fpl-graph")?.remove();
-    const g = id ? near(graphOf(), id) : graphOf();
+    document.querySelector(".fpl-graph")?.close();
+    const g = graphOf();
     const css = getComputedStyle(document.documentElement);
     const color = (n) => css.getPropertyValue({ chunk: "--fpl-fg", file: "--fpl-mine", span: "--fpl-vers", argument: "--fpl-con", tfa: "--fpl-lost",
       coref: "--fpl-mine", relation: "--fpl-mute", address: "--fpl-mute", elders: "--fpl-rule" }[n.kind] ?? "--fpl-fg").trim() || "#888";
@@ -1950,25 +2325,11 @@
     const cv = el("canvas", { width: W * dpr, height: H * dpr });
     cv.style.width = `${W}px`; cv.style.height = `${H}px`;
     const panel = el("div", { className: "fpl-annot-ui fpl-graph", role: "dialog", "aria-label": "Graph" },
-      el("div", { className: "fpl-bar" }, el("b", {}, id ? `Graph rond ${id}` : "Graph van de pagina"),
+      el("div", { className: "fpl-bar" }, el("b", {}, "Graph van de pagina"),
         el("span", { className: "fpl-mute" }, ` · ${g.nodes.length} knopen · ${g.edges.length} kanten`), el("span", { className: "fpl-space" }),
         button("Sluit", () => close())), cv);
     const close = () => { panel.remove(); opener?.focus?.(); };
-    /** Where a node goes: its own place, else that of what it is about, followed up its first targets. */
-    const goal = (nid, been = new Set()) => {
-      const e = place(nid) ?? chunkBlock(nid);
-      if (e || been.has(nid)) return e;
-      been.add(nid);
-      const r = all.find((x) => x.id === nid);
-      return r?.targets?.[0] ? goal(r.targets[0], been) : null;
-    };
-    const go = (n) => {
-      const e = goal(n.id);
-      if (!e) { toast(`${n.id} staat niet op deze pagina`); return; }
-      close();
-      seen(e).scrollIntoView({ block: "center", behavior: "smooth" });
-      hot(n.id);
-    };
+    const go = (n) => goTo(n.id, close);
     settleGraph(g, W, H);
     const ctx = cv.getContext("2d");
     ctx.scale(dpr, dpr);
@@ -1985,7 +2346,7 @@
       const rel = n.kind === "relation" || n.kind === "argument" && all.find((x) => x.id === n.id && typeof x.text !== "string" && (x.targets ?? []).length > 1);
       ctx.beginPath();
       if (rel) { ctx.moveTo(n.x, n.y - 6); ctx.lineTo(n.x + 6, n.y); ctx.lineTo(n.x, n.y + 6); ctx.lineTo(n.x - 6, n.y); ctx.closePath(); }
-      else ctx.arc(n.x, n.y, n.id === id ? 8 : 5, 0, 2 * Math.PI);
+      else ctx.arc(n.x, n.y, 5, 0, 2 * Math.PI);
       ctx.fill();
       ctx.fillStyle = css.getPropertyValue("--fpl-fg").trim() || "#222";
       const name = n.label ?? n.id;   // a chunk or file by its name, a row by its id
@@ -2006,10 +2367,12 @@
     document.body.append(panel);
     panel.focus();
     panel.dataset.nodes = g.nodes.map((n) => `${n.id}@${Math.round(n.x)},${Math.round(n.y)}`).join(" ");   // for tests: where each node landed
+    log("graph", null);
   }
 
   /** Download this browser's rows as <stem>.annot.json. */
   function exportRows() {
+    log("exporteer rijen", null);
     const blob = new Blob([JSON.stringify(local(), null, 1) + "\n"],
       { type: "application/json" });
     const a = el("a", { href: URL.createObjectURL(blob), download: `${stem}.annot.json` });
@@ -2017,16 +2380,33 @@
     URL.revokeObjectURL(a.href);
   }
 
+  /** Download the log as <stem>.log.json; the export is its last entry. */
+  function exportLog() {
+    log("exporteer logboek", null);
+    const blob = new Blob([JSON.stringify(journal, null, 1) + "\n"],
+      { type: "application/json" });
+    const a = el("a", { href: URL.createObjectURL(blob),
+      download: `${stem}.log.json` });
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
   /** Merge a file of rows for this page into this browser's, by id. */
   function merge(text) {
     let got;
-    try { got = JSON.parse(text); } catch (e) { toast(`Geen JSON: ${e.message}`); return; }
-    if (!Array.isArray(got)) { toast("Geen lijst van rijen"); return; }
+    try { got = JSON.parse(text); } catch (e) {
+      refuse("importeer", null, `Geen JSON: ${e.message}`);
+      return;
+    }
+    if (!Array.isArray(got)) {
+      refuse("importeer", null, "Geen lijst van rijen");
+      return;
+    }
     const by = new Map(local().map((r) => [r.id, r]));
     let n = 0;
     for (const r of got) if (r && r.item === item && typeof r.id === "string") { by.set(r.id, r); n++; }
     keep([...by.values()]);
-    toast(`${n} rijen ingelezen`);
+    did("importeer", null, `${n} rijen ingelezen`);
     draw();
   }
 
@@ -2068,7 +2448,11 @@
     render();
     const add = () => {
       const l = more.value.trim();
-      if (!LABEL.test(l)) { toast("Een label is naam/scope/…: geen spatie, geen leeg stuk"); return; }
+      if (!LABEL.test(l)) {
+        refuse("label", l,
+          "Een label is naam/scope/…: geen spatie, geen leeg stuk");
+        return;
+      }
       on.add(l); more.value = ""; render(); more.focus();
     };
     more.onkeydown = (e) => { if (e.key === "Enter" && more.value.trim()) { e.preventDefault(); add(); } };
@@ -2104,20 +2488,26 @@
   /** Save the editor's result on a new row (no id) or one of ours. */
   function save(row, got) {
     const mine = local();
-    if (got === "delete") { keep(mine.filter((r) => r.id !== row.id)); return; }
+    if (got === "delete") {
+      keep(mine.filter((r) => r.id !== row.id));
+      return row.id;
+    }
     const now = Date.now();
     const done = { ...row, ...got, updatedAt: now };
     delete done.mine;
+    const rand = Math.random().toString(36).slice(2, 6);
+    const id = row.id || `a-${now.toString(36)}${rand}`;
     if (row.id) mine[mine.findIndex((r) => r.id === row.id)] = done;
-    else mine.push({ id: `a-${now.toString(36)}${Math.random().toString(36).slice(2, 6)}`,
-      item, commit, by: by() || undefined, targets: [], ...done, createdAt: now });
+    else mine.push({ id, item, commit, by: by() || undefined, targets: [],
+      ...done, createdAt: now });
     keep(mine);
     const l = layerOf(done), off = offLayers();
-    if (off.delete(l)) { offLayers(off); toast(`Laag ${l} weer aan`); }
+    if (off.delete(l)) { offLayers(off); did("laag", l, `Laag ${l} weer aan`); }
+    return id;
   }
   /** A save from the editor: what the reader typed or picked counts toward the ranking and the offer. */
   function typed(row, got) {
-    save(row, got);
+    log(got === "delete" ? "verwijder" : "bewaar", save(row, got));
     if (got === "delete") return;
     const t = new Map(Object.entries(tally())), added = (got.labels ?? []).filter((x) => !(row.labels ?? []).includes(x));
     for (const x of added) t.set(x, (Number(t.get(x)) || 0) + 1);
@@ -2136,7 +2526,12 @@
     const l = labels.find((x) => !quick().includes(x) && !declined().includes(x)
       && rowsNow.filter((r) => r.labels?.includes(x)).length >= 3);
     if (!l) return;
-    const say = (yes) => { (yes ? quick : declined)([...(yes ? quick() : declined()), l]); box.remove(); if (yes) toast(`${l} is een snelchip`); };
+    const say = (yes) => {
+      (yes ? quick : declined)([...(yes ? quick() : declined()), l]);
+      box.remove();
+      if (yes) did("snelchip", l, `${l} is een snelchip`);
+      else log("geen snelchip", l);
+    };
     const box = el("div", { className: "fpl-annot-ui fpl-toast fpl-offer" }, `Drie keer ${l}: als snelchip op een adres?`,
       button("Ja", () => say(true)), button("Nee", () => say(false)));
     document.body.append(box);
@@ -2209,7 +2604,10 @@
     const k = ev.target.closest?.(".fpl-knob");
     if (!k || ev.button > 0) return;
     ev.preventDefault();   // no selection starts and no mouse events follow: pointerDone and the pick's click stay out
-    if (mode() !== "kantlijn") { toast("Verbinden doe je in de stand Kantlijn (a)"); return; }
+    if (mode() !== "kantlijn") {
+      refuse("verbind", k.dataset.id, LINKS);
+      return;
+    }
     if (picking) unpick();
     drag = { from: k.dataset.id, id: ev.pointerId, x: ev.clientX, y: ev.clientY, live: false, touch: ev.pointerType === "touch" };
     if (drag.touch) drag.timer = setTimeout(() => drag && !drag.moved && carry(), HOLD);
@@ -2220,7 +2618,11 @@
   lines.addEventListener("touchstart", (ev) => { if (ev.target.closest?.(".fpl-knob")) ev.preventDefault(); }, { passive: false });
   // a stretch by keys holds while its knob has the focus; the focus gone, it is put back
   lines.addEventListener("focusout", (ev) => {
-    if (stretching?.keys && ev.target.closest?.(".fpl-knob")?.dataset.id === stretching.id) { dropStretch(); toast("Niet bewaard: teruggezet"); }
+    const k = ev.target.closest?.(".fpl-knob");
+    if (!stretching?.keys || k?.dataset.id !== stretching.id) return;
+    const id = stretching.id;
+    dropStretch();
+    refuse("rek", id, "Niet bewaard: teruggezet");
   });
   for (const [t, on] of [["pointerover", true], ["pointerout", false], ["focusin", true], ["focusout", false]])
     lines.addEventListener(t, (ev) => { const k = ev.target.closest?.(".fpl-knob"); if (k && !editing) hot(on ? k.dataset.id : null); });
@@ -2377,6 +2779,7 @@
   /** The span, card and line of one row light up together. */
   function hot(id) {
     if (link) id = link.from;   // while a connect is in flight its start stays lit, whatever the pointer passes
+    else id ??= around.id;   // while a card's graph is up, that card is lit
     const group = new Set(id ? groupOf(id) : []);   // a piece lights its whole, the whole its pieces
     for (const n of [...body.querySelectorAll("mark.fact, .is-hot"), ...margin.querySelectorAll(".fpl-card"), ...lines.children])
       n.classList.toggle("is-hot", group.has(n.dataset.id));
@@ -2464,7 +2867,11 @@
       path.dataset.id = r.id;
       path.append(Object.assign(document.createElementNS("http://www.w3.org/2000/svg", "title"),
         { textContent: `${r.targets[0]} resumes ${r.targets[1]}${r.mine ? " (klik: weg)" : ""}` }));
-      if (r.mine) path.onclick = () => { keep(local().filter((x) => x.id !== r.id)); draw(); toast(`${r.id} weg`); };
+      if (r.mine) path.onclick = () => {
+        keep(local().filter((x) => x.id !== r.id));
+        draw();
+        did("verwijder", r.id, `${r.id} weg`);
+      };
       svg.append(path);
     }
     document.body.append(svg);
@@ -2480,7 +2887,7 @@
     keep(mine);
     if (next) save({ targets: [id] }, { note: "", labels: [next] });
     draw();
-    toast(next ? `${id}: ${next}` : `${id}: geen tfa`);
+    did("tfa", id, next ? `${id}: ${next}` : `${id}: geen tfa`);
   }
 
   /* ---- bands: blocks folded into a seam, the page one scroll ---- */
@@ -2563,12 +2970,15 @@
   }
 
   /** Write the bands to the URL (?scrunch=a..b,c..d, kept readable) and to this browser. */
+  let persisted = null;   // the bands last kept, so a fold is logged once
   function persist() {
     const s = bands.map(([a, b]) => (a === b ? a : `${a}..${b}`)).join(","), u = new URL(location.href);
     if (s) u.searchParams.set("scrunch", s); else u.searchParams.delete("scrunch");
     u.search = u.search.replace(/%2[CF]/gi, decodeURIComponent);
     history.replaceState(history.state, "", u);
     try { if (s) localStorage.setItem(SCRUNCH, s); else localStorage.removeItem(SCRUNCH); } catch { /* no storage */ }
+    if (s !== persisted && (persisted !== null || s)) log("vouw", s || null);
+    persisted = s;
   }
   /** Take a new list of bands: lay the page out with them, then keep them. */
   function setBands(list) { bands = list; layout(); persist(); }
@@ -2587,11 +2997,14 @@
   function both(from, to) {
     const us = units();
     const [i, j] = [from, to].map((id) => us.indexOf(place(id)?.closest(".fpl-p"))).sort((x, y) => x - y);
-    if (i < 0) { toast("Niet op deze pagina"); return; }
+    if (i < 0) { refuse("toon beide", to, "Niet op deze pagina"); return; }
     const covers = (b, x) => { const [p, q] = b.map((id) => us.indexOf(document.getElementById(id))); return p <= x && x <= q; };
     const kept = bands.filter((b) => !covers(b, i) && !covers(b, j));
     const fold = j - i >= 2 ? [[us[i + 1].id, us[j - 1].id]] : [];
-    if (!fold.length && kept.length === bands.length) { toast("Ze staan al samen in beeld"); return; }
+    if (!fold.length && kept.length === bands.length) {
+      refuse("toon beide", to, "Ze staan al samen in beeld");
+      return;
+    }
     setBands([...kept, ...fold]);
     (fold.length ? bandOf(us[i + 1]) : us[i]).scrollIntoView({ block: "center", behavior: "smooth" });
   }
@@ -2629,15 +3042,16 @@
     : "Geen span in beeld om tot te vouwen");
   function squeeze() {
     const runs = runsNear(context);
-    if (!runs) { toast(NOSPAN()); return; }
+    if (!runs) { refuse("vouw tot spans", null, NOSPAN()); return; }
     const same = folded(runs);
     setBands(same ? [] : runs);
-    if (same) toast("Alles open");
+    did("vouw tot spans", null, same ? "Alles open" : "");
   }
   function setContext(n) {
     const was = folded(runsNear(context));
     context = n;
     try { localStorage.setItem(CONTEXT, n); } catch { /* no storage */ }
+    log("context", String(n));
     if (was) setBands(runsNear(n));
   }
 
@@ -2780,7 +3194,7 @@
     wheel.s += d * [1, 16, innerHeight][ev.deltaMode];   // pixels, lines, pages
     const next = wheelFold(wheel);
     if (typeof next === "string") {   // nothing to do: why, once a gesture
-      if (!wheel.said) toast(next);
+      if (!wheel.said) refuse("vouw", null, next);
       wheel.said = true;
       return;
     }
@@ -2916,13 +3330,19 @@
       else if (card && wide()) card.scrollIntoView({ block: "nearest", behavior: "smooth" });
       return;
     }
-    if (mode() !== "kantlijn") return;
+    if (mode() !== "kantlijn") {   // a reader copies: logged, no toast
+      const here = mode() === "lezen" ? "Lezen" : "Spans";
+      log("selectie", null, false,
+        `In ${here} maakt een selectie geen span: kies Kantlijn (a)`);
+      return;
+    }
     const range = sel.getRangeAt(0);
     if (!body.contains(range.commonAncestorContainer)) return;
     if ([...body.querySelectorAll(".fpl-scrunched")].some((l) => range.intersectsNode(l))) {
       // shown() keeps folded text (the quote finder needs it whole), so the quote would hold what was never seen
       sel.removeAllRanges();
-      toast("De selectie loopt door een band: open die eerst");
+      refuse("selectie", null,
+        "De selectie loopt door een band: open die eerst");
       return;
     }
     const ix = shown(), [s, e] = bounds(ix, range);
@@ -2941,22 +3361,27 @@
   /** Esc, Enter, the editor's Esc or leaving Kantlijn: the armed parts row takes no more pieces. */
   function disarm() {
     if (!adding) return;
-    toast(`Gestopt: ${adding} heeft ${local().find((r) => r.id === adding)?.targets.length ?? 0} delen`);
+    const n = local().find((r) => r.id === adding)?.targets.length ?? 0;
+    did("breek af", adding, `Gestopt: ${adding} heeft ${n} delen`);
     adding = null;
   }
   /** "Deel erbij…": the next Alt-selects join this parts row, until Esc or Enter. */
   function arm(id) {
-    if (mode() !== "kantlijn") { toast("Delen schrijf je in de stand Kantlijn (a)"); return; }
+    if (mode() !== "kantlijn") { refuse("deel erbij", id, PARTS); return; }
     if (picking) unpick();
     const loose = pieces.length ? ": de losse delen blijven losse spans" : "";
     pieces = [];
     adding = id;
-    toast(`Delen erbij voor ${id}${loose} · Alt-selecteer het volgende · Esc stopt`);
+    did("deel erbij", id, `Delen erbij voor ${id}${loose} · ${NEXT}`);
   }
   /** Alt-select: the selection becomes a span row of this browser, the next piece of a discontinuous span. */
   function piece(sel) {
     pieced = performance.now();   // this gesture is a selection, whatever comes of it: its click is no Alt-click
-    if (mode() !== "kantlijn") { sel.removeAllRanges(); toast("Delen schrijf je in de stand Kantlijn (a)"); return; }
+    if (mode() !== "kantlijn") {
+      sel.removeAllRanges();
+      refuse("deel", null, PARTS);
+      return;
+    }
     const range = sel.getRangeAt(0);
     if (!body.contains(range.commonAncestorContainer)
       || [...body.querySelectorAll(".fpl-scrunched")].some((l) => range.intersectsNode(l))) { sel.removeAllRanges(); return; }
@@ -2971,19 +3396,30 @@
       return Array.isArray(at) && at[0] < e && s < at[1];
     }));
     const mine = pr ? (wholeOf(pr.id) ?? pr).id : null;   // the selection touches the bundle being made: refused, whatever else it touches
-    if (hit.some((h) => h.id === mine || pieces.includes(h.id))) { toast(`Dat is al een deel van ${pr?.id ?? "deze bundel"}`); return; }
-    if (hit.length > 1) { toast(`Dat loopt over ${hit.length} bundels: kies er één`); return; }
+    if (hit.some((h) => h.id === mine || pieces.includes(h.id))) {
+      refuse("deel", pr?.id ?? null,
+        `Dat is al een deel van ${pr?.id ?? "deze bundel"}`);
+      return;
+    }
+    if (hit.length > 1) {
+      refuse("deel", null, `Dat loopt over ${hit.length} bundels: kies er één`);
+      return;
+    }
     const owner = hit[0];
     if (owner) {   // a piece of a piece: the whole that text is in joins as one piece
       if (pr) {
         save(pr, { targets: [...pr.targets, owner.id] });
         draw();
-        toast(`Bundel ${owner.id} is deel ${pr.targets.length + 1} van ${pr.id} · Alt-selecteer het volgende · Esc stopt`);
+        const k = pr.targets.length + 1;
+        did("deel", owner.id,
+          `Bundel ${owner.id} is deel ${k} van ${pr.id} · ${NEXT}`);
         return;
       }
       pieces.push(owner.id);
       draw();
-      toast(`Deel ${pieces.length}: bundel ${owner.id}${pieces.length > 1 ? " · Enter bundelt" : ""} · Alt-selecteer het volgende · Esc stopt`);
+      const more = pieces.length > 1 ? " · Enter bundelt" : "";
+      did("deel", owner.id,
+        `Deel ${pieces.length}: bundel ${owner.id}${more} · ${NEXT}`);
       return;
     }
     save({ text: ix.flat.slice(s, e), prefix: ix.flat.slice(Math.max(0, s - AROUND), s), suffix: ix.flat.slice(e, e + AROUND) },
@@ -2992,21 +3428,26 @@
     if (pr) {
       save(pr, { targets: [...pr.targets, id] });
       draw();
-      toast(`Deel ${pr.targets.length + 1} van ${pr.id} · Alt-selecteer het volgende · Esc stopt`);
+      did("deel", id, `Deel ${pr.targets.length + 1} van ${pr.id} · ${NEXT}`);
       return;
     }
     pieces.push(id);
     draw();
-    toast(`Deel ${pieces.length}${pieces.length > 1 ? ": Enter bundelt" : ""} · Alt-selecteer het volgende · Esc stopt`);
+    const more = pieces.length > 1 ? ": Enter bundelt" : "";
+    did("deel", id, `Deel ${pieces.length}${more} · ${NEXT}`);
   }
   /** Enter: the pieces become one span, a parts row, and the editor opens for a fact about it. */
   function bundle() {
     const live = new Set([...local().filter((r) => typeof r.text === "string"), ...all.filter((r) => r.labels?.[0] === "parts" && !partsOf(r.id))].map((r) => r.id));
     const ps = pieces.filter((id) => live.has(id));   // a piece deleted meanwhile is no piece
     pieces = [];
-    if (ps.length < 2) { toast("Minder dan twee delen over: niets gebundeld"); draw(); return; }
-    save({ targets: ps }, { note: "", labels: ["parts"] });
-    const id = local().at(-1).id;
+    if (ps.length < 2) {
+      refuse("bundel", null, "Minder dan twee delen over: niets gebundeld");
+      draw();
+      return;
+    }
+    const id = save({ targets: ps }, { note: "", labels: ["parts"] });
+    log("bundel", id);
     draw();
     const m = anchorsOf(id)[0];
     edit({ targets: [id] }, null, (m ?? body).getBoundingClientRect());
@@ -3039,7 +3480,8 @@
     adding = null;   // one armed gesture at a time
     picking = { from: c.id, kind: "resumes" };
     document.body.classList.add("fpl-picking");
-    toast(`Klik de eerdere bijzin die ${c.id} weer opneemt. Esc breekt af.`);
+    did("kies eind", c.id,
+      `Klik de eerdere bijzin die ${c.id} weer opneemt. Esc breekt af.`);
   }, true);
   document.addEventListener("click", (ev) => {
     const id = numberAt(ev);
@@ -3049,7 +3491,9 @@
     history.replaceState(null, "", `#${id}`);
     sync();
     const url = location.href;
-    navigator.clipboard?.writeText(url).then(() => toast(`Adres gekopieerd: #${id}`), () => toast(`#${id}`));
+    navigator.clipboard?.writeText(url).then(
+      () => did("adres", id, `Adres gekopieerd: #${id}`),
+      () => refuse("adres", id, `Niet op het klembord: #${id}`));
     if (mode() === "kantlijn") edit({ targets: [id] }, null, document.getElementById(id).getBoundingClientRect());
   });
   document.addEventListener("mouseup", pointerDone);
@@ -3069,7 +3513,8 @@
     if (stretching?.keys && (ev.key === "Escape" || ev.key === "Enter")) {   // a stretch by keys: Enter saves, Esc puts back
       ev.preventDefault();
       const id = stretching.id;
-      if (ev.key === "Enter") keepStretch(); else { dropStretch(); toast("Teruggezet"); }
+      if (ev.key === "Enter") keepStretch();
+      else { dropStretch(); did("breek af", id, "Teruggezet"); }
       lines.querySelector(`.fpl-knob[data-id="${CSS.escape(id)}"]`)?.focus({ preventScroll: true });
       return;
     }
@@ -3094,7 +3539,12 @@
     const g = document.querySelector(".fpl-graph");   // an open graph takes Esc first, wherever focus is
     if (ev.key === "Escape" && g) { g.close(); return; }
     if (ev.key === "Escape" && editing) { closeEditor(); layout(); disarm(); return; }
-    if (ev.key === "Escape" && picking) { unpick(); toast("Afgebroken"); return; }
+    if (ev.key === "Escape" && picking) {
+      const from = picking.from;
+      unpick();
+      did("breek af", from, "Afgebroken");
+      return;
+    }
     if (ev.key === "Escape" && openId && !ev.target.closest?.("input, textarea, [contenteditable]")) { openId = null; layout(); return; }
     if (adding && (ev.key === "Escape" || ev.key === "Enter") && !ev.defaultPrevented
       && !ev.target.closest?.(ev.key === "Enter" ? "input, textarea, select, [contenteditable], button, a, [role=button], .fpl-chip, summary"
@@ -3107,7 +3557,11 @@
       && !ev.target.closest?.("input, textarea, select, [contenteditable], button, a, [role=button], .fpl-chip, summary")) {
       ev.preventDefault();
       if (ev.key === "Enter" && pieces.length > 1) bundle();
-      else { toast(pieces.length > 1 ? "Gestopt: de delen blijven losse spans" : "Gestopt"); pieces = []; }
+      else {
+        did("breek af", null, pieces.length > 1
+          ? "Gestopt: de delen blijven losse spans" : "Gestopt");
+        pieces = [];
+      }
       return;
     }
     if (ev.key === "Escape" && bands.length && !ev.target.closest?.("input, textarea, [contenteditable]")) {
@@ -3121,10 +3575,14 @@
     if (ev.key === "z") { ev.preventDefault(); seek(); return; }
     if (ev.key === "l") {   // Verbind met…: the knob or card holding the focus, else the card under the mouse
       ev.preventDefault();
-      if (mode() !== "kantlijn") { toast("Verbinden doe je in de stand Kantlijn (a)"); return; }
+      if (mode() !== "kantlijn") { refuse("verbind", null, LINKS); return; }
       const c = margin.querySelector(".fpl-card:focus-within[data-id], .fpl-card.is-hot[data-id]");
       const id = document.activeElement?.closest?.(".fpl-knob")?.dataset.id ?? c?.dataset.id;
-      if (!id || id === "draft") { toast("l verbindt de kaart onder de muis: wijs er eerst een aan"); return; }
+      if (!id || id === "draft") {
+        refuse("verbind", null,
+          "l verbindt de kaart onder de muis: wijs er eerst een aan");
+        return;
+      }
       pick(id);
       return;
     }
@@ -3132,15 +3590,13 @@
     if (ev.key === "Enter" && reading && !ev.target.closest?.("button, a, [role=button]")) {
       ev.preventDefault();
       if (mode() === "kantlijn") edit({ targets: [reading.id] }, null, reading.getBoundingClientRect());
-      else toast("Een feit schrijf je in de stand Kantlijn (a)");
+      else refuse("feit", reading.id,
+        "Een feit schrijf je in de stand Kantlijn (a)");
       return;
     }
     if (ev.key === "a" && !ev.metaKey && !ev.ctrlKey && !ev.altKey
       && !ev.target.closest?.("input, textarea, [contenteditable]")) {
-      const m = MODES[(MODES.indexOf(mode()) + 1) % MODES.length];
-      if (m !== "kantlijn") disarm();
-      mode(m);
-      draw();
+      stand(MODES[(MODES.indexOf(mode()) + 1) % MODES.length]);
     }
   });
 

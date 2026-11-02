@@ -479,6 +479,36 @@ body.fpl-picking .fpl-c[id], body.fpl-picking .fpl-s[id] { cursor: crosshair; }
 .fpl-graph canvas { display: block; cursor: pointer; }
 .fpl-graph .fpl-bar { display: flex; align-items: baseline; gap: .3rem; margin-bottom: .3rem; }
 .fpl-graph .fpl-mute { color: var(--fpl-mute); }
+/* a card's graph (board J): a popover beside its card, as small as what
+   it holds; the card's Graph stays lit while it is up */
+.fpl-graph.fpl-around { position: absolute; transform: none; max-width: none;
+  box-sizing: border-box; padding: 9px 12px 11px; border-radius: 7px;
+  box-shadow: 0 6px 20px rgba(20, 30, 50, .14), 0 1px 3px rgba(20, 30, 50, .08);
+  font-size: 13px; line-height: 1.4; color: var(--fpl-fg); }
+.fpl-around:focus { outline: none; }
+.fpl-around .fpl-bar { align-items: center; gap: 6px; margin: 0; }
+.fpl-around .fpl-bar b { flex: 1; min-width: 0; white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis; font-weight: 600; }
+.fpl-around .fpl-bar .fpl-ib { opacity: 1; margin-right: -4px; padding: 0;
+  color: var(--fpl-mute); }
+.fpl-around .fpl-bar .fpl-ib:hover { background: var(--fpl-wash);
+  color: var(--fpl-fg); }
+.fpl-around .fpl-ib svg { width: 13px; height: 13px; }
+.fpl-around .fpl-sub { display: flex; align-items: center; gap: 8px;
+  margin-top: 1px; font-size: 12.5px; color: var(--fpl-mute); }
+.fpl-around .fpl-sub .fpl-link { margin-left: auto; font-size: 12.5px; }
+.fpl-around .fpl-g { display: block; margin: 8px 0 4px; overflow: visible; }
+.fpl-around p { margin: 4px 0 0; font-size: 12.5px; color: var(--fpl-mute); }
+.fpl-gx { fill: none; stroke: var(--fpl-mute); stroke-width: 1.2; }
+.fpl-ge { font-size: 11px; fill: var(--fpl-mute); }
+.fpl-gnode { cursor: pointer; fill: var(--fpl-mute); outline: none;
+  pointer-events: bounding-box; }   /* the dot and its name are one target */
+.fpl-gnode.vers { fill: var(--fpl-vers); }
+.fpl-gnode.mine { fill: var(--fpl-mine); }
+.fpl-gl { font-size: 11px; font-weight: 600; fill: var(--fpl-fg); }
+.fpl-gnode:hover .fpl-gl, .fpl-gnode:focus-visible .fpl-gl {
+  text-decoration: underline; }
+.fpl-cardhead > .fpl-ib[aria-expanded="true"] { opacity: 1; }
 
 /* the coref lens: each member carries its chain's number */
 .fpl-chain { font: 700 .58em var(--bs-font-sans-serif, sans-serif); color: var(--fpl-mine); margin-left: .1em; user-select: none; }
