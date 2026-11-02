@@ -1294,7 +1294,9 @@
   const aimOf = (e) => e.dataset.fact ?? (e.matches(".fpl-p, .fpl-s, .fpl-c") ? e.id : e.dataset.id);
   /** The end under a point of the window, or null. */
   const aimAt = (x, y) => {
-    const e = document.elementFromPoint(x, y)?.closest?.(AIMS);
+    const hit = document.elementFromPoint(x, y), k = hit?.closest?.(".fpl-knob");
+    if (k) return k.dataset.id;   // another span's knob is that span: dot onto dot connects
+    const e = hit?.closest?.(AIMS);
     return e && !e.closest(".fpl-menu") ? aimOf(e) : null;
   };
   /** The text column's right edge, where every line leaves for the margin, in page px. */
