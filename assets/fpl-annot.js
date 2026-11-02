@@ -3319,6 +3319,19 @@
 
   /* ---- selecting and clicking ---- */
 
+  const WORD = /[\p{L}\p{N}_]/u;
+  /**
+   * A selection's [s, e) grown to whole words: a quote never starts or
+   * ends inside a word ("he module … a docst" is "The module … a
+   * docstring"), as a reader means it and as the knob stretches.
+   */
+  function whole(ix, [s, e]) {
+    const w = (i) => WORD.test(ix.flat[i] ?? "");
+    if (s >= e) return [s, e];
+    while (s > 0 && w(s - 1) && w(s)) s--;
+    while (e < ix.flat.length && w(e - 1) && w(e)) e++;
+    return [s, e];
+  }
   /** The shown index of a range's first character and past its last. */
   function bounds(ix, range) {
     const first = (after) => {
@@ -3373,7 +3386,7 @@
         "De selectie loopt door een band: open die eerst");
       return;
     }
-    const ix = shown(), [s, e] = bounds(ix, range);
+    const ix = shown(), [s, e] = whole(ix, bounds(ix, range));
     if (s >= e) return;
     const seed = { text: ix.flat.slice(s, e), prefix: ix.flat.slice(Math.max(0, s - AROUND), s),
       suffix: ix.flat.slice(e, e + AROUND) };
