@@ -297,6 +297,9 @@ button.fpl-end:hover, button.fpl-end:focus-visible { color: var(--fpl-fg); text-
   border: 1px solid var(--fpl-rule); border-radius: 6px; }
 .fpl-topbar:not(.is-full):not(.is-docked) .fpl-stand { border-color: transparent; }   /* no bordered box inside the bordered bar */
 .fpl-topbar.is-docked { display: flex; align-items: center; margin-left: 4px; }
+/* docked, the bar stays where it is: Quarto's top bar no longer slides
+   away on a scroll down (headroom), so the controls keep one place */
+#quarto-header:has(.fpl-topbar.is-docked) { transform: none !important; }
 .fpl-topbar.is-docked::after { content: ""; width: 1px; height: 24px; margin: 0 2px 0 4px; background: var(--fpl-rule); }
 .quarto-secondary-nav:has(.fpl-topbar) .quarto-page-breadcrumbs { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .quarto-secondary-nav:has(.fpl-topbar) .breadcrumb { flex-wrap: nowrap; }

@@ -137,7 +137,8 @@
  * with no query) opens, hover never does, and nothing in the bar changes size
  * or place on hover or on a change of stand. Where Quarto shows its top
  * bar (a narrow window) the bar folds into it, a stand picker and three
- * icons, the search and the counts in the filter panel; where neither
+ * icons, the search and the counts in the filter panel, and that top bar
+ * then stays on a scroll down rather than sliding away; where neither
  * fits, the folded bar stands at the top right of the window. In
  * Kantlijn an empty margin says in three lines how to annotate,
  * connect and fold.
