@@ -872,7 +872,7 @@
   }
   /** The menu: the three views as radio items, a check on the one shown; ↑ ↓ move, Enter chooses. */
   function fillViews() {
-    const v = viewOf();
+    const v = viewOf(), was = [...views.children].indexOf(document.activeElement);   // a redraw keeps the focus where it was
     views.replaceChildren(...VIEWS.map(([k, name]) => {
       const b = button("", () => view(k), "fpl-item");
       b.role = "menuitemradio"; b.ariaChecked = String(k === v);
@@ -880,6 +880,7 @@
       if (k === "boom") b.append(el("kbd", {}, "b"));
       return b;
     }));
+    views.children[was]?.focus({ preventScroll: true });
   }
   views.onkeydown = (e) => {
     if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
