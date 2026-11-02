@@ -1081,7 +1081,7 @@
       ["Shift + scroll",
         "Vouwt rond de muis in, terug opent; met een filter tot de spans"],
       ["Esc", "Sluit of breekt af; anders opent de laatste band"], ["Alt + selectie", "Een deel van een span; Enter bundelt"],
-      ["Alt-klik", "De tfa-waarde van een bijzin"], ["Alt-Shift-klik", "Deze bijzin neemt een eerdere op"],
+      ["Alt + ←", "Terug na een sprong uit de graph"], ["Alt-klik", "De tfa-waarde van een bijzin"], ["Alt-Shift-klik", "Deze bijzin neemt een eerdere op"],
       ["l", "Verbind de kaart onder de muis of de focus; Tab kiest het andere eind, Enter het soort"],
       ["Shift + ← →", "Rek je span een woord, met de focus op zijn bolletje; Enter bewaart"], ["?", "Deze lijst"]];
     menu.replaceChildren(el("p", { className: "fpl-panel-head" }, "Sneltoetsen"),
