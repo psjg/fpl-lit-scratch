@@ -186,7 +186,7 @@
  * query on, the same Shift+wheel folds to the spans they let through:
  * every block further than the context (0-3 blocks, the menu's
  * Context, kept in localStorage["fpl-annot:context"]) from such a span,
- * and back opens them; the count line then reads "5 van 9 spans ·
+ * and back opens them; the screen reader hears "5 van 9 spans ·
  * ingevouwen tot de spans, context 1". Vouw tot de spans, in the menu,
  * does the same without the gesture; chosen again it opens them, and a
  * new context refolds. A card whose row points at another place on the
@@ -350,8 +350,8 @@
  * for a chain of at least N R edges; the same language as lit facts
  * --query (facts.parse_query, facts.query) and tested against the same
  * cases (tests/query_cases.json): what it finds stays, the rest fades.
- * The count line says how many it found, or why the query does not
- * parse; a query asked in Lezen turns to Spans, where there is
+ * A query that does not parse reddens the field, which says why under
+ * the mouse; how many it found is read out; a query asked in Lezen turns to Spans, where there is
  * something to find.
  */
 (() => {
@@ -861,6 +861,7 @@
   }, "fpl-tool fpl-view");
   const moreBtn = tool("more", "Meer", () => flip(menu, moreBtn, fillMenu));
   const filterBtn = tool("filter", "Filter: labels en lagen", () => flip(panel, filterBtn, fillChips));
+  filterBtn.title = "Filter: lagen en labels";
   moreBtn.classList.add("fpl-icon", "fpl-more"); filterBtn.classList.add("fpl-icon", "fpl-filter-btn");
   for (const b of [moreBtn, filterBtn, viewBtn]) { b.ariaHasPopup = "true"; b.ariaExpanded = "false"; }
   const field = el("input", { className: "fpl-query", placeholder: "Zoek of filter, bv. label:claim", ariaLabel: "Zoek of filter",
@@ -871,7 +872,9 @@
     onclick: () => { field.value = ""; ask(); field.focus(); } }, ico("clear"));
   const search = el("div", { className: "fpl-search" },
     ico("search"), field, el("kbd", {}, "/"), clear);
-  const count = el("p", { className: "fpl-count" });
+  // the counts are for a screen reader only (QA, block 4: no count line on screen); lost rows are their strips, a filter
+  // lights the funnel, a bad query reddens the field and says why under the mouse
+  const count = el("p", { className: "fpl-count fpl-sr", role: "status" });
   const row = el("div", { className: "fpl-row" }, tabs, el("span", { className: "fpl-picker" }, picker, ico("chevron")), viewBtn, moreBtn);
   const bar = el("div", { className: "fpl-annot-ui fpl-topbar", role: "region", ariaLabel: "Kantlijn" }, row, search, count);
   const menu = el("div", { className: "fpl-annot-ui fpl-menu", hidden: true });
@@ -921,9 +924,7 @@
     // folded to the spans: refold to the new ones, as a new Context does
     if (was) setBands(runsNear(context) ?? []);
   };
-  /** The full bar has no filter button: a click into the empty field opens the panel, typing a query closes it. */
-  const filters = () => { if (bar.classList.contains("is-full") && !field.value && panel.hidden) flip(panel, filterBtn, fillChips, false); };
-  field.onclick = filters;
+  /** The funnel opens the panel, in the field of the full bar as in the folded one; typing a query closes it. */
   field.oninput = () => { if (field.value && bar.classList.contains("is-full") && !panel.hidden) shut(); };
   field.onkeydown = (e) => {
     e.stopPropagation();   // j, k, a, 1-4 and Esc belong to the page, not while typing a query
@@ -953,7 +954,7 @@
     else if (bar.parentElement !== document.body) document.body.append(bar);
     if (bar.dataset.form !== String(full)) {   // the folded bar keeps the search in its panel
       bar.dataset.form = full;
-      if (full) { filterBtn.remove(); bar.insertBefore(search, file); bar.insertBefore(count, file); }
+      if (full) { search.append(filterBtn); bar.insertBefore(search, file); bar.insertBefore(count, file); }
       else { row.insertBefore(filterBtn, viewBtn); panel.prepend(search, count); }
     }
     if (!menu.hidden) hang(menu, moreBtn);
@@ -1216,12 +1217,11 @@
     menu.focus({ preventScroll: true });
   }
 
-  /** /: the search field, in the panel when the bar is folded; with no query yet, the filter panel opens under it. */
+  /** /: the search field, in the panel when the bar is folded; the full bar's panel waits for its funnel. */
   function seek() {
     if (!bar.classList.contains("is-full") && panel.hidden) flip(panel, filterBtn, fillChips);
     field.focus();
     field.select();
-    filters();
   }
 
   /** The margin when Kantlijn has no card yet: how to annotate, connect and fold, in three lines. */
