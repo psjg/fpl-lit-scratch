@@ -2831,7 +2831,7 @@
       if (!at) continue;
       const cls = c.classList.contains("mine") ? "mine" : "";
       if (w) svg("path", { d: curve(at.y, c), class: `fpl-line ${cls}` }, id);
-      if (at.long) {
+      if (w && at.long) {   // narrow, a long span keeps its underline
         for (const m of anchorsOf(id)) if (m.matches("mark.fact")) m.classList.add("fpl-long");
         svg("rect", { x: gx - 1.25, y: at.top, width: 2.5, height: at.bottom - at.top, rx: 1.25, class: `fpl-stretch ${cls}` }, id);
       }
