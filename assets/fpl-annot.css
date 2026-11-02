@@ -527,5 +527,5 @@ mark.fact.fpl-faded { background: none; box-shadow: none; }
 /* spans off: the marks stay as anchors, unpainted and without their lines */
 body.fpl-nospans mark.fact { background: none; box-shadow: none; outline-color: transparent; }
 /* one layer alone (board V4b): the text dimmed, only that layer in colour */
-body.fpl-solo main :is(p, li, h1, h2, h3, h4, h5, a, code, td, th, figcaption, .breadcrumb, .fpl-n) { color: var(--fpl-mute); }
+body.fpl-solo main :is(p, li, h1, h2, h3, h4, h5, a, code, td, th, figcaption, .breadcrumb, .fpl-n):not(.fpl-margin *, .fpl-inline *) { color: var(--fpl-mute); }   /* a narrow margin lives in main: its cards stay legible */
 body.fpl-solo .fpl-arcs path { stroke-width: 2; opacity: 1; }
