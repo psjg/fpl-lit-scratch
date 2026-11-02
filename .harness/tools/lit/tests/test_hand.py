@@ -459,6 +459,7 @@ LAYERED: list[facts.Row] = [
     {"id": "l2", "labels": ["fn//claim"], "targets": ["a"]},
     {"id": "l3", "labels": ["fn/"], "targets": ["a"]},
     {"id": "l4", "labels": ["two words"], "targets": ["a"]},
+    {"id": "v", "labels": ["relates"], "targets": ["a", "b"]},
 ]
 
 
@@ -521,8 +522,25 @@ def test_layer_is_read_from_the_labels() -> None:
         "span", "span", "span", "span", "coref", "tfa", "tfa", "tfa",
         "tfa", "tfa", "fact", "thread", "argument", "coref", "fact",
         "tfa", "tfa", "tfa", "span", "fact", "fact", "fact", "fact",
-        "fact", "fact",
+        "fact", "fact", "relation",
     ]  # fmt: skip
+
+
+def test_relates_is_the_neutral_relation() -> None:
+    """The knob's "verbindt": a relation with no stance, two ends."""
+    rows: list[facts.Row] = [
+        {"id": "a", "item": "p.md", "start": 0, "end": 1, "text": "#"},
+        {"id": "b", "item": "p.md", "start": 2, "end": 6, "text": "Demo"},
+        {"id": "v", "labels": ["relates"], "targets": ["a", "b"]},
+    ]
+    assert "relates" in facts.RELATIONS
+    assert "relates" not in facts.ARGUING
+    assert (
+        facts.validate(rows, "p.facts.json", {"p.md": "# Demo"}, set()) == []
+    )
+    assert facts.layer(rows[2], {cast_id(r): r for r in rows}) == "relation"
+    assert facts.query(rows, "has:relates") == ["b"]
+    assert facts.query(rows, "gives:relates") == ["a"]
 
 
 def cast_id(row: facts.Row) -> str:

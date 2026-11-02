@@ -1283,6 +1283,90 @@
     }
    ],
    "error": "chain too long to search at 11"
+  },
+  {
+   "q": "has:relates",
+   "rows": [
+    {
+     "id": "x",
+     "item": "p.md",
+     "text": "X"
+    },
+    {
+     "id": "y",
+     "item": "p.md",
+     "text": "Y"
+    },
+    {
+     "id": "v",
+     "labels": [
+      "relates"
+     ],
+     "targets": [
+      "x",
+      "y"
+     ]
+    }
+   ],
+   "ids": [
+    "y"
+   ]
+  },
+  {
+   "q": "gives:relates",
+   "rows": [
+    {
+     "id": "x",
+     "item": "p.md",
+     "text": "X"
+    },
+    {
+     "id": "y",
+     "item": "p.md",
+     "text": "Y"
+    },
+    {
+     "id": "v",
+     "labels": [
+      "relates"
+     ],
+     "targets": [
+      "x",
+      "y"
+     ]
+    }
+   ],
+   "ids": [
+    "x"
+   ]
+  },
+  {
+   "q": "layer:relation",
+   "rows": [
+    {
+     "id": "x",
+     "item": "p.md",
+     "text": "X"
+    },
+    {
+     "id": "y",
+     "item": "p.md",
+     "text": "Y"
+    },
+    {
+     "id": "v",
+     "labels": [
+      "relates"
+     ],
+     "targets": [
+      "x",
+      "y"
+     ]
+    }
+   ],
+   "ids": [
+    "v"
+   ]
   }
  ]
 }

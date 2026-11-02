@@ -234,7 +234,7 @@
 (() => {
   "use strict";
   const LABELS = ["reason", "claim", "question", "history", "slop", "good",
-    "because", "supports", "attacks", "contradicts", "cites", "checkedBy",
+    "because", "supports", "attacks", "contradicts", "cites", "relates", "checkedBy",
     "resumes", "coref", "parts", "tfa/t", "tfa/c", "tfa/f",
     "fn/definition", "fn/example", "fn/transition", "fn/claim", "fn/evidence", "fn/aside", "fn/hedge"];
   const LABEL = /^[^/ \t\n\r\f\v]+(?:\/[^/ \t\n\r\f\v]+)*$/;   // lit's facts.LABEL, whitespace spelt out alike
@@ -252,7 +252,7 @@
   const quick = store("fpl-annot:quick", []);       // labels confirmed as quick chips
   const declined = store("fpl-annot:declined", []); // labels whose offer was turned down
   const LAYERS = ["span", "fact", "thread", "argument", "tfa", "coref", "relation"];
-  const RELATIONS = new Set(["because", "supports", "attacks", "contradicts", "supersedes", "checkedBy", "cites", "resumes"]);
+  const RELATIONS = new Set(["because", "supports", "attacks", "contradicts", "supersedes", "checkedBy", "cites", "relates", "resumes"]);
   const AROUND = 32;
   const SKIP = "script, style, button, .fpl-annot-ui";
   const QUOTE = { "‘": "'", "’": "'", "“": '"', "”": '"' };
@@ -777,7 +777,7 @@
     return t.length <= n ? t : `${t.slice(0, n).replace(/\s+\S*$/, "")}…`;
   };
   const VERB = { supports: "steunt", attacks: "valt aan", contradicts: "spreekt tegen", because: "omdat", cites: "citeert",
-    checkedBy: "getoetst door", resumes: "neemt op", supersedes: "vervangt", coref: "zelfde als" };
+    checkedBy: "getoetst door", resumes: "neemt op", supersedes: "vervangt", coref: "zelfde als", relates: "verbindt" };
   /** A relation's verb: Dutch for the labels lit knows, else the label as written. */
   const verb = (r) => VERB[r.labels?.[0]] ?? ((r.labels ?? []).join(" ") || "verbindt");
   /** Who wrote a row, when the row says so; a row without a name has no author line, never a "?". */
@@ -1290,7 +1290,7 @@
 
   /* query: begin. Self-contained: tests/test_query_js.py runs this block in node against tests/query_cases.json. */
   const QUERY = (() => {
-    const RELS = new Set(["because", "supports", "attacks", "contradicts", "supersedes", "checkedBy", "cites", "resumes"]);
+    const RELS = new Set(["because", "supports", "attacks", "contradicts", "supersedes", "checkedBy", "cites", "relates", "resumes"]);
     const SETS = new Set(["coref", "parts"]);
     const KEYS = ["label", "layer", "by", "text", "has", "gives"];
     const LAYERS = ["span", "fact", "thread", "argument", "tfa", "coref", "relation"];

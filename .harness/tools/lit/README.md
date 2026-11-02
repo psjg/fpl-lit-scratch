@@ -253,7 +253,8 @@ not speak in representation details. The answer here is a query over the layers 
 A row's layer is read from what it is and never written down (`facts.layer`, and `layerOf`
 in the overlay): `span` (it names an item, or it is a `parts` set), `argument` (`supports`,
 `attacks`), `tfa` (`tfa/t`, `tfa/c`, `tfa/f`, `resumes`), `coref`, `relation` (any other
-relation), `thread` (a fact whose first target is a row that is no span), else `fact`. A row of
+relation: `because`, `contradicts`, `supersedes`, `checkedBy`, `cites`, and `relates`, the
+neutral link with no stance that the overlay's knob writes for "verbindt"), `thread` (a fact whose first target is a row that is no span), else `fact`. A row of
 chips under the label filter hides a layer.
 
 - **Sets** group instead of pointing. `coref` is Müller's set relation, undirected and

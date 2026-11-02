@@ -557,12 +557,17 @@ WEIGHTS = range(1, 6)
 # A clause that takes up an earlier one (Danes 1974, thematic
 # progression): ``targets[0]``, the bound clause, -> ``targets[1]``.
 RESUMES = "resumes"
+# The neutral link: two ends joined with no stance, what the overlay's
+# knob writes when its reader picks "verbindt", and what a kind may
+# replace later.
+RELATES = "relates"
 RELATIONS = ARGUING | {
     "because",
     "contradicts",
     "supersedes",
     "checkedBy",
     "cites",
+    RELATES,
     RESUMES,
 }
 # Rows that group rather than point. ``coref`` is Mueller (2005)'s set
