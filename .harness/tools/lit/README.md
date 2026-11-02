@@ -237,7 +237,9 @@ chips under the label filter hides a layer.
   transitive: its targets name one referent, and hovering one (a span, a card, a clause)
   lights the whole chain. `parts` holds what Müller keeps as a markable of several token
   ranges: its targets, spans (a sidecar span, a generated span or a ledger row), are the pieces
-  of one discontinuous span. Both need two members at least, each once (`lit-facts-set`).
+  of one discontinuous span. A piece may be a `parts` row itself, a piece in pieces; the
+  bundles form a tree, so each piece has one whole and no bundle holds itself. Both need two
+  members at least, each once (`lit-facts-set`).
 - **Topic-focus** after the t-layer manual (Mikulová et al. 2006, ch. 10): one value per
   clause, `tfa/t` bound, `tfa/c` bound and contrastive, `tfa/f` not bound; topic and focus as
   wholes are not marked, they follow (`lit-facts-tfa`: the value is the row's first label, one
@@ -304,7 +306,12 @@ They are the next work on this layer, not ideas:
    as a lost card at the top of the margin ("wijst nergens heen", with the id that is gone),
    counted under `kwijt` in the head, as any fact whose row is gone: open it to delete or
    rewrite it, since lit refuses it (`lit-facts-target`) until it names something. A sidecar
-   `parts` row lists its chips read-only. Still open: a piece of a piece.
+   `parts` row lists its chips read-only. A piece of a piece, built 2026-11-02: an Alt-select
+   in text of another whole (while bundling, or armed on a row) takes that whole in as one
+   piece, the outermost one if it is itself inside a bundle, and writes no span; text of the
+   bundle being made is refused. A bundle inside has no card: it stands on its whole's card as
+   one chip, its pieces in brackets, a click on it writes a fact about it, and its facts hang
+   on that card under "over deel <id>". Its × makes it a whole again, with its card.
 2. **Coreference as a layer of its own: built 2026-11-01.** `coref` rows that share a member
    are one chain (union-find), as PDT links an anaphor to its antecedent and a chain follows
    (Mikulová et al. 2006 ch. 9); chains are numbered by where their first member stands, and

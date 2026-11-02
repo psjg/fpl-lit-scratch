@@ -159,7 +159,11 @@
  * left the bundle goes (lit refuses a one-member set), and a fact on it,
  * kept, gets a lost card like any fact whose row is gone (the ask counts
  * them; lit refuses them until they name something).
- * A sidecar row's chips only read.
+ * A sidecar row's chips only read. A piece may be a bundle: Alt-select
+ * text of another whole and that whole (the outermost) joins as one
+ * piece. It has no card then; its whole's card shows it as one chip of
+ * bracketed pieces, a click writes a fact about it, and its facts hang
+ * there under "over deel <id>". lit keeps the bundles a tree.
  *
  * The coref lens: coref rows that share a member are one chain (a
  * union-find over the sets), numbered in page order, and each member on
@@ -328,14 +332,29 @@
   /** What a row is drawn at: its marks, or the addressed element it is about. */
   /** The shown parts row a span row is a piece of, or undefined. */
   const partsOf = (id) => all.find((r) => r.labels?.[0] === "parts" && shows(r) && r.targets?.includes(id));
-  /** A parts row and its pieces, from any of them; else just the id. */
+  const bundleOf = (id) => all.find((r) => r.id === id && r.labels?.[0] === "parts");
+  /** The outermost shown whole a row is a piece of, through bundles in bundles, or undefined. */
+  const wholeOf = (id) => {
+    let w;
+    const seen = new Set([id]);
+    for (let p = partsOf(id); p && !seen.has(p.id); p = partsOf(p.id)) { w = p; seen.add(p.id); }
+    return w;
+  };
+  /** A parts row and every id inside it, bundles in it and their pieces, in order (lit refuses a ring; this stops at one). */
+  const treeOf = (pr, seen = new Set([pr.id])) => [pr.id, ...(pr.targets ?? []).flatMap((t) => {
+    const q = bundleOf(t);
+    return !q ? [t] : seen.has(t) ? [] : (seen.add(t), treeOf(q, seen));
+  })];
+  /** The span rows a parts row is made of, through the bundles in it. */
+  const leavesOf = (pr) => treeOf(pr).filter((t) => !bundleOf(t));
+  /** A whole and everything in it, from any of its ids; else just the id. */
   const groupOf = (id) => {
-    const p = all.find((r) => r.id === id && r.labels?.[0] === "parts") ?? partsOf(id);
-    return p ? [p.id, ...p.targets] : [id];
+    const p = bundleOf(id), w = wholeOf(id) ?? p;
+    return w ? treeOf(w) : [id];
   };
   function anchorsOf(id) {
-    const pr = all.find((r) => r.id === id && r.labels?.[0] === "parts");
-    if (pr) return (pr.targets ?? []).flatMap((t) => [...marksOf(t)]);   // a discontinuous span: its pieces' marks
+    const pr = bundleOf(id);
+    if (pr) return leavesOf(pr).flatMap((t) => [...marksOf(t)]);   // a discontinuous span: its pieces' marks
     const ms = marksOf(id);
     if (ms.length) return [...ms];
     const row = all.find((r) => r.id === id);
@@ -386,9 +405,9 @@
   /** The labels a span is filtered by: its own and those of the facts about it, in the layers shown. */
   function labelsOf(row) {
     const got = new Set(row.labels ?? []);
-    const walk = (id) => { for (const r of all.filter((x) => typeof x.text !== "string" && x.targets?.[0] === id && shows(x))) {
+    const walk = (id) => { for (const r of all.filter((x) => typeof x.text !== "string" && x.labels?.[0] !== "parts" && x.targets?.[0] === id && shows(x))) {
       for (const l of r.labels ?? []) got.add(l); walk(r.id); } };
-    walk(row.id);
+    for (const id of bundleOf(row.id) ? treeOf(bundleOf(row.id)).filter(bundleOf) : [row.id]) walk(id);   // a bundle in it is the whole's too
     return got.size ? got : new Set([NONE]);
   }
   const passes = (row) => { const off = [...hidden()]; return [...labelsOf(row)].some((l) => !off.some((h) => under(l, h))); };
@@ -404,12 +423,12 @@
       if (typeof row.text !== "string" || !row.text.trim()) continue;
       const ix = shown(), at = find(ix, row);
       state[row.id] = typeof at === "string" ? at : "vers";
-      const p = partsOf(row.id);   // a piece shows when its whole does
+      const p = wholeOf(row.id);   // a piece shows when its whole does
       if (typeof at !== "string" && mode() !== "lezen" && (p ? passes(p) : passes(row))) wrap(ix, at[0], at[1], row);
     }
     for (const row of all) if (addressed(row)) state[row.id] = "vers";
     for (const p of all.filter((r) => r.labels?.[0] === "parts"))   // a whole is found only when every piece is
-      state[p.id] = (p.targets ?? []).every((t) => state[t] === "vers") ? "vers" : "stale";
+      state[p.id] = leavesOf(p).every((t) => state[t] === "vers") ? "vers" : "stale";
     layout();
   }
 
@@ -475,7 +494,8 @@
     const [head, sub] = label.split(/\/(.*)/);
     return el("span", { className: "fpl-chip " + cls }, head, sub ? el("small", {}, "/" + sub) : null);
   };
-  const facts = (id) => all.filter((r) => typeof r.text !== "string" && r.targets?.[0] === id && shows(r));
+  // a parts row names its pieces, it says nothing about the first one
+  const facts = (id) => all.filter((r) => typeof r.text !== "string" && r.labels?.[0] !== "parts" && r.targets?.[0] === id && shows(r));
 
   /** A fact about something: a relation line or labels, its note, and the facts about it. */
   const reply = (id, at) => button("Reageer", (ev) => {
@@ -538,6 +558,12 @@
         el("div", { className: "fpl-readings" }, ...plainFacts.map((r) => Object.assign(factView(r, cls), { className: "fpl-fact fpl-reading" }))));
       for (const r of fs.filter((x) => !plainFacts.includes(x))) card.append(factView(r, cls));
     } else for (const r of fs) card.append(factView(r, cls));
+    if (row.labels?.[0] === "parts")   // a bundle inside has no card: its facts hang here, under its name
+      for (const d of treeOf(row).slice(1).filter(bundleOf)) for (const r of facts(d)) {
+        const v = factView(r, cls);
+        v.prepend(el("div", { className: "fpl-rel" }, "over deel ", el("code", {}, d)));
+        card.append(v);
+      }
     const box = readings.length ? null : argBox(row.id);   // a reading's factView drew it
     if (box) card.append(box);
     const ends = (r) => (r.targets ?? []).slice(typeof r.text === "string" ? 0 : 1);
@@ -565,8 +591,13 @@
   function piecesOf(row, card) {
     const text = (t) => { const r = all.find((x) => x.id === t);
       return typeof r?.text === "string" ? plain(r.text).trim().slice(0, 40) : t; };
+    // a bundle in the bundle: its pieces in brackets, and a click writes a fact about it
+    const gist = (t) => !bundleOf(t) ? el("span", { className: "fpl-gist" }, text(t))
+      : el("button", { type: "button", className: "fpl-gist fpl-inner", title: `Feit over ${t}`, onclick: (ev) => {
+        ev.stopPropagation(); edit({ targets: [t] }, null, ev.currentTarget.getBoundingClientRect()); } },
+        "⟨", ...leavesOf(bundleOf(t)).flatMap((u, j) => [j ? " · " : "", text(u).slice(0, 16)]), "⟩");
     return el("div", { className: "fpl-pieces" }, ...(row.targets ?? []).map((t, i) => el("span",
-      { className: `fpl-chip fpl-piece ${state[t] === "vers" ? "" : "is-lost"}`, title: t }, el("span", { className: "fpl-gist" }, text(t)),
+      { className: `fpl-chip fpl-piece ${state[t] === "vers" ? "" : "is-lost"}`, title: t }, gist(t),
       row.mine ? button("×", (ev) => {
         ev.stopPropagation();
         const rest = row.targets.filter((_, j) => j !== i);
@@ -1243,7 +1274,7 @@
     if (full) margin.append(head());
     const heads = new Set();   // one card per address: its other rows are readings in it
     const spans = all.filter((r) => (typeof r.text === "string" || addressed(r) || orphan(r) || r.labels?.[0] === "parts") && shows(r) && passes(r) && (full || open.has(r.id)))
-      .filter((r) => typeof r.text === "string" ? !partsOf(r.id) : r.labels?.[0] === "parts" || orphan(r) || (!heads.has(r.targets[0]) && heads.add(r.targets[0])));
+      .filter((r) => typeof r.text === "string" || r.labels?.[0] === "parts" ? !partsOf(r.id) : orphan(r) || (!heads.has(r.targets[0]) && heads.add(r.targets[0])));
     if (!spans.length) return;
     const lost = spans.filter((r) => state[r.id] !== "vers" || orphan(r));
     const found = spans.map((r) => ({ r, m: anchorsOf(r.id)[0] })).filter((x) => x.m)
@@ -1814,7 +1845,7 @@
     if (!sel.rangeCount || sel.isCollapsed) {
       const m = target?.closest("mark.fact");
       if (!m) { if (editing) { closeEditor(); layout(); } return; }
-      const own = all.find((r) => r.id === m.dataset.id), row = partsOf(own.id) ?? own;   // a piece answers for its whole
+      const own = all.find((r) => r.id === m.dataset.id), row = wholeOf(own.id) ?? own;   // a piece answers for its whole
       if (mode() !== "kantlijn") {
         open.has(row.id) ? open.delete(row.id) : (open.clear(), open.add(row.id));
         layout();
@@ -1876,12 +1907,26 @@
     if (s >= e) return;
     const pr = adding && local().find((r) => r.id === adding);
     if (adding && !pr) adding = null;   // the bundle went meanwhile: this starts a new one
-    if (pr) {   // a fresh row is in no bundle, so the test is by place: text a piece of a shown bundle already covers
-      const owner = all.filter((r) => r.labels?.[0] === "parts" && (shows(r) || r.id === pr.id)).find((p) => p.targets.some((t) => {
-        const r = all.find((x) => x.id === t), at = typeof r?.text === "string" && find(ix, r);
-        return Array.isArray(at) && at[0] < e && s < at[1];
-      }));
-      if (owner) { toast(`Dat is al een deel van ${owner.id}`); return; }
+    // a fresh row is in no bundle, so the test is by place: text a piece of a whole already covers
+    const hit = all.filter((r) => r.labels?.[0] === "parts" && !partsOf(r.id) && (shows(r) || r.id === pr?.id)).filter((p) => leavesOf(p).some((t) => {
+      const r = all.find((x) => x.id === t), at = typeof r?.text === "string" && find(ix, r);
+      return Array.isArray(at) && at[0] < e && s < at[1];
+    }));
+    const mine = pr ? (wholeOf(pr.id) ?? pr).id : null;   // the selection touches the bundle being made: refused, whatever else it touches
+    if (hit.some((h) => h.id === mine || pieces.includes(h.id))) { toast(`Dat is al een deel van ${pr?.id ?? "deze bundel"}`); return; }
+    if (hit.length > 1) { toast(`Dat loopt over ${hit.length} bundels: kies er één`); return; }
+    const owner = hit[0];
+    if (owner) {   // a piece of a piece: the whole that text is in joins as one piece
+      if (pr) {
+        save(pr, { targets: [...pr.targets, owner.id] });
+        draw();
+        toast(`Bundel ${owner.id} is deel ${pr.targets.length + 1} van ${pr.id} · Alt-selecteer het volgende · Esc stopt`);
+        return;
+      }
+      pieces.push(owner.id);
+      draw();
+      toast(`Deel ${pieces.length}: bundel ${owner.id}${pieces.length > 1 ? " · Enter bundelt" : ""} · Alt-selecteer het volgende · Esc stopt`);
+      return;
     }
     save({ text: ix.flat.slice(s, e), prefix: ix.flat.slice(Math.max(0, s - AROUND), s), suffix: ix.flat.slice(e, e + AROUND) },
       { note: "", labels: [] });
@@ -1898,7 +1943,7 @@
   }
   /** Enter: the pieces become one span, a parts row, and the editor opens for a fact about it. */
   function bundle() {
-    const live = new Set(local().filter((r) => typeof r.text === "string").map((r) => r.id));
+    const live = new Set([...local().filter((r) => typeof r.text === "string"), ...all.filter((r) => r.labels?.[0] === "parts" && !partsOf(r.id))].map((r) => r.id));
     const ps = pieces.filter((id) => live.has(id));   // a piece deleted meanwhile is no piece
     pieces = [];
     if (ps.length < 2) { toast("Minder dan twee delen over: niets gebundeld"); draw(); return; }
