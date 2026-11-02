@@ -318,7 +318,7 @@
      falls the way it fell for the boards */
   const ANCHORS = { dit: 153.69175324544503, niet: 29.696698619015162, slop: 56.519342372371014 };
   const HUES = ["waarom", "lang", "verhaal", "code", "anders", "onduidelijk", "group", "role", "fn", "claim", "note", "order",
-    "coref", "tfa", "resumes", "supports", "attacks", ...LABELS];
+    "coref", "tfa", "resumes", "supports", "attacks", "slop/beeld", "slop/beeld/dood", ...LABELS];   // the boards' slop chain
   const BANDS = [0.52, 0.64], ARC = 12;   // OKLCH lightness of even and odd roots; a child's arc, in degrees either side
   const sighted = store("fpl-annot:hues", []);
   /** OKLCH to linear sRGB (Ottosson 2020). */
