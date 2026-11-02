@@ -22,8 +22,8 @@
  *     prefix, suffix,  32 characters of shown text either side of it
  *     labels: [], note, targets: [], createdAt, updatedAt }  (times in ms)
  *
- * by is who wrote the row: the name this browser was given in the head
- * of the margin (localStorage["fpl-annot:by"]), or, for a row an agent
+ * by is who wrote the row: the name this browser was given under Naam
+ * in the bar's menu (localStorage["fpl-annot:by"]), or, for a row an agent
  * imported with lit, that agent's model id. A reply is a row without
  * text whose first target is the fact it answers; it shows nested under
  * that fact, with its author, as deep as the thread goes.
@@ -42,9 +42,11 @@
  * cites a clause.
  *
  * Storage. localStorage["fpl-annot:" + item] holds a JSON array of this
- * browser's rows for that page; the sidecar is never written here. Export
- * downloads that array as <stem>.annot.json (JSON.stringify(rows, null,
- * 1)); Import merges a file of rows into it by id; Clear empties it.
+ * browser's rows for that page; the sidecar is never written here. The
+ * menu's Exporteer rijen downloads that array as <stem>.annot.json
+ * (JSON.stringify(rows, null, 1)) and shows the lit command that takes
+ * it in; Importeer rijen merges a file of rows into it by id; Wis mijn
+ * rijen empties it, after asking. Exporteer logboek waits for the log.
  *
  * Finding a quote. The page's text nodes are read into one string, the
  * shown text: a backtick dropped, a curly quote read as a straight one,
@@ -65,10 +67,23 @@
  * the cards; where the column is hidden (a narrow window) each card
  * folds under the block its span is in, and the editor is a popover.
  *
- * Three stands, chosen with the control floating at the top right of
- * the window and with the key "a": lezen shows
- * nothing; spans underlines the spans whose labels pass the filter, a
- * row of label chips under the control, and a click on a span opens
+ * The bar. One bar, fixed above the margin column, holds the three
+ * stands as tabs (Lezen, Spans, Kantlijn, also the key "a"), the search
+ * field (the key "z"), Graph and a menu ⋯: Naam, Importeer rijen,
+ * Exporteer rijen, Exporteer logboek, Vouw tot de spans, Context 0-3,
+ * Sneltoetsen (also "?") and Wis mijn rijen. A quiet line under it
+ * counts the spans, the relations, the lost rows and this browser's.
+ * The label and layer filters are a panel the filter button opens; a
+ * click opens it, hover never does, and nothing in the bar changes size
+ * or place on hover or on a change of stand. Where Quarto shows its top
+ * bar (a narrow window) the bar folds into it, a stand picker and three
+ * icons, the search and the counts in the filter panel; where neither
+ * fits, the folded bar stands at the top right of the window. In
+ * Kantlijn an empty margin says in three lines how to annotate,
+ * connect and fold.
+ *
+ * Three stands: lezen shows nothing; spans underlines the spans whose
+ * labels pass the filter, and a click on a span opens
  * its card alone; kantlijn shows every card, the lines and the editor.
  * A line carries the type of the edge it draws: the first label of the
  * first fact about the span, else the span's own. localStorage["fpl-annot:mode"] keeps the stand
@@ -89,10 +104,10 @@
  * inside a band draws its line, and places its card, at the band.
  * On a touch screen two fingers drawn together fold the blocks between
  * them, from the middle out, as many as the fingers closed by; drawn
- * apart over a band they open it. Knijp tot, under the label chips,
- * folds every block further than its context (0-3 blocks, kept in
- * localStorage["fpl-annot:context"]) from a span the filter shows;
- * pressed again it opens them.
+ * apart over a band they open it. Vouw tot de spans, in the menu,
+ * folds every block further than its context (0-3 blocks, the menu's
+ * Context, kept in localStorage["fpl-annot:context"]) from a span the
+ * filter shows; chosen again it opens them, and a new context refolds.
  *
  * Close reading. Outside Lezen each block carries a bar in its left
  * gutter, shaded by how many rows hang from it (after Zyto 2012, where
@@ -115,7 +130,7 @@
  * only a span anchors in the text, every other row names an id. A row's
  * layer is read from what it is, as lit's facts.layer reads it (span,
  * fact, thread, argument, tfa, coref, relation), and a row of chips
- * under the label filter hides a layer. A coref row groups ids that name
+ * under the labels in the filter panel hides a layer. A coref row groups ids that name
  * one referent: hovering one lights the others. The tfa lens marks a
  * clause t (bound), c (bound, contrastive) or f (not bound), after the
  * t-layer manual (Mikulova et al. 2006): Alt-click a clause cycles its
@@ -141,7 +156,7 @@
  * layers shown, laid out by a force model (Fruchterman and Reingold 1991)
  * on a canvas. A relation row is a node of its own, a small diamond, so
  * an undercut has something to aim at (AIF); a fact hangs from what it is
- * about. "Graph" in the margin's head shows the page, "Graph" on a card
+ * about. "Graph" in the bar shows the page, "Graph" on a card
  * that row and what lies within two steps; a click on a node goes there.
  * Beside the rows stand the page's chunks and the files they tangle to,
  * from <stem>.graph.json (lit graph, written at publish): a chunk uses
@@ -172,11 +187,14 @@
  * links. "Zelfde als…" on a card arms a pick; its end joins the chain.
  *
  * Querying across the layers (after PML-TQ, Pajas and Stepanek 2009):
- * a field under the filters takes terms [!]key:value, all to hold, in
+ * the bar's search field takes terms [!]key:value, all to hold, in
  * groups apart by "|" of which one must hold, and has:R+N or gives:R+N
  * for a chain of at least N R edges; the same language as lit facts
  * --query (facts.parse_query, facts.query) and tested against the same
  * cases (tests/query_cases.json): what it finds stays, the rest fades.
+ * The count line says how many it found, or why the query does not
+ * parse; a query asked in Lezen turns to Spans, where there is
+ * something to find.
  */
 (() => {
   "use strict";
@@ -432,15 +450,153 @@
     layout();
   }
 
-  /** The control: three stands, and under it the labels to show. */
-  const control = el("div", { className: "fpl-annot-ui fpl-mode" });
-  function drawControl() {
-    const spans = all.filter((r) => typeof r.text === "string"), cur = mode();
-    const seg = el("div", { className: "fpl-seg", role: "radiogroup" },
-      ...MODES.map((m) => button(m === "lezen" ? "Lezen" : m === "spans" ? `Spans · ${spans.length}` : "Kantlijn",
-        () => { if (m !== "kantlijn") disarm(); mode(m); draw(); }, m === cur ? "is-on" : "")));
-    control.replaceChildren(seg);
-    if (cur === "lezen") return;
+  /* ---- the bar: the stands, the search, Graph and a menu, in one place ---- */
+
+  /** The bar's icons, one stroke on a 16-unit grid (the canvas boards' set). */
+  const ICONS = {
+    graph: '<g fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="3.5" r="1.8"/><circle cx="3.5" cy="12.5" r="1.8"/><circle cx="12.5" cy="12.5" r="1.8"/><path d="M7.2 5.1 4.4 10.9M8.8 5.1l2.8 5.8M5.3 12.5h5.4"/></g>',
+    more: '<g fill="currentColor"><circle cx="3.5" cy="8" r="1.3"/><circle cx="8" cy="8" r="1.3"/><circle cx="12.5" cy="8" r="1.3"/></g>',
+    search: '<g fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5 14 14"/></g>',
+    filter: '<path fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" d="M2.5 3h11L9.5 8v4.5l-3 1.5V8z"/>',
+    chevron: '<path fill="none" stroke="currentColor" stroke-width="1.6" d="m4 6 4 4 4-4"/>',
+    name: '<g fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="5.5" r="2.5"/><path d="M3 13.5a5 5 0 0 1 10 0"/></g>',
+    import: '<path fill="none" stroke="currentColor" stroke-width="1.5" d="M8 2v8M5 7l3 3 3-3M3 11v2.5h10V11"/>',
+    export: '<path fill="none" stroke="currentColor" stroke-width="1.5" d="M8 10V2M5 5l3-3 3 3M3 11v2.5h10V11"/>',
+    log: '<g fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3.5" y="2" width="9" height="12" rx="1"/><path d="M6 5.5h4M6 8h4M6 10.5h2.5"/></g>',
+    fold: '<path fill="none" stroke="currentColor" stroke-width="1.5" d="M2 8h12M8 1.5v4M6 3.5l2 2 2-2M8 14.5v-4M6 12.5l2-2 2 2"/>',
+    context: '<path fill="none" stroke="currentColor" stroke-width="1.5" d="M3 4h10M3 8h10M3 12h6"/>',
+    keys: '<g fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1.5" y="4" width="13" height="8" rx="1.5"/><path d="M4 7h1M7 7h1M10 7h1M5 9.5h6"/></g>',
+    wipe: '<path fill="none" stroke="currentColor" stroke-width="1.5" d="M3 4.5h10M6.5 4.5V3h3v1.5M4.5 4.5l.7 9h5.6l.7-9"/>',
+    select: '<path fill="none" stroke="currentColor" stroke-width="1.5" d="M6 2.5h4M6 13.5h4M8 2.5v11"/>',
+    knob: '<circle cx="8" cy="8" r="3.5" style="fill: var(--fpl-mine)"/>',
+    shift: '<path fill="none" stroke="currentColor" stroke-width="1.5" d="m5 6 3-3 3 3M5 10l3 3 3-3"/>',
+  };
+  const ico = (name) => {
+    const s = el("span", { className: "fpl-ico" });
+    s.ariaHidden = "true";
+    s.innerHTML = `<svg width="16" height="16" viewBox="0 0 16 16">${ICONS[name]}</svg>`;
+    return s;
+  };
+  /** A button of the bar: an icon, and a name that a narrow bar keeps for the screen reader only. */
+  const tool = (name, text, onclick) => {
+    const b = button("", onclick, "fpl-tool");
+    b.append(ico(name), el("span", { className: "fpl-name" }, text));
+    return b;
+  };
+
+  const STANDS = { lezen: "Lezen", spans: "Spans", kantlijn: "Kantlijn" };
+  const stand = (m) => { if (m !== "kantlijn") disarm(); mode(m); draw(); };
+  const tabs = el("div", { className: "fpl-tabs", role: "tablist", ariaLabel: "Stand" },
+    ...MODES.map((m) => Object.assign(button(STANDS[m], () => stand(m), "fpl-tab"), { role: "tab" })));
+  const picker = el("select", { className: "fpl-stand", ariaLabel: "Stand", onchange: () => stand(picker.value) },
+    ...MODES.map((m) => el("option", { value: m }, STANDS[m])));
+  const graphBtn = tool("graph", "Graph", () => { shut(); graph(null); });
+  const moreBtn = tool("more", "Meer", () => flip(menu, moreBtn, fillMenu));
+  const filterBtn = tool("filter", "Filter: labels en lagen", () => flip(panel, filterBtn, fillChips));
+  moreBtn.classList.add("fpl-icon", "fpl-more"); filterBtn.classList.add("fpl-icon", "fpl-filter-btn");
+  for (const b of [moreBtn, filterBtn]) { b.ariaHasPopup = "true"; b.ariaExpanded = "false"; }
+  const field = el("input", { className: "fpl-query", placeholder: "Zoek of filter, bv. label:claim", ariaLabel: "Zoek of filter",
+    autocomplete: "off", spellcheck: false });
+  const search = el("div", { className: "fpl-search" }, ico("search"), field, el("kbd", {}, "z"));
+  const count = el("p", { className: "fpl-count" });
+  const row = el("div", { className: "fpl-row" }, tabs, el("span", { className: "fpl-picker" }, picker, ico("chevron")), graphBtn, moreBtn);
+  const bar = el("div", { className: "fpl-annot-ui fpl-topbar", role: "region", ariaLabel: "Kantlijn" }, row, search, count);
+  const menu = el("div", { className: "fpl-annot-ui fpl-menu", hidden: true });
+  const chips = el("div", { className: "fpl-filters" });
+  const panel = el("div", { className: "fpl-annot-ui fpl-menu fpl-panel", hidden: true, role: "group", ariaLabel: "Filter" }, chips);
+  const file = el("input", { type: "file", accept: ".json", hidden: true });
+  file.onchange = () => { file.files[0]?.text().then(merge); file.value = ""; };
+  bar.append(file);
+  let bad = "";   // why the query in the field does not parse
+
+  /** Run the query in the field; a query in Lezen shows the spans, since Lezen draws none. */
+  const ask = () => {
+    asked = field.value.replace(/^ +| +$/g, "");   // only U+0020 apart, as the parser
+    try { found = asked ? new Set(QUERY.query(all, asked)) : null; bad = ""; }
+    catch (e) { found = null; bad = e.message; }
+    field.classList.toggle("is-bad", !!bad);
+    field.title = bad;
+    if (asked && mode() === "lezen") stand("spans"); else layout();
+  };
+  field.onkeydown = (e) => {
+    e.stopPropagation();   // j, k, a, z and Esc belong to the page, not while typing a query
+    if (e.key === "Enter") ask();
+    if (e.key === "Escape") { if (field.value) { field.value = ""; ask(); } else { shut(); field.blur(); } }
+  };
+
+  /**
+   * Where the bar goes, measured each layout. Where Quarto shows its top
+   * bar (a narrow window) the bar docks in it, left of the site's search,
+   * folded to a stand picker and three icons, and the search field and
+   * the counts move into the filter panel. Where the margin column has
+   * room, the bar is fixed above it at full width. Between the two it is
+   * the folded bar, fixed at the top right.
+   */
+  const nav = document.querySelector(".quarto-secondary-nav .container-fluid");
+  function dock() {
+    const top = !!nav && nav.offsetHeight > 0, left = wide() ? column.getBoundingClientRect().left : Infinity;
+    const full = !top && innerWidth - left - 16 >= 320;
+    bar.classList.toggle("is-full", full);
+    bar.classList.toggle("is-docked", top);
+    bar.style.left = full ? `${left}px` : "";
+    if (top) { if (bar.parentElement !== nav) nav.insertBefore(bar, nav.querySelector(".quarto-search-button")); }
+    else if (bar.parentElement !== document.body) document.body.append(bar);
+    if (bar.dataset.form !== String(full)) {   // the folded bar keeps the search in its panel
+      bar.dataset.form = full;
+      if (full) { search.append(filterBtn); bar.insertBefore(search, file); bar.insertBefore(count, file); }
+      else { row.insertBefore(filterBtn, graphBtn); panel.prepend(search, count); }
+    }
+    if (!menu.hidden) hang(menu, moreBtn);
+    if (!panel.hidden) hang(panel, full ? search : filterBtn);
+  }
+
+  /** The bar's state: which stand, the counts, the filter's mark; the open panel's chips. */
+  function drawBar() {
+    const cur = mode();
+    for (const [i, t] of [...tabs.children].entries()) { t.ariaSelected = String(MODES[i] === cur); t.classList.toggle("is-on", MODES[i] === cur); }
+    picker.value = cur;
+    const spans = all.filter((r) => typeof r.text === "string" || addressed(r));
+    const lost = spans.filter((r) => state[r.id] !== "vers").length + all.filter(orphan).length, mine = local().length;
+    count.replaceChildren(...el("p", {}, all.length ? `${spans.length} spans · ${all.length - spans.length} relaties` : "Nog geen spans op deze pagina",
+      lost ? el("span", { className: "fpl-lost" }, ` · ${lost} kwijt`) : null,
+      mine ? el("span", { className: "fpl-mine" }, ` · ${mine} van jou`) : null,
+      bad ? el("span", { className: "fpl-bad" }, ` · ${bad}`) : found ? ` · ${found.size} gevonden` : null).childNodes);
+    count.title = count.textContent;
+    filterBtn.classList.toggle("is-on", hidden().size + offLayers().size > 0);
+    if (!panel.hidden) fillChips();
+    dock();
+  }
+
+  /** Open one popover under its button, or close it if it was open; one at a time. */
+  function flip(pop, btn, fill) {
+    const was = !pop.hidden;
+    shut();
+    if (was) return;
+    fill();
+    pop.hidden = false;
+    btn.ariaExpanded = "true";
+    btn.classList.add("is-open");
+    hang(pop, pop === panel && bar.classList.contains("is-full") ? search : btn);
+    pop.querySelector("button:not(:disabled), [tabindex='0']")?.focus({ preventScroll: true });
+  }
+  /** A popover hangs under what opened it, right edges flush, inside the window. */
+  function hang(pop, at) {
+    const r = at.getBoundingClientRect();
+    pop.style.top = `${Math.max(8, r.bottom + 6)}px`;   // a docked bar may have scrolled away with Quarto's header
+    pop.style.right = `${Math.max(8, innerWidth - r.right)}px`;
+    pop.style.width = at === search ? `${r.width}px` : "";
+  }
+  /** Close the menu and the filter panel. */
+  function shut() {
+    for (const [pop, btn] of [[menu, moreBtn], [panel, filterBtn]]) { pop.hidden = true; btn.ariaExpanded = "false"; btn.classList.remove("is-open"); }
+  }
+  document.addEventListener("pointerdown", (ev) => {
+    if (!ev.target.closest?.(".fpl-menu") && !moreBtn.contains(ev.target) && !filterBtn.contains(ev.target)) shut();
+  }, true);
+
+  /** The filter panel: the labels to show, as a tree of chips, and the layers. */
+  function fillChips() {
+    const was = panel.contains(document.activeElement) ? document.activeElement.dataset.chip : null;
     const off = hidden();
     const bySegment = (a, b) => {   // children right after their scope: slop, slop/beeld, slop-ish
       const x = a.split("/"), y = b.split("/");
@@ -450,43 +606,97 @@
     const labels = [...new Set(all.filter((r) => typeof r.text === "string" || addressed(r))   // spans and rows on addresses
       .flatMap((r) => [...labelsOf(r)].flatMap(scopes)))]
       .sort((a, b) => a === NONE ? 1 : b === NONE ? -1 : bySegment(a, b));
-    const row = el("div", { className: "fpl-chips fpl-filter" },
-      ...labels.map((l) => { const struck = [...off].some((h) => under(l, h));
-        const c = chip(l, struck ? "is-off" : "is-on"); c.tabIndex = 0;
+    const toggle = (c, act) => {
+      c.tabIndex = 0;
+      c.onclick = act;
+      c.onkeydown = (e) => { if (e.key === " " || e.key === "Enter") { e.preventDefault(); act(); } };
+      return c;
+    };
+    const offL = offLayers(), present = new Set(all.map(layerOf));
+    chips.replaceChildren(
+      el("p", { className: "fpl-panel-head" }, "Labels", off.size ? button("alles aan", () => { hidden(new Set()); draw(); }, "fpl-link") : null),
+      labels.length ? el("div", { className: "fpl-chips fpl-filter" }, ...labels.map((l) => {
+        const struck = [...off].some((h) => under(l, h)), c = chip(l, struck ? "is-off" : "is-on");
+        c.dataset.chip = "l:" + l;
         c.style.marginLeft = `${(l.split("/").length - 1) * 0.6}rem`;
-        c.onclick = () => {
+        return toggle(c, () => {
           const o = hidden(), above = [...o].find((h) => h !== l && under(l, h));
           if (above) { toast(`Zet eerst ${above} aan`); return; }   // struck by its scope: the scope decides
           o.has(l) ? o.delete(l) : o.add(l); hidden(o); draw();
-        };
-        c.onkeydown = (e) => { if (e.key === " " || e.key === "Enter") { e.preventDefault(); c.onclick(); } };
-        return c; }),
-      off.size ? button("alles", () => { hidden(new Set()); draw(); }, "fpl-link") : null);
-    const offL = offLayers(), present = new Set(all.map(layerOf));
-    const layers = el("div", { className: "fpl-chips fpl-filter fpl-layers" }, el("small", {}, "lagen"),
-      ...LAYERS.filter((l) => present.has(l) && l !== "span").map((l) => {
-        const c = chip(l, offL.has(l) ? "is-off" : "is-on"); c.tabIndex = 0;
-        c.onclick = () => { const o = offLayers(); o.has(l) ? o.delete(l) : o.add(l); offLayers(o); draw(); };
-        c.onkeydown = (e) => { if (e.key === " " || e.key === "Enter") { e.preventDefault(); c.onclick(); } };
-        return c; }));
-    const field = el("input", { className: "fpl-query", placeholder: "zoek: label:claim !has:attacks", value: asked, autocomplete: "off", spellcheck: false });
-    const said = el("small", { className: "fpl-query-said" }, found ? `${found.size} gevonden` : "");
-    const ask = () => {
-      asked = field.value.replace(/^ +| +$/g, "");   // only U+0020 apart, as the parser
-      try { found = asked ? new Set(QUERY.query(all, asked)) : null; field.classList.remove("is-bad"); field.title = ""; }
-      catch (e) { found = null; fade(); field.classList.add("is-bad"); field.title = e.message; said.textContent = e.message; return; }
-      layout();
-      control.querySelector(".fpl-query")?.focus();
-    };
-    field.onkeydown = (e) => {
-      e.stopPropagation();   // j, k, a and Esc belong to the page, not while typing a query
-      if (e.key === "Enter") ask();
-      if (e.key === "Escape") { field.value = ""; ask(); }
-    };
-    const squeezer = el("div", { className: "fpl-chips fpl-squeeze" }, button("Knijp tot", squeeze),
-      button(`context ${context}`, () => { context = (context + 1) % 4; try { localStorage.setItem(CONTEXT, context); } catch { /* no storage */ } drawControl(); }, "fpl-link"));
-    control.append(row, layers, squeezer, el("div", { className: "fpl-query-row" }, field, said));
+        });
+      })) : el("p", { className: "fpl-panel-none" }, "Nog geen labels op deze pagina"),
+      el("p", { className: "fpl-panel-head" }, "Lagen"),
+      el("div", { className: "fpl-chips fpl-filter fpl-layers" }, ...LAYERS.filter((l) => present.has(l) && l !== "span").map((l) => {
+        const c = chip(l, offL.has(l) ? "is-off" : "is-on");
+        c.dataset.chip = "y:" + l;
+        return toggle(c, () => { const o = offLayers(); o.has(l) ? o.delete(l) : o.add(l); offLayers(o); draw(); });
+      })));
+    if (was) chips.querySelector(`[data-chip="${CSS.escape(was)}"]`)?.focus();
   }
+
+  /** The menu under ⋯; ask is "export" after an export (the lit command shows), "wipe" while wiping asks. */
+  function fillMenu(ask) {
+    const mine = local().length, rows = mine === 1 ? "1 rij" : `${mine} rijen`;
+    const entry = (name, text, onclick, after, cls = "") => {
+      const b = button("", onclick, "fpl-item " + cls);
+      b.append(ico(name), text, ...after ? [after] : []);
+      return b;
+    };
+    const why = (text) => el("small", {}, text);
+    const none = (b) => { b.disabled = true; return b; };
+    const name = el("input", { value: by(), placeholder: "jij", onchange: (ev) => by(ev.target.value.trim()) });
+    const ctx = el("span", { className: "fpl-ctx", role: "group", ariaLabel: "Context rond elke span, in blokken" },
+      ...[0, 1, 2, 3].map((n) => Object.assign(button(String(n), () => { setContext(n); fillMenu(); }), { ariaPressed: String(n === context) })));
+    const exp = entry("export", "Exporteer rijen", () => { exportRows(); fillMenu("export"); }, why(mine ? `${mine} van jou` : "geen van jou"));
+    const wipe = entry("wipe", "Wis mijn rijen op deze pagina…", () => fillMenu("wipe"), mine ? null : why("geen"), "fpl-danger");
+    menu.classList.remove("fpl-keysheet");
+    menu.replaceChildren(...[
+      el("label", { className: "fpl-item" }, ico("name"), "Naam", name),
+      el("hr"),
+      entry("import", "Importeer rijen…", () => { shut(); file.click(); }),
+      mine ? exp : none(exp),
+      ask === "export" ? el("p", { className: "fpl-cmd" }, "Dan, vanuit 01-bootstrap/: ",
+        el("code", {}, `lit facts --import ${stem}.annot.json --item ${item}=${item}@${commit}`)) : null,
+      none(entry("log", "Exporteer logboek", null, why("nog niet"))),
+      el("hr"),
+      entry("fold", "Vouw tot de spans", () => { shut(); squeeze(); }),
+      el("div", { className: "fpl-item" }, ico("context"), "Context", ctx),
+      el("hr"),
+      entry("keys", "Sneltoetsen", () => keysheet(), el("kbd", {}, "?")),
+      ask === "wipe"
+        ? el("div", { className: "fpl-item fpl-confirm" }, `${rows} van jou wissen?`,
+          button("Wis", () => { localStorage.removeItem(key); shut(); draw(); toast(`${rows} gewist`); }, "fpl-go fpl-danger"),
+          button("Nee", () => fillMenu()))
+        : mine ? wipe : none(wipe)].filter(Boolean));
+  }
+
+  /** The keys, in the menu's place: "?" or the menu's Sneltoetsen. */
+  function keysheet() {
+    if (menu.hidden) flip(menu, moreBtn, () => {});
+    menu.classList.add("fpl-keysheet");
+    const keys = [["a", "Volgende stand"], ["z", "Zoek of filter"], ["j  k", "Volgende, vorige zin"],
+      ["Enter", "Een feit op de zin onder de cursor"], ["⌘↩", "Bewaar in de editor"],
+      ["Esc", "Sluit of breekt af; anders opent de laatste band"], ["Alt + selectie", "Een deel van een span; Enter bundelt"],
+      ["Alt-klik", "De tfa-waarde van een bijzin"], ["Alt-Shift-klik", "Deze bijzin neemt een eerdere op"], ["?", "Deze lijst"]];
+    menu.replaceChildren(el("p", { className: "fpl-panel-head" }, "Sneltoetsen"),
+      el("dl", {}, ...keys.flatMap(([k, what]) => [el("dt", {}, ...k.split(/ {2}/).map((x) => el("kbd", {}, x))), el("dd", {}, what)])));
+    menu.tabIndex = -1;
+    menu.focus({ preventScroll: true });
+  }
+
+  /** z: the search field, in the panel when the bar is folded. */
+  function seek() {
+    if (!bar.classList.contains("is-full") && panel.hidden) flip(panel, filterBtn, fillChips);
+    field.focus();
+    field.select();
+  }
+
+  /** The margin when Kantlijn has no card yet: how to annotate, connect and fold, in three lines. */
+  const hint = () => el("ul", { className: "fpl-hint" },
+    ...[["select", "Selecteer tekst", " en schrijf een notitie."],
+      ["knob", "Sleep het bolletje", " achter een span naar een andere span om ze te verbinden."],
+      ["shift", "", ["Houd ", el("kbd", {}, "Shift"), " en scroll boven de tekst om hem in te vouwen. Terug scrollen opent."]]]
+      .map(([i, b, rest]) => el("li", {}, ico(i), el("span", {}, b ? el("b", {}, b) : null, ...[rest].flat()))));
 
   /* ---- what a card shows ---- */
 
@@ -1022,39 +1232,6 @@
     panel.dataset.nodes = g.nodes.map((n) => `${n.id}@${Math.round(n.x)},${Math.round(n.y)}`).join(" ");   // for tests: where each node landed
   }
 
-  /** The head of the margin: counts and the three buttons. */
-  function head() {
-    const spans = all.filter((r) => typeof r.text === "string" || addressed(r));
-    const lost = spans.filter((r) => state[r.id] !== "vers").length + all.filter(orphan).length, mine = local().length;
-    const file = el("input", { type: "file", accept: ".json", hidden: true });
-    file.onchange = () => file.files[0]?.text().then(merge);
-    const cmd = el("div", { className: "fpl-cmd", hidden: true });
-    const h = el("div", { className: "fpl-head" },
-      el("div", { className: "fpl-count" },
-        `${spans.length} spans · ${all.length - spans.length} relaties`,
-        lost ? el("span", { className: "fpl-lost" }, ` · ${lost} kwijt`) : null,
-        mine ? el("span", { className: "fpl-mine" }, ` · ${mine} lokaal`) : null),
-      el("div", { className: "fpl-bar" },
-        el("input", { className: "fpl-byme", value: by(), placeholder: "jij", title: "Wie schrijft: komt als by op elke rij",
-          onchange: (ev) => by(ev.target.value.trim()) }),
-        button("Graph", () => graph(null)),
-        button("Export", () => { exportRows(); cmd.hidden = false; }),
-        button("Import", () => file.click()),
-        mine ? button("Clear", () => clear(h)) : null, file),
-      cmd);
-    cmd.append("Dan, vanuit 01-bootstrap/: ",
-      el("code", {}, `lit facts --import ${stem}.annot.json --item ${item}=${item}@${commit}`));
-    return h;
-  }
-
-  /** Clear asks once, in the head itself. */
-  function clear(h) {
-    const ask = el("div", { className: "fpl-bar fpl-ask" }, "De lokale rijen van deze pagina vergeten?",
-      button("Ja, vergeet", () => { localStorage.removeItem(key); draw(); }, "fpl-go"),
-      button("Nee", () => ask.remove()));
-    h.append(ask);
-  }
-
   /** Download this browser's rows as <stem>.annot.json. */
   function exportRows() {
     const blob = new Blob([JSON.stringify(local(), null, 1) + "\n"],
@@ -1249,7 +1426,7 @@
   /** Lay every card out: the head, the lost rows, then one card per span in page order. */
   function layout() {
     closeEditor();
-    drawControl();
+    drawBar();
     document.body.classList.toggle("fpl-numbered", mode() !== "lezen");
     for (const c of body.querySelectorAll(".fpl-inline")) c.remove();
     scrunch();
@@ -1260,7 +1437,6 @@
     lines.replaceChildren();
     margin.style.minHeight = "";
     const full = mode() === "kantlijn";
-    if (control.parentElement !== document.body) document.body.append(control);
     if (wide()) {
       column.classList.add("fpl-column");
       if (margin.parentElement !== column) column.append(margin);
@@ -1271,17 +1447,22 @@
       if (margin.parentElement !== body) body.prepend(margin);
     }
     if (mode() === "lezen") return;
-    if (full) margin.append(head());
+    const y0 = wide() ? Math.max(0, bar.getBoundingClientRect().bottom + GAP - top0()) : 0;   // the first card clears the bar
     const heads = new Set();   // one card per address: its other rows are readings in it
     const spans = all.filter((r) => (typeof r.text === "string" || addressed(r) || orphan(r) || r.labels?.[0] === "parts") && shows(r) && passes(r) && (full || open.has(r.id)))
       .filter((r) => typeof r.text === "string" || r.labels?.[0] === "parts" ? !partsOf(r.id) : orphan(r) || (!heads.has(r.targets[0]) && heads.add(r.targets[0])));
-    if (!spans.length) return;
+    if (!spans.length) {
+      if (!full) return;
+      const h = margin.appendChild(hint());
+      if (wide()) Object.assign(h.style, { top: `${y0}px`, width: `${Math.min(340, innerWidth - column.getBoundingClientRect().left - 16)}px` });
+      return;
+    }
     const lost = spans.filter((r) => state[r.id] !== "vers" || orphan(r));
     const found = spans.map((r) => ({ r, m: anchorsOf(r.id)[0] })).filter((x) => x.m)
       .map((x) => ({ r: x.r, m: seen(x.m) }))
       .sort((a, b) => a.m.getBoundingClientRect().top - b.m.getBoundingClientRect().top);
     if (wide()) {
-      let y = full ? margin.firstElementChild.offsetHeight + GAP : 0;
+      let y = y0;
       for (const r of lost) {
         const c = cardOf(r);
         margin.append(c);
@@ -1662,26 +1843,40 @@
   }
 
   /**
-   * Knijp tot (LiquidText's merged highlights): fold every run of blocks
-   * further than context blocks from a span the filter lets through, so
-   * the spans stand together with their surroundings. Pressed again while
-   * the bands are just that, it opens them all.
+   * Vouw tot de spans, in the menu (LiquidText's merged highlights): fold
+   * every run of blocks further than context blocks from a span the filter
+   * lets through, so the spans stand together with their surroundings.
+   * Chosen again while the bands are just that, it opens them all; a new
+   * context refolds them at once.
    */
   const CONTEXT = "fpl-annot:context";
   let context = (() => { try { const n = localStorage.getItem(CONTEXT); return n != null && /^[0-3]$/.test(n) ? +n : 1; } catch { return 1; } })();
-  function squeeze() {
+  /** The runs of blocks further than n blocks from a drawn span, as bands; null when no span is drawn. */
+  function runsNear(n) {
     const us = units(), near = new Set();
     for (const m of body.querySelectorAll("mark.fact")) {
       const i = us.indexOf(m.closest(".fpl-p"));
-      if (i >= 0) for (let t = i - context; t <= i + context; t++) near.add(t);
+      if (i >= 0) for (let t = i - n; t <= i + n; t++) near.add(t);
     }
-    if (!near.size) { toast("Geen spans om tot te knijpen"); return; }
+    if (!near.size) return null;
     const runs = [];
     for (let i = 0; i < us.length; i++)
       if (!near.has(i)) { const a = i; while (i + 1 < us.length && !near.has(i + 1)) i++; runs.push([us[a].id, us[i].id]); }
-    const same = runs.length === bands.length && runs.every(([a, b], x) => a === bands[x][0] && b === bands[x][1]);
+    return runs;
+  }
+  const folded = (runs) => !!runs && runs.length === bands.length && runs.every(([a, b], x) => a === bands[x][0] && b === bands[x][1]);
+  function squeeze() {
+    const runs = runsNear(context);
+    if (!runs) { toast(mode() === "lezen" ? "Lezen onderstreept niets: kies Spans of Kantlijn" : "Geen span in beeld om tot te vouwen"); return; }
+    const same = folded(runs);
     setBands(same ? [] : runs);
     if (same) toast("Alles open");
+  }
+  function setContext(n) {
+    const was = folded(runsNear(context));
+    context = n;
+    try { localStorage.setItem(CONTEXT, n); } catch { /* no storage */ }
+    if (was) setBands(runsNear(n));
   }
 
   /**
@@ -1722,7 +1917,7 @@
   const PINCH = [["touchmove", pinchMove], ["touchend", pinchEnd], ["touchcancel", pinchEnd]];
   body.addEventListener("touchstart", (ev) => {
     if (pinch) pinchEnd({ touches: [] });
-    if (ev.touches.length !== 2 || [...ev.touches].some((t) => t.target.closest?.(".fpl-card, .fpl-mode"))) return;
+    if (ev.touches.length !== 2 || [...ev.touches].some((t) => t.target.closest?.(".fpl-card, .fpl-topbar, .fpl-menu"))) return;
     const [y0, y1] = ys(ev.touches), us = units();
     const at = (y) => us.findIndex((u) => !u.classList.contains("fpl-scrunched") && u.getBoundingClientRect().bottom >= y);
     const i = at(y0), j = at(y1) < 0 ? us.length : at(y1);
@@ -2005,6 +2200,12 @@
       if (e && body.contains(e)) e.classList.add("fpl-coref");
   });
   document.addEventListener("keydown", (ev) => {
+    if (ev.key === "Escape" && (!menu.hidden || !panel.hidden)) {   // an open popover first, focus back to its button
+      const back = menu.hidden ? filterBtn : moreBtn, inside = menu.contains(document.activeElement) || panel.contains(document.activeElement);
+      shut();
+      if (inside) back.focus();
+      return;
+    }
     const g = document.querySelector(".fpl-graph");   // an open graph takes Esc first, wherever focus is
     if (ev.key === "Escape" && g) { g.close(); return; }
     if (ev.key === "Escape" && editing) { closeEditor(); layout(); disarm(); return; }
@@ -2029,7 +2230,9 @@
     }
     const typing = ev.defaultPrevented || ev.target.closest?.("input, textarea, select, [contenteditable], .fpl-editor");
     if (ev.key === "Escape" && reading && !typing) { read(null); return; }
+    if (ev.key === "?" && !typing && !ev.metaKey && !ev.ctrlKey && !ev.altKey) { ev.preventDefault(); menu.hidden || !menu.classList.contains("fpl-keysheet") ? keysheet() : shut(); return; }
     if (typing || ev.metaKey || ev.ctrlKey || ev.altKey || ev.shiftKey) return;
+    if (ev.key === "z") { ev.preventDefault(); seek(); return; }
     if (ev.key === "j" || ev.key === "k") { ev.preventDefault(); step(ev.key === "j" ? 1 : -1); return; }
     if (ev.key === "Enter" && reading && !ev.target.closest?.("button, a, [role=button]")) {
       ev.preventDefault();
@@ -2052,7 +2255,7 @@
   addEventListener("resize", relayout);
   document.fonts?.ready.then(relayout);
 
-  document.body.append(pop);
+  document.body.append(pop, menu, panel);
   (snap ? Promise.resolve(snap.rows) : fetch(`${stem}.facts.json`).then((r) => (r.ok ? r.json() : [])))
     .catch(() => [])
     .then((got) => { sidecar = Array.isArray(got) ? got : []; draw(); persist();

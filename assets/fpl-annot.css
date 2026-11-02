@@ -13,6 +13,7 @@
   --fpl-lost: #9a7b2f;
   --fpl-con: #b4443c;
   --fpl-rule: var(--bs-border-color, #dee2e6);
+  --fpl-edge: var(--bs-gray-500, #adb5bd);
   --fpl-mute: var(--bs-secondary-color, #6c757d);
   --fpl-bg: var(--bs-body-bg, #fff);
   --fpl-fg: var(--bs-body-color, #212529);
@@ -114,37 +115,117 @@ body.fpl-numbered .fpl-s:hover .fpl-c::before { opacity: 1; }
 .fpl-reply { display: block; font: 600 .72rem var(--bs-font-sans-serif, sans-serif); color: var(--bs-link-color, #2b6cb0);
   background: none; border: 0; padding: .15rem 0 0; cursor: pointer; opacity: 0; transition: opacity .12s; }
 .fpl-card:hover .fpl-reply, .fpl-reply:focus-visible { opacity: 1; }
-.fpl-byme { font: inherit; font-size: .78rem; width: 5.5rem; padding: .1rem .35rem; border: 1px dashed var(--fpl-rule); border-radius: 999px;
-  background: none; color: var(--fpl-fg); }
-.fpl-byme::placeholder { color: var(--fpl-mute); }
 .fpl-fact { margin-top: .4rem; }
 .fpl-sub { margin-left: .5rem; padding-left: .5rem; border-left: 1px solid var(--fpl-rule); }
 .fpl-rel { font-size: .78rem; color: var(--fpl-mute); }
 .fpl-rel b { color: var(--fpl-fg); }
 .fpl-rel code { font-size: .76rem; background: none; padding: 0; color: inherit; }
 
-/* the control: three stands and the label filter */
-.fpl-mode { position: fixed; top: .75rem; right: max(.75rem, env(safe-area-inset-right, 0px)); z-index: 1000; font-size: .8rem;
-  max-width: min(22rem, calc(100vw - 1.5rem)); padding: .35rem .45rem; background: var(--fpl-bg); border: 1px solid var(--fpl-rule);
-  border-radius: 999px; box-shadow: 0 4px 16px rgba(0, 0, 0, .10); }
-.fpl-mode:has(.fpl-filter):hover, .fpl-mode:has(.fpl-filter):focus-within { border-radius: 10px; }
-.fpl-filter { display: none; }   /* the filter shows while the control is hovered or focused */
-.fpl-mode:hover .fpl-filter, .fpl-mode:focus-within .fpl-filter { display: flex; }
-.fpl-column .fpl-margin { padding-top: 3rem; }
-.fpl-mode { top: .6rem; right: max(.6rem, env(safe-area-inset-right, 0px)); }
-/* narrow: Quarto's bar is fixed at the top, so the control sits in it, left of the search
-   icon, folded to its current stand until it is hovered or focused */
-@media (max-width: 991px) {
-  .fpl-mode { top: .35rem; right: 3rem; padding: .15rem; background: transparent; border-color: transparent; box-shadow: none; }
-  .fpl-mode:hover, .fpl-mode:focus-within { background: var(--fpl-bg); border-color: var(--fpl-rule); box-shadow: 0 4px 16px rgba(0, 0, 0, .10); }
-  .fpl-mode:not(:hover):not(:focus-within) .fpl-seg button:not(.is-on) { display: none; }
-}
-.fpl-seg { display: inline-flex; padding: 2px; border-radius: 999px; border: 1px solid var(--fpl-rule); background: var(--fpl-wash); }
-.fpl-seg button { font: inherit; font-size: .76rem; font-weight: 600; padding: .25rem .65rem; border: 0; border-radius: 999px;
-  background: none; color: var(--fpl-mute); cursor: pointer; }
-.fpl-seg button.is-on { background: var(--fpl-bg); color: var(--fpl-vers); box-shadow: 0 1px 2px rgba(0, 0, 0, .12); }
-.fpl-seg button:focus-visible { outline: 2px solid var(--fpl-mine); outline-offset: 1px; }
-.fpl-filter { margin: .45rem .2rem .15rem; }
+/* the bar (fpl-annot.js dock): the stands, the search, Graph and ⋯, fixed above the margin.
+   Nothing in it changes size or place on hover or state: hover and state change colour only. */
+.fpl-topbar { z-index: 1000; box-sizing: border-box; font: 14px/1.4 var(--bs-font-sans-serif, sans-serif); color: var(--fpl-fg); }
+.fpl-topbar.is-full { position: fixed; top: 0; right: 16px; height: 118px; padding-top: 14px; background: var(--fpl-bg);
+  border-bottom: 1px solid var(--fpl-rule); }
+.fpl-row { display: flex; align-items: center; gap: 6px; }
+.fpl-ico { display: inline-flex; flex: none; }
+.fpl-ico svg { display: block; }
+.fpl-tabs { display: flex; gap: 2px; margin-right: auto; }
+.fpl-tab { font: inherit; font-weight: 600; height: 32px; padding: 0 8px; border: 0; border-radius: 0; background: none;
+  color: var(--fpl-mute); cursor: pointer; }
+.fpl-tab:hover { color: var(--fpl-fg); }
+.fpl-tab.is-on { color: var(--fpl-fg); box-shadow: inset 0 -2px 0 var(--fpl-mine); }
+.fpl-tool { font: inherit; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 32px;
+  padding: 0 10px; box-sizing: border-box; border: 1px solid var(--fpl-rule); border-radius: 5px; background: var(--fpl-bg);
+  color: var(--fpl-fg); cursor: pointer; }
+.fpl-tool.fpl-icon { width: 32px; padding: 0; }
+.fpl-icon .fpl-name, .fpl-topbar:not(.is-full) .fpl-name { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.fpl-tool:hover, .fpl-tool.is-open { background: var(--fpl-wash); }
+.fpl-tool.is-open { border-color: var(--fpl-edge); }
+.fpl-tool.is-on { color: var(--fpl-mine); }
+.fpl-topbar :focus-visible, .fpl-menu :focus-visible { outline: 2px solid var(--fpl-mine); outline-offset: 1px; }
+.fpl-search { margin-top: 8px; display: flex; align-items: center; gap: 8px; height: 32px; box-sizing: border-box; padding: 0 3px 0 8px;
+  border: 1px solid var(--fpl-rule); border-radius: 5px; color: var(--fpl-mute); background: var(--fpl-bg); }
+.fpl-search:focus-within { border-color: var(--fpl-mine); }
+.fpl-search:has(.is-bad) { border-color: var(--fpl-con); }
+.fpl-query { flex: 1; min-width: 0; border: 0; outline: 0; padding: 0; font: inherit; color: var(--fpl-fg); background: transparent; }
+.fpl-query::placeholder { color: var(--fpl-mute); }
+.fpl-search .fpl-query:focus-visible { outline: 0; }
+.fpl-topbar kbd, .fpl-menu kbd, .fpl-hint kbd { font: 600 11px/1 SFMono-Regular, Menlo, monospace; padding: 3px 5px; border-radius: 3px;
+  background: var(--fpl-wash); color: var(--fpl-fg); box-shadow: none; }
+.fpl-search .fpl-tool { width: 24px; height: 24px; border: 0; border-radius: 4px; color: var(--fpl-mute); background: none; }
+.fpl-search .fpl-tool:hover, .fpl-search .fpl-tool.is-open { background: var(--fpl-wash); color: var(--fpl-fg); }
+.fpl-search .fpl-tool.is-on { color: var(--fpl-mine); }
+.fpl-count { margin: 7px 0 0; font-size: 12.5px; color: var(--fpl-mute); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fpl-count .fpl-bad { color: var(--fpl-con); }
+.fpl-picker { position: relative; display: none; }
+.fpl-picker .fpl-ico { position: absolute; right: 10px; top: 50%; margin-top: -8px; pointer-events: none; }
+.fpl-stand { appearance: none; font: inherit; font-size: 15px; font-weight: 600; height: 40px; padding: 0 30px 0 10px; border: 1px solid var(--fpl-rule);
+  border-radius: 6px; background: var(--fpl-bg); color: var(--fpl-fg); cursor: pointer; }
+.fpl-stand:hover { background-color: var(--fpl-wash); }
+/* folded (board K): a stand picker and three icons, 40px targets, in Quarto's top bar or at the top right */
+.fpl-topbar:not(.is-full) .fpl-tabs, .fpl-topbar:not(.is-full) > .fpl-search, .fpl-topbar:not(.is-full) > .fpl-count { display: none; }
+.fpl-topbar:not(.is-full) .fpl-picker { display: inline-flex; }
+.fpl-topbar:not(.is-full) .fpl-row { gap: 4px; }
+.fpl-topbar:not(.is-full) .fpl-tool { width: 40px; height: 40px; padding: 0; border: 0; border-radius: 6px; background: none; }
+.fpl-topbar:not(.is-full) .fpl-tool:hover, .fpl-topbar:not(.is-full) .fpl-tool.is-open { background: var(--fpl-wash); }
+.fpl-topbar:not(.is-full) .fpl-ico svg { width: 18px; height: 18px; }
+.fpl-topbar:not(.is-full) .fpl-picker .fpl-ico svg { width: 14px; height: 14px; }
+.fpl-topbar:not(.is-full):not(.is-docked) { position: fixed; top: 8px; right: 16px; padding: 2px 4px; background: var(--fpl-bg);
+  border: 1px solid var(--fpl-rule); border-radius: 6px; }
+.fpl-topbar.is-docked { display: flex; align-items: center; margin-left: 4px; }
+.fpl-topbar.is-docked::after { content: ""; width: 1px; height: 24px; margin: 0 2px 0 4px; background: var(--fpl-rule); }
+.quarto-secondary-nav:has(.fpl-topbar) .quarto-page-breadcrumbs { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.quarto-secondary-nav:has(.fpl-topbar) .breadcrumb { flex-wrap: nowrap; }
+/* the menu under ⋯ and the filter panel: one shell (board I) */
+.fpl-menu { position: fixed; z-index: 1001; width: 284px; max-width: calc(100vw - 16px); max-height: calc(100vh - 80px); overflow: auto;
+  box-sizing: border-box; padding: 5px 0; background: var(--fpl-bg); border: 1px solid var(--fpl-rule); border-radius: 7px;
+  box-shadow: 0 6px 20px rgba(20, 30, 50, .14), 0 1px 3px rgba(20, 30, 50, .08); font: 14px/1.4 var(--bs-font-sans-serif, sans-serif); color: var(--fpl-fg); }
+.fpl-menu[hidden] { display: none; }
+.fpl-menu hr { margin: 5px 0; border: 0; border-top: 1px solid var(--fpl-rule); opacity: 1; }
+.fpl-item { display: flex; align-items: center; gap: 9px; width: 100%; box-sizing: border-box; margin: 0; padding: 6px 13px; border: 0; background: none;
+  font: inherit; color: var(--fpl-fg); text-align: left; cursor: pointer; }
+button.fpl-item:hover, button.fpl-item:focus-visible { background: var(--fpl-mine-wash); outline: 0; }
+.fpl-item .fpl-ico { color: var(--fpl-mute); }
+.fpl-item small, .fpl-item kbd { margin-left: auto; }
+.fpl-item small { font-size: 12.5px; color: var(--fpl-mute); }
+.fpl-item:disabled { color: var(--fpl-mute); cursor: default; }
+.fpl-item.fpl-danger, .fpl-item.fpl-danger .fpl-ico { color: var(--fpl-con); }
+.fpl-item.fpl-danger:disabled, .fpl-item.fpl-danger:disabled .fpl-ico { color: var(--fpl-mute); }
+.fpl-item input { margin-left: auto; width: 104px; box-sizing: border-box; padding: 2px 7px; font: inherit; font-size: 13px;
+  border: 1px solid var(--fpl-rule); border-radius: 4px; background: var(--fpl-bg); color: var(--fpl-fg); }
+label.fpl-item { cursor: text; }
+.fpl-ctx { margin-left: auto; display: inline-flex; border: 1px solid var(--fpl-rule); border-radius: 4px; overflow: hidden; }
+.fpl-ctx button { min-width: 26px; height: 24px; padding: 0 6px; border: 0; border-left: 1px solid var(--fpl-rule); background: var(--fpl-bg);
+  font: 600 12.5px/1 inherit; font-family: inherit; color: var(--fpl-mute); cursor: pointer; }
+.fpl-ctx button:first-child { border-left: 0; }
+.fpl-ctx button:hover { color: var(--fpl-fg); }
+.fpl-ctx button[aria-pressed="true"] { background: var(--fpl-wash); color: var(--fpl-fg); }
+.fpl-cmd { margin: 0; padding: 0 13px 6px 38px; font-size: 12px; color: var(--fpl-mute); }
+.fpl-cmd code { word-break: break-all; font-size: 11.5px; user-select: all; }
+.fpl-confirm { cursor: default; }
+.fpl-confirm button { font: inherit; font-weight: 600; height: 26px; padding: 0 9px; border: 1px solid var(--fpl-rule); border-radius: 4px;
+  background: var(--fpl-bg); color: var(--fpl-fg); cursor: pointer; }
+.fpl-confirm button.fpl-danger { margin-left: auto; border-color: var(--fpl-con); background: var(--fpl-con); color: var(--fpl-bg); }
+.fpl-panel { width: 320px; padding: 10px 12px 12px; }
+.fpl-panel > .fpl-search { margin: 0 0 6px; }
+.fpl-panel > .fpl-count { margin: 0 0 4px; }
+.fpl-panel-head { display: flex; align-items: baseline; gap: 8px; margin: 6px 0 0; font-size: 12.5px; font-weight: 600; color: var(--fpl-mute); }
+.fpl-panel-head .fpl-link { margin-left: auto; }
+.fpl-panel-none { margin: 4px 0 0; font-size: 13px; color: var(--fpl-mute); }
+.fpl-keysheet { width: 340px; padding: 10px 14px 12px; }
+.fpl-keysheet .fpl-panel-head { margin: 0 0 6px; }
+.fpl-keysheet:focus { outline: 0; }   /* focused only so that Esc and Tab start there */
+.fpl-keysheet dl { display: grid; grid-template-columns: max-content 1fr; gap: 6px 12px; margin: 0; font-size: 13px; }
+.fpl-keysheet dt { display: flex; gap: 3px; align-items: center; margin: 0; }
+.fpl-keysheet dd { margin: 0; color: var(--fpl-mute); }
+/* the empty margin in Kantlijn: three lines on how (board A) */
+.fpl-hint { margin: 1rem 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 12px; font-size: 14px; line-height: 1.4;
+  color: var(--fpl-mute); }
+.fpl-column .fpl-hint { position: absolute; left: 0; margin: 0; }
+.fpl-hint li { display: flex; gap: 10px; align-items: flex-start; }
+.fpl-hint b { color: var(--fpl-fg); font-weight: 600; }
+.fpl-hint .fpl-ico { margin-top: 2px; color: var(--fpl-fg); }
+.fpl-filter { margin: 4px 0 0; }
 .fpl-filter .fpl-chip { cursor: pointer; }
 .fpl-filter .fpl-chip.is-on { background: var(--fpl-vers-wash); border-color: transparent; color: var(--fpl-vers); }
 .fpl-filter .fpl-chip.is-off { background: none; color: var(--fpl-mute); text-decoration: line-through; }
@@ -152,17 +233,10 @@ body.fpl-numbered .fpl-s:hover .fpl-c::before { opacity: 1; }
 .fpl-card, .fpl-line { animation: fpl-in .12s ease-out; }
 @keyframes fpl-in { from { opacity: 0; } }
 
-/* the head of the margin */
-.fpl-head { padding-bottom: .5rem; border-bottom: 1px solid var(--fpl-rule); }
-.fpl-column .fpl-head { position: absolute; left: 0; right: 0; top: 0; }
-.fpl-count { font-size: .78rem; color: var(--fpl-mute); }
 .fpl-bar { display: flex; flex-wrap: wrap; gap: .4rem .8rem; align-items: center; margin-top: .3rem; font-size: .8rem; }
 .fpl-bar button { font: inherit; font-weight: 600; padding: 0; border: 0; background: none; color: var(--bs-link-color, #2b6cb0); cursor: pointer; }
 .fpl-bar button.fpl-go { padding: .3rem .7rem; border-radius: 4px; background: var(--fpl-mine); color: #fff; }
 .fpl-bar button:focus-visible, .fpl-editor :focus-visible { outline: 2px solid var(--fpl-mine); outline-offset: 1px; }
-.fpl-ask { color: var(--fpl-fg); }
-.fpl-cmd { margin-top: .4rem; font-size: .74rem; color: var(--fpl-mute); }
-.fpl-cmd code { word-break: break-all; font-size: .72rem; user-select: all; }
 .fpl-space { flex: 1; }
 
 /* the editor, in a card or in the popover */
@@ -277,14 +351,7 @@ body.fpl-picking .fpl-c[id], body.fpl-picking .fpl-s[id] { cursor: crosshair; }
 /* the coref lens: each member carries its chain's number */
 .fpl-chain { font: 700 .58em var(--bs-font-sans-serif, sans-serif); color: var(--fpl-mine); margin-left: .1em; user-select: none; }
 
-/* querying across the layers */
-.fpl-query-row { display: flex; align-items: baseline; gap: .4rem; margin-top: .3rem; }
-.fpl-query { flex: 1; min-width: 0; font: .78rem ui-monospace, SFMono-Regular, monospace; padding: .15rem .4rem;
-  border: 1px solid var(--fpl-rule); border-radius: 4px; background: var(--fpl-bg); color: var(--fpl-fg); }
-.fpl-query.is-bad { border-color: var(--fpl-con); }
-.fpl-query-said { color: var(--fpl-mute); white-space: nowrap; }
 .fpl-card.fpl-faded { opacity: .25; }
 mark.fact.fpl-faded { text-decoration-color: transparent; }
 .fpl-c[data-tfa].fpl-faded, .fpl-s[data-tfa].fpl-faded { background: none; box-shadow: none; }
 
-.fpl-squeeze { align-items: baseline; }
