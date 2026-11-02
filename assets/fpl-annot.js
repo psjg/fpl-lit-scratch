@@ -2485,10 +2485,15 @@
       el("span", { className: "fpl-space" }),
       button("Annuleer", () => onDone(null)),
       el("button", { type: "submit", className: "fpl-go" }, "Bewaar ", el("kbd", {}, "⌘↩")));
+    // the head says what the fact is about by its text, never by an id
     const t0 = row.targets?.[0] ?? "", parent = all.find((r) => r.id === t0);
+    const said = (parent ? (typeof parent.text === "string"
+      ? plain(parent.text) : parent.note || (parent.labels ?? []).join(" "))
+      : document.getElementById(t0)?.textContent ?? "")
+      .replace(/\s+/g, " ").trim();
     const about = typeof row.text === "string" ? row.text
-      : parent ? `Reactie op ${t0}: ${(parent.note || parent.text || (parent.labels ?? []).join(" ")).replace(/\s+/g, " ").slice(0, 140)}`
-      : `${t0}: ${document.getElementById(t0)?.textContent.replace(/\s+/g, " ").trim().slice(0, 140) ?? ""}`;
+      : parent ? `Reactie op “${clip(said, 140)}”`
+      : said ? clip(said, 140) : named(t0) || "een plek op de pagina";
     const fast = typeof row.text !== "string" && !row.id && quick().length
       ? el("div", { className: "fpl-chips fpl-quick" }, el("small", {}, "snel"),
         ...quick().map((l) => { const b = chip(l, "is-on"); b.tabIndex = 0;
