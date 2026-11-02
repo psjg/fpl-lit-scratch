@@ -471,7 +471,9 @@
   const LAYERS = ["span", "fact", "thread", "argument", "tfa", "coref", "group", "relation"];
   const RELATIONS = new Set(["because", "supports", "attacks", "contradicts", "supersedes", "checkedBy", "cites", "relates", "resumes"]);
   const AROUND = 32;
-  const SKIP = "script, style, button, .fpl-annot-ui";
+  // a card is no text of the page: a narrow margin folds its cards in under their blocks, in main, and a redraw that read
+  // their quotes found every span twice (QA, block 4: a layer alone at 760 made six spans dubbel)
+  const SKIP = "script, style, button, .fpl-annot-ui, .fpl-card";
   const QUOTE = { "‘": "'", "’": "'", "“": '"', "”": '"' };
   const GAP = 12;
   const HEAD = 19;   // a card's top to the middle of its first row: its border, padding and half the row
