@@ -64,8 +64,14 @@
  *
  * The margin. Quarto's right column (#quarto-margin-sidebar) is empty
  * once fpl-nav.js has moved the page's sections to the left, and holds
- * the cards; where the column is hidden (a narrow window) each card
- * folds under the block its span is in, and the editor is a popover.
+ * the cards; the margin starts RAIL (12px) past the text column, under
+ * the bar's left edge, and ends RIGHT (24px) from the window's, at most
+ * a CARD and the gutter's 28px wide. From 1380px wide fpl-annot.css
+ * lets the right side of Quarto's grid take room from the left, so that
+ * at 1440 the column stands at x320 and the bar (344px) and a card
+ * (316px) fit, as on the boards. Where the column is hidden or a card
+ * there would be narrower than 132px, each card folds under the block
+ * its span is in, and the editor is a popover.
  * A card stands at the height of its span's last line, in the order of
  * those lines, and is only pushed down, by the card above it; the
  * editor is a card in that stack and pushes the rest down, never over
@@ -236,7 +242,9 @@
   const GAP = 12;
   const HEAD = 19;   // a card's top to the middle of its first row: its border, padding and half the row
   const LONG = 56;   // px: an address taller than this (a block, one rect) is long, as a span over three lines is
-  const CARD = 360;  // px: the widest a card in the margin gets   // px: a span taller than this (three lines) gets a bar in the gutter, not an underline
+  const CARD = 360;  // px: the widest a card in the margin gets
+  const RAIL = 12;   // px: from the text column's edge to the margin (the bar's left edge); a card stands 28px further in
+  const RIGHT = 24;  // px: from the margin's right edge to the window's
 
   const snap = window.FPL_SNAPSHOT;
   const root = snap ? "" : new URL("../", document.currentScript.src).href;
@@ -543,17 +551,18 @@
    * Where the bar goes, measured each layout. Where Quarto shows its top
    * bar (a narrow window) the bar docks in it, left of the site's search,
    * folded to a stand picker and three icons, and the search field and
-   * the counts move into the filter panel. Where the margin column has
-   * room, the bar is fixed above it at full width. Between the two it is
-   * the folded bar, fixed at the top right.
+   * the counts move into the filter panel. Where the margin has 320px
+   * (from about 1380px wide), the bar is fixed above it, as wide as the
+   * margin. Between the two it is the folded bar, fixed at the top right.
    */
   const nav = document.querySelector(".quarto-secondary-nav .container-fluid");
   function dock() {
-    const top = !!nav && nav.offsetHeight > 0, left = wide() ? column.getBoundingClientRect().left : Infinity;
-    const full = !top && innerWidth - left - 16 >= 320;
+    const top = !!nav && nav.offsetHeight > 0, room = wide() ? reserve() : 0;
+    const full = !top && room >= 320;
     bar.classList.toggle("is-full", full);
     bar.classList.toggle("is-docked", top);
-    bar.style.left = full ? `${left}px` : "";
+    bar.style.left = full ? `${rail()}px` : "";
+    bar.style.width = full ? `${room}px` : "";
     if (top) { if (bar.parentElement !== nav) nav.insertBefore(bar, nav.querySelector(".quarto-search-button")); }
     else if (bar.parentElement !== document.body) document.body.append(bar);
     if (bar.dataset.form !== String(full)) {   // the folded bar keeps the search in its panel
@@ -1445,7 +1454,12 @@
   lines.setAttribute("class", "fpl-annot-ui fpl-lines");
   const pop = el("div", { className: "fpl-annot-ui fpl-pop", hidden: true });
 
-  const wide = () => !!column && column.offsetWidth > 120;
+  /** The margin's left edge, in the window: RAIL past the text column (main), wherever Quarto's own margin column starts. */
+  const rail = () => body.getBoundingClientRect().right + RAIL;
+  /** The margin's width: RIGHT from the window's edge, at most a CARD and the gutter's 28px. */
+  const reserve = () => Math.min(document.documentElement.clientWidth - RIGHT - rail(), 28 + CARD);
+  /** Cards stand in the margin while Quarto shows its column and a card there is 132px or more; else they fold in. */
+  const wide = () => !!column && column.offsetWidth > 120 && reserve() >= 160;
   const top0 = () => margin.getBoundingClientRect().top + scrollY;
 
   /** Lay every card out: the head, the lost rows, then one card per span in page order. */
@@ -1466,13 +1480,14 @@
     if (wide()) {
       column.classList.add("fpl-column");
       if (margin.parentElement !== column) column.append(margin);
-      // the cards end where the bar ends (16px from the window's edge), past Quarto's narrow column, at most CARD wide
-      margin.style.width = `${Math.min(document.documentElement.clientWidth - 16 - column.getBoundingClientRect().left, 28 + CARD)}px`;
+      // the margin starts RAIL past the text, under the bar's left edge, and ends where the bar ends, past Quarto's narrow column
+      margin.style.width = `${reserve()}px`;
+      margin.style.marginLeft = `${rail() - column.getBoundingClientRect().left}px`;
       if (lines.parentElement !== document.body) document.body.append(lines);
     } else {
       column?.classList.remove("fpl-column");
       lines.remove();
-      margin.style.width = "";
+      margin.style.width = margin.style.marginLeft = "";
       if (margin.parentElement !== body) body.prepend(margin);
     }
     if (mode() === "lezen") return;
@@ -1483,7 +1498,7 @@
     if (!spans.length) {
       if (!full) return;
       const h = margin.appendChild(hint());
-      if (wide()) Object.assign(h.style, { top: `${y0}px`, width: `${Math.min(340, innerWidth - column.getBoundingClientRect().left - 16)}px` });
+      if (wide()) h.style.top = `${y0 + 10}px`;   // board A: 22px under the bar's rule, where a card would stand 12px under it
       return;
     }
     const lost = spans.filter((r) => state[r.id] !== "vers" || orphan(r));
@@ -1553,7 +1568,7 @@
    * one curve to the card's dot. Every line has the same x geometry and
    * the cards stand in the order of their lines, pushed only down, so
    * the lines never cross and never run through the text. A long span
-   * has its bar at the stub; the knob sits at the end of every span.
+   * has its bar at the stub; the knob sits at the end of every saved span.
    */
   function drawLines() {
     const h = Math.max(document.documentElement.scrollHeight, body.getBoundingClientRect().bottom + scrollY);
@@ -1572,7 +1587,7 @@
         for (const m of anchorsOf(id)) if (m.matches("mark.fact")) m.classList.add("fpl-long");
         svg("rect", { x: gx - 1.25, y: at.top, width: 2.5, height: at.bottom - at.top, rx: 1.25, class: `fpl-stretch ${cls}` }, id);
       }
-      svg("circle", { cx: at.end + 3, cy: at.foot, r: 3.5, class: `fpl-knob ${cls}` }, id);
+      if (id !== "draft") svg("circle", { cx: at.end + 3, cy: at.foot, r: 4, class: `fpl-knob ${cls}` }, id);   // a selection being written has nothing to drag yet (board B)
     }
   }
 

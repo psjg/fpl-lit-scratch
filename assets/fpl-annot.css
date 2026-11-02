@@ -10,7 +10,7 @@
 :root {
   --fpl-vers: #2f7d6b; --fpl-vers-wash: rgba(47, 125, 107, .12);
   --fpl-mine: #3b63c4; --fpl-mine-wash: rgba(59, 99, 196, .12);
-  --fpl-lost: #9a7b2f;
+  --fpl-lost: #7f6526;   /* 5.6:1 on white: it is small text in the count line and on cards */
   --fpl-con: #b4443c;
   --fpl-rule: var(--bs-border-color, #dee2e6);
   --fpl-edge: var(--bs-gray-500, #adb5bd);
@@ -36,6 +36,18 @@ mark.fact.fpl-long { text-decoration-color: transparent; }   /* three lines or m
 mark.fact:hover, mark.fact.is-hot { background: var(--fpl-vers-wash); }
 mark.fact-mine:hover, mark.fact-mine.is-hot { background: var(--fpl-mine-wash); }
 
+/* room for the margin (boards A-J at 1440): Quarto centres the 740px column, which leaves 350px right of it at
+   1440 and no room for the bar (344px) and a card (316px) behind a 40px gutter. Where 380px fits, the outer right
+   track takes at least 79px from the shared 5fr (Quarto's 301px of fixed tracks + 79 = 380) and the left track
+   gives it up: at 1440 the column starts at x320 instead of 350, the nav moves with it, and nothing narrows.
+   Below 1380 the folded bar stands at the top right and Quarto's grid is left alone. */
+@media (min-width: 1380px) {
+  html:has(meta[name="fpl-commit"]) body.floating .page-columns { grid-template-columns: [screen-start] 1.5em [screen-start-inset] 5fr
+    [page-start] minmax(25px, 50px) [page-start-inset] minmax(50px, 150px) [body-start-outset] minmax(25px, 50px) [body-start] 1.5em
+    [body-content-start] minmax(740px, calc(780px - 3em)) [body-content-end] 1.5em [body-end] minmax(25px, 50px) [body-end-outset]
+    minmax(50px, 150px) [page-end-inset] minmax(25px, 50px) [page-end] minmax(79px, 5fr) [screen-end-inset] 1.5em [screen-end]; }
+}
+
 /* the column: no longer sticky, as tall as its cards */
 #quarto-margin-sidebar.fpl-column { position: relative; top: auto; height: auto; max-height: none;
   overflow: visible; align-self: stretch; }
@@ -43,16 +55,16 @@ mark.fact-mine:hover, mark.fact-mine.is-hot { background: var(--fpl-mine-wash); 
 #quarto-margin-sidebar.fpl-column.zindex-bottom { z-index: 1 !important; }
 .fpl-margin { position: relative; font-size: .86rem; line-height: 1.4; color: var(--fpl-fg); }
 .fpl-lines { position: absolute; top: 0; left: 0; pointer-events: none; z-index: 1; }
-.fpl-line { fill: none; stroke: var(--fpl-vers); stroke-width: 1; stroke-linecap: round; opacity: .35; transition: opacity .12s; }
+.fpl-line { fill: none; stroke: var(--fpl-vers); stroke-width: 1.25; stroke-linecap: round; opacity: .5; transition: opacity .12s; }
 .fpl-line.mine { stroke: var(--fpl-mine); }
 .fpl-line.is-hot { opacity: 1; stroke-width: 1.75; }
-.fpl-stretch { fill: var(--fpl-vers); opacity: .5; transition: opacity .12s; }
+.fpl-stretch { fill: var(--fpl-vers); opacity: .7; transition: opacity .12s; }
 .fpl-stretch.mine { fill: var(--fpl-mine); }
 .fpl-stretch.is-hot { opacity: 1; }
-.fpl-knob { fill: var(--fpl-vers); opacity: .6; transition: opacity .12s, r .12s; }
+.fpl-knob { fill: var(--fpl-vers); transition: opacity .12s, r .12s; }
 .fpl-knob.mine { fill: var(--fpl-mine); }
 .fpl-knob.is-hot { opacity: 1; r: 4.5; }
-mark.fact[data-id="draft"] { text-decoration-color: var(--fpl-mine); background: var(--fpl-mine-wash); }
+mark.fact[data-id="draft"] { text-decoration-color: transparent; background: color-mix(in srgb, var(--fpl-mine) 22%, transparent); }   /* board B: a selection, washed, no line yet */
 
 /* paragraph and sentence numbers, outside the reading stand */
 .fpl-p { position: relative; }
@@ -86,7 +98,7 @@ body.fpl-numbered .fpl-s:hover .fpl-c::before { opacity: 1; }
 .fpl-card.is-hot { z-index: 3; background: color-mix(in srgb, var(--fpl-vers) 6%, var(--fpl-bg));
   border-color: color-mix(in srgb, var(--fpl-vers) 30%, var(--fpl-bg)); }
 .fpl-card.mine.is-hot { background: color-mix(in srgb, var(--fpl-mine) 6%, var(--fpl-bg)); border-color: color-mix(in srgb, var(--fpl-mine) 30%, var(--fpl-bg)); }
-.fpl-card.fpl-editing { cursor: auto; z-index: 4; background: var(--fpl-bg); border-color: color-mix(in srgb, var(--fpl-mine) 28%, var(--fpl-bg));
+.fpl-card.fpl-editing, .fpl-card.mine.fpl-editing.is-hot { cursor: auto; z-index: 4; background: var(--fpl-bg); border-color: color-mix(in srgb, var(--fpl-mine) 28%, var(--fpl-bg));
   box-shadow: 0 6px 20px rgba(20, 30, 50, .14), 0 1px 3px rgba(20, 30, 50, .08); }
 .fpl-inline { margin: -.5rem 0 1rem; padding: .45rem .7rem; background: var(--fpl-wash); }
 .fpl-head { display: flex; gap: 7px; min-width: 0; }
@@ -137,7 +149,7 @@ body.fpl-numbered .fpl-s:hover .fpl-c::before { opacity: 1; }
 /* the bar (fpl-annot.js dock): the stands, the search, Graph and ⋯, fixed above the margin.
    Nothing in it changes size or place on hover or state: hover and state change colour only. */
 .fpl-topbar { z-index: 1000; box-sizing: border-box; font: 14px/1.4 var(--bs-font-sans-serif, sans-serif); color: var(--fpl-fg); }
-.fpl-topbar.is-full { position: fixed; top: 0; right: 16px; height: 118px; padding-top: 14px; background: var(--fpl-bg);
+.fpl-topbar.is-full { position: fixed; top: 0; height: 118px; padding-top: 14px; background: var(--fpl-bg);
   border-bottom: 1px solid var(--fpl-rule); }
 .fpl-row { display: flex; align-items: center; gap: 6px; }
 .fpl-ico { display: inline-flex; flex: none; }
@@ -210,10 +222,10 @@ button.fpl-item:hover, button.fpl-item:focus-visible { background: var(--fpl-min
 label.fpl-item { cursor: text; }
 .fpl-ctx { margin-left: auto; display: inline-flex; border: 1px solid var(--fpl-rule); border-radius: 4px; overflow: hidden; }
 .fpl-ctx button { min-width: 26px; height: 24px; padding: 0 6px; border: 0; border-left: 1px solid var(--fpl-rule); background: var(--fpl-bg);
-  font: 600 12.5px/1 inherit; font-family: inherit; color: var(--fpl-mute); cursor: pointer; }
+  font: 600 12.5px/1 var(--bs-font-sans-serif, sans-serif); color: var(--fpl-mute); cursor: pointer; }
 .fpl-ctx button:first-child { border-left: 0; }
 .fpl-ctx button:hover { color: var(--fpl-fg); }
-.fpl-ctx button[aria-pressed="true"] { background: var(--fpl-wash); color: var(--fpl-fg); }
+.fpl-ctx button[aria-pressed="true"] { background: var(--bs-secondary-bg, #e9ecef); color: var(--fpl-fg); }
 .fpl-cmd { margin: 0; padding: 0 13px 6px 38px; font-size: 12px; color: var(--fpl-mute); }
 .fpl-cmd code { word-break: break-all; font-size: 11.5px; user-select: all; }
 .fpl-confirm { cursor: default; }
@@ -235,7 +247,7 @@ label.fpl-item { cursor: text; }
 /* the empty margin in Kantlijn: three lines on how (board A) */
 .fpl-hint { margin: 1rem 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 12px; font-size: 14px; line-height: 1.4;
   color: var(--fpl-mute); }
-.fpl-column .fpl-hint { position: absolute; left: 0; margin: 0; }
+.fpl-column .fpl-hint { position: absolute; left: 28px; right: 0; margin: 0; }   /* at the cards' edge */
 .fpl-hint li { display: flex; gap: 10px; align-items: flex-start; }
 .fpl-hint b { color: var(--fpl-fg); font-weight: 600; }
 .fpl-hint .fpl-ico { margin-top: 2px; color: var(--fpl-fg); }
@@ -255,8 +267,9 @@ label.fpl-item { cursor: text; }
 
 /* the editor, in a card or in the popover */
 .fpl-editor { display: grid; gap: .45rem; }
-.fpl-editor textarea { font: inherit; font-size: .88rem; width: 100%; box-sizing: border-box; resize: vertical;
-  border: 1px solid var(--fpl-rule); border-radius: 4px; padding: .4rem .5rem; background: var(--fpl-bg); color: var(--fpl-fg); }
+.fpl-editor textarea { font: inherit; font-size: .88rem; width: 100%; box-sizing: border-box; resize: none; field-sizing: content;
+  min-height: 3.4em; max-height: 12em; border: 1px solid var(--fpl-rule); border-radius: 5px; padding: 6px 8px; background: var(--fpl-bg); color: var(--fpl-fg); }
+.fpl-editor textarea:focus { outline: 0; border-color: var(--fpl-mine); }   /* board B: the field's own border is the focus, one line */
 .fpl-editor input { font: inherit; font-size: .7rem; font-weight: 600; padding: .28rem .5rem; border-radius: 999px; width: 7rem;
   border: 1px dashed var(--fpl-rule); background: none; color: var(--fpl-fg); }
 .fpl-editor input::placeholder { font-weight: 400; color: var(--fpl-mute); }

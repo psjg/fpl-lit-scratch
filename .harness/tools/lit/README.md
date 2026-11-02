@@ -166,7 +166,10 @@ of counts. The label filter (a struck chip hides its spans) and the layers are a
 filter button in the search field opens on a click, never on hover. Where Quarto shows its top
 bar (a narrow window) the bar folds into it as a stand picker and three icons. The stand and
 the filter are remembered in that browser for the whole site; a page opens in Lezen. In
-Kantlijn an empty margin says in three lines how to annotate, connect and fold.
+Kantlijn an empty margin says in three lines how to annotate, connect and fold. From about
+1380 px wide, `fpl-annot.css` lets the right side of Quarto's grid take room from the left, so
+the margin holds the full bar and a 316 px card behind a 40 px gutter (at 1440 the text column
+starts at x 320, as on the design boards); narrower, the bar is folded at the top right.
 
 Outside Lezen every block carries its address: below the page's own number (01.02.01 Lex is
 1.2.1) the headings count (`1.2.1.3`), and under a heading the blocks, paragraphs and code
