@@ -145,26 +145,37 @@
  * localStorage["fpl-annot:mode"] keeps the stand
  * and "fpl-annot:hide" the labels switched off, for the whole site.
  *
- * Bands (after LiquidText's collapse, Tashman & Edwards, CHI 2011). A
- * band folds the blocks from one block address to another, both ends
- * included, into one hairline per text line they showed, so the reader
- * still sees how much is folded and where, and the page stays one
- * scroll. Headings, lists and tables between the two blocks fold with
- * them. Its grips, at its top and bottom edge, fold blocks in or let
- * them out a whole block at a time as the pointer passes them; a click
- * opens it, Escape opens the newest. The bands are in the URL as
+ * Bands (after LiquidText's collapse, Tashman & Edwards, CHI 2011;
+ * boards G and H). A band folds the blocks from one block address to
+ * another, both ends included, into a seam of 28px: two hairlines
+ * across the column and at their left its range, "1.2.1.3 §9 - 1.2.1.4
+ * §7 · 25 blokken", so the reader sees where the text is folded and how
+ * much, and the page stays one scroll. Headings, lists and tables
+ * between the two blocks fold with them. A click on the seam (or Enter)
+ * opens it, Escape the newest; under the mouse it darkens and a tip
+ * under it says how to fold further. The bands are in the URL as
  * ?scrunch=a..b,c..d (block ids such as the-plan/b3) and in
  * localStorage["fpl-annot:scrunch:" + item]; at load the URL wins. A
- * card whose row points at another place on the page has "Toon beide",
- * which folds what lies between the two so both are in view (its menu,
- * or a click on the other end in its meta line). A span
- * inside a band draws its line, and places its card, at the band.
- * On a touch screen two fingers drawn together fold the blocks between
- * them, from the middle out, as many as the fingers closed by; drawn
- * apart over a band they open it. Vouw tot de spans, in the menu,
- * folds every block further than its context (0-3 blocks, the menu's
- * Context, kept in localStorage["fpl-annot:context"]) from a span the
- * filter shows; chosen again it opens them, and a new context refolds.
+ * span inside a band draws its line, and places its card, at the seam.
+ *
+ * Folding is a gesture, as in LiquidText. Shift+wheel over the text
+ * folds around the pointer, the block under it first and then outward,
+ * as far as the wheel turns, the seam staying under the pointer;
+ * turned back it opens the band under the pointer (or the nearest in
+ * the window). On a touch screen two fingers drawn together fold the
+ * blocks between them, from the middle out, as many as the fingers
+ * closed by; drawn apart over a band they open it. With a filter or a
+ * query on, the same Shift+wheel folds to the spans they let through:
+ * every block further than the context (0-3 blocks, the menu's
+ * Context, kept in localStorage["fpl-annot:context"]) from such a span,
+ * and back opens them; the count line then reads "5 van 9 spans ·
+ * ingevouwen tot de spans, context 1". Vouw tot de spans, in the menu,
+ * does the same without the gesture; chosen again it opens them, and a
+ * new context refolds. A card whose row points at another place on the
+ * page has "Toon beide", which folds what lies between the two so both
+ * are in view (its menu, or a click on the other end in its meta line).
+ * A query asked lights the search field, whose z gives way to an x
+ * that clears it.
  *
  * Close reading. Outside Lezen each block carries a bar in its left
  * gutter, shaded by how many rows hang from it (after Zyto 2012, where
@@ -533,6 +544,8 @@
     wipe: '<path fill="none" stroke="currentColor" stroke-width="1.5" d="M3 4.5h10M6.5 4.5V3h3v1.5M4.5 4.5l.7 9h5.6l.7-9"/>',
     select: '<path fill="none" stroke="currentColor" stroke-width="1.5" d="M6 2.5h4M6 13.5h4M8 2.5v11"/>',
     knob: '<circle cx="8" cy="8" r="3.5" style="fill: var(--fpl-mine)"/>',
+    clear: '<path fill="none" stroke="currentColor" stroke-width="1.8"'
+      + ' d="m4 4 8 8M12 4l-8 8"/>',
     shift: '<path fill="none" stroke="currentColor" stroke-width="1.5" d="m5 6 3-3 3 3M5 10l3 3 3-3"/>',
     reply: '<path fill="none" stroke="currentColor" stroke-width="1.5" d="M6.5 4 2.5 8l4 4M2.5 8H10a3.5 3.5 0 0 1 3.5 3.5V13"/>',
     link: '<path fill="none" stroke="currentColor" stroke-width="1.5" d="M6.5 9.5l3-3M7 4.5l1-1a2.8 2.8 0 0 1 4 4l-1 1M9 11.5l-1 1a2.8 2.8 0 0 1-4-4l1-1"/>',
@@ -567,7 +580,12 @@
   for (const b of [moreBtn, filterBtn]) { b.ariaHasPopup = "true"; b.ariaExpanded = "false"; }
   const field = el("input", { className: "fpl-query", placeholder: "Zoek of filter, bv. label:claim", ariaLabel: "Zoek of filter",
     autocomplete: "off", spellcheck: false });
-  const search = el("div", { className: "fpl-search" }, ico("search"), field, el("kbd", {}, "z"));
+  // a query asked (board H): the field is lit, its z gives way to an x
+  const clear = el("button", { type: "button", className: "fpl-x",
+    ariaLabel: "Wis het filter", title: "Wis het filter",
+    onclick: () => { field.value = ""; ask(); field.focus(); } }, ico("clear"));
+  const search = el("div", { className: "fpl-search" },
+    ico("search"), field, el("kbd", {}, "z"), clear);
   const count = el("p", { className: "fpl-count" });
   const row = el("div", { className: "fpl-row" }, tabs, el("span", { className: "fpl-picker" }, picker, ico("chevron")), graphBtn, moreBtn);
   const bar = el("div", { className: "fpl-annot-ui fpl-topbar", role: "region", ariaLabel: "Kantlijn" }, row, search, count);
@@ -585,6 +603,7 @@
     try { found = asked ? new Set(QUERY.query(all, asked)) : null; bad = ""; }
     catch (e) { found = null; bad = e.message; }
     field.classList.toggle("is-bad", !!bad);
+    search.classList.toggle("is-on", !!asked);
     field.title = bad;
     if (asked && mode() === "lezen") stand("spans"); else layout();
   };
@@ -632,12 +651,24 @@
     picker.value = cur;
     const spans = all.filter((r) => typeof r.text === "string" || addressed(r));
     const lost = spans.filter((r) => state[r.id] !== "vers").length + all.filter(orphan).length, mine = local().length;
-    count.replaceChildren(...el("p", {}, all.length ? `${spans.length} spans · ${all.length - spans.length} relaties` : "Nog geen spans op deze pagina",
+    const head = all.length
+      ? `${spans.length} spans · ${all.length - spans.length} relaties`
+      : "Nog geen spans op deze pagina";
+    const line = el("p", {}, head,
       lost ? el("span", { className: "fpl-lost" }, ` · ${lost} kwijt`) : null,
       mine ? el("span", { className: "fpl-mine" }, ` · ${mine} van jou`) : null,
       bad ? el("span", { className: "fpl-bad" }, ` · ${bad}`) : found ? ` · ${found.size} gevonden` : null,
-      hidden().size + offLayers().size ? el("span", { className: "fpl-mine" }, " · filter aan") : null).childNodes);
-    count.title = count.textContent;
+      hidden().size + offLayers().size
+        ? el("span", { className: "fpl-mine" }, " · filter aan") : null);
+    count.title = line.textContent;
+    // folded to the spans (board H): how many spans the fold keeps, of all
+    if (bands.length && folded(runsNear(context))) {
+      const kept = new Set([...body.querySelectorAll("mark.fact")]
+        .filter((m) => !m.matches(".fpl-faded")).map((m) => m.dataset.id));
+      const k = spans.filter((r) => kept.has(r.id)).length;
+      count.replaceChildren(`${k} van ${spans.length} spans · `,
+        el("b", {}, "ingevouwen tot de spans"), `, context ${context}`);
+    } else count.replaceChildren(...line.childNodes);
     filterBtn.classList.toggle("is-on", hidden().size + offLayers().size > 0);
     if (!panel.hidden) fillChips();
     dock();
@@ -764,6 +795,8 @@
     menu.classList.add("fpl-keysheet");
     const keys = [["a", "Volgende stand"], ["z", "Zoek of filter"], ["j  k", "Volgende, vorige zin"],
       ["Enter", "Een feit op de zin onder de cursor"], ["⌘↩", "Bewaar in de editor"],
+      ["Shift + scroll",
+        "Vouwt rond de muis in, terug opent; met een filter tot de spans"],
       ["Esc", "Sluit of breekt af; anders opent de laatste band"], ["Alt + selectie", "Een deel van een span; Enter bundelt"],
       ["Alt-klik", "De tfa-waarde van een bijzin"], ["Alt-Shift-klik", "Deze bijzin neemt een eerdere op"],
       ["l", "Verbind de kaart onder de muis of de focus; Tab kiest het andere eind, Enter het soort"],
@@ -2447,15 +2480,9 @@
     toast(next ? `${id}: ${next}` : `${id}: geen tfa`);
   }
 
-  /* ---- bands: blocks folded to a hairline per line, the page one scroll ---- */
+  /* ---- bands: blocks folded into a seam, the page one scroll ---- */
 
   const SCRUNCH = "fpl-annot:scrunch:" + item;
-  /**
-   * A hairline every PITCH pixels, unless the band would be taller than
-   * TALL of the window: then its lines draw closer, so that a band never
-   * keeps its two ends (Toon beide) out of one view.
-   */
-  const PITCH = 3, TALL = 0.3;
   /**
    * The bands, oldest first, each the ids of its first and last block:
    * the URL's ?scrunch= when it has one, else this browser's for the page
@@ -2467,7 +2494,6 @@
     if (s == null) try { s = localStorage.getItem(SCRUNCH); } catch { /* no storage */ }
     return (s || "").split(",").filter(Boolean).map((p) => { const [a, b = a] = p.split(".."); return [a, b]; });
   })();
-  let held = false;   // a grip is down: the click that ends its drag does not open the band
 
   /** The addressed blocks (essay.lua's fpl-p), in page order: a band's ends are two of them. */
   const units = () => [...body.querySelectorAll(".fpl-p")];
@@ -2482,21 +2508,6 @@
   const seen = (e) => bandOf(e) ?? e;
   /** A block's address as the page numbers it: 1.2.1.3 §4, or §5:C for code. */
   const addr = (u) => `${u.dataset.addr ?? ""} §${u.dataset.n}${u.dataset.kind === "C" ? ":C" : ""}`.trim();
-
-  /**
-   * The text lines a block shows now: for each paragraph or code block in
-   * it (else the block itself, a heading or a list) its height over its
-   * line height.
-   */
-  function linesOf(e) {
-    const parts = e.querySelectorAll("p, pre");
-    let n = 0;
-    for (const x of parts.length ? parts : [e]) {
-      const cs = getComputedStyle(x);
-      n += Math.round(x.offsetHeight / (parseFloat(cs.lineHeight) || 1.2 * parseFloat(cs.fontSize)));
-    }
-    return Math.max(1, n);
-  }
 
   /** The bands as [first, last] indices into us; unresolved ones dropped, one overlapped merged into the later. */
   function settle(us) {
@@ -2514,98 +2525,38 @@
   }
 
   /**
-   * Draw the bands. Every element from a band's first block to its last
-   * is measured at the page's current width, then hidden (fpl-scrunched,
-   * data-band = the band's index, data-lines = its count), and the band
-   * stands before the first of them: --lines hairlines --fpl-pitch apart,
-   * its range in data-range for the hover. All of it within one task, so
-   * the reader never sees the blocks unfold; a resize or a font load
-   * counts afresh.
+   * Draw the bands (board G, feedback 3). Every element from a band's
+   * first block to its last is hidden (fpl-scrunched, data-band = the
+   * band's index) and a seam stands before the first of them: a button
+   * of SEAM pixels, two hairlines across the column and at their left
+   * its range, "1.2.1.3 §9 – 1.2.1.4 §7 · 25 blokken". However much it
+   * folds, a seam is that high, so a fold never leaves a field of lines
+   * to read and both ends of a long jump fit in one view. A click (or
+   * Enter) opens it; under the mouse or the focus it darkens and a tip
+   * under it says how to fold further, and nothing moves.
    */
   function scrunch() {
     for (const b of body.querySelectorAll(".fpl-band")) b.remove();
     const us = units(), ls = leaves(), got = settle(us);
     bands = got.map(([i, j]) => [us[i].id, us[j].id]);
-    const folds = got.map(([i, j]) => ls.slice(ls.indexOf(us[i]), ls.indexOf(us[j]) + 1));
     for (const l of ls) l.classList.remove("fpl-scrunched");
-    for (const l of folds.flat()) l.dataset.lines = linesOf(l);   // unfolded for the measure, folded below before a paint
-    folds.forEach((fold, k) => {
-      const [i, j] = got[k], n = fold.reduce((s, l) => s + +l.dataset.lines, 0);
-      const range = `${addr(us[i])} – ${addr(us[j])} · ${j - i + 1} blok${j > i ? "ken" : ""}, ${n} regels`;
-      const open = () => setBands(bands.filter((_, x) => x !== k));
-      const band = el("div", { className: "fpl-annot-ui fpl-band", tabIndex: 0, role: "button", ariaLabel: `Band ${range}: open`,
-        onclick: () => { if (!held) open(); },
-        onkeydown: (ev) => { if (ev.target === band && (ev.key === "Enter" || ev.key === " ")) { ev.preventDefault(); open(); } } },
-      grip(k, "top"), grip(k, "bottom"));
-      Object.assign(band.dataset, { k, range });
-      band.style.setProperty("--lines", n);
-      band.style.setProperty("--fpl-pitch", `${Math.min(PITCH, (TALL * innerHeight) / n)}px`);
+    got.forEach(([i, j], k) => {
+      const fold = ls.slice(ls.indexOf(us[i]), ls.indexOf(us[j]) + 1);
+      const n = j - i + 1, to = j > i ? ` – ${addr(us[j])}` : "";
+      const range = `${addr(us[i])}${to} · ${n} blok${n > 1 ? "ken" : ""}`;
+      const seam = el("button", {
+        type: "button", className: "fpl-annot-ui fpl-band",
+        ariaExpanded: "false",
+        ariaLabel: `Ingevouwen: ${range}. Klik om te openen.`,
+        onclick: () => setBands(bands.filter((_, x) => x !== k)) },
+      el("span", { className: "fpl-seam" }, ico("shift"), range),
+      el("span", { className: "fpl-tip", ariaHidden: "true" },
+        "Klik opent · ", el("kbd", {}, "Shift"),
+        " + scroll boven de tekst vouwt verder, terug scrollen opent"));
+      Object.assign(seam.dataset, { k, range });
       for (const l of fold) { l.classList.add("fpl-scrunched"); l.dataset.band = k; }
-      fold[0].before(band);
+      fold[0].before(seam);
     });
-  }
-
-  /**
-   * A grip on a band's top or bottom edge. Dragged, the edge moves to the
-   * block boundary nearest the pointer's travel since the press: outward
-   * over the blocks as they stood then, inward over the band's hairlines.
-   * It stops before another band, so bands never merge under the pointer.
-   * The drag follows its band by its ends, not its place in the list, and
-   * lets go when the band is gone (Escape, a click elsewhere). Focused,
-   * the arrow keys move the edge one block.
-   */
-  function grip(k, edge) {
-    const g = el("span", { className: `fpl-grip fpl-grip-${edge}`, tabIndex: 0, role: "button",
-      ariaLabel: `${edge === "top" ? "Boven" : "Onder"}rand van de band: pijltjes schuiven een blok` });
-    g.onkeydown = (ev) => {
-      const d = { ArrowUp: -1, ArrowDown: 1 }[ev.key];
-      if (!d) return;
-      ev.preventDefault();
-      ev.stopPropagation();
-      const us = units(), [i, j] = bands[k].map((id) => us.indexOf(document.getElementById(id)));
-      const [a, b] = edge === "top" ? [i + d, j] : [i, j + d], grows = (edge === "top") === (d < 0);
-      const t = edge === "top" ? a : b;
-      if (a > b || !us[t] || (grows && us[t].classList.contains("fpl-scrunched"))) return;
-      setBands(bands.map((x, y) => (y === k ? [us[a].id, us[b].id] : x)));
-      body.querySelector(`.fpl-band[data-k="${k}"] .fpl-grip-${edge}`)?.focus();
-    };
-    g.onpointerdown = (ev) => {
-      ev.preventDefault();
-      ev.stopPropagation();
-      const band = g.parentElement, r = band.getBoundingClientRect(), y0 = ev.clientY;
-      const us = units(), ls = leaves(), [i, j] = bands[k].map((id) => us.indexOf(document.getElementById(id)));
-      const pitch = parseFloat(band.style.getPropertyValue("--fpl-pitch"));
-      const base = ls.indexOf(us[i]), y = [0];   // y[x]: the hairlines above the band's x-th element
-      for (let x = base; x <= ls.indexOf(us[j]); x++) y.push(y.at(-1) + +ls[x].dataset.lines * pitch);
-      const stops = [];   // [travel from the press, first block, last block]
-      for (let t = i; t <= j; t++)
-        stops.push(edge === "top" ? [y[ls.indexOf(us[t]) - base], t, j] : [y[ls.indexOf(us[t]) - base + 1] - y.at(-1), i, t]);
-      const free = (t) => us[t] && !us[t].classList.contains("fpl-scrunched");
-      if (edge === "top") for (let t = i - 1; free(t); t--) stops.push([us[t].getBoundingClientRect().top - r.top, t, j]);
-      else for (let t = j + 1; free(t); t++) stops.push([us[t].getBoundingClientRect().bottom - r.bottom, i, t]);
-      held = true;
-      let ends = bands[k];
-      const move = (e) => {
-        const at = bands.findIndex(([p, q]) => p === ends[0] && q === ends[1]);
-        if (at < 0 || pinch) { up(); return; }   // gone, or a second finger made it a pinch
-        const dy = e.clientY - y0;
-        const [, a, b] = stops.reduce((best, s) => (Math.abs(s[0] - dy) < Math.abs(best[0] - dy) ? s : best));
-        if (us[a].id === ends[0] && us[b].id === ends[1]) return;
-        bands[at] = ends = [us[a].id, us[b].id];
-        layout();
-      };
-      const up = () => {
-        removeEventListener("pointermove", move);
-        removeEventListener("pointerup", up);
-        removeEventListener("pointercancel", up);
-        persist();
-        setTimeout(() => { held = false; });
-      };
-      addEventListener("pointermove", move);
-      addEventListener("pointerup", up);
-      addEventListener("pointercancel", up);
-    };
-    return g;
   }
 
   /** Write the bands to the URL (?scrunch=a..b,c..d, kept readable) and to this browser. */
@@ -2645,16 +2596,19 @@
   /**
    * Vouw tot de spans, in the menu (LiquidText's merged highlights): fold
    * every run of blocks further than context blocks from a span the filter
-   * lets through, so the spans stand together with their surroundings.
-   * Chosen again while the bands are just that, it opens them all; a new
-   * context refolds them at once.
+   * lets through and the query finds, so those spans stand together with
+   * their surroundings. Chosen again while the bands are just that, it
+   * opens them all; a new context refolds them at once.
    */
   const CONTEXT = "fpl-annot:context";
   let context = (() => { try { const n = localStorage.getItem(CONTEXT); return n != null && /^[0-3]$/.test(n) ? +n : 1; } catch { return 1; } })();
-  /** The runs of blocks further than n blocks from a drawn span, as bands; null when no span is drawn. */
+  /**
+   * The runs of blocks further than n blocks from a drawn span the query
+   * did not fade, as bands; null when no such span is drawn.
+   */
   function runsNear(n) {
     const us = units(), near = new Set();
-    for (const m of body.querySelectorAll("mark.fact")) {
+    for (const m of body.querySelectorAll("mark.fact:not(.fpl-faded)")) {
       const i = us.indexOf(m.closest(".fpl-p"));
       if (i >= 0) for (let t = i - n; t <= i + n; t++) near.add(t);
     }
@@ -2664,10 +2618,15 @@
       if (!near.has(i)) { const a = i; while (i + 1 < us.length && !near.has(i + 1)) i++; runs.push([us[a].id, us[i].id]); }
     return runs;
   }
-  const folded = (runs) => !!runs && runs.length === bands.length && runs.every(([a, b], x) => a === bands[x][0] && b === bands[x][1]);
+  /** Whether a list of bands (the bands now, by default) is just these runs. */
+  const folded = (runs, list = bands) => !!runs && runs.length === list.length
+    && runs.every(([a, b], x) => a === list[x][0] && b === list[x][1]);
+  const NOSPAN = () => (mode() === "lezen"
+    ? "Lezen onderstreept niets: kies Spans of Kantlijn"
+    : "Geen span in beeld om tot te vouwen");
   function squeeze() {
     const runs = runsNear(context);
-    if (!runs) { toast(mode() === "lezen" ? "Lezen onderstreept niets: kies Spans of Kantlijn" : "Geen span in beeld om tot te vouwen"); return; }
+    if (!runs) { toast(NOSPAN()); return; }
     const same = folded(runs);
     setBands(same ? [] : runs);
     if (same) toast("Alles open");
@@ -2678,6 +2637,47 @@
     try { localStorage.setItem(CONTEXT, n); } catch { /* no storage */ }
     if (was) setBands(runsNear(n));
   }
+
+  /**
+   * The fold of a gesture, from the moment it began (g) and how far it has
+   * gone (s, pixels; less than 0 back). On: g.base with the blocks around
+   * g.mid folded, the block itself first and then one more a side by
+   * turns, as many as s covers of their heights g.h (a block already
+   * folded costs nothing, so a fold grows through a band), none at or
+   * past the bounds g.i and g.j. Back past OPEN: g.base without the bands
+   * g.open. A pinch and a Shift+wheel both fold so.
+   */
+  const OPEN = 40;
+  function fold(g, s) {
+    if (s < -OPEN && g.open.length)
+      return g.base.filter((b) => !g.open.includes(b));
+    if (s <= 0 || g.mid < 0) return g.base;
+    const { us, h, i, j } = g;
+    let a = g.mid, b = a - 1, sum = 0;   // [a, b], empty, grows by turns
+    const fits = (t) => t > i && t < j && sum + h[t] <= s;
+    for (let left = false; ; left = !left) {
+      const t = left ? a - 1 : b + 1;
+      if (fits(t)) { sum += h[t]; left ? a-- : b++; }
+      else if (!fits(left ? b + 1 : a - 1)) break;
+    }
+    return a <= b ? [...g.base, [us[a].id, us[b].id]] : g.base;
+  }
+  /**
+   * What folding each block takes away as the page shows now: down to the
+   * next block shown, headings and tables between included; 0 when folded.
+   */
+  function heights(us) {
+    const r = us.map((u) => (u.classList.contains("fpl-scrunched")
+      ? null : u.getBoundingClientRect()));
+    return r.map((x, t) => {
+      const n = r.findIndex((y, u) => u > t && y);
+      return !x ? 0 : n < 0 ? x.height : Math.max(0, r[n].top - x.top);
+    });
+  }
+  /** The first block shown whose bottom is at or below window y, or -1. */
+  const blockAt = (us, y) => us.findIndex((u) =>
+    !u.classList.contains("fpl-scrunched")
+    && u.getBoundingClientRect().bottom >= y);
 
   /**
    * Pinch (the paper's gesture): two fingers on the text, drawn together,
@@ -2692,18 +2692,7 @@
   function pinchMove(ev) {
     if (!pinch || ev.touches.length !== 2) return;
     ev.preventDefault();
-    const [y0, y1] = ys(ev.touches), { d0, base, us, i, j, h, open } = pinch, s = d0 - (y1 - y0);
-    let next = base;
-    if (s < -40 && open.length) next = base.filter((b) => !open.includes(b));
-    else if (s > 0 && i >= 0 && j - i > 1) {   // i < 0: the fingers are below the last block
-      let a = Math.floor((i + j) / 2), b = a - 1, sum = 0;   // [a, b], empty, grows a block a side by turns
-      const fits = (t) => t > i && t < j && sum + h[t] <= s;
-      for (let left = false; ; left = !left) {
-        const t = left ? a - 1 : b + 1;
-        if (fits(t)) { sum += h[t]; left ? a-- : b++; } else if (!fits(left ? b + 1 : a - 1)) break;
-      }
-      if (a <= b) next = [...base, [us[a].id, us[b].id]];
-    }
+    const [y0, y1] = ys(ev.touches), next = fold(pinch, pinch.d0 - (y1 - y0));
     const key = JSON.stringify(next);
     if (key !== pinch.key) { pinch.key = key; bands = next; layout(); }
   }
@@ -2719,18 +2708,89 @@
     if (pinch) pinchEnd({ touches: [] });
     if (ev.touches.length !== 2 || [...ev.touches].some((t) => t.target.closest?.(".fpl-card, .fpl-topbar, .fpl-menu"))) return;
     const [y0, y1] = ys(ev.touches), us = units();
-    const at = (y) => us.findIndex((u) => !u.classList.contains("fpl-scrunched") && u.getBoundingClientRect().bottom >= y);
-    const i = at(y0), j = at(y1) < 0 ? us.length : at(y1);
+    const i = blockAt(us, y0), j1 = blockAt(us, y1);
+    const j = j1 < 0 ? us.length : j1;
     const between = [...body.querySelectorAll(".fpl-band")].filter((b) => { const r = b.getBoundingClientRect(); return r.bottom >= y0 && r.top <= y1; });
-    const r = us.map((u) => (u.classList.contains("fpl-scrunched") ? null : u.getBoundingClientRect()));
-    const h = r.map((x, t) => {   // what folding block t takes away: down to the next block shown, headings and tables between included
-      const n = r.findIndex((y, u) => u > t && y);
-      return !x ? 0 : n < 0 ? x.height : Math.max(0, r[n].top - x.top);
-    });
-    pinch = { d0: y1 - y0, base: bands, us, i, j, h,
+    // i < 0: the fingers are below the last block
+    const mid = i >= 0 && j - i > 1 ? Math.floor((i + j) / 2) : -1;
+    pinch = { d0: y1 - y0, base: bands, us, i, j, mid, h: heights(us),
       open: between.map((b) => bands[+b.dataset.k]), key: "", at: new Set([...ev.touches].map((t) => t.target)) };
     for (const x of pinch.at) for (const [t, f] of PINCH) x.addEventListener(t, f, { passive: false });
   }, { passive: true });
+
+  /**
+   * Shift+wheel over the text, LiquidText's gesture at a desk (board G,
+   * feedback 3): turned on, the wheel folds the blocks around the pointer,
+   * the block under it first (fold), as far as it has turned; turned back
+   * past OPEN, it opens the band under the pointer, else the nearest one
+   * in the window. With a filter or a query on, the same turn folds to
+   * the spans they let through, at the menu's Context (Vouw tot de spans),
+   * and back opens what that folded. The fold shows while the wheel turns,
+   * what was under the pointer stays under it, and IDLE ms without a turn
+   * keep it (the URL and this browser). macOS sends a Shift+wheel as a
+   * sideways turn, so the larger delta counts; Shift+wheel over a wide
+   * code block folds rather than scrolls it, a sideways swipe still does.
+   * A turn that can do nothing says why, once.
+   */
+  const IDLE = 250;
+  let wheel = null;
+  const filtering = () => !!found || hidden().size + offLayers().size > 0;
+  /** A wheel gesture begins at window height y: what it folds from. */
+  function wheelStart(y) {
+    const us = units(), seams = [...body.querySelectorAll(".fpl-band")];
+    const box = (b) => b.getBoundingClientRect();
+    const dist = (b) => Math.max(0, box(b).top - y, y - box(b).bottom);
+    const near = seams
+      .filter((b) => box(b).bottom > 0 && box(b).top < innerHeight)
+      .sort((a, b) => dist(a) - dist(b))[0];
+    const over = near && dist(near) === 0 ? bands[+near.dataset.k] : null;
+    const mid = over
+      ? us.indexOf(document.getElementById(over[0])) : blockAt(us, y);
+    return { base: bands, us, i: -1, j: us.length, mid, h: heights(us),
+      s: 0, key: JSON.stringify(bands), said: false,
+      open: near ? [bands[+near.dataset.k]] : [],
+      runs: filtering() ? runsNear(context) : undefined };
+  }
+  /** The bands a wheel gesture asks for now, or a reason it can do nothing. */
+  function wheelFold(g) {
+    const to = g.runs !== undefined;   // a filter or a query: to its spans
+    if (to && g.s > OPEN) return g.runs ?? NOSPAN();
+    if (to && g.s < -OPEN && folded(g.runs, g.base)) return [];
+    if (to && g.s > 0) return g.base;
+    if (g.s > 0 && g.mid < 0)
+      return "Onder het laatste blok valt niets te vouwen";
+    if (g.s < -OPEN && !g.open.length) return "Geen band in beeld om te openen";
+    return fold(g, g.s);
+  }
+  function wheelEnd() {
+    if (wheel && wheel.key !== JSON.stringify(wheel.base)) persist();
+    wheel = null;
+  }
+  body.addEventListener("wheel", (ev) => {
+    if (!ev.shiftKey || ev.ctrlKey || ev.metaKey) return;
+    if (ev.target.closest?.(".fpl-card, .fpl-inline")) return;
+    ev.preventDefault();
+    const d = Math.abs(ev.deltaX) > Math.abs(ev.deltaY) ? ev.deltaX : ev.deltaY;
+    wheel ??= wheelStart(ev.clientY);
+    clearTimeout(wheel.t);
+    wheel.t = setTimeout(wheelEnd, IDLE);
+    wheel.s += d * [1, 16, innerHeight][ev.deltaMode];   // pixels, lines, pages
+    const next = wheelFold(wheel);
+    if (typeof next === "string") {   // nothing to do: why, once a gesture
+      if (!wheel.said) toast(next);
+      wheel.said = true;
+      return;
+    }
+    const key = JSON.stringify(next);
+    if (key === wheel.key) return;
+    // what was under the pointer stays under it: the block it folds from
+    const at = wheel.us[wheel.mid];
+    const y = at && seen(at).getBoundingClientRect().top;
+    wheel.key = key;
+    bands = next;
+    layout();
+    if (at) scrollBy(0, seen(at).getBoundingClientRect().top - y);
+  }, { passive: false });
 
   /* ---- density: how many rows each block carries, in its gutter ---- */
 

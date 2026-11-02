@@ -260,6 +260,15 @@ button.fpl-end:hover, button.fpl-end:focus-visible { color: var(--fpl-fg); text-
   border: 1px solid var(--fpl-rule); border-radius: 5px; color: var(--fpl-mute); background: var(--fpl-bg); }
 .fpl-search:focus-within { border-color: var(--fpl-mine); }
 .fpl-search:has(.is-bad) { border-color: var(--fpl-con); }
+.fpl-search.is-on { border-color: var(--fpl-mine); }
+.fpl-search.is-on .fpl-query { font: 13px/1 SFMono-Regular, Menlo, monospace; }
+.fpl-search.is-on > kbd, .fpl-search:not(.is-on) > .fpl-x { display: none; }
+.fpl-x { flex: none; display: inline-flex; align-items: center;
+  justify-content: center; width: 22px; height: 22px; margin-right: 3px;
+  padding: 0; border: 0; border-radius: 4px; background: none;
+  color: var(--fpl-mute); cursor: pointer; }
+.fpl-x:hover { background: var(--fpl-wash); color: var(--fpl-fg); }
+.fpl-x .fpl-ico svg { width: 12px; height: 12px; }
 .fpl-query { flex: 1; min-width: 0; border: 0; outline: 0; padding: 0; font: inherit; color: var(--fpl-fg); background: transparent; }
 .fpl-query::placeholder { color: var(--fpl-mute); }
 .fpl-search .fpl-query:focus-visible { outline: 0; }
@@ -270,6 +279,7 @@ button.fpl-end:hover, button.fpl-end:focus-visible { color: var(--fpl-fg); text-
 .fpl-search .fpl-tool.is-on { color: var(--fpl-mine); }
 .fpl-count { margin: 7px 0 0; font-size: 12.5px; color: var(--fpl-mute); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .fpl-count .fpl-bad { color: var(--fpl-con); }
+.fpl-count b { font-weight: 600; color: var(--fpl-fg); }
 .fpl-picker { position: relative; display: none; }
 .fpl-picker .fpl-ico { position: absolute; right: 10px; top: 50%; margin-top: -8px; pointer-events: none; }
 .fpl-stand { appearance: none; font: inherit; font-size: 15px; font-weight: 600; height: 40px; padding: 0 30px 0 10px; border: 1px solid var(--fpl-rule);
@@ -383,25 +393,31 @@ label.fpl-item { cursor: text; }
 .fpl-files .fpl-addr { font-size: .78rem; font-weight: 600; color: var(--fpl-vers); text-decoration: none; margin-right: .2rem; }
 .fpl-files .fpl-addr:hover { text-decoration: underline; }
 
-/* a band: blocks folded away, one hairline per text line they showed (fpl-annot.js scrunch);
-   the padding is room for the pointer and the grips, the hairlines stay in the content box */
+/* a band (fpl-annot.js scrunch, board G): the folded blocks are one seam,
+   two hairlines across the column and the range at their left on the
+   page's ground; under the mouse or the focus the lines and the label
+   darken and the tip shows under it, nothing moves */
 .fpl-scrunched { display: none !important; }
-.fpl-band { position: relative; box-sizing: content-box; height: calc(var(--lines) * var(--fpl-pitch));   /* both set by the script */
-  padding: .3rem 0; margin: .6rem 0; cursor: pointer; user-select: none; --fpl-hair: var(--fpl-rule); --fpl-thin: min(1px, calc(var(--fpl-pitch) / 2));
-  background: repeating-linear-gradient(to bottom, var(--fpl-hair) 0 var(--fpl-thin), transparent var(--fpl-thin) var(--fpl-pitch)) content-box; }
-.fpl-band:hover { --fpl-hair: var(--fpl-mute); }
-.fpl-band::after { content: attr(data-range); position: absolute; right: 0; bottom: 100%; padding: 0 .3rem; white-space: nowrap;
-  font-size: .7rem; color: var(--fpl-mute); background: var(--fpl-bg); opacity: 0; transition: opacity .12s; pointer-events: none; }
-.fpl-band:hover::after { opacity: 1; }
-.fpl-grip { position: absolute; left: 50%; width: 2.4rem; height: .5rem; margin-left: -1.2rem; border-radius: 999px; box-sizing: border-box;
-  border: 1px solid var(--fpl-mute); background: var(--fpl-bg); cursor: ns-resize; touch-action: none; opacity: 0; transition: opacity .12s; }
-.fpl-grip-top { top: -.25rem; }
-.fpl-grip-bottom { bottom: -.25rem; }
-.fpl-band:hover .fpl-grip, .fpl-band:focus-within .fpl-grip, .fpl-grip:active { opacity: 1; }
-.fpl-band:focus-within { --fpl-hair: var(--fpl-mute); }
-.fpl-band:focus-within::after { opacity: 1; }
-.fpl-band:focus-visible, .fpl-grip:focus-visible { outline: 2px solid var(--fpl-mine); outline-offset: 1px; }
-@media (hover: none) { .fpl-grip { opacity: 1; } }
+.fpl-band { position: relative; display: block; width: 100%; height: 28px;
+  margin: .6rem 0; padding: 0; border: 0; background: none; font: inherit;
+  text-align: left; color: var(--fpl-mute); cursor: pointer;
+  user-select: none;
+  --fpl-hair: var(--fpl-edge); --fpl-hair2: var(--fpl-rule); }
+.fpl-band::before, .fpl-band::after { content: ""; position: absolute;
+  left: 0; right: 0; border-top: 1px solid var(--fpl-hair); }
+.fpl-band::before { top: 12px; }
+.fpl-band::after { top: 16px; border-color: var(--fpl-hair2); }
+.fpl-seam { position: relative; z-index: 1; display: inline-flex;
+  align-items: center; gap: 6px; height: 28px; padding-right: 10px;
+  background: var(--fpl-bg); font-size: 13px; }
+.fpl-seam .fpl-ico svg { width: 14px; height: 14px; }
+.fpl-band:is(:hover, :focus-visible) { color: var(--fpl-fg);
+  --fpl-hair: var(--fpl-mute); --fpl-hair2: var(--fpl-edge); }
+.fpl-band:focus-visible { outline: 2px solid var(--fpl-mine);
+  outline-offset: 2px; }
+.fpl-band > .fpl-tip { left: 0; top: calc(100% + 4px); opacity: 0;
+  transition: opacity .12s; }
+.fpl-band:is(:hover, :focus-visible) > .fpl-tip { opacity: 1; }
 
 /* density: a bar in a block's gutter (or a band's), three greys by how many rows hang from it (fpl-annot.js heat);
    the padding widens the bar's hover target, the grey stays in the content box */

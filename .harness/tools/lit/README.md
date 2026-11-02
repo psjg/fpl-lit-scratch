@@ -190,6 +190,14 @@ Kantlijn an empty margin says in three lines how to annotate, connect and fold. 
 the margin holds the full bar and a 316 px card behind a 40 px gutter (at 1440 the text column
 starts at x 320, as on the design boards); narrower, the bar is folded at the top right.
 
+Folding works as in LiquidText. Shift+scroll over the text folds the blocks around the pointer
+into a seam, the block under the pointer first and more as the wheel turns; scrolling back opens
+the seam under the pointer. On a touch screen two fingers pinch the same way. A seam is two thin
+lines with its range at the left (`1.2.1.3 §9 – 1.2.1.4 §7 · 25 blokken`), and a click opens
+it. With a filter or a query on, the same gesture folds to the spans that pass, keeping the
+menu's Context (0-3 blocks) around each, and the count line says `ingevouwen tot de spans`;
+`Vouw tot de spans` in the menu does the same. The folds are kept in the URL (`?scrunch=`).
+
 Outside Lezen every block carries its address: below the page's own number (01.02.01 Lex is
 1.2.1) the headings count (`1.2.1.3`), and under a heading the blocks, paragraphs and code
 alike, in page order: `§4` is the fourth block, `§5:C` the fifth when it is code, `§4.2` the
