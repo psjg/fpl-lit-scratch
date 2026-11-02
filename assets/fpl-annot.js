@@ -669,7 +669,8 @@
     asked = field.value.replace(/^ +| +$/g, "");   // only U+0020 apart, as the parser
     try { found = asked ? new Set(QUERY.query(all, asked)) : null; bad = ""; }
     catch (e) { found = null; bad = e.message; }
-    log("zoek", asked || null, !bad, bad || null);
+    if (bad) refuse("zoek", asked, `Deze zoekvraag lees ik niet: ${bad}`);
+    else log("zoek", asked || null);
     field.classList.toggle("is-bad", !!bad);
     search.classList.toggle("is-on", !!asked);
     field.title = bad;
@@ -3371,14 +3372,14 @@
       else if (card && wide()) card.scrollIntoView({ block: "nearest", behavior: "smooth" });
       return;
     }
-    if (mode() !== "kantlijn") {   // a reader copies: logged, no toast
+    const range = sel.getRangeAt(0);
+    if (!body.contains(range.commonAncestorContainer)) return;
+    if (mode() !== "kantlijn") {   // the copy is untouched; the toast says why no span
       const here = mode() === "lezen" ? "Lezen" : "Spans";
-      log("selectie", null, false,
+      refuse("selectie", null,
         `In ${here} maakt een selectie geen span: kies Kantlijn (a)`);
       return;
     }
-    const range = sel.getRangeAt(0);
-    if (!body.contains(range.commonAncestorContainer)) return;
     if ([...body.querySelectorAll(".fpl-scrunched")].some((l) => range.intersectsNode(l))) {
       // shown() keeps folded text (the quote finder needs it whole), so the quote would hold what was never seen
       sel.removeAllRanges();
@@ -3424,9 +3425,17 @@
       return;
     }
     const range = sel.getRangeAt(0);
-    if (!body.contains(range.commonAncestorContainer)
-      || [...body.querySelectorAll(".fpl-scrunched")].some((l) => range.intersectsNode(l))) { sel.removeAllRanges(); return; }
-    const ix = shown(), [s, e] = bounds(ix, range);
+    if (!body.contains(range.commonAncestorContainer)) {
+      sel.removeAllRanges();
+      return;
+    }
+    if ([...body.querySelectorAll(".fpl-scrunched")]
+      .some((l) => range.intersectsNode(l))) {
+      sel.removeAllRanges();
+      refuse("deel", null, "Het deel loopt door een band: open die eerst");
+      return;
+    }
+    const ix = shown(), [s, e] = whole(ix, bounds(ix, range));
     sel.removeAllRanges();
     if (s >= e) return;
     const pr = adding && local().find((r) => r.id === adding);
