@@ -263,7 +263,7 @@
  *
  * The graph (boards V2b-V2d, V4d): every row of the page and everything
  * a row names, in the layers shown, as a plane beside the page. Graph in
- * the Weergave menu opens it, Kantlijn there closes it; the text column slides to the
+ * the Weergave menu opens it, Kaarten there closes it; the text column slides to the
  * window's left edge, the left nav and the margin's cards give way, and
  * the bar heads the plane. A row is a card (board V2b): its kind on a
  * line (a label, besluit and its topic, weigering, test, chunk) over two
@@ -273,7 +273,8 @@
  * edge between its ends, so an undercut has something to aim at (AIF); a
  * fact hangs from what it is about; a tfa or resumes row has no node.
  * The edges are typed (verbindt, steunt, valt aan, zelfde als, citeert),
- * and the chips at the plane's foot switch a kind on and off. A card
+ * and the chips at the plane's foot switch a kind on and off; a (?)
+ * at their end says what a click, a drag and Shift do. A card
  * drags, in this view only. A click selects it, lights its neighbours
  * and scrolls the page to its span; Alt ← scrolls back. Graph on a card
  * opens the plane with that card selected. Beside the rows stand the
@@ -322,7 +323,8 @@
  *
  * The tree (boards V3c, V4c): Boom in the menu, or b, turns the plane to
  * the groups as an argument, a block per group (the tray aside) in the
- * order of its order/<n>. A group hangs under another by a supports or
+ * order of its order/<n>; with no group yet, one empty block and its
+ * one action, Maak groep, which turns to the graph. A group hangs under another by a supports or
  * attacks row from it to the other, which gives the step its kind and
  * weight; a bewijs or tegen without one hangs under the last claim before
  * it, a thin grey line without a sign. An attacks row aimed at a step is
@@ -340,7 +342,7 @@
  * and on a block puts it in that group, a sentence dragged from the tray
  * onto a block joins the group and leaves the tray, and the tray's
  * sentences are dashed in the text while the tree is open. Graph in the
- * Weergave menu turns the plane back in place, Kantlijn closes it.
+ * Weergave menu turns the plane back in place, Kaarten closes it.
  *
  * The coref lens: coref rows that share a member are one chain (a
  * union-find over the sets), numbered in page order, and each member on
@@ -823,6 +825,8 @@
     same: '<g fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6" cy="8" r="4"/><circle cx="10" cy="8" r="4"/></g>',
     cites: '<path fill="none" stroke="currentColor" stroke-width="1.5" d="M3 12V9a3.5 3.5 0 0 1 3.5-3.5M9 12V9a3.5 3.5 0 0 1 3.5-3.5"/>',
     margin: '<g fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 3.5h6M2 6.5h6M2 9.5h6M2 12.5h4"/><rect x="10" y="3" width="4" height="5" rx="1"/></g>',
+    group: '<g fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1.5" y="2.5" width="13" height="11" rx="2" stroke-dasharray="2.5 1.5"/>'
+      + '<path d="M4.5 6h7M4.5 10h4.5"/></g>',
     check: '<path fill="none" stroke="currentColor" stroke-width="1.8" d="m3 8.5 3 3 7-7.5"/>',
   };
   const ico = (name) => {
@@ -854,11 +858,13 @@
    * names the view while the plane is open ("Weergave: Boom"); folded,
    * it is the view's icon.
    */
-  const VIEWS = [["kantlijn", "Kantlijn", "margin"], ["graph", "Graph", "graph"], ["boom", "Boom", "tree"]];
+  const VIEWS = [["kantlijn", "Kaarten", "margin"], ["graph", "Graph", "graph"], ["boom", "Boom", "tree"]];
   const viewOf = () => plane?.view ?? "kantlijn";
-  const view = (v) => { shut(); if (v === "kantlijn") plane?.close(); else graph(null, v); };
+  /** A page with no row and no chunk has nothing for the plane: its Graph and Boom are off (QA, block 4: a blank plane). */
+  const bare = () => !all.length && !code?.nodes?.length;
+  const view = (v) => { shut(); if (v === "kantlijn") plane?.close(); else if (!bare()) graph(null, v); };
   /** The tree in the plane, or closed: the key b. */
-  const boom = () => { shut(); plane?.view === "boom" ? plane.close() : graph(null, "boom"); };
+  const boom = () => { shut(); if (plane?.view === "boom") plane.close(); else if (!bare()) graph(null, "boom"); };
   const viewBtn = button("", () => {
     flip(views, viewBtn, fillViews);
     views.querySelector('[aria-checked="true"]')?.focus({ preventScroll: true });
@@ -896,6 +902,7 @@
     views.replaceChildren(...VIEWS.map(([k, name]) => {
       const b = button("", () => view(k), "fpl-item");
       b.role = "menuitemradio"; b.ariaChecked = String(k === v);
+      if (k !== "kantlijn" && bare()) { b.disabled = true; b.title = "Nog niets op deze pagina"; }
       b.append(k === v ? ico("check") : el("span", { className: "fpl-ico" }), name);
       if (k === "boom") b.append(el("kbd", {}, "b"));
       return b;
@@ -2665,6 +2672,7 @@
       p.dataset.nodes = ns.map((n) => `${n.id}@${Math.round(n.x)},${Math.round(n.y)}`).join(" ");   // for tests: where each node landed
       p.dataset.groups = frames.map((f) => `${f.g.id}@${f.box.join(",")}`).join(" ");   // and each frame: left, top, right, bottom
       const kinds = [...new Set(g.edges.map((e) => e.kind))].filter((k) => k !== "over" && k !== "parts");
+      const how = "Klik: naar de span, Alt ← terug. Sleep: alleen hier. Shift-klik kaarten: een groep.";
       foot.replaceChildren(...kinds.map((k) => {
         const c = button("", () => { offKinds.has(k) ? offKinds.delete(k) : offKinds.add(k); build(); foot.querySelector(`[data-kind="${k}"]`)?.focus(); }, "fpl-kchip");
         c.dataset.kind = k; c.ariaPressed = String(!offKinds.has(k));
@@ -2672,7 +2680,7 @@
         c.innerHTML = `<svg width="22" height="10" aria-hidden="true"><path class="fpl-edge" data-kind="${k}" d="M1 5H${ARROWS.has(k) ? 15 : 21}"/>${ARROWS.has(k) ? '<path d="M13 1L21 5L13 9z" fill="currentColor"/>' : ""}</svg>`;
         c.append(kindName(k));
         return c;
-      }));
+      }), el("button", { type: "button", className: "fpl-why", title: how, ariaLabel: how, onclick: () => toast(how) }, ico("why")));
       select(sel, false);
     }
     /**
@@ -2852,6 +2860,14 @@
       if (treeKey === key && tree.of === all) return;
       treeKey = key; tree.of = all;
       const items = outline(), list = el("div", { className: "fpl-tree" });
+      if (!items.length) {   // no group yet: one empty block and its one action, not a blank plane (QA, block 4)
+        const make = button("", () => { p.show("graph"); toast("Shift-klik de kaarten van de groep"); }, "fpl-tmake");
+        make.append(ico("group"), "Maak groep");
+        area.replaceChildren(el("div", { className: "fpl-tree" }, el("section", { className: "fpl-tblock fpl-tempty" }, make)));
+        fillTray();
+        p.dataset.tree = "";
+        return;
+      }
       const sv = document.createElementNS("http://www.w3.org/2000/svg", "svg");
       sv.classList.add("fpl-edges", "fpl-tlines");
       area.replaceChildren(list);

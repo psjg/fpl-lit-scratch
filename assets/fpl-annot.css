@@ -696,3 +696,10 @@ mark.fact.fpl-ingroup, .fpl-p.fpl-ingroup, .fpl-ingroup:not(.fpl-card):not(.fpl-
 .fpl-tpill.is-lift { position: relative; z-index: 6; cursor: grabbing; box-shadow: 0 10px 24px rgba(20, 30, 50, .18), 0 2px 6px rgba(20, 30, 50, .1); }
 /* a sentence in the tray, while the tree is open: dashed in the text, as pulled out of it */
 mark.fact.fpl-pulled { background: none; box-shadow: none; text-decoration: underline dashed var(--fpl-mute); text-decoration-thickness: 2px; text-underline-offset: .22em; }
+/* the tree without a group: one empty block, one action (QA, block 4) */
+.fpl-tempty { display: flex; justify-content: center; padding: 22px 16px; border: 1.5px dashed var(--fpl-rule); background: none; }
+.fpl-tmake { display: inline-flex; align-items: center; gap: 7px; height: 32px; padding: 0 14px; border: 1px solid var(--fpl-rule); border-radius: 7px;
+  background: var(--fpl-bg); font: 600 13px var(--bs-font-sans-serif, sans-serif); color: var(--fpl-fg); cursor: pointer; }
+.fpl-tmake:hover { background: var(--fpl-wash); }
+.fpl-tmake:focus-visible { outline: 2px solid var(--fpl-mine); outline-offset: 2px; }
+.fpl-plane-foot .fpl-why { margin-left: auto; align-self: center; }
