@@ -146,7 +146,10 @@
  * one level at a time with how many spans carry each; up and down
  * choose, right goes a level deeper, left back up, Enter or a click
  * strikes a label and all under it, Shift shows it alone. A label of
- * MEANING has a (?) that says what it means; any other has none. The
+ * MEANING has a (?) that says what it means; any other has none. A
+ * relation is shown by its Dutch name (omdat, citeert, spreekt tegen),
+ * here as on a card and in the graph; its English key is the label
+ * written and queried. The
  * panel holds no sentence of explanation: what a control does it shows. Where Quarto shows its top
  * bar (a narrow window) the bar folds into it, a stand picker and three
  * icons, the search and the counts in the filter panel; where neither
@@ -471,6 +474,10 @@
   // the layers drawn by CSS (tfa washes, resumes arcs, chain numbers) take the colours their buttons show
   for (const k of ["coref", "tfa", "resumes", "group", "role", "supports", "attacks"]) document.documentElement.style.setProperty(`--fpl-${k}`, colourOf(k));
   const LAYERS = ["span", "fact", "thread", "argument", "tfa", "coref", "group", "relation"];
+  // one Dutch name per relation, wherever one is shown (a chip, the label list, the graph, a meta line); the English key
+  // stays the label as written and as queried (QA, block 4: the panel said contradicts where the card said spreekt tegen)
+  const VERB = { supports: "steunt", attacks: "valt aan", contradicts: "spreekt tegen", because: "omdat", cites: "citeert",
+    checkedBy: "getoetst door", resumes: "neemt op", supersedes: "vervangt", coref: "zelfde als", relates: "verbindt" };
   const RELATIONS = new Set(["because", "supports", "attacks", "contradicts", "supersedes", "checkedBy", "cites", "relates", "resumes"]);
   const AROUND = 32;
   // a card is no text of the page: a narrow margin folds its cards in under their blocks, in main, and a redraw that read
@@ -1086,7 +1093,7 @@
   function fillLabels() {
     const v = labelField.value.toLowerCase(), cut = v.lastIndexOf("/"), at = v.slice(0, cut + 1), typed = v.slice(cut + 1);
     const n = scopeTally(), off = hidden(), depth = at.split("/").length;
-    const name = (l) => l.slice(l.lastIndexOf("/") + 1).toLowerCase();
+    const name = (l) => (VERB[l] ?? "") + " " + l.slice(l.lastIndexOf("/") + 1).toLowerCase();
     let here = [...n.keys()].filter((l) => l.split("/").length === depth && l.toLowerCase().startsWith(at) && name(l).includes(typed));
     if (!here.length && typed) here = [...n.keys()].filter((l) => l.toLowerCase().includes(typed));   // nothing on this level: anywhere
     here.sort((a, b) => (a === NONE) - (b === NONE) || n.get(b) - n.get(a) || a.localeCompare(b));
@@ -1096,7 +1103,7 @@
       const cut = l.lastIndexOf("/") + 1, why = MEANING[l];
       const li = el("li", { id: `fpl-scope-${i}`, role: "option", className: struck ? "is-off" : "", ariaSelected: String(i === lit) },
         l === NONE ? null : el("span", { className: "fpl-sq", style: `--lc: ${colourOf(l)}` }),
-        el("span", { className: "fpl-scope" }, cut && !at ? el("small", {}, l.slice(0, cut)) : null, l.slice(cut)),
+        el("span", { className: "fpl-scope" }, cut && !at ? el("small", {}, l.slice(0, cut)) : null, VERB[l] ?? l.slice(cut)),
         el("span", { className: "fpl-ct" }, String(n.get(l))),
         why ? el("button", { type: "button", className: "fpl-why", title: why, ariaLabel: `Wat is ${l}? ${why}`,
           onclick: (e) => { e.stopPropagation(); toast(`${l}: ${why}`); } }, ico("why")) : null,
@@ -1227,8 +1234,8 @@
   /* ---- what a card shows: a head, its relations, a thread (board F) ---- */
 
   const chip = (label, cls) => {
-    const [head, sub] = label.split(/\/(.*)/);
-    return el("span", { className: "fpl-chip " + cls }, head, sub ? el("small", {}, "/" + sub) : null);
+    const [head, sub] = VERB[label] ? [VERB[label]] : label.split(/\/(.*)/);
+    return el("span", { className: "fpl-chip " + cls, title: VERB[label] ? label : "" }, head, sub ? el("small", {}, "/" + sub) : null);
   };
   // a parts row names its pieces, it says nothing about the first one
   const facts = (id) => all.filter((r) => typeof r.text !== "string" && r.labels?.[0] !== "parts" && !isGroup(r) && r.targets?.[0] === id && shows(r));
@@ -1239,8 +1246,6 @@
     const t = String(s ?? "").replace(/\s+/g, " ").trim();
     return t.length <= n ? t : `${t.slice(0, n).replace(/\s+\S*$/, "")}…`;
   };
-  const VERB = { supports: "steunt", attacks: "valt aan", contradicts: "spreekt tegen", because: "omdat", cites: "citeert",
-    checkedBy: "getoetst door", resumes: "neemt op", supersedes: "vervangt", coref: "zelfde als", relates: "verbindt" };
   /** A relation's verb: Dutch for the labels lit knows, else the label as written. */
   const verb = (r) => VERB[r.labels?.[0]] ?? ((r.labels ?? []).join(" ") || "verbindt");
   /** Who wrote a row, when the row says so; a row without a name has no author line, never a "?". */
