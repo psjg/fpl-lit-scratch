@@ -1068,8 +1068,11 @@
       for (const m of sub) been.add(m.id);
       li.append(el("ol", { className: "fpl-msgs sub" }, ...sub.map((m) => msgView(m, owner, been))));
     }
+    // a message of ours opens in the editor; a click in a reply under it
+    // is that reply's (which opens its own, or nothing)
     if (r.mine) li.onclick = (ev) => {
-      if (picking || ev.target.closest("button, a, details, input, label, .fpl-msg .fpl-msg")) return;
+      if (picking || ev.target.closest("button, a, details, input, label")
+        || ev.target.closest(".fpl-msg") !== li) return;
       ev.stopPropagation();
       edit(r, null, li.getBoundingClientRect());
     };
@@ -1208,7 +1211,11 @@
     card.onmouseenter = () => hot(row.id);
     card.onmouseleave = () => hot(null);
     card.onclick = (ev) => {
-      if (picking || ev.target.closest("button, a, input, label, details, .fpl-editor, .fpl-ask")) return;
+      // a message is not the card: one of ours edits itself, another's
+      // is read, not a way into the card's own editor
+      if (picking || ev.target.closest(
+        "button, a, input, label, details, .fpl-editor, .fpl-ask, .fpl-msg"))
+        return;
       const m = anchorsOf(row.id)[0];
       m && seen(m).scrollIntoView({ block: "center", behavior: "smooth" });
       if (row.mine && (m || gone)) { edit(row, card); return; }   // a lost fact of ours: open it to delete or rewrite
