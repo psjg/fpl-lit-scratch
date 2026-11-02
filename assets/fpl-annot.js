@@ -2179,7 +2179,7 @@
     }
     return { nodes: [...in2.values()], edges };
   }
-  /** What a node of a card's graph is called: its first words, never an id. */
+  /** What a node of a graph (a card's or the page's) is called: its first words, never an id. */
   function nodeName(nid, own) {
     const r = all.find((x) => x.id === nid), d = decision(nid);
     const span = typeof r?.text === "string";
@@ -2188,7 +2188,11 @@
     const c = code?.nodes.find((x) => x.id === nid);
     if (c) return c.label ?? named(nid);
     if (r && !span && RELATIONS.has(r.labels?.[0])) return verb(r);
-    if (r) return said(nid);
+    if (r && !span && !r.note && SETKINDS.has(r.labels?.[0]))
+      return r.labels[0] === "coref" ? "zelfde als" : "delen";
+    // a row that says nothing (no note, no text) by its labels
+    if (r) return gist(nid) !== nid ? said(nid)
+      : (r.labels ?? []).join(" ") || "een feit";
     return place(nid) ? said(nid) : named(nid) || "iets dat weg is";
   }
   /**
@@ -2386,7 +2390,8 @@
       else ctx.arc(n.x, n.y, 5, 0, 2 * Math.PI);
       ctx.fill();
       ctx.fillStyle = css.getPropertyValue("--fpl-fg").trim() || "#222";
-      const name = n.label ?? n.id;   // a chunk or file by its name, a row by its id
+      // a chunk or file by its name, a row by its words, never an id
+      const name = n.label ?? nodeName(n.id, null);
       if (n.kind === "chunk" || n.kind === "file") { ctx.fillStyle = color(n); ctx.fillRect(n.x - 4, n.y - 4, 8, 8); ctx.fillStyle = css.getPropertyValue("--fpl-fg").trim() || "#222"; }
       ctx.fillText(name.length > 28 ? name.slice(0, 27) + "…" : name, n.x + 8, n.y + 4);
     }
