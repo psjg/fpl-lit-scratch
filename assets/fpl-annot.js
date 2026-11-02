@@ -112,6 +112,17 @@
  * click on the other end, or Tab and the arrows to it and Enter, asks the
  * same. The row is saved as every pick's is, targets [start, end].
  *
+ * The same knob stretches (board D): carried along the text of its own
+ * block rather than onto another end, it moves the end of a span of this
+ * browser a whole word at a time, the words gained washed and dashed,
+ * the words lost washed grey, and a tip "+ n woorden · loslaten bewaart
+ * · Esc zet terug"; the drop saves text, prefix and suffix read anew,
+ * Esc puts it back. Where it is let go decides: over another span, card,
+ * fact or knob, or another block's text, it connects. A bundle's knob
+ * stretches the piece it ends; a sidecar span only connects, and says
+ * why. Shift with the arrows on a focused knob stretches by a word, Enter
+ * saves.
+ *
  * The bar. One bar, fixed above the margin column, holds the three
  * stands as tabs (Lezen, Spans, Kantlijn, also the key "a"), the search
  * field (the key "z"), Graph and a menu ⋯: Naam, Importeer rijen,
@@ -755,7 +766,8 @@
       ["Enter", "Een feit op de zin onder de cursor"], ["⌘↩", "Bewaar in de editor"],
       ["Esc", "Sluit of breekt af; anders opent de laatste band"], ["Alt + selectie", "Een deel van een span; Enter bundelt"],
       ["Alt-klik", "De tfa-waarde van een bijzin"], ["Alt-Shift-klik", "Deze bijzin neemt een eerdere op"],
-      ["l", "Verbind de kaart onder de muis of de focus; Tab kiest het andere eind, Enter het soort"], ["?", "Deze lijst"]];
+      ["l", "Verbind de kaart onder de muis of de focus; Tab kiest het andere eind, Enter het soort"],
+      ["Shift + ← →", "Rek je span een woord, met de focus op zijn bolletje; Enter bewaart"], ["?", "Deze lijst"]];
     menu.replaceChildren(el("p", { className: "fpl-panel-head" }, "Sneltoetsen"),
       el("dl", {}, ...keys.flatMap(([k, what]) => [el("dt", {}, ...k.split(/ {2}/).map((x) => el("kbd", {}, x))), el("dd", {}, what)])));
     menu.tabIndex = -1;
@@ -1450,18 +1462,31 @@
   function carry() {
     drag.live = true;
     link = { from: drag.from, to: null, x: drag.x + scrollX, y: drag.y + scrollY };
+    dropStretch();   // a stretch by keys waiting on another knob
+    stretching = stretchOf(drag.from);   // null when its row is no span in the text: then the knob only connects
     document.body.classList.add("fpl-dragging");
     hot(drag.from);
     drawAim();
   }
   function dragMove(ev) {
-    if (ev.pointerId !== drag?.id) return;
+    if (ev.pointerId !== drag?.id || drag.cancelled) return;
     if (!drag.live) {
       const far = Math.hypot(ev.clientX - drag.x, ev.clientY - drag.y);
       if (drag.touch) { if (far > 8) drag.moved = true; return; }   // a touch that wanders before HOLD carries nothing
       if (far < 4) return;
       carry();
     }
+    const st = stretching;
+    if (st && onGround(st, ev.clientX, ev.clientY)) {   // along its own text: a stretch, no line to follow the pointer
+      if (st.row.mine) {
+        link.to = link.x = link.y = null;
+        st.end = endAt(st, ev.clientX, ev.clientY);
+        paintStretch();
+        drawAim();
+        return;
+      }
+      if (!drag.told) { drag.told = true; toast(`${SIDECAR}; slepen verbindt`); }
+    } else if (st && st.end !== st.e) { st.end = st.e; paintStretch(); }   // off its text: the span as it was
     const to = aimAt(ev.clientX, ev.clientY);
     link.x = ev.pageX;
     link.y = ev.pageY;
@@ -1481,15 +1506,185 @@
     const eat = (e) => { e.stopImmediatePropagation(); e.preventDefault(); };   // the click a drag ends in is the drop's
     addEventListener("click", eat, { capture: true, once: true });
     setTimeout(() => removeEventListener("click", eat, { capture: true }), 0);
-    const to = ev.type === "pointerup" ? aimAt(ev.clientX, ev.clientY) : null;
+    if (d.cancelled) return;   // Esc let it go already
+    const st = stretching, up = ev.type === "pointerup";
+    if (st?.row.mine && up && onGround(st, ev.clientX, ev.clientY)) { link = null; keepStretch(); drawAim(); hot(null); return; }
+    dropStretch();
+    const to = up ? aimAt(ev.clientX, ev.clientY) : null;
     if (to && to !== d.from) { chooser(d.from, to, { x: ev.pageX, y: ev.pageY }, true); return; }
     link = null;
     drawAim();
     hot(null);
-    toast(ev.type !== "pointerup" ? "Slepen afgebroken" : to ? "Losgelaten op de eigen span: niets verbonden"
-      : "Losgelaten naast een span, kaart of feit: niets verbonden");
+    toast(!up ? "Slepen afgebroken" : !to ? "Losgelaten naast een span, kaart of feit: niets verbonden"
+      : st && !st.row.mine ? `${SIDECAR}; niets verbonden` : "Losgelaten op de eigen span: niets verbonden");
+  }
+  /** Esc while a knob is carried: the stretch put back and the connect let go; the drop that follows does nothing. */
+  function cancelDrag() {
+    const moved = stretching && stretching.end !== stretching.e;
+    drag.cancelled = true;
+    dropStretch();
+    link = null;
+    drawAim();
+    hot(null);
+    document.body.classList.remove("fpl-dragging");
+    toast(moved ? "Teruggezet" : "Slepen afgebroken");
   }
   const DRAG = [["pointermove", dragMove], ["pointerup", dragEnd], ["pointercancel", dragEnd]];
+
+  /**
+   * Stretching (board D). The same knob, carried along the text of its
+   * own block (its .fpl-p) instead of onto another end, moves the end of
+   * its span there, a whole word at a time; only the end moves, never
+   * past the block, and a span keeps one word. While carried the part
+   * gained is washed and underlined dashed (lost words are washed grey),
+   * drawn in the lines' svg so the text itself is not touched until the
+   * drop; the knob and its line stand at the new end, the card's quote
+   * follows, and a tip says "+ n woorden · loslaten bewaart · Esc zet
+   * terug". Letting go there saves the row with its text, prefix and
+   * suffix read anew from the shown text, as a selection makes them, so
+   * the quote finder finds it once; Esc puts it back. Where the pointer
+   * is let go decides (PSJ's choice 1): over another span, a card, a
+   * fact or a knob, or text of another block, the knob connects as
+   * before. A bundle's knob stretches the piece it ends, as a single
+   * span. A span of the sidecar is lit's to change: its knob only
+   * connects, and says why once it passes over its own text. Shift with
+   * the arrows on a focused knob stretches by a word, shown the same
+   * way; Enter saves, Esc puts back.
+   */
+  let stretching = null;   // {id, row, ix, s, e, end, block, hi, keys}: id the knob's card, row the span it moves, [s, e) its text in ix, end the end shown, hi its block's end
+  const SIDECAR = "Een span uit de sidecar rek je niet: die verandert alleen met lit";
+  const tip = el("div", { className: "fpl-annot-ui fpl-tip", role: "status" });
+  const words = (t) => t.split(" ").filter(Boolean).length;
+  /** The box of shown character i in the window, or null. */
+  const charBox = (ix, i) => {
+    const [n, o] = ix.from[i] ?? [];
+    if (!n) return null;
+    const r = document.createRange();
+    r.setStart(n, o);
+    r.setEnd(n, o + 1);
+    return r.getBoundingClientRect();
+  };
+
+  /** What a knob would stretch, or null when its row is no span drawn in a block (a fact on an address only connects). */
+  function stretchOf(id) {
+    const at = reach(id), row = all.find((r) => r.id === at?.tail?.dataset?.id);
+    const block = at?.tail?.closest?.(".fpl-p"), ix = typeof row?.text === "string" && block && shown();
+    const got = ix && find(ix, row);
+    if (!Array.isArray(got)) return null;
+    const r = document.createRange();
+    r.selectNodeContents(block);
+    return { id, row, ix, s: got[0], e: got[1], end: got[1], block, hi: bounds(ix, r)[1] };
+  }
+  /** Whether a point of the window is a stretch's own ground: text of its block, outside every span but its own. */
+  function onGround(st, x, y) {
+    const hit = document.elementFromPoint(x, y), m = hit?.closest?.("mark.fact");
+    return !!hit && st.block.contains(hit) && (!m || groupOf(st.id).includes(m.dataset.id));
+  }
+  /**
+   * The shown index past the word under a point: the span's own end
+   * while the point is in its last word, at least past its first word,
+   * at most its block's end.
+   */
+  function endAt(st, x, y) {
+    const { ix, s, e, hi } = st, flat = ix.flat;
+    const pos = document.caretPositionFromPoint?.(x, y), cr = !pos && document.caretRangeFromPoint?.(x, y);
+    if (!pos && !cr) return st.end;
+    const r = document.createRange();
+    r.setStart(pos ? pos.offsetNode : cr.startContainer, pos ? pos.offset : cr.startOffset);
+    let k = bounds(ix, r)[0];   // the character right of the caret, or the one left of it when the pointer is there
+    const b = charBox(ix, k);
+    if (!b || x < b.left || x > b.right) k--;
+    while (k > s && flat[k] === " ") k--;
+    const past = (i) => { while (i < hi && flat[i] !== " ") i++; return i; };
+    const end = past(Math.max(k, s));
+    return end === past(e - 1) ? e : Math.min(hi, Math.max(end, Math.min(e, past(s))));
+  }
+  /** The stretch drawn: the part gained or lost per line, the knob and line at the new end, the card's quote and the tip. */
+  function paintStretch() {
+    for (const n of lines.querySelectorAll(".fpl-grow")) n.remove();
+    tip.remove();
+    const st = stretching;
+    if (!st) return;
+    const { flat, from } = st.ix, cut = st.end < st.e, last = charBox(st.ix, st.end - 1);
+    let a = Math.min(st.e, st.end);
+    const z = Math.max(st.e, st.end);
+    while (a < z && flat[a] === " ") a++;
+    if (a < z) {
+      const r = document.createRange(), rows = [];
+      r.setStart(...from[a]);
+      r.setEnd(from[z - 1][0], from[z - 1][1] + 1);
+      for (const q of r.getClientRects()) {   // one box per line: the inline boxes of a line overlap by more than half
+        if (!q.width || !q.height) continue;
+        const o = rows.find((w) => Math.min(w.b, q.bottom) - Math.max(w.t, q.top) > Math.min(w.b - w.t, q.height) / 2);
+        if (o) Object.assign(o, { l: Math.min(o.l, q.left), r: Math.max(o.r, q.right), t: Math.min(o.t, q.top), b: Math.max(o.b, q.bottom) });
+        else rows.push({ l: q.left, r: q.right, t: q.top, b: q.bottom });
+      }
+      const cls = cut ? " is-cut" : "";
+      for (const w of rows) {
+        svg("rect", { x: w.l + scrollX, y: w.t + scrollY, width: w.r - w.l, height: w.b - w.t, class: `fpl-grow fpl-grow-wash${cls}` }, st.id);
+        svg("path", { d: `M${w.l + scrollX},${w.b + 0.5 + scrollY} H${w.r + scrollX}`, class: `fpl-grow fpl-grow-line${cls}` }, st.id);
+      }
+    }
+    const card = cardEl(st.id), q = CSS.escape(st.id);
+    const knob = lines.querySelector(`.fpl-knob[data-id="${q}"]`), line = lines.querySelector(`.fpl-line[data-id="${q}"]`);
+    if (last && knob) { knob.setAttribute("cx", last.right + scrollX + 3); knob.setAttribute("cy", last.bottom - 2 + scrollY); }
+    if (last && card && line) line.setAttribute("d", curve(last.bottom - Math.min(last.height, 24) / 2 + scrollY, card));
+    const title = card?.querySelector(".fpl-title");
+    if (title) {   // the quote as it would be saved, through headOf, so a bundle's card shows its pieces
+      const was = all;
+      all = all.map((r) => (r.id === st.row.id ? { ...r, text: flat.slice(st.s, st.end) } : r));
+      title.textContent = headOf(all.find((r) => r.id === st.id));
+      all = was;
+    }
+    if (st.end === st.e || !last) return;
+    const n = words(flat.slice(st.s, st.end)) - words(flat.slice(st.s, st.e)), m = Math.abs(n);
+    tip.replaceChildren(`${n < 0 ? "−" : "+"} ${m} ${m === 1 ? "woord" : "woorden"} · `,
+      ...(st.keys ? [el("kbd", {}, "Enter"), " bewaart"] : ["loslaten bewaart"]), " · ", el("kbd", {}, "Esc"), " zet terug");
+    document.body.append(tip);
+    const col = body.getBoundingClientRect(), w = tip.offsetWidth;
+    tip.style.top = `${last.bottom + scrollY + 8}px`;
+    tip.style.left = `${Math.max(col.left, Math.min(last.right - w / 2, col.right - w)) + scrollX}px`;
+  }
+  /** Put the span back as it was (Esc, a drop elsewhere, a new stretch); the stretch, or null. */
+  function dropStretch() {
+    const st = stretching;
+    if (st) { st.end = st.e; paintStretch(); }
+    stretching = null;
+    tip.remove();
+    return st;
+  }
+  /** Save the stretch: its text, prefix and suffix read from the shown text, as a selection makes them. */
+  function keepStretch() {
+    const st = stretching;
+    if (!st) return;
+    if (st.end === st.e) { dropStretch(); toast("Losgelaten op de eigen span: niets veranderd"); return; }
+    const { flat } = st.ix, n = words(flat.slice(st.s, st.end)) - words(flat.slice(st.s, st.e));
+    const got = { text: flat.slice(st.s, st.end), prefix: flat.slice(Math.max(0, st.s - AROUND), st.s), suffix: flat.slice(st.end, st.end + AROUND) };
+    if (!Array.isArray(find(st.ix, { ...st.row, ...got }))) { dropStretch(); toast("Zo staat de tekst vaker op de pagina: niet gerekt"); return; }
+    stretching = null;
+    tip.remove();
+    save(st.row, got);
+    draw();
+    toast(n > 0 ? `${n} ${n === 1 ? "woord" : "woorden"} erbij` : n < 0 ? `${-n} ${n === -1 ? "woord" : "woorden"} eraf` : "Gerekt");
+  }
+  /** Shift and an arrow on a focused knob: its span's end a word on (d 1) or back (d -1), shown as a drag shows it. */
+  function nudge(id, d) {
+    if (stretching?.id !== id) {
+      dropStretch();
+      const st = stretchOf(id);
+      if (!st) { toast("Hier valt niets te rekken: dit eind is geen span in de tekst"); return; }
+      if (!st.row.mine) { toast(SIDECAR); return; }
+      stretching = { ...st, keys: true };
+      hot(id);
+    }
+    const st = stretching, { flat } = st.ix;
+    let i = st.end;
+    if (d > 0) { while (i < st.hi && flat[i] === " ") i++; while (i < st.hi && flat[i] !== " ") i++; }
+    else { while (i > st.s && flat[i - 1] !== " ") i--; while (i > st.s && flat[i - 1] === " ") i--; }
+    if (i === st.end || i <= st.s) { toast(d > 0 ? "Het blok houdt hier op: verder rekt de span niet" : "Een span houdt minstens één woord"); return; }
+    st.end = i;
+    paintStretch();
+  }
 
   /* ---- the graph: rows and what they name, laid out by force ---- */
 
@@ -1987,6 +2182,10 @@
   lines.addEventListener("contextmenu", (ev) => { if (ev.target.closest?.(".fpl-knob")) ev.preventDefault(); });   // a long press carries, it opens no menu
   // a touch on a knob is the knob's: the page does not pan under it (touch-action does not reach into an svg)
   lines.addEventListener("touchstart", (ev) => { if (ev.target.closest?.(".fpl-knob")) ev.preventDefault(); }, { passive: false });
+  // a stretch by keys holds while its knob has the focus; the focus gone, it is put back
+  lines.addEventListener("focusout", (ev) => {
+    if (stretching?.keys && ev.target.closest?.(".fpl-knob")?.dataset.id === stretching.id) { dropStretch(); toast("Niet bewaard: teruggezet"); }
+  });
   for (const [t, on] of [["pointerover", true], ["pointerout", false], ["focusin", true], ["focusout", false]])
     lines.addEventListener(t, (ev) => { const k = ev.target.closest?.(".fpl-knob"); if (k && !editing) hot(on ? k.dataset.id : null); });
   const pop = el("div", { className: "fpl-annot-ui fpl-pop", hidden: true });
@@ -2077,19 +2276,20 @@
    * Where a span meets the gutter, in page coordinates: y, the middle of
    * its last line, where its line leaves and its card's dot stands; top
    * and bottom, its first and last line; end and foot, the end of its
-   * last line, where the knob sits on the underline; and long, a span
+   * last line, where the knob sits on the underline; tail, the mark (or
+   * element) that line ends in, a bundle's last piece; and long, a span
    * over three lines or more, which the gutter marks with a bar instead
    * of an underline on every line. A folded span is its band's.
    */
   function reach(id) {
     const ms = anchorsOf(id).map(seen);
     if (!ms.length) return null;
-    const rs = ms.flatMap((m) => [...m.getClientRects()]);
-    if (!rs.length) rs.push(ms[0].getBoundingClientRect());
+    const rs = ms.flatMap((m) => [...m.getClientRects()].map((r) => Object.assign(r, { m })));
+    if (!rs.length) rs.push(Object.assign(ms[0].getBoundingClientRect(), { m: ms[0] }));
     const last = rs.reduce((a, r) => (r.bottom > a.bottom + 1 || (r.bottom > a.bottom - 1 && r.right > a.right) ? r : a));
     const top = Math.min(...rs.map((r) => r.top));
     const rows = rs.map((r) => r.bottom).sort((a, b) => a - b).filter((b, i, a) => !i || b - a[i - 1] > 4).length;
-    return { m: ms[0], y: last.bottom - Math.min(last.height, 24) / 2 + scrollY, top: top + scrollY, bottom: last.bottom + scrollY,
+    return { m: ms[0], tail: last.m, y: last.bottom - Math.min(last.height, 24) / 2 + scrollY, top: top + scrollY, bottom: last.bottom + scrollY,
       end: last.right + scrollX, foot: last.bottom - 2 + scrollY, long: rows >= 3 || last.bottom - top > LONG && rs.length === 1 };
   }
   const unbar = () => { for (const m of body.querySelectorAll("mark.fpl-long")) m.classList.remove("fpl-long"); };
@@ -2118,19 +2318,24 @@
     for (const c of margin.querySelectorAll(".fpl-card[data-id]")) {
       const id = c.dataset.id, at = reach(id);
       if (!at) continue;
-      const cls = c.classList.contains("mine") ? "mine" : "", cr = c.getBoundingClientRect();
-      const x2 = cr.left + scrollX - 1, y2 = cr.top + scrollY + HEAD, k = Math.max(0, x2 - gx - 6) / 2;
-      svg("path", { d: `M${gx},${at.y} h6 C${gx + 6 + k},${at.y} ${x2 - k},${y2} ${x2},${y2}`, class: `fpl-line ${cls}` }, id);
+      const cls = c.classList.contains("mine") ? "mine" : "";
+      svg("path", { d: curve(at.y, c), class: `fpl-line ${cls}` }, id);
       if (at.long) {
         for (const m of anchorsOf(id)) if (m.matches("mark.fact")) m.classList.add("fpl-long");
         svg("rect", { x: gx - 1.25, y: at.top, width: 2.5, height: at.bottom - at.top, rx: 1.25, class: `fpl-stretch ${cls}` }, id);
       }
       if (id === "draft") continue;   // a selection being written has nothing to drag yet (board B)
       const knob = svg("circle", { cx: at.end + 3, cy: at.foot, r: 4, class: `fpl-knob ${cls}`, tabindex: 0, role: "button",
-        "aria-label": `Bolletje van “${clip(said(id), 40)}”: sleep het naar een andere span, kaart of feit, of druk l` }, id);
-      knob.appendChild(document.createElementNS("http://www.w3.org/2000/svg", "title")).textContent = "Sleep naar een span, kaart of feit om te verbinden";
+        "aria-label": `Bolletje van “${clip(said(id), 40)}”: sleep het naar een andere span, kaart of feit, of druk l; langs de tekst, of met Shift en de pijlen, rek je de span` }, id);
+      knob.appendChild(document.createElementNS("http://www.w3.org/2000/svg", "title")).textContent = "Sleep naar een span, kaart of feit om te verbinden, of langs de tekst om te rekken";
     }
     drawAim();
+    paintStretch();   // a layout in the middle of a stretch draws it again
+  }
+  /** The line from a span's stub, at the height y of its last line, to the dot of its card c: the same x geometry for every line. */
+  function curve(y, c) {
+    const gx = gutter(), cr = c.getBoundingClientRect(), x2 = cr.left + scrollX - 1, y2 = cr.top + scrollY + HEAD, k = Math.max(0, x2 - gx - 6) / 2;
+    return `M${gx},${y} h6 C${gx + 6 + k},${y} ${x2 - k},${y2} ${x2},${y2}`;
   }
 
   /** The span, card and line of one row light up together. */
@@ -2795,8 +3000,22 @@
       if (e && body.contains(e)) e.classList.add("fpl-coref");
   });
   document.addEventListener("keydown", (ev) => {
+    if (ev.key === "Escape" && drag?.live && !drag.cancelled) { ev.preventDefault(); cancelDrag(); return; }
     if (picking && !picking.kind && cardMenu.hidden && !ev.metaKey && !ev.ctrlKey && !ev.altKey
       && !ev.target.closest?.("input, textarea, select, [contenteditable]") && walk(ev)) return;
+    if (stretching?.keys && (ev.key === "Escape" || ev.key === "Enter")) {   // a stretch by keys: Enter saves, Esc puts back
+      ev.preventDefault();
+      const id = stretching.id;
+      if (ev.key === "Enter") keepStretch(); else { dropStretch(); toast("Teruggezet"); }
+      lines.querySelector(`.fpl-knob[data-id="${CSS.escape(id)}"]`)?.focus({ preventScroll: true });
+      return;
+    }
+    const knobId = document.activeElement?.closest?.(".fpl-knob")?.dataset.id;
+    if (knobId && ev.shiftKey && (ev.key === "ArrowRight" || ev.key === "ArrowLeft") && !ev.metaKey && !ev.ctrlKey && !ev.altKey && !drag) {
+      ev.preventDefault();
+      nudge(knobId, ev.key === "ArrowRight" ? 1 : -1);
+      return;
+    }
     if (ev.key === "Escape" && !cardMenu.hidden) {   // a card's menu: closed, focus back on its ⋯
       const id = menuOf;
       shut();

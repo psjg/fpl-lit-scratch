@@ -70,6 +70,17 @@ mark.fact-mine:hover, mark.fact-mine.is-hot { background: var(--fpl-mine-wash); 
 .fpl-aim-line { fill: none; stroke: var(--fpl-mine); stroke-width: 1.75; stroke-dasharray: 5 4; }
 .fpl-aim-dot { fill: var(--fpl-mine); }
 body.fpl-dragging, body.fpl-dragging * { cursor: grabbing !important; user-select: none; }
+/* the carried knob lets the pointer through, so the text under it decides between a stretch and a connect */
+body.fpl-dragging .fpl-knob.is-drag { pointer-events: none; }
+/* a stretch in flight (board D): the words gained washed and underlined dashed, the words lost washed grey */
+.fpl-grow-wash { fill: var(--fpl-mine); opacity: .07; }
+.fpl-grow-line { fill: none; stroke: var(--fpl-mine); stroke-width: 2; stroke-dasharray: 5 3; }
+.fpl-grow-wash.is-cut { fill: var(--fpl-mute); opacity: .14; }
+.fpl-grow-line.is-cut { stroke: var(--fpl-mute); }
+.fpl-tip { position: absolute; z-index: 1002; margin: 0; padding: 4px 8px; border-radius: 4px; font-size: 12.5px; line-height: 1.4;
+  white-space: nowrap; pointer-events: none; background: var(--fpl-fg); color: var(--fpl-bg); }
+.fpl-tip kbd { font: 600 11px/1 SFMono-Regular, Menlo, monospace; padding: 2px 4px; border: 0; border-radius: 3px; box-shadow: none;
+  background: color-mix(in srgb, var(--fpl-bg) 18%, transparent); color: inherit; }
 mark.fact.fpl-target, .fpl-target:is(.fpl-c, .fpl-s, .fpl-p, li, [data-fact]) { background: color-mix(in srgb, var(--fpl-vers) 12%, transparent);
   outline: 1.5px solid var(--fpl-vers); outline-offset: 1px; border-radius: 2px; }
 .fpl-card.fpl-target, .fpl-card.mine.fpl-target { z-index: 3; background: color-mix(in srgb, var(--fpl-vers) 6%, var(--fpl-bg)); border-color: var(--fpl-vers); }
