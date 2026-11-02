@@ -235,7 +235,7 @@
   const QUOTE = { "‘": "'", "’": "'", "“": '"', "”": '"' };
   const GAP = 12;
   const HEAD = 19;   // a card's top to the middle of its first row: its border, padding and half the row
-  const LONG = 56;
+  const LONG = 56;   // px: an address taller than this (a block, one rect) is long, as a span over three lines is
   const CARD = 360;  // px: the widest a card in the margin gets   // px: a span taller than this (three lines) gets a bar in the gutter, not an underline
 
   const snap = window.FPL_SNAPSHOT;
@@ -1535,8 +1535,9 @@
     if (!rs.length) rs.push(ms[0].getBoundingClientRect());
     const last = rs.reduce((a, r) => (r.bottom > a.bottom + 1 || (r.bottom > a.bottom - 1 && r.right > a.right) ? r : a));
     const top = Math.min(...rs.map((r) => r.top));
+    const rows = rs.map((r) => r.bottom).sort((a, b) => a - b).filter((b, i, a) => !i || b - a[i - 1] > 4).length;
     return { m: ms[0], y: last.bottom - Math.min(last.height, 24) / 2 + scrollY, top: top + scrollY, bottom: last.bottom + scrollY,
-      end: last.right + scrollX, foot: last.bottom - 2 + scrollY, long: last.bottom - top > LONG };
+      end: last.right + scrollX, foot: last.bottom - 2 + scrollY, long: rows >= 3 || last.bottom - top > LONG && rs.length === 1 };
   }
   const unbar = () => { for (const m of body.querySelectorAll("mark.fpl-long")) m.classList.remove("fpl-long"); };
   const svg = (tag, attrs, id) => {

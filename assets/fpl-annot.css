@@ -82,6 +82,7 @@ body.fpl-numbered .fpl-s:hover .fpl-c::before { opacity: 1; }
   cursor: pointer; transition: opacity .12s, background-color .12s, border-color .12s; }
 .fpl-column .fpl-card { position: absolute; left: 28px; right: 0; }   /* 28px of the gutter's curve inside the column */
 .fpl-card > .fpl-who:first-child, .fpl-head { min-height: 20px; align-items: center; }   /* HEAD in fpl-annot.js: the line meets this row */
+.fpl-card:focus-within { z-index: 3; }
 .fpl-card.is-hot { z-index: 3; background: color-mix(in srgb, var(--fpl-vers) 6%, var(--fpl-bg));
   border-color: color-mix(in srgb, var(--fpl-vers) 30%, var(--fpl-bg)); }
 .fpl-card.mine.is-hot { background: color-mix(in srgb, var(--fpl-mine) 6%, var(--fpl-bg)); border-color: color-mix(in srgb, var(--fpl-mine) 30%, var(--fpl-bg)); }
