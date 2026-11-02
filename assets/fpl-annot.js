@@ -252,15 +252,24 @@
  * below 4.5:1 for the text, with a line per layer under it, the outermost
  * lowest. Under the mouse a span is outlined in its colour.
  *
- * The graph: every row of the page and everything a row names, in the
- * layers shown, laid out by a force model (Fruchterman and Reingold 1991)
- * on a canvas. A relation row is a node of its own, a small diamond, so
- * an undercut has something to aim at (AIF); a fact hangs from what it is
- * about. "Graph" in the bar shows the page, "Graph" on a card
- * that row and what lies within two steps; a click on a node goes there.
- * Beside the rows stand the page's chunks and the files they tangle to,
- * from <stem>.graph.json (lit graph, written at publish): a chunk uses
- * chunks, tangles to a file, and a row may name a chunk.
+ * The graph (boards V2b-V2d, V4d): every row of the page and everything
+ * a row names, in the layers shown, as a plane beside the page. Graph in
+ * the bar opens it, pressed, and closes it; the text column slides to the
+ * window's left edge, the left nav and the margin's cards give way, and
+ * the bar heads the plane. A row is a card with the first words of its
+ * quote, laid out by a force model (Fruchterman and Reingold 1991) and
+ * set on a lattice so no two overlap; a relation row is a diamond on the
+ * edge between its ends, so an undercut has something to aim at (AIF); a
+ * fact hangs from what it is about; a tfa or resumes row has no node.
+ * The edges are typed (verbindt, steunt, valt aan, zelfde als, citeert),
+ * and the chips at the plane's foot switch a kind on and off. A card
+ * drags, in this view only. A click selects it, lights its neighbours
+ * and scrolls the page to its span; Alt ← scrolls back. Graph on a card
+ * opens the plane with that card selected. Beside the rows stand the
+ * page's chunks and the files they tangle to, from <stem>.graph.json
+ * (lit graph, written at publish), behind the chip code: a chunk uses
+ * chunks, tangles to a file, and a row may name a chunk. A window too
+ * narrow for the plane beside the column gets it as a sheet.
  *
  * Discontinuous spans: a parts row bundles span rows as the pieces of
  * one span (Mueller 2005 keeps such a span as several token ranges). Its
@@ -751,7 +760,8 @@
     ...MODES.map((m) => Object.assign(button(STANDS[m], () => stand(m), "fpl-tab"), { role: "tab" })));
   const picker = el("select", { className: "fpl-stand", ariaLabel: "Stand", onchange: () => stand(picker.value) },
     ...MODES.map((m) => el("option", { value: m }, STANDS[m])));
-  const graphBtn = tool("graph", "Graph", () => { shut(); graph(null); });
+  const graphBtn = tool("graph", "Graph", () => { shut(); plane ? plane.close() : graph(null); });
+  graphBtn.ariaPressed = "false";
   const moreBtn = tool("more", "Meer", () => flip(menu, moreBtn, fillMenu));
   const filterBtn = tool("filter", "Filter: labels en lagen", () => flip(panel, filterBtn, fillChips));
   moreBtn.classList.add("fpl-icon", "fpl-more"); filterBtn.classList.add("fpl-icon", "fpl-filter-btn");
@@ -808,11 +818,13 @@
    */
   const nav = document.querySelector(".quarto-secondary-nav .container-fluid");
   function dock() {
-    const top = !!nav && nav.offsetHeight > 0, room = wide() ? reserve() : 0;
+    const over = !!plane?.beside;   // the bar heads the plane (board V2b), as wide as it
+    const top = !over && !!nav && nav.offsetHeight > 0, room = over ? innerWidth - plane.x : wide() ? reserve() : 0;
     const full = !top && room >= 320;
     bar.classList.toggle("is-full", full);
     bar.classList.toggle("is-docked", top);
-    bar.style.left = full ? `${rail()}px` : "";
+    bar.classList.toggle("is-plane", over);
+    bar.style.left = full ? `${over ? plane.x : rail()}px` : "";
     bar.style.width = full ? `${room}px` : "";
     if (top) { if (bar.parentElement !== nav) nav.insertBefore(bar, nav.querySelector(".quarto-search-button")); }
     else if (bar.parentElement !== document.body) document.body.append(bar);
@@ -2119,8 +2131,12 @@
   const SETKINDS = new Set(["coref", "parts"]);
   /**
    * The page's graph in the layers shown: a node per row and per id a row
-   * names; a relation row (or set) is a node between its ends, a fact an
-   * edge to what it is about. Edges carry the relation's label.
+   * names, but none for a tfa or resumes row (the lens draws those on the
+   * text). A relation row (or coref set) is a node between its ends, rel,
+   * an edge in to it from its first target and out to each other; a fact
+   * an edge "over" to what it is about; a parts row an edge to each
+   * piece. Every edge carries its kind: the relation's label, over, parts,
+   * or code for the code graph's.
    */
   let code = null;   // the page's code graph (lit graph), when the site shipped one
   const coded = (snap ? Promise.resolve(snap.graph ?? null) : fetch(`${stem}.graph.json`).then((r) => (r.ok ? r.json() : null)))
@@ -2133,19 +2149,19 @@
       return r ? layerOf(r) : kinds.get(id) ?? (document.getElementById(id) ? "address" : "elders");
     };
     const node = (id) => nodes.get(id) ?? nodes.set(id, { id, kind: kindOf(id), x: 0, y: 0, dx: 0, dy: 0 }).get(id);
-    for (const r of all.filter(shows)) {
-      node(r.id);
-      const k = r.labels?.[0] ?? "", ts = (r.targets ?? []).filter(Boolean);
+    for (const r of all.filter((x) => shows(x) && !["tfa", "resumes"].includes(sheetOf(x)))) {
+      const k = r.labels?.[0] ?? "", ts = (r.targets ?? []).filter(Boolean), n = node(r.id);
+      n.row = true;
       if (typeof r.text === "string") continue;
-      if (RELATIONS.has(k)) {
-        if (ts[0]) edges.push({ a: node(ts[0]), b: node(r.id), label: "" });
-        for (const t of ts.slice(1)) edges.push({ a: node(r.id), b: node(t), label: k, w: r.weight ?? 0 });
-      } else if (SETKINDS.has(k)) for (const t of ts) edges.push({ a: node(r.id), b: node(t), label: k });
-      else if (ts[0]) edges.push({ a: node(r.id), b: node(ts[0]), label: "over" });
+      if (RELATIONS.has(k) || k === "coref") {
+        Object.assign(n, { rel: true, kind: k });
+        if (k !== "coref" && ts[0]) edges.push({ a: node(ts[0]), b: n, kind: k });
+        for (const t of k === "coref" ? ts : ts.slice(1)) edges.push({ a: n, b: node(t), kind: k, w: r.weight ?? 0 });
+      } else if (k === "parts") for (const t of ts) edges.push({ a: n, b: node(t), kind: k });
+      else if (ts[0]) edges.push({ a: n, b: node(ts[0]), kind: "over" });
     }
     for (const n of code?.nodes ?? []) node(n.id).label = n.label;
-    // a tangle edge carries no word, its width says how many lines it gives (many labels at one file hide each other)
-    for (const e of code?.edges ?? []) edges.push({ a: node(e.a), b: node(e.b), label: e.label === "tangles" ? "" : e.label, lines: e.n ?? 0 });
+    for (const e of code?.edges ?? []) edges.push({ a: node(e.a), b: node(e.b), kind: "code" });
     return { nodes: [...nodes.values()], edges };
   }
   /**
@@ -2165,21 +2181,11 @@
     const k = Number(id.split(":").at(-1)) || 1;
     return [...body.querySelectorAll('.fpl-p[data-kind="C"]')].filter((b) => head(b) === norm(n.label))[k - 1] ?? null;
   }
-  /** The part of a graph within two steps of an id. */
-  function near({ nodes, edges }, id, steps = 2) {
-    const keep = new Set([id]);
-    for (let i = 0; i < steps; i++) {   // breadth first: a round reaches one step past the last, no further
-      const was = new Set(keep);
-      for (const e of edges) if (was.has(e.a.id) || was.has(e.b.id)) { keep.add(e.a.id); keep.add(e.b.id); }
-    }
-    return { nodes: nodes.filter((n) => keep.has(n.id)), edges: edges.filter((e) => keep.has(e.a.id) && keep.has(e.b.id)) };
-  }
   /**
    * Fruchterman-Reingold, a fixed number of rounds from a circle (the same
    * layout every time for the same rows): neighbours pull, all push, a
    * weak gravity holds the loose parts of the graph near the middle
    * (without it they drift to the walls), and the step cools to nothing.
-   * The right edge keeps room for the labels drawn right of each node.
    * k and GRAV measured 2026-11-01 on the lex page (28 nodes, 22 edges):
    * at 0.6 and 2 no node rests on a wall and no two lie within 12 px;
    * gravity 0.5 left 16 nodes on the walls, 1.2 with k 0.8 left 19.
@@ -2201,29 +2207,70 @@
       const temp = (w / 10) * (1 - t / rounds);
       for (const n of nodes) {
         const d = Math.hypot(n.dx, n.dy) || 0.01;
-        n.x = Math.min(w - 150, Math.max(20, n.x + (n.dx / d) * Math.min(d, temp)));
+        n.x = Math.min(w - 20, Math.max(20, n.x + (n.dx / d) * Math.min(d, temp)));
         n.y = Math.min(h - 20, Math.max(20, n.y + (n.dy / d) * Math.min(d, temp)));
       }
     }
   }
-  /** Open the graph over the page: all of it, or the part around an id. Esc or a click outside closes it. */
+  /**
+   * The graph is a plane beside the page (boards V2b-V2d, V4d): the text
+   * column slides to the window's left edge, the margin's cards give way,
+   * and the plane takes the rest of the window under the bar, which
+   * widens over it. A row is a card with the first words of its quote (a
+   * fact its note, a decision its topic), in its colour; a relation row
+   * is a diamond on the edge between its ends, so an undercut has
+   * something to aim at; a tfa or resumes row has no node, its lens is
+   * the text. The cards stand on a lattice: the force layout says
+   * roughly where, the nearest free cell where exactly, so no two
+   * overlap and the plane scrolls when they are many. Dragging a card
+   * moves it in this view only: nothing is kept, and the next drawing
+   * lays the graph out anew. A click selects the card, lights its
+   * neighbours and scrolls the page to its span, which Alt ← undoes. The
+   * chips at the foot are the kinds of edge, each a toggle; the code
+   * graph's edges (a chunk uses a chunk, tangles to a file) start off.
+   * Where the window has no room beside the column the plane is a sheet
+   * over the page under the folded bar, and a click closes it first.
+   */
+  let plane = null;
+  const jumps = [];   // the scroll before each jump from the graph, for Alt ←
+  const offKinds = new Set(["code"]);   // the edge kinds switched off, for this visit only
+  const CW = 168, CH = 40, GY = 18, PAD = 24, FOOT = 52;   // a card, the gap between rows, the plane's padding, its foot
+  const ARROWS = new Set(["supports", "attacks", "cites", "because", "contradicts", "checkedBy", "supersedes"]);
+  const GREY = new Set(["relates", "cites", "checkedBy", "supersedes", "over", "parts", "code"]);
+  const edgeColour = (k) => (GREY.has(k) ? css.getPropertyValue("--fpl-mute").trim() || "#6c757d" : colourOf(k));
+  const kindName = (k) => (k === "code" ? "code" : VERB[k] ?? k);
+  /** What a node says: a row's quote, a fact's note, a decision's topic, an address's text, a chunk's name. */
+  function nodeText(n) {
+    const r = all.find((x) => x.id === n.id), d = decision(n.id);
+    if (r) return typeof r.text === "string" ? r.text : r.note || (r.labels ?? []).join(" ") || r.id;
+    if (d) return d.topic || `besluit ${d.id}`;
+    return n.label ?? (document.getElementById(n.id)?.textContent.trim() || n.id);
+  }
+  /** Open the plane, with an id selected (a card's Graph) or none (the bar's); a second open selects. */
   async function graph(id) {
-    await coded;   // the code graph first: a panel drawn before it came would lack the chunks
-    document.querySelector(".fpl-graph")?.remove();
-    const g = id ? near(graphOf(), id) : graphOf();
-    const css = getComputedStyle(document.documentElement);
-    const color = (n) => css.getPropertyValue({ chunk: "--fpl-fg", file: "--fpl-mine", span: "--fpl-vers", argument: "--fpl-con", tfa: "--fpl-lost",
-      coref: "--fpl-mine", relation: "--fpl-mute", address: "--fpl-mute", elders: "--fpl-rule" }[n.kind] ?? "--fpl-fg").trim() || "#888";
-    const W = Math.max(320, Math.min(innerWidth - 32, 1100)), H = Math.max(240, Math.min(innerHeight - 96, 760)), dpr = devicePixelRatio || 1;
+    await coded;   // the code graph first: a plane drawn before it came would lack the chunks
+    if (plane) { plane.select(id); return; }
     const opener = document.activeElement;
-    const cv = el("canvas", { width: W * dpr, height: H * dpr });
-    cv.style.width = `${W}px`; cv.style.height = `${H}px`;
-    const panel = el("div", { className: "fpl-annot-ui fpl-graph", role: "dialog", "aria-label": "Graph" },
-      el("div", { className: "fpl-bar" }, el("b", {}, id ? `Graph rond ${id}` : "Graph van de pagina"),
-        el("span", { className: "fpl-mute" }, ` · ${g.nodes.length} knopen · ${g.edges.length} kanten`), el("span", { className: "fpl-space" }),
-        button("Sluit", () => close())), cv);
-    const close = () => { panel.remove(); opener?.focus?.(); };
-    /** Where a node goes: its own place, else that of what it is about, followed up its first targets. */
+    const area = el("div", { className: "fpl-plane-area" });
+    const foot = el("div", { className: "fpl-plane-foot", role: "group", ariaLabel: "Soorten relaties" });
+    const p = plane = el("div", { className: "fpl-annot-ui fpl-graph fpl-plane", role: "region", ariaLabel: "Graph" }, area, foot);
+    let g = null, sel = id, built = "", nodes = [];
+    const slide = (fn) => {   // the column moves left (or back) in one motion: FLIP on main
+      const a = body.getBoundingClientRect().left;
+      fn();
+      const d = a - body.getBoundingClientRect().left;
+      if (d && !matchMedia("(prefers-reduced-motion: reduce)").matches)
+        body.animate([{ transform: `translateX(${d}px)` }, { transform: "none" }], { duration: 260, easing: "cubic-bezier(.2,.8,.2,1)" })
+          .finished.then(relayout, () => {});   // what was measured mid-slide (arcs, cards, lines) is measured again where it stopped
+    };
+    const close = () => {
+      p.remove(); plane = null; hot(null);
+      graphBtn.classList.remove("is-on"); graphBtn.ariaPressed = "false";
+      slide(() => document.body.classList.remove("fpl-beside"));
+      layout();
+      opener?.focus?.({ preventScroll: true });
+    };
+    /** Where a node goes on the page: its own place, else that of what it is about, followed up its first targets. */
     const goal = (nid, been = new Set()) => {
       const e = place(nid) ?? chunkBlock(nid);
       if (e || been.has(nid)) return e;
@@ -2231,50 +2278,175 @@
       const r = all.find((x) => x.id === nid);
       return r?.targets?.[0] ? goal(r.targets[0], been) : null;
     };
-    const go = (n) => {
+    const jump = (n) => {
       const e = goal(n.id);
-      if (!e) { toast(`${n.id} staat niet op deze pagina`); return; }
-      close();
+      if (!e) { toast(`“${clip(nodeText(n), 30)}” staat niet op deze pagina`); return; }
+      if (!p.beside) close();
+      jumps.push(scrollY);
       seen(e).scrollIntoView({ block: "center", behavior: "smooth" });
       hot(n.id);
+      toast("Terug: Alt ←");
     };
-    settleGraph(g, W, H);
-    const ctx = cv.getContext("2d");
-    ctx.scale(dpr, dpr);
-    ctx.font = "11px system-ui, sans-serif";
-    ctx.lineWidth = 1;
-    for (const e of g.edges) {
-      ctx.strokeStyle = css.getPropertyValue("--fpl-rule").trim() || "#ccc";
-      ctx.lineWidth = e.lines ? 1 + Math.log2(e.lines) : e.w ? e.w : 1;
-      ctx.beginPath(); ctx.moveTo(e.a.x, e.a.y); ctx.lineTo(e.b.x, e.b.y); ctx.stroke();
-      if (e.label) { ctx.fillStyle = css.getPropertyValue("--fpl-mute").trim() || "#777"; ctx.fillText(e.label, (e.a.x + e.b.x) / 2 + 3, (e.a.y + e.b.y) / 2 - 3); }
-    }
-    for (const n of g.nodes) {
-      ctx.fillStyle = color(n);
-      const rel = n.kind === "relation" || n.kind === "argument" && all.find((x) => x.id === n.id && typeof x.text !== "string" && (x.targets ?? []).length > 1);
-      ctx.beginPath();
-      if (rel) { ctx.moveTo(n.x, n.y - 6); ctx.lineTo(n.x + 6, n.y); ctx.lineTo(n.x, n.y + 6); ctx.lineTo(n.x - 6, n.y); ctx.closePath(); }
-      else ctx.arc(n.x, n.y, n.id === id ? 8 : 5, 0, 2 * Math.PI);
-      ctx.fill();
-      ctx.fillStyle = css.getPropertyValue("--fpl-fg").trim() || "#222";
-      const name = n.label ?? n.id;   // a chunk or file by its name, a row by its id
-      if (n.kind === "chunk" || n.kind === "file") { ctx.fillStyle = color(n); ctx.fillRect(n.x - 4, n.y - 4, 8, 8); ctx.fillStyle = css.getPropertyValue("--fpl-fg").trim() || "#222"; }
-      ctx.fillText(name.length > 28 ? name.slice(0, 27) + "…" : name, n.x + 8, n.y + 4);
-    }
-    cv.onclick = (ev) => {
-      const r = cv.getBoundingClientRect(), x = ev.clientX - r.left, y = ev.clientY - r.top;
-      const hit = g.nodes.find((n) => Math.hypot(n.x - x, n.y - y) < 9);
-      if (hit) go(hit);
+    /** The nodes and edges shown: a row always, anything else while an edge of a kind switched on reaches it. */
+    const shown = () => {
+      const es = g.edges.filter((e) => !offKinds.has(e.kind));
+      const ends = new Set(es.flatMap((e) => [e.a.id, e.b.id]));
+      const ns = g.nodes.filter((n) => (n.row && !n.rel) || ends.has(n.id));
+      const on = new Set(ns.map((n) => n.id));
+      return { ns, es: es.filter((e) => on.has(e.a.id) && on.has(e.b.id)) };
     };
-    // the same nodes as buttons, for a keyboard or a screen reader: the canvas is pixels only
-    cv.setAttribute("aria-hidden", "true");
-    panel.append(el("details", { className: "fpl-graph-list" }, el("summary", {}, "Knopen als lijst"),
-      el("div", { className: "fpl-chips" }, ...g.nodes.map((n) => button(`${n.id} · ${n.kind}`, () => go(n), "fpl-link")))));
-    panel.close = close;
-    panel.tabIndex = -1;
-    document.body.append(panel);
-    panel.focus();
-    panel.dataset.nodes = g.nodes.map((n) => `${n.id}@${Math.round(n.x)},${Math.round(n.y)}`).join(" ");   // for tests: where each node landed
+    /** Lay the cards on the lattice and draw; again only when the rows, the width or the kinds changed. */
+    function build() {
+      const w = area.clientWidth, cols = Math.max(1, Math.floor((w - 2 * PAD + 16) / (CW + 16))), cw = (w - 2 * PAD) / cols, chh = CH + GY;
+      const key = `${cols}|${[...offKinds]}`;
+      if (g && built === key && g.of === all) return;
+      built = key;
+      g = graphOf(); g.of = all;
+      const { ns, es } = shown();
+      nodes = ns;
+      const cards = ns.filter((n) => !n.rel), rels = ns.filter((n) => n.rel);
+      const fit = Math.max(1, Math.floor((area.clientHeight - PAD) / chh)), rows = Math.max(fit, Math.ceil((cards.length * 1.3) / cols));
+      // the force layout over the cards alone: a relation row joins its ends directly
+      const via = new Map(rels.map((r) => [r.id, es.filter((e) => e.a === r || e.b === r).map((e) => (e.a === r ? e.b : e.a))]));
+      const flat = es.flatMap((e) => (e.a.rel || e.b.rel ? [] : [e])).concat(rels.flatMap((r) => {
+        const xs = via.get(r.id).filter((n) => !n.rel);
+        return xs.slice(1).map((b) => ({ a: xs[0], b }));
+      }));
+      settleGraph({ nodes: cards, edges: flat }, cols * cw, rows * chh);
+      const free = new Set(Array.from({ length: cols * rows }, (_, i) => i));
+      const mid = { x: (cols * cw) / 2, y: (rows * chh) / 2 };
+      for (const n of [...cards].sort((a, b) => Math.hypot(a.x - mid.x, a.y - mid.y) - Math.hypot(b.x - mid.x, b.y - mid.y))) {
+        let best = -1, bd = Infinity;   // the nearest free cell to where the force left it
+        for (const i of free) { const d = Math.hypot((i % cols + 0.5) * cw - n.x, (Math.floor(i / cols) + 0.5) * chh - n.y); if (d < bd) { bd = d; best = i; } }
+        free.delete(best);
+        n.x = PAD + (best % cols + 0.5) * cw; n.y = PAD + (Math.floor(best / cols) + 0.5) * chh;
+      }
+      area.replaceChildren();
+      const sv = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      sv.classList.add("fpl-edges");
+      sv.setAttribute("width", w); sv.setAttribute("height", rows * chh + 2 * PAD);
+      const defs = sv.appendChild(document.createElementNS("http://www.w3.org/2000/svg", "defs"));
+      for (const k of new Set(es.map((e) => e.kind))) if (ARROWS.has(k)) defs.insertAdjacentHTML("beforeend",
+        `<marker id="fpl-to-${k}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" markerUnits="userSpaceOnUse" orient="auto"><path d="M0 1L9 5L0 9z" fill="${edgeColour(k)}"/></marker>`);
+      area.append(sv);
+      for (const e of es) {
+        e.path = sv.appendChild(document.createElementNS("http://www.w3.org/2000/svg", "path"));
+        e.path.setAttribute("class", "fpl-edge"); e.path.dataset.kind = e.kind;
+        e.path.style.setProperty("--lc", edgeColour(e.kind));
+        if (ARROWS.has(e.kind) && (!e.b.rel || e.kind !== e.b.kind)) e.path.setAttribute("marker-end", `url(#fpl-to-${e.kind})`);
+      }
+      for (const n of ns) {
+        const r = all.find((x) => x.id === n.id), text = nodeText(n);
+        n.el = n.rel
+          ? el("button", { type: "button", className: "fpl-node fpl-dia", ariaLabel: `${kindName(r.labels[0])}: ${clip(nodeText({ id: r.targets[0] }), 30)}` })
+          : el("button", { type: "button", className: `fpl-node${r ? (typeof r.text === "string" ? "" : " is-note") : " is-ext"}`, title: text },
+            r && typeof r.text === "string" ? el("span", { className: "fpl-sq", style: `--lc: ${tone(r)}` }) : null, el("span", {}, clip(text, 80)));
+        n.el.dataset.id = n.id;
+        if (n.rel) n.el.style.setProperty("--lc", edgeColour(n.kind));
+        area.append(n.el);
+        grab(n);
+      }
+      place2(chh);
+      p.dataset.nodes = ns.map((n) => `${n.id}@${Math.round(n.x)},${Math.round(n.y)}`).join(" ");   // for tests: where each node landed
+      const kinds = [...new Set(g.edges.map((e) => e.kind))].filter((k) => k !== "over" && k !== "parts");
+      foot.replaceChildren(...kinds.map((k) => {
+        const c = button("", () => { offKinds.has(k) ? offKinds.delete(k) : offKinds.add(k); build(); foot.querySelector(`[data-kind="${k}"]`)?.focus(); }, "fpl-kchip");
+        c.dataset.kind = k; c.ariaPressed = String(!offKinds.has(k));
+        c.style.setProperty("--lc", edgeColour(k));
+        c.innerHTML = `<svg width="22" height="10" aria-hidden="true"><path class="fpl-edge" data-kind="${k}" d="M1 5H${ARROWS.has(k) ? 15 : 21}"/>${ARROWS.has(k) ? '<path d="M13 1L21 5L13 9z" fill="currentColor"/>' : ""}</svg>`;
+        c.append(kindName(k));
+        return c;
+      }));
+      select(sel, false);
+    }
+    /**
+     * Put each card and diamond where its node is, the diamonds midway
+     * between their ends, and draw the edges to their borders. Laid out
+     * anew (row, the lattice's row height), a diamond keeps to the gap
+     * between two rows of cards, so it never stands on one; while a card
+     * is dragged its diamonds follow it freely.
+     */
+    function place2(row) {
+      for (let i = 0; i < 3; i++) for (const n of nodes.filter((x) => x.rel)) {   // three rounds: a diamond on a diamond (an undercut)
+        const xs = g.edges.filter((e) => e.path && (e.a === n || e.b === n)).map((e) => (e.a === n ? e.b : e.a));
+        if (xs.length) { n.x = xs.reduce((s, x) => s + x.x, 0) / xs.length; n.y = xs.reduce((s, x) => s + x.y, 0) / xs.length; }
+        if (row) n.y = PAD + Math.round((n.y - PAD) / row) * row;   // a cell boundary: the middle of the nearest gap
+      }
+      for (const n of nodes) { n.el.style.left = `${n.x}px`; n.el.style.top = `${n.y}px`; }
+      const rim = (n, dx, dy) => {   // where the line from a node's middle, along dx dy, leaves its card
+        const hw = n.rel ? 7 : CW / 2 + 2, hh = n.rel ? 7 : CH / 2 + 2, t = Math.min(hw / (Math.abs(dx) || 1e-9), hh / (Math.abs(dy) || 1e-9), 1);
+        return [n.x + dx * t, n.y + dy * t];
+      };
+      for (const e of g.edges.filter((x) => x.path)) {
+        const dx = e.b.x - e.a.x, dy = e.b.y - e.a.y, [x1, y1] = rim(e.a, dx, dy), [x2, y2] = rim(e.b, -dx, -dy);
+        e.path.setAttribute("d", `M${x1.toFixed(1)} ${y1.toFixed(1)}L${x2.toFixed(1)} ${y2.toFixed(1)}`);
+      }
+    }
+    /** A card is dragged in this view only; a press without a move is a click. */
+    function grab(n) {
+      let from = null, moved = false;
+      n.el.onpointerdown = (ev) => { if (ev.button) return; from = [ev.clientX, ev.clientY, n.x, n.y]; moved = false; n.el.setPointerCapture(ev.pointerId); };
+      n.el.onpointermove = (ev) => {
+        if (!from) return;
+        const dx = ev.clientX - from[0], dy = ev.clientY - from[1];
+        if (!moved && Math.hypot(dx, dy) < 4) return;
+        moved = true; n.el.classList.add("is-lift");
+        n.x = from[2] + dx; n.y = from[3] + dy;
+        place2();
+      };
+      n.el.onpointerup = () => { from = null; n.el.classList.remove("is-lift"); };
+      n.el.onclick = (ev) => { ev.stopPropagation(); if (moved) { moved = false; return; } select(n.id); jump(n); };
+      n.el.onmouseenter = () => { hot(n.id); light(n.id); };
+      n.el.onmouseleave = () => { hot(null); light(sel); };
+    }
+    /** The edges of a node drawn heavier, each with its kind as a pill at its middle. */
+    function light(nid) {
+      for (const x of area.querySelectorAll(".fpl-pill")) x.remove();
+      for (const e of g.edges.filter((x) => x.path)) {
+        const on = !!nid && (e.a.id === nid || e.b.id === nid || (e.a.rel && e.b.id !== nid && g.edges.some((f) => f.path && f.b === e.a && f.a.id === nid))
+          || (e.b.rel && g.edges.some((f) => f.path && f.a === e.b && f.b.id === nid)));
+        e.path.classList.toggle("is-hot", on);
+        if (on && !(e.a.rel && e.b.rel) && (e.a.rel || !e.b.rel)) {   // one pill per relation: on the half that leaves its diamond
+          const pill = el("span", { className: "fpl-pill" }, kindName(e.kind));
+          pill.style.left = `${(e.a.x + e.b.x) / 2}px`; pill.style.top = `${(e.a.y + e.b.y) / 2}px`;
+          pill.style.setProperty("--lc", edgeColour(e.kind));
+          area.append(pill);
+        }
+      }
+    }
+    /** Select a node: it and its neighbours stand out, the rest dims; none, all show alike. */
+    function select(nid, scroll = true) {
+      sel = nodes.some((n) => n.id === nid) ? nid : null;
+      const near = new Set(sel ? [sel] : []);
+      for (let i = 0; i < 2; i++) for (const e of g.edges.filter((x) => x.path)) {   // through a diamond to the other end
+        if (near.has(e.a.id) && (i === 0 || e.a.rel)) near.add(e.b.id);
+        if (near.has(e.b.id) && (i === 0 || e.b.rel)) near.add(e.a.id);
+      }
+      p.classList.toggle("has-sel", !!sel);
+      for (const n of nodes) { n.el.classList.toggle("is-sel", n.id === sel); n.el.classList.toggle("is-near", near.has(n.id)); }
+      light(sel);
+      if (sel && scroll) nodes.find((n) => n.id === sel).el.scrollIntoView({ block: "nearest", inline: "nearest" });
+    }
+    area.onclick = (ev) => { if (ev.target === area || ev.target.closest?.(".fpl-edges")) select(null); };
+    /** Measure the frame: beside the column where 320px are left for the plane, else a sheet over the page. */
+    p.fit = () => {
+      const was = p.beside;
+      p.beside = innerWidth >= 24 + 740 + 24 + 320;
+      if (p.beside !== was) slide(() => document.body.classList.toggle("fpl-beside", p.beside));
+      p.classList.toggle("is-sheet", !p.beside);
+      const shift = new DOMMatrix(getComputedStyle(body).transform).m41;   // where the column ends, not where its slide is now
+      p.x = p.beside ? Math.round(body.getBoundingClientRect().right - shift) + 24 : 0;
+      p.style.left = `${p.x}px`;
+      p.style.top = p.beside ? "" : `${Math.max(0, bar.getBoundingClientRect().bottom)}px`;   // a sheet under the bar, whose Graph closes it
+      build();
+    };
+    p.select = (nid) => select(nid);
+    p.close = close;
+    p.tabIndex = -1;
+    graphBtn.classList.add("is-on"); graphBtn.ariaPressed = "true";
+    document.body.append(p);
+    layout();   // fit, and the margin gives way
+    p.focus({ preventScroll: true });
   }
 
   /** Download this browser's rows as <stem>.annot.json. */
@@ -2520,6 +2692,7 @@
     lines.replaceChildren();
     unbar();
     margin.style.minHeight = "";
+    if (plane) { plane.fit(); dock(); lens(); fade(); return; }   // the plane stands where the margin was: no cards, no lines
     const full = mode() === "kantlijn";
     if (wide()) {
       column.classList.add("fpl-column");
@@ -2650,7 +2823,8 @@
   function hot(id) {
     if (link) id = link.from;   // while a connect is in flight its start stays lit, whatever the pointer passes
     const group = new Set(id ? groupOf(id) : []);   // a piece lights its whole, the whole its pieces
-    for (const n of [...body.querySelectorAll("mark.fact, .is-hot"), ...margin.querySelectorAll(".fpl-card"), ...lines.children])
+    for (const n of [...body.querySelectorAll("mark.fact, .is-hot"), ...margin.querySelectorAll(".fpl-card"), ...lines.children,
+      ...(plane?.querySelectorAll(".fpl-node") ?? [])])
       n.classList.toggle("is-hot", group.has(n.dataset.id));
     if (id) for (const e of anchorsOf(id)) if (!e.matches("mark.fact")) e.classList.add("is-hot");
     for (const n of body.querySelectorAll(".fpl-coref")) n.classList.remove("fpl-coref");
@@ -3387,6 +3561,12 @@
       return;
     }
     const typing = ev.defaultPrevented || ev.target.closest?.("input, textarea, select, [contenteditable], .fpl-editor");
+    // back to where the page stood before a jump from the graph: our own stack, since browser Back is Cmd+[ on a Mac
+    if (ev.key === "ArrowLeft" && ev.altKey && !ev.metaKey && !ev.ctrlKey && !ev.shiftKey && !typing && jumps.length) {
+      ev.preventDefault();
+      scrollTo({ top: jumps.pop(), behavior: "smooth" });
+      return;
+    }
     if (ev.key === "Escape" && reading && !typing) { read(null); return; }
     if (ev.key === "?" && !typing && !ev.metaKey && !ev.ctrlKey && !ev.altKey) { ev.preventDefault(); menu.hidden || !menu.classList.contains("fpl-keysheet") ? keysheet() : shut(); return; }
     const plainish = !typing && !ev.metaKey && !ev.ctrlKey && !ev.altKey;
