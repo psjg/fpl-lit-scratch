@@ -610,7 +610,7 @@
    * whatever order they were wrapped.
    */
   function paint(size) {
-    const fg = getComputedStyle(body).color, bg = getComputedStyle(document.body).backgroundColor;
+    const bg = getComputedStyle(document.body).backgroundColor;
     const ground = /^rgba\(.*, 0\)$/.test(bg) ? "#ffffff" : bg;   // a transparent body is the white canvas
     const tones = {};
     for (const m of body.querySelectorAll("mark.fact")) {
@@ -620,6 +620,7 @@
       const cs = ids.map((id) => tones[id] ??= tone(all.find((r) => r.id === id)));
       const lc = cs.at(-1), d = cs.length - 1;
       let p = Math.min(0.7, 0.2 + 0.12 * d);
+      const fg = getComputedStyle(m).color;   // a link or code in a span has its own
       while (p > 0 && contrast(fg, mix(lc, p, ground)) < 4.5) p -= 0.02;
       m.style.setProperty("--lc", lc);
       m.style.setProperty("--wash", mix(lc, Math.max(0, p), ground));
