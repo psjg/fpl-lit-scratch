@@ -2549,7 +2549,14 @@
       const { ns, es } = shown();
       nodes = ns;
       const cards = ns.filter((n) => !n.rel), rels = ns.filter((n) => n.rel);
-      const fit = Math.max(1, Math.floor((area.clientHeight - PAD) / chh)), rows = Math.max(fit, Math.ceil((cards.length * 1.3) / cols));
+      // room for every card and a third more, and for each group's block with the row of its tab (GPT review: two cards
+      // of a group take four cells, and a lattice sized by the cards alone ran out)
+      const blocks = g.groups.reduce((t, gr) => {
+        const m = cards.filter((n) => gr.targets.includes(n.id)).length, bw = Math.min(m, 2, cols);
+        return t + (m && bw * (Math.ceil(m / bw) + 1));
+      }, 0);
+      const fit = Math.max(1, Math.floor((area.clientHeight - PAD) / chh));
+      let rows = Math.max(fit, Math.ceil((cards.length * 1.3 + blocks) / cols));
       // the force layout over the cards alone: a relation row joins its ends directly
       const via = new Map(rels.map((r) => [r.id, es.filter((e) => e.a === r || e.b === r).map((e) => (e.a === r ? e.b : e.a))]));
       const flat = es.flatMap((e) => (e.a.rel || e.b.rel ? [] : [e])).concat(rels.flatMap((r) => {
@@ -2580,6 +2587,7 @@
         for (const i of room(Math.floor(best / cols), best % cols)) free.delete(i);   // its tab's row and an empty cell stay empty
       }
       for (const n of [...cards].filter((x) => x.cell === undefined).sort((a, b) => Math.hypot(a.x - mid.x, a.y - mid.y) - Math.hypot(b.x - mid.x, b.y - mid.y))) {
+        if (!free.size) { for (let c = 0; c < cols; c++) free.add(rows * cols + c); rows++; }   // never a cell off the lattice
         let best = -1, bd = Infinity;   // the nearest free cell to where the force left it
         for (const i of free) { const d = Math.hypot((i % cols + 0.5) * cw - n.x, (Math.floor(i / cols) + 0.5) * chh - n.y); if (d < bd) { bd = d; best = i; } }
         cell(n, best);
