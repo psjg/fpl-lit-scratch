@@ -2549,11 +2549,12 @@
       const { ns, es } = shown();
       nodes = ns;
       const cards = ns.filter((n) => !n.rel), rels = ns.filter((n) => n.rel);
-      // room for every card and a third more, and for each group's block with the row of its tab (GPT review: two cards
-      // of a group take four cells, and a lattice sized by the cards alone ran out)
+      // room for every card and a third more, and for the cells each group's block takes beyond its cards, the row of its
+      // tab and a block's empty corner (GPT review: two cards of a group take four cells, and a lattice sized by the cards
+      // alone ran out)
       const blocks = g.groups.reduce((t, gr) => {
         const m = cards.filter((n) => gr.targets.includes(n.id)).length, bw = Math.min(m, 2, cols);
-        return t + (m && bw * (Math.ceil(m / bw) + 1));
+        return t + (m && bw * (Math.ceil(m / bw) + 1) - m);
       }, 0);
       const fit = Math.max(1, Math.floor((area.clientHeight - PAD) / chh));
       let rows = Math.max(fit, Math.ceil((cards.length * 1.3 + blocks) / cols));
