@@ -37,6 +37,8 @@ mark.fact-mine:hover, mark.fact-mine.is-hot { background: var(--fpl-mine-wash); 
 /* the column: no longer sticky, as tall as its cards */
 #quarto-margin-sidebar.fpl-column { position: relative; top: auto; height: auto; max-height: none;
   overflow: visible; align-self: stretch; }
+/* Quarto sinks an empty margin column (zindex-bottom, z-index -1) under the text; ours holds cards and an editor */
+#quarto-margin-sidebar.fpl-column.zindex-bottom { z-index: 1 !important; }
 .fpl-margin { position: relative; font-size: .86rem; line-height: 1.4; color: var(--fpl-fg); }
 .fpl-lines { position: absolute; top: 0; left: 0; pointer-events: none; z-index: 1; }
 .fpl-line { fill: none; stroke: var(--fpl-vers); stroke-width: 1; stroke-linecap: round; opacity: .35; transition: opacity .12s; }
