@@ -20,12 +20,15 @@
   --fpl-fg: var(--bs-body-color, #212529);
   --fpl-wash: var(--bs-tertiary-bg, #f8f9fa);
   --fpl-node: var(--bs-gray-400, #ced4da);   /* a graph card's border */
+  /* the heat bar's three steps: the accent's hue, darker per step, the lightest 3:1 on white */
+  --fpl-heat-1: oklch(.66 .09 262); --fpl-heat-2: oklch(.53 .13 262); --fpl-heat-3: oklch(.40 .14 262);
 }
 [data-bs-theme="dark"], .quarto-dark {
   --fpl-vers: #63b89f; --fpl-vers-wash: rgba(99, 184, 159, .16);
   --fpl-mine: #8aa6ee; --fpl-mine-wash: rgba(138, 166, 238, .18);
   --fpl-lost: #cfa85a;
   --fpl-con: #e0857c;
+  --fpl-heat-1: oklch(.55 .09 262); --fpl-heat-2: oklch(.69 .11 262); --fpl-heat-3: oklch(.83 .08 262);
 }
 
 /* spans (boards V3, V4): washed in their label's colour, a 2px line per layer under them, the outermost lowest;
@@ -441,13 +444,14 @@ label.fpl-item { cursor: text; }
   white-space: normal; }
 @media (hover: none) { .fpl-band > .fpl-tip { display: none; } }
 
-/* density: a bar in a block's gutter (or a band's), three greys by how many rows hang from it (fpl-annot.js heat);
-   the padding widens the bar's hover target, the grey stays in the content box */
-.fpl-heat { position: absolute; top: 0; bottom: 0; left: calc(-.35rem - 6px); width: 3px; padding: 0 3px; box-sizing: content-box;
-  background: var(--fpl-mute) content-box; cursor: help; }
-.fpl-heat[data-level="1"] { opacity: .25; }
-.fpl-heat[data-level="2"] { opacity: .55; }
-.fpl-heat[data-level="3"] { opacity: .9; }
+/* density (feedback 16): a bar in a block's gutter (or a band's), one hue in three steps by how many rows hang
+   from it (fpl-annot.js heat), each step 3:1 or more on the page. It keeps to its own lane, 2 to 6px left of the
+   text; the resumes arcs start at 8px and bow left of it. The padding widens the hover target, the colour stays
+   in the content box. */
+.fpl-heat { position: absolute; top: 2px; bottom: 2px; left: -9px; width: 4px; padding: 0 3px; box-sizing: content-box;
+  border-radius: 2px; background: var(--fpl-heat-1) content-box; cursor: help; }
+.fpl-heat[data-level="2"] { background-color: var(--fpl-heat-2); }
+.fpl-heat[data-level="3"] { background-color: var(--fpl-heat-3); }
 
 /* close reading: the sentence under the cursor (j / k), washed like a hot span */
 .fpl-s.fpl-here { background: var(--fpl-vers-wash); }

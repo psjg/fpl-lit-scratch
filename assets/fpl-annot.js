@@ -193,7 +193,8 @@
  * that clears it.
  *
  * Close reading. Outside Lezen each block carries a bar in its left
- * gutter, shaded by how many rows hang from it (after Zyto 2012, where
+ * gutter, the accent's blue in three steps by how many rows hang from it
+ * (feedback 16: a grey of 3px went unseen; after Zyto 2012, where
  * the most annotated regions of a text showed where readers stumbled).
  * And j and k move a reading cursor sentence by sentence (after Miall
  * 1994): the sentence is washed, its address is the URL's hash, so a
