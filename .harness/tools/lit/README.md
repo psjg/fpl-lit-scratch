@@ -155,9 +155,14 @@ first words, and a click opens the ledger row, its reason, date and who, in the 
 reacties`. Open (a click, its menu `⋯`, `n reacties` on a card of one's own) it shows its thread:
 each message with its labels, author and time when known, replies one step in and no further,
 a reply arrow on hover that answers that message, and one field `Antwoord…` that saves a reply
-(Enter); a thread of more than four folds to `n reacties`. The menu `⋯` holds Verbind met… (`l`:
-steunt, valt aan, zelfde als, then a click on the other end), Graph van deze kaart, Toon beide,
-and Verwijder (a sidecar row says why it cannot). The cards
+(Enter); a thread of more than four folds to `n reacties`. The menu `⋯` holds Verbind met… (`l`),
+Graph van deze kaart, Toon beide, and Verwijder (a sidecar row says why it cannot). The knob at
+the end of a span is a handle: drag it onto another span, card, fact or address (on touch after a
+long press) and the end lights, a dashed line following in the gutter, never across the text; on
+the drop a chooser asks the kind, `verbindt` (`relates`, also Enter), `steunt`, `valt aan`,
+`zelfde als`, `citeert` (keys 1-5), and Esc lets go. A click on the knob, Verbind met… or `l`
+arms a pick instead: click the other end, or Tab to it and Enter, and the chooser asks the same.
+A drop on nothing lets go and says so. The cards
 stand in the order of their lines and are only pushed down, so the lines, which stay in the
 gutter between the text and the cards, never cross; a span over three lines or more gets a
 thin bar in the gutter instead of an underline. A card's quote is one line and its note two
@@ -222,8 +227,8 @@ premise. `lit facts` refuses an arguing row with fewer than two targets, one tha
 or one that runs from a row to that row (`lit-facts-argument`). The rows stay a graph, so one
 premise may serve two claims; a card shows the tree read from its row as `Argument · 2 voor ·
 1 tegen`, grounds under the claim (+ supports, − attacks), undercuts under the inference they
-attack, a cycle marked where it closes. Verbind met… in a card's menu arms a pick of a kind
-(`Steunt…`, `Valt aan…`, `Zelfde als…`, keys 1-3): the next click on a span, card, fact or branch is the end of a new row, and Esc cancels it.
+attack, a cycle marked where it closes. `steunt` and `valt aan` are kinds of the knob's chooser
+(above), and a branch of a tree is an end like a span, card or fact.
 
 An arguing row may carry a `weight`, an integer 1 to 5 (Kialo's impact): how much the reader
 thinks the inference bears. `lit facts` refuses a weight outside 1 to 5 or on a row that does
@@ -339,8 +344,8 @@ They are the next work on this layer, not ideas:
 2. **Coreference as a layer of its own: built 2026-11-01.** `coref` rows that share a member
    are one chain (union-find), as PDT links an anaphor to its antecedent and a chain follows
    (Mikulová et al. 2006 ch. 9); chains are numbered by where their first member stands, and
-   each member on the page carries its number. `Zelfde als…` (Verbind met… on a card) arms a pick whose end
-   joins the chain. Still open: the PDT's link types (textual, grammatical) as sub-labels
+   each member on the page carries its number. `zelfde als` in the knob's chooser joins its end
+   to the chain. Still open: the PDT's link types (textual, grammatical) as sub-labels
    (`coref/text`), and a gutter column of the chains.
 3. **Querying across layers: built 2026-11-01** (Müller's objection, PML-TQ's answer).
    Terms `[!]key:value`, all to hold, a negation a condition met zero times: `label:` (at or

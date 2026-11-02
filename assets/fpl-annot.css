@@ -61,9 +61,18 @@ mark.fact-mine:hover, mark.fact-mine.is-hot { background: var(--fpl-mine-wash); 
 .fpl-stretch { fill: var(--fpl-vers); opacity: .7; transition: opacity .12s; }
 .fpl-stretch.mine { fill: var(--fpl-mine); }
 .fpl-stretch.is-hot { opacity: 1; }
-.fpl-knob { fill: var(--fpl-vers); transition: opacity .12s, r .12s; }
+/* the knob is a handle (board C): a transparent stroke widens its hit; it grows in place, a plain dot, no ring */
+.fpl-knob { fill: var(--fpl-vers); stroke: transparent; stroke-width: 8; pointer-events: all; cursor: grab; touch-action: none;
+  outline: none; transition: opacity .12s, r .12s; }
 .fpl-knob.mine { fill: var(--fpl-mine); }
-.fpl-knob.is-hot { opacity: 1; r: 4.5; }
+.fpl-knob:hover, .fpl-knob:focus-visible, .fpl-knob.is-hot, .fpl-knob.is-drag { opacity: 1; r: 6; }
+/* a connect in flight: a dashed line from the span's stub, a dot under the pointer, the end lit */
+.fpl-aim-line { fill: none; stroke: var(--fpl-mine); stroke-width: 1.75; stroke-dasharray: 5 4; }
+.fpl-aim-dot { fill: var(--fpl-mine); }
+body.fpl-dragging, body.fpl-dragging * { cursor: grabbing !important; user-select: none; }
+mark.fact.fpl-target, .fpl-target:is(.fpl-c, .fpl-s, .fpl-p, li, [data-fact]) { background: color-mix(in srgb, var(--fpl-vers) 12%, transparent);
+  outline: 1.5px solid var(--fpl-vers); outline-offset: 1px; border-radius: 2px; }
+.fpl-card.fpl-target, .fpl-card.mine.fpl-target { z-index: 3; background: color-mix(in srgb, var(--fpl-vers) 6%, var(--fpl-bg)); border-color: var(--fpl-vers); }
 mark.fact[data-id="draft"] { text-decoration-color: transparent; background: color-mix(in srgb, var(--fpl-mine) 22%, transparent); }   /* board B: a selection, washed, no line yet */
 
 /* paragraph and sentence numbers, outside the reading stand */
@@ -149,6 +158,7 @@ body.fpl-numbered .fpl-s:hover .fpl-c::before { opacity: 1; }
 .fpl-cardhead > .fpl-ib:last-child { margin-right: -4px; }
 .fpl-card.is-hot .fpl-cardhead > .fpl-ib, .fpl-card.is-open .fpl-cardhead > .fpl-ib, .fpl-card:focus-within .fpl-cardhead > .fpl-ib,
 .fpl-inline .fpl-cardhead > .fpl-ib, .fpl-ib:focus-visible { opacity: 1; }
+body.fpl-linking .fpl-card .fpl-cardhead > .fpl-ib { opacity: 0; }   /* board C: while a connect is in flight its lit cards show no tools */
 .fpl-ib:hover, .fpl-ib[aria-expanded="true"] { background: var(--fpl-vers-wash); color: var(--fpl-vers); }
 .mine .fpl-ib:hover, .mine .fpl-ib[aria-expanded="true"] { background: var(--fpl-mine-wash); color: var(--fpl-mine); }
 .fpl-ib:focus-visible { outline: 2px solid var(--fpl-mine); outline-offset: 0; }
@@ -210,6 +220,8 @@ button.fpl-end:hover, button.fpl-end:focus-visible { color: var(--fpl-fg); text-
 .fpl-menu footer { margin-top: 5px; padding: 7px 13px 3px; border-top: 1px solid var(--fpl-rule); font-size: 12.5px; color: var(--fpl-mute); }
 .fpl-item[aria-disabled="true"], .fpl-item.fpl-danger[aria-disabled="true"], .fpl-item.fpl-danger[aria-disabled="true"] .fpl-ico { color: var(--fpl-mute); cursor: default; }
 .fpl-cardmenu .fpl-panel-head { margin: 4px 13px 2px; }
+.fpl-cardmenu header { padding: 4px 13px 6px; font-size: 12.5px; color: var(--fpl-mute); }   /* the chooser: Verbind met “…” als */
+.fpl-cardmenu header b { font-weight: 600; color: var(--fpl-fg); }
 
 /* the bar (fpl-annot.js dock): the stands, the search, Graph and ⋯, fixed above the margin.
    Nothing in it changes size or place on hover or state: hover and state change colour only. */

@@ -98,6 +98,20 @@
  * met… (key l), Graph van deze kaart, Toon beide, Verwijder (a sidecar
  * row says why not).
  *
+ * The knob (board C) at the end of a span is a handle: a plain dot that
+ * grows under the mouse, on focus and while carried, never a ring. Drag
+ * it onto a span, card, fact or address (on touch after a long press):
+ * the end under the pointer lights, and a dashed line from the span's
+ * stub follows, in the gutter while the pointer is over the text and to
+ * the pointer over the margin, a dot under the pointer. On the drop a
+ * chooser asks the kind: verbindt (relates, also Enter), steunt, valt
+ * aan, zelfde als, citeert (keys 1-5); Esc or a click elsewhere lets go.
+ * A drop on nothing or on its own span lets go and says so. A click on
+ * the knob, its card's Verbind met… or the key l (on the knob or card
+ * with the focus, else the card under the mouse) arms a pick instead: a
+ * click on the other end, or Tab and the arrows to it and Enter, asks the
+ * same. The row is saved as every pick's is, targets [start, end].
+ *
  * The bar. One bar, fixed above the margin column, holds the three
  * stands as tabs (Lezen, Spans, Kantlijn, also the key "a"), the search
  * field (the key "z"), Graph and a menu ⋯: Naam, Importeer rijen,
@@ -155,9 +169,8 @@
  * the inference rather than its premise. The data stays a graph (a
  * premise may serve two claims); a card shows the tree read from its
  * row, grounds under the claim, undercuts under the inference they
- * attack. Verbind met… in a card's menu offers "Steunt…" and "Valt
- * aan…" (keys 1, 2): each arms a pick, and the next click on a span, a
- * card, a fact or a branch of a tree is the end.
+ * attack. Steunt and valt aan are kinds of the knob's chooser, and a
+ * branch of a tree is an end like a span, a card or a fact.
  *
  * Layers, after the Prague Dependency Treebank's stacked annotation:
  * only a span anchors in the text, every other row names an id. A row's
@@ -218,8 +231,7 @@
  * union-find over the sets), numbered in page order, and each member on
  * the page carries its chain's number, as the PDT links an anaphor to its
  * antecedent (Mikulova et al. 2006, ch. 9) and a chain follows from the
- * links. "Zelfde als…" under a card's Verbind met… arms a pick; its end
- * joins the chain.
+ * links. Zelfde als in the knob's chooser joins its end to the chain.
  *
  * Querying across the layers (after PML-TQ, Pajas and Stepanek 2009):
  * the bar's search field takes terms [!]key:value, all to hold, in
@@ -513,9 +525,10 @@
     shift: '<path fill="none" stroke="currentColor" stroke-width="1.5" d="m5 6 3-3 3 3M5 10l3 3 3-3"/>',
     reply: '<path fill="none" stroke="currentColor" stroke-width="1.5" d="M6.5 4 2.5 8l4 4M2.5 8H10a3.5 3.5 0 0 1 3.5 3.5V13"/>',
     link: '<path fill="none" stroke="currentColor" stroke-width="1.5" d="M6.5 9.5l3-3M7 4.5l1-1a2.8 2.8 0 0 1 4 4l-1 1M9 11.5l-1 1a2.8 2.8 0 0 1-4-4l1-1"/>',
-    supports: '<path fill="none" stroke="currentColor" stroke-width="1.5" d="M8 3v10M3 8h10"/>',
-    attacks: '<path fill="none" stroke="currentColor" stroke-width="1.5" d="M3 8h10"/>',
-    same: '<path fill="none" stroke="currentColor" stroke-width="1.5" d="M3 6h10M3 10h10"/>',
+    supports: '<g fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="5.5"/><path d="M8 5.5v5M5.5 8h5"/></g>',
+    attacks: '<g fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="5.5"/><path d="M5.5 8h5"/></g>',
+    same: '<g fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6" cy="8" r="4"/><circle cx="10" cy="8" r="4"/></g>',
+    cites: '<path fill="none" stroke="currentColor" stroke-width="1.5" d="M3 12V9a3.5 3.5 0 0 1 3.5-3.5M9 12V9a3.5 3.5 0 0 1 3.5-3.5"/>',
   };
   const ico = (name) => {
     const s = el("span", { className: "fpl-ico" });
@@ -640,6 +653,7 @@
   }
   /** Close the menu, the filter panel and a card's menu. */
   function shut() {
+    if (link?.open) { link = null; drawAim(); hot(null); toast("Niet verbonden"); }   // the chooser closed unanswered
     for (const [pop, btn] of [[menu, moreBtn], [panel, filterBtn]]) { pop.hidden = true; btn.ariaExpanded = "false"; btn.classList.remove("is-open"); }
     cardMenu.hidden = true;
     if (menuOf) for (const b of margin.querySelectorAll(".fpl-card-more")) b.ariaExpanded = "false";
@@ -647,6 +661,7 @@
   }
   document.addEventListener("pointerdown", (ev) => {
     const t = ev.target;
+    if (link?.open && t.closest?.(".fpl-knob")) { link = null; drawAim(); }   // a new drag replaces the question, quietly
     if (!t.closest?.(".fpl-menu, .fpl-card-more") && !moreBtn.contains(t) && !filterBtn.contains(t) && t !== field) shut();
   }, true);
   /** A click outside every card, menu and panel lets the open card close; not while a new fact is written. */
@@ -739,7 +754,8 @@
     const keys = [["a", "Volgende stand"], ["z", "Zoek of filter"], ["j  k", "Volgende, vorige zin"],
       ["Enter", "Een feit op de zin onder de cursor"], ["⌘↩", "Bewaar in de editor"],
       ["Esc", "Sluit of breekt af; anders opent de laatste band"], ["Alt + selectie", "Een deel van een span; Enter bundelt"],
-      ["Alt-klik", "De tfa-waarde van een bijzin"], ["Alt-Shift-klik", "Deze bijzin neemt een eerdere op"], ["?", "Deze lijst"]];
+      ["Alt-klik", "De tfa-waarde van een bijzin"], ["Alt-Shift-klik", "Deze bijzin neemt een eerdere op"],
+      ["l", "Verbind de kaart onder de muis of de focus; Tab kiest het andere eind, Enter het soort"], ["?", "Deze lijst"]];
     menu.replaceChildren(el("p", { className: "fpl-panel-head" }, "Sneltoetsen"),
       el("dl", {}, ...keys.flatMap(([k, what]) => [el("dt", {}, ...k.split(/ {2}/).map((x) => el("kbd", {}, x))), el("dd", {}, what)])));
     menu.tabIndex = -1;
@@ -989,7 +1005,7 @@
     const more = el("button", { type: "button", className: "fpl-ib fpl-card-more", ariaLabel: "Meer acties voor deze kaart", title: "Meer acties" }, ico("more"));
     more.ariaHasPopup = "menu";
     more.ariaExpanded = String(menuOf === row.id && !cardMenu.hidden);
-    more.onclick = (ev) => { ev.stopPropagation(); openMenu(row.id, false); };
+    more.onclick = (ev) => { ev.stopPropagation(); openMenu(row.id); };
     if (st !== "vers") {   // board B: one amber line, the same card underneath
       const what = gone ? "wijst nergens heen" : st === "dubbel" ? "staat meer dan eens in de tekst" : "staat niet meer in de tekst";
       card.append(el("div", { className: "fpl-cardhead" },   // no Graph: a lost row has no place to draw from
@@ -1061,20 +1077,19 @@
   const cardEl = (id) => margin.querySelector(`.fpl-card[data-id="${CSS.escape(id)}"]`);
   /**
    * Open the menu of a card, left of it as on board F (under its ⋯ where
-   * there is no room), with the card laid out open; connect opens it at
-   * Verbind met…, as the key l does. Until the knob's drag (unit 4) the
-   * three kinds arm the pick: the next click on a span, card or fact ends it.
+   * there is no room), with the card laid out open. Its Verbind met… arms
+   * a pick, as the key l and a press on the card's knob do.
    */
-  function openMenu(id, connect) {
+  function openMenu(id) {
     const was = menuOf === id && !cardMenu.hidden;
     shut();
-    if (was && !connect) return;
+    if (was) return;
     if (openId !== id) { openId = id; layout(); }
     const card = cardEl(id), row = all.find((r) => r.id === id);
     if (!card || !row) return;
     hot(id);
     menuOf = id;
-    fillCardMenu(row, connect);
+    fillCardMenu(row);
     cardMenu.hidden = false;
     const btn = card.querySelector(".fpl-card-more");
     btn.ariaExpanded = "true";
@@ -1084,36 +1099,34 @@
     cardMenu.style.top = `${scrollY + (left ? r.top - 2 : b.bottom + 6)}px`;
     cardMenu.querySelector("button:not([aria-disabled='true'])")?.focus({ preventScroll: true });
   }
-  function fillCardMenu(row, connect) {
-    const item = (name, text, onclick, after) => {
-      const b = button("", onclick, "fpl-item");
-      b.role = "menuitem";
-      b.append(ico(name), text, ...after ? [after] : []);
-      return b;
-    };
+  /** An item of a menu: an icon, its name, and a key or a reason after it. */
+  const entry = (name, text, onclick, after) => {
+    const b = button("", onclick, "fpl-item");
+    b.role = "menuitem";
+    b.append(ico(name), text, ...after ? [after] : []);
+    return b;
+  };
+  function fillCardMenu(row) {
     const ends = [...new Set([row, ...facts(row.id)].flatMap((r) => (r.targets ?? []).slice(typeof r.text === "string" ? 0 : 1)))]
       .filter((t) => place(t) && t !== row.id).slice(0, 3);
-    const kinds = ["supports", "attacks", "coref"].map((k, i) => item(k === "coref" ? "same" : k, ASK[k][0],
-      () => { shut(); pick(row.id, k); }, el("kbd", {}, String(i + 1))));
     const mine = !!row.mine, n = replies(row.id);
-    const del = item("wipe", "Verwijder", () => {
+    const del = entry("wipe", "Verwijder", () => {
       if (!mine) { toast("Een rij uit de sidecar verwijder je met lit facts, niet hier"); return; }
       del.replaceWith(el("div", { className: "fpl-item fpl-confirm" }, n ? `Verwijderen? ${n} ${n === 1 ? "reactie wijst" : "reacties wijzen"} dan nergens heen.` : "Verwijderen?",
         button("Verwijder", () => { shut(); save(row, "delete"); openId = null; draw(); toast("Verwijderd"); }, "fpl-danger"),
-        button("Nee", () => fillCardMenu(row, false))));
+        button("Nee", () => fillCardMenu(row))));
       cardMenu.querySelector(".fpl-confirm button")?.focus();
     }, mine ? null : el("small", {}, "uit de sidecar"));
     del.classList.add("fpl-danger");
     if (!mine) del.ariaDisabled = "true";
+    cardMenu.ariaLabel = "Acties voor deze kaart";
     cardMenu.replaceChildren(...[
-      ...connect ? [el("p", { className: "fpl-panel-head" }, "Verbind met…"), ...kinds]
-        : [item("link", "Verbind met…", () => { fillCardMenu(row, true); cardMenu.querySelector(".fpl-item")?.focus(); }, el("kbd", {}, "l"))],
-      item("graph", "Graph van deze kaart", () => { shut(); graph(row.id); }),
-      ...ends.map((t) => item("fold", `Toon beide · ${clip(said(t), 22)}`, () => { shut(); both(row.id, t); })),
+      entry("link", "Verbind met…", () => { shut(); pick(row.id); }, el("kbd", {}, "l")),
+      entry("graph", "Graph van deze kaart", () => { shut(); graph(row.id); }),
+      ...ends.map((t) => entry("fold", `Toon beide · ${clip(said(t), 22)}`, () => { shut(); both(row.id, t); })),
       el("hr"),
       del,
-      el("footer", {}, "Verbind met…: kies het soort en klik dan de andere span, kaart of feit.")]);
-    if (connect) cardMenu.querySelector(".fpl-item")?.focus({ preventScroll: true });
+      el("footer", {}, "Steunt, valt aan, zelfde als: sleep het bolletje naar een andere span.")]);
   }
   cardMenu.onkeydown = (e) => {
     const items = [...cardMenu.querySelectorAll("button")];
@@ -1121,13 +1134,14 @@
     if (e.key === "ArrowDown" || e.key === "ArrowUp") {
       e.preventDefault();
       items[(i + (e.key === "ArrowDown" ? 1 : items.length - 1)) % items.length]?.focus();
-    } else if (/^[1-3]$/.test(e.key) && cardMenu.querySelector("kbd")?.textContent === "1") {
+    } else if (/^[1-5]$/.test(e.key) && cardMenu.querySelector("kbd")?.textContent === "1") {   // the chooser's kinds
       e.preventDefault();
       [...cardMenu.querySelectorAll(".fpl-item")].find((x) => x.querySelector("kbd")?.textContent === e.key)?.click();
-    } else if (e.key === "l" && !cardMenu.querySelector(".fpl-panel-head")) {
+    } else if (e.key === "l" && menuOf) {
       e.preventDefault();
-      const row = all.find((r) => r.id === menuOf);
-      if (row) fillCardMenu(row, true);
+      const id = menuOf;
+      shut();
+      pick(id);
     }
   };
 
@@ -1255,28 +1269,72 @@
     return d;
   }
 
-  let picking = null;   // {from, kind}: the next click on a row ends a new supports or attacks row from it
+  /**
+   * Connecting (board C). A pick waits for the other end: Verbind met…,
+   * the key l, or a press on a knob arms one, and a click on an end, or
+   * Tab to it and Enter, asks the kind. The knob may instead be dragged
+   * onto the end (on touch after a long press). Either way the chooser
+   * then offers verbindt (relates, Enter), steunt, valt aan, zelfde als
+   * and citeert (1-5); Esc or a click elsewhere lets go. Alt-Shift-click
+   * arms a pick whose kind is known, resumes, which saves at once.
+   */
+  let picking = null;   // {from, kind}: the next click on an end ends a pick from `from`; kind null asks it there
   let picked = 0;       // when the last pick landed: the gesture's late touchend (pointerDone) is swallowed
-  const ASK = { supports: ["Steunt…", "steunt"], attacks: ["Valt aan…", "aanvalt"], coref: ["Zelfde als…", "zelfde is als"] };
-  /** Arm a pick from a row (a card's menu, Verbind met…): the next click on a row ends a new row of that kind. */
-  const pick = (from, kind) => {
-    adding = null;   // one armed gesture at a time
-    picking = { from, kind };
-    document.body.classList.add("fpl-picking");
-    toast(`Klik wat “${clip(said(from), 28)}” ${ASK[kind][1]}: een span, kaart, feit, tak of bijzin. Esc breekt af.`);
+  /**
+   * The connect in flight, kept as data so that a layout in between
+   * draws it again (drawAim): from, the row it starts at; to, the end
+   * under the pointer or reached with Tab; x and y, the pointer in page
+   * px while the knob is carried; open, once the chooser asks the kind.
+   */
+  let link = null;
+  let drag = null;   // the pointer on a knob: {from, id, x, y, live, touch, moved, timer}
+  const HOLD = 350;  // ms: a touch held this long on a knob carries it; a shorter one is a tap, which arms a pick
+  /** What a connect may end at: a branch, a fact, a card, a span or an address. */
+  const AIMS = "li[data-id], [data-fact], .fpl-card[data-id]:not([data-id='draft']), mark.fact:not([data-id='draft']), .fpl-c[id], .fpl-s[id], .fpl-p[id]";
+  const aimOf = (e) => e.dataset.fact ?? (e.matches(".fpl-p, .fpl-s, .fpl-c") ? e.id : e.dataset.id);
+  /** The end under a point of the window, or null. */
+  const aimAt = (x, y) => {
+    const e = document.elementFromPoint(x, y)?.closest?.(AIMS);
+    return e && !e.closest(".fpl-menu") ? aimOf(e) : null;
   };
-  const unpick = () => { picking = null; document.body.classList.remove("fpl-picking"); };
+  /** The text column's right edge, where every line leaves for the margin, in page px. */
+  const gutter = () => body.getBoundingClientRect().right + scrollX + 2;
+
+  /** Arm a pick from a row: the next click on an end, or Tab to one and Enter, asks the kind. */
+  const pick = (from) => {
+    adding = null;   // one armed gesture at a time
+    picking = { from, kind: null };
+    link = { from, to: null };
+    document.body.classList.add("fpl-picking");
+    hot(from);
+    drawAim();
+    toast(`Verbind “${clip(said(from), 28)}”: klik het andere eind, of Tab en Enter. Esc breekt af.`);
+  };
+  const unpick = () => {
+    picking = null;
+    document.body.classList.remove("fpl-picking");
+    if (link && !link.open) { link = null; drawAim(); hot(null); }
+  };
   /** The pick's click: the row under it, from the innermost of a branch, a fact, a card, a span or a block. */
   document.addEventListener("click", (ev) => {
     if (!picking || ev.target.closest?.(".fpl-arm")) return;   // "Deel erbij…" ends the pick itself (arm)
-    const at = ev.target.closest?.(picking.kind === "resumes" ? ".fpl-c[id], .fpl-s[id]:not(:has(.fpl-c))"
-      : "li[data-id], [data-fact], .fpl-card, mark.fact, .fpl-c[id], .fpl-s[id], .fpl-p[id]");
+    const at = ev.target.closest?.(picking.kind === "resumes" ? ".fpl-c[id], .fpl-s[id]:not(:has(.fpl-c))" : AIMS);
     if (!at) return;
     ev.preventDefault();
     ev.stopImmediatePropagation();   // the Alt listener below must not see a pick's click
-    const to = at.dataset.fact ?? (at.matches(".fpl-p, .fpl-s, .fpl-c") ? at.id : at.dataset.id);
-    const { from, kind } = picking;
+    const to = aimOf(at), { from, kind } = picking;
+    picked = performance.now();
+    if (!kind) {
+      if (to === from) { toast("Dat is hetzelfde eind: kies een ander"); return; }
+      chooser(from, to, { x: ev.pageX, y: ev.pageY }, false);
+      return;
+    }
     unpick();
+    connect(from, to, kind);
+  }, true);
+
+  /** Save a row of a kind from -> to, unless it is there already; its toast names both ends by their text. */
+  function connect(from, to, kind) {
     picked = performance.now();
     if (to === from) { toast("Een rij argumenteert niet over zichzelf"); return; }
     if (all.some((r) => r.labels?.[0] === kind && r.targets?.[0] === from && r.targets?.[1] === to)) { toast("Die rij is er al"); return; }
@@ -1284,7 +1342,152 @@
     opened.add(to);
     draw();
     toast(`“${clip(said(from), 24)}” ${VERB[kind] ?? kind} “${clip(said(to), 24)}”`);
-  }, true);
+  }
+
+  /** The chooser's kinds in their keys' order, each with its icon: verbindt is lit's relates. */
+  const KINDS = [["relates", "link"], ["supports", "supports"], ["attacks", "attacks"], ["coref", "same"], ["cites", "cites"]];
+  /**
+   * Ask what kind of row joins from to to: the chooser (board C) in the
+   * card menu's place, 23px right of and 16px under the point at, the
+   * first kind focused, so Enter saves verbindt. carried: the knob was
+   * dragged there, and its line stays at the drop until the answer.
+   */
+  function chooser(from, to, at, carried) {
+    unpick();
+    link = { from, to, x: carried ? at.x : null, y: carried ? at.y : null };
+    shut();
+    link.open = true;
+    hot(from);
+    drawAim();
+    menuOf = null;
+    cardMenu.ariaLabel = "Soort verbinding";
+    cardMenu.replaceChildren(
+      el("header", {}, "Verbind met ", el("b", {}, `“${clip(said(to), 24)}”`), " als"),
+      ...KINDS.map(([k, i], n) => entry(i, VERB[k], () => choose(k), el("kbd", {}, String(n + 1)))),
+      el("footer", {}, el("kbd", {}, "Enter"), " kiest verbindt · ", el("kbd", {}, "Esc"), " laat los"));
+    const w = 248;
+    cardMenu.style.width = `${w}px`;
+    cardMenu.hidden = false;
+    const h = cardMenu.offsetHeight, right = scrollX + document.documentElement.clientWidth - w - 8;
+    cardMenu.style.left = `${Math.max(scrollX + 8, Math.min(at.x + 23, right))}px`;
+    cardMenu.style.top = `${at.y + 16 + h > scrollY + innerHeight - 8 ? Math.max(scrollY + 8, at.y - h - 8) : at.y + 16}px`;
+    cardMenu.querySelector(".fpl-item")?.focus({ preventScroll: true });
+  }
+  function choose(kind) {
+    const { from, to } = link;
+    link = null;
+    shut();
+    drawAim();
+    hot(null);
+    connect(from, to, kind);
+  }
+
+  /**
+   * While a pick waits: Tab and the arrows walk the cards in page order
+   * (a span and its card are one end), the end lit and scrolled into
+   * view; Enter asks the kind. Whether the key was the walk's.
+   */
+  function walk(ev) {
+    const back = ev.key === "ArrowUp" || ev.key === "ArrowLeft" || (ev.key === "Tab" && ev.shiftKey);
+    if (!back && !["Tab", "ArrowDown", "ArrowRight", "Enter"].includes(ev.key)) return false;
+    ev.preventDefault();
+    ev.stopPropagation();
+    const { from } = picking;
+    if (ev.key === "Enter") {
+      if (!link?.to) { toast("Kies eerst het andere eind: Tab of een klik"); return true; }
+      const m = anchorsOf(link.to).at(-1), e = m ? seen(m) : cardEl(link.to) ?? document.getElementById(link.to);
+      const r = e.getBoundingClientRect();
+      chooser(from, link.to, m ? { x: r.right + scrollX, y: r.top + scrollY + r.height / 2 } : { x: r.left + scrollX, y: r.top + scrollY + HEAD }, false);
+      return true;
+    }
+    const ids = [...new Set([...document.querySelectorAll(".fpl-card[data-id]")].map((c) => c.dataset.id))].filter((id) => id !== "draft" && id !== from);
+    if (!ids.length) { toast("Geen ander eind op deze pagina"); return true; }
+    const i = ids.indexOf(link.to), n = ids.length;
+    link.to = ids[i < 0 ? (back ? n - 1 : 0) : (i + (back ? n - 1 : 1)) % n];
+    drawAim();
+    const m = anchorsOf(link.to)[0];
+    (m ? seen(m) : cardEl(link.to))?.scrollIntoView({ block: "nearest" });
+    return true;
+  }
+
+  /** Where a connect ends when no pointer holds it: a card's dot, else the gutter at its end's line. */
+  function aimPoint(to) {
+    const c = cardEl(to);
+    if (c) { const r = c.getBoundingClientRect(); return { x: r.left + scrollX - 1, y: r.top + scrollY + HEAD }; }
+    const at = reach(to), e = !at && document.getElementById(to);
+    if (e) { const r = seen(e).getBoundingClientRect(); return { x: gutter(), y: r.top + scrollY + Math.min(r.height, 24) / 2 }; }
+    return at && { x: gutter(), y: at.y };
+  }
+  /**
+   * The connect in flight: its end lit, its knob big, and a dashed line
+   * from its span's stub at the text's edge: over the margin it runs to
+   * the pointer; while the pointer is over the text it stays in the
+   * gutter, at the pointer's height, and only a dot follows the pointer,
+   * so no line crosses the text.
+   */
+  function drawAim() {
+    for (const n of document.querySelectorAll(".fpl-target")) n.classList.remove("fpl-target");
+    for (const n of lines.querySelectorAll(".fpl-aim")) n.remove();
+    for (const n of lines.querySelectorAll(".fpl-knob.is-drag")) n.classList.remove("is-drag");
+    document.body.classList.toggle("fpl-linking", !!link);
+    if (!link) return;
+    const to = link.to, q = to && CSS.escape(to);
+    if (to) for (const e of [...anchorsOf(to).map(seen), ...document.querySelectorAll(`.fpl-card[data-id="${q}"], li[data-id="${q}"], [data-fact="${q}"]`),
+      ...all.some((r) => r.id === to) ? [] : [document.getElementById(to)]])
+      if (e && !e.closest(".fpl-menu")) e.classList.add("fpl-target");
+    lines.querySelector(`.fpl-knob[data-id="${CSS.escape(link.from)}"]`)?.classList.add("is-drag");
+    const from = reach(link.from), end = link.x != null ? { x: link.x, y: link.y } : to && aimPoint(to);
+    if (!from || !end || !lines.isConnected) return;
+    const gx = gutter(), { x, y } = end, k = (x - gx - 6) / 2;
+    svg("path", { class: "fpl-aim fpl-aim-line", d: x > gx + 6 ? `M${gx},${from.y} h6 C${gx + 6 + k},${from.y} ${x - k},${y} ${x},${y}`
+      : `M${gx},${from.y} C${gx + 28},${from.y} ${gx + 28},${y} ${gx},${y}` }, link.from);
+    if (link.x != null) svg("circle", { class: "fpl-aim fpl-aim-dot", cx: x, cy: y, r: 6 }, link.from);
+  }
+
+  /** The knob leaves its place: the line and its dot follow the pointer from here. */
+  function carry() {
+    drag.live = true;
+    link = { from: drag.from, to: null, x: drag.x + scrollX, y: drag.y + scrollY };
+    document.body.classList.add("fpl-dragging");
+    hot(drag.from);
+    drawAim();
+  }
+  function dragMove(ev) {
+    if (ev.pointerId !== drag?.id) return;
+    if (!drag.live) {
+      const far = Math.hypot(ev.clientX - drag.x, ev.clientY - drag.y);
+      if (drag.touch) { if (far > 8) drag.moved = true; return; }   // a touch that wanders before HOLD carries nothing
+      if (far < 4) return;
+      carry();
+    }
+    const to = aimAt(ev.clientX, ev.clientY);
+    link.x = ev.pageX;
+    link.y = ev.pageY;
+    link.to = to === drag.from ? null : to;
+    drawAim();
+  }
+  /** The drop: on an end the chooser asks the kind; on itself or on nothing it lets go, and says so. */
+  function dragEnd(ev) {
+    if (ev.pointerId !== drag?.id) return;
+    for (const [t, f] of DRAG) removeEventListener(t, f);
+    clearTimeout(drag.timer);
+    const d = drag;
+    drag = null;
+    document.body.classList.remove("fpl-dragging");
+    if (!d.live) { if (ev.type === "pointerup" && !d.moved) pick(d.from); return; }
+    picked = performance.now();
+    const eat = (e) => { e.stopImmediatePropagation(); e.preventDefault(); };   // the click a drag ends in is the drop's
+    addEventListener("click", eat, { capture: true, once: true });
+    setTimeout(() => removeEventListener("click", eat, { capture: true }), 0);
+    const to = ev.type === "pointerup" ? aimAt(ev.clientX, ev.clientY) : null;
+    if (to && to !== d.from) { chooser(d.from, to, { x: ev.pageX, y: ev.pageY }, true); return; }
+    link = null;
+    drawAim();
+    hot(null);
+    toast(ev.type !== "pointerup" ? "Slepen afgebroken" : to ? "Losgelaten op de eigen span: niets verbonden"
+      : "Losgelaten naast een span, kaart of feit: niets verbonden");
+  }
+  const DRAG = [["pointermove", dragMove], ["pointerup", dragEnd], ["pointercancel", dragEnd]];
 
   /* ---- the graph: rows and what they name, laid out by force ---- */
 
@@ -1768,6 +1971,22 @@
   const margin = el("div", { className: "fpl-annot-ui fpl-margin" });
   const lines = document.createElementNS("http://www.w3.org/2000/svg", "svg");
   lines.setAttribute("class", "fpl-annot-ui fpl-lines");
+  /** A press on a knob: a click arms a pick, as l does; a drag (on touch, after HOLD) carries the knob to the other end. */
+  lines.addEventListener("pointerdown", (ev) => {
+    const k = ev.target.closest?.(".fpl-knob");
+    if (!k || ev.button > 0) return;
+    ev.preventDefault();   // no selection starts and no mouse events follow: pointerDone and the pick's click stay out
+    if (mode() !== "kantlijn") { toast("Verbinden doe je in de stand Kantlijn (a)"); return; }
+    if (picking) unpick();
+    drag = { from: k.dataset.id, id: ev.pointerId, x: ev.clientX, y: ev.clientY, live: false, touch: ev.pointerType === "touch" };
+    if (drag.touch) drag.timer = setTimeout(() => drag && !drag.moved && carry(), HOLD);
+    for (const [t, f] of DRAG) addEventListener(t, f);
+  });
+  lines.addEventListener("contextmenu", (ev) => { if (ev.target.closest?.(".fpl-knob")) ev.preventDefault(); });   // a long press carries, it opens no menu
+  // a touch on a knob is the knob's: the page does not pan under it (touch-action does not reach into an svg)
+  lines.addEventListener("touchstart", (ev) => { if (ev.target.closest?.(".fpl-knob")) ev.preventDefault(); }, { passive: false });
+  for (const [t, on] of [["pointerover", true], ["pointerout", false], ["focusin", true], ["focusout", false]])
+    lines.addEventListener(t, (ev) => { const k = ev.target.closest?.(".fpl-knob"); if (k && !editing) hot(on ? k.dataset.id : null); });
   const pop = el("div", { className: "fpl-annot-ui fpl-pop", hidden: true });
 
   /** The margin's left edge, in the window: RAIL past the text column (main), wherever Quarto's own margin column starts. */
@@ -1849,6 +2068,7 @@
     }
     lens();   // last: the cards placed inline move the clauses it measures
     fade();
+    drawAim();
   }
 
   /**
@@ -1892,7 +2112,7 @@
     lines.setAttribute("height", h);
     lines.replaceChildren();
     unbar();
-    const gx = body.getBoundingClientRect().right + scrollX + 2;
+    const gx = gutter();
     for (const c of margin.querySelectorAll(".fpl-card[data-id]")) {
       const id = c.dataset.id, at = reach(id);
       if (!at) continue;
@@ -1903,12 +2123,17 @@
         for (const m of anchorsOf(id)) if (m.matches("mark.fact")) m.classList.add("fpl-long");
         svg("rect", { x: gx - 1.25, y: at.top, width: 2.5, height: at.bottom - at.top, rx: 1.25, class: `fpl-stretch ${cls}` }, id);
       }
-      if (id !== "draft") svg("circle", { cx: at.end + 3, cy: at.foot, r: 4, class: `fpl-knob ${cls}` }, id);   // a selection being written has nothing to drag yet (board B)
+      if (id === "draft") continue;   // a selection being written has nothing to drag yet (board B)
+      const knob = svg("circle", { cx: at.end + 3, cy: at.foot, r: 4, class: `fpl-knob ${cls}`, tabindex: 0, role: "button",
+        "aria-label": `Bolletje van “${clip(said(id), 40)}”: sleep het naar een andere span, kaart of feit, of druk l` }, id);
+      knob.appendChild(document.createElementNS("http://www.w3.org/2000/svg", "title")).textContent = "Sleep naar een span, kaart of feit om te verbinden";
     }
+    drawAim();
   }
 
   /** The span, card and line of one row light up together. */
   function hot(id) {
+    if (link) id = link.from;   // while a connect is in flight its start stays lit, whatever the pointer passes
     const group = new Set(id ? groupOf(id) : []);   // a piece lights its whole, the whole its pieces
     for (const n of [...body.querySelectorAll("mark.fact, .is-hot"), ...margin.querySelectorAll(".fpl-card"), ...lines.children])
       n.classList.toggle("is-hot", group.has(n.dataset.id));
@@ -2568,6 +2793,8 @@
       if (e && body.contains(e)) e.classList.add("fpl-coref");
   });
   document.addEventListener("keydown", (ev) => {
+    if (picking && !picking.kind && cardMenu.hidden && !ev.metaKey && !ev.ctrlKey && !ev.altKey
+      && !ev.target.closest?.("input, textarea, select, [contenteditable]") && walk(ev)) return;
     if (ev.key === "Escape" && !cardMenu.hidden) {   // a card's menu: closed, focus back on its ⋯
       const id = menuOf;
       shut();
@@ -2608,12 +2835,13 @@
     if (ev.key === "?" && !typing && !ev.metaKey && !ev.ctrlKey && !ev.altKey) { ev.preventDefault(); menu.hidden || !menu.classList.contains("fpl-keysheet") ? keysheet() : shut(); return; }
     if (typing || ev.metaKey || ev.ctrlKey || ev.altKey || ev.shiftKey) return;
     if (ev.key === "z") { ev.preventDefault(); seek(); return; }
-    if (ev.key === "l") {   // Verbind met…: the card under the mouse, or the one holding the focus
+    if (ev.key === "l") {   // Verbind met…: the knob or card holding the focus, else the card under the mouse
       ev.preventDefault();
       if (mode() !== "kantlijn") { toast("Verbinden doe je in de stand Kantlijn (a)"); return; }
-      const c = margin.querySelector(".fpl-card.is-hot[data-id], .fpl-card:focus-within[data-id]");
-      if (!c || c.dataset.id === "draft") { toast("l verbindt de kaart onder de muis: wijs er eerst een aan"); return; }
-      openMenu(c.dataset.id, true);
+      const c = margin.querySelector(".fpl-card:focus-within[data-id], .fpl-card.is-hot[data-id]");
+      const id = document.activeElement?.closest?.(".fpl-knob")?.dataset.id ?? c?.dataset.id;
+      if (!id || id === "draft") { toast("l verbindt de kaart onder de muis: wijs er eerst een aan"); return; }
+      pick(id);
       return;
     }
     if (ev.key === "j" || ev.key === "k") { ev.preventDefault(); step(ev.key === "j" ? 1 : -1); return; }
