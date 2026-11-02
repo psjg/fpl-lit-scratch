@@ -1585,8 +1585,11 @@
 
   /**
    * While a pick waits: Tab and the arrows walk the cards in page order
-   * (a span and its card are one end), the end lit and scrolled into
-   * view; Enter asks the kind. Whether the key was the walk's.
+   * (a span and its card are one end) and, after a card, the facts its
+   * open thread shows, the end lit and scrolled into view; Enter asks
+   * the kind. A clause or block with no card is an end for the pointer
+   * only: a walk through every clause of a page would not be one.
+   * Whether the key was the walk's.
    */
   function walk(ev) {
     const back = ev.key === "ArrowUp" || ev.key === "ArrowLeft" || (ev.key === "Tab" && ev.shiftKey);
@@ -1599,12 +1602,16 @@
         refuse("verbind", from, "Kies eerst het andere eind: Tab of een klik");
         return true;
       }
-      const m = anchorsOf(link.to).at(-1), e = m ? seen(m) : cardEl(link.to) ?? document.getElementById(link.to);
+      const m = anchorsOf(link.to).at(-1), e = m ? seen(m) : cardEl(link.to)
+        ?? document.getElementById(link.to) ?? factEl(link.to);
       const r = e.getBoundingClientRect();
       chooser(from, link.to, m ? { x: r.right + scrollX, y: r.top + scrollY + r.height / 2 } : { x: r.left + scrollX, y: r.top + scrollY + HEAD }, false);
       return true;
     }
-    const ids = [...new Set([...document.querySelectorAll(".fpl-card[data-id]")].map((c) => c.dataset.id))].filter((id) => id !== "draft" && id !== from);
+    const ends = document.querySelectorAll(
+      ".fpl-card[data-id], .fpl-card .fpl-msg[data-fact]");
+    const ids = [...new Set([...ends].map((c) => c.dataset.id ?? c.dataset.fact))]
+      .filter((id) => id !== "draft" && id !== from);
     if (!ids.length) {
       refuse("verbind", from, "Geen ander eind op deze pagina");
       return true;
@@ -1613,9 +1620,13 @@
     link.to = ids[i < 0 ? (back ? n - 1 : 0) : (i + (back ? n - 1 : 1)) % n];
     drawAim();
     const m = anchorsOf(link.to)[0];
-    (m ? seen(m) : cardEl(link.to))?.scrollIntoView({ block: "nearest" });
+    (m ? seen(m) : cardEl(link.to) ?? factEl(link.to))
+      ?.scrollIntoView({ block: "nearest" });
     return true;
   }
+  /** A fact shown in a thread, by its id. */
+  const factEl = (id) => document.querySelector(
+    `.fpl-card .fpl-msg[data-fact="${CSS.escape(id)}"]`);
 
   /** Where a connect ends when no pointer holds it: a card's dot, else the gutter at its end's line. */
   function aimPoint(to) {
