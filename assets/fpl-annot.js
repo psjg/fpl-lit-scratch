@@ -1032,12 +1032,14 @@
   /**
    * What hangs from an id: the relations it starts, and the messages
    * about it or about those relations (a note on "contradicts L-G2" is a
-   * message of the span's thread, as on board F).
+   * message of the span's thread, as on board F), oldest first: a reply
+   * stands under what it answers, wherever that hangs.
    */
   function about(id) {
     const rels = [], msgs = [], seenIds = new Set([id]);
     for (const r of facts(id)) (relates(r) ? rels : msgs).push(r);
     for (const r of rels) for (const f of facts(r.id)) if (!seenIds.has(f.id)) { seenIds.add(f.id); (relates(f) ? rels : msgs).push(f); }
+    msgs.sort((a, b) => (a.createdAt ?? 0) - (b.createdAt ?? 0));
     return { rels, msgs };
   }
   /** The messages in a thread, all the way down. */
