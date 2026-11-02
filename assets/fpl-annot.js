@@ -73,7 +73,8 @@
  * at 1440 the column stands at x320 and the bar (344px) and a card
  * (316px) fit, as on the boards. Where the column is hidden or a card
  * there would be narrower than NARROW (220px), each card folds under the block
- * its span is in, and the editor is a popover.
+ * its span is in, and the editor is a popover; the span keeps its knob,
+ * with no line to the card under it.
  * A card stands at the height of its span's last line, in the order of
  * those lines, and is only pushed down, by the card above it; the
  * editor is a card in that stack and pushes the rest down, never over
@@ -2689,7 +2690,7 @@
       if (lines.parentElement !== document.body) document.body.append(lines);
     } else {
       column?.classList.remove("fpl-column");
-      lines.remove();
+      if (lines.parentElement !== document.body) document.body.append(lines);
       margin.style.width = margin.style.marginLeft = "";
       if (margin.parentElement !== body) body.prepend(margin);
     }
@@ -2733,6 +2734,7 @@
         c.classList.add("fpl-inline");
         (m.closest("p, li, pre, h1, h2, h3, h4, td, th, blockquote") ?? m).after(c);
       }
+      drawLines();   // no lines between a span and the card under it: knobs
     }
     lens();   // last: the cards placed inline move the clauses it measures
     fade();
@@ -2781,12 +2783,16 @@
     lines.setAttribute("height", h);
     lines.replaceChildren();
     unbar();
-    const gx = gutter();
-    for (const c of margin.querySelectorAll(".fpl-card[data-id]")) {
+    // a narrow screen folds each card in under its block: no line runs
+    // to it, but its span keeps the knob, to connect and to stretch
+    const gx = gutter(), w = wide();
+    const cards = w ? margin.querySelectorAll(".fpl-card[data-id]")
+      : body.querySelectorAll(".fpl-card.fpl-inline[data-id]");
+    for (const c of cards) {
       const id = c.dataset.id, at = reach(id);
       if (!at) continue;
       const cls = c.classList.contains("mine") ? "mine" : "";
-      svg("path", { d: curve(at.y, c), class: `fpl-line ${cls}` }, id);
+      if (w) svg("path", { d: curve(at.y, c), class: `fpl-line ${cls}` }, id);
       if (at.long) {
         for (const m of anchorsOf(id)) if (m.matches("mark.fact")) m.classList.add("fpl-long");
         svg("rect", { x: gx - 1.25, y: at.top, width: 2.5, height: at.bottom - at.top, rx: 1.25, class: `fpl-stretch ${cls}` }, id);
