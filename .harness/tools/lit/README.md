@@ -146,7 +146,7 @@ and 0.60 and 0.61 with the examples stripped.
 ## Annotating the published page
 
 Every page of the site loads `assets/fpl-annot.js`. It draws the page's sidecar (shipped
-beside the page) as underlined spans, each with a card in the right margin at the height of
+beside the page) as washed and underlined spans, each with a card in the right margin at the height of
 its span's last line and a line between the two. A card is headed by the first words of its
 quote (never an id) and its kind as a chip; under it the note and one line: who wrote it, when
 the row says so, its relations by their other end's text (`spreekt tegen → grammar-theory ·
@@ -304,8 +304,19 @@ that arise from examples, with structure available on demand (Marshall, Shipman 
 https://doi.org/10.1145/192757.192759). The editor ranks its chips by use, the rows of the page
 plus the times this browser saved each label anywhere on the site; the seeds, among them the
 rhetorical functions under `fn/` (`fn/definition`, `fn/example`, `fn/transition`, `fn/claim`,
-`fn/evidence`, `fn/aside`, `fn/hedge`), only start the list: unused, they sink, they never go.
-The filter lists every scope above a label, and striking a scope strikes all below it.
+`fn/evidence`, `fn/aside`, `fn/hedge`) and `code/stijl`, `code/bug` (who found it is the row's
+`by`, not a label), only start the list: unused, they sink, they never go.
+The filter lists every scope above a label, each with a square of its colour, and striking a
+scope strikes all below it.
+
+A label's colour is its place on a hue tree over the OKLCH wheel: `dit`, `niet` and `slop` keep
+the review surface's hues, every other root takes the middle of the largest free gap, first in
+a fixed order and then in the order the browser first meets it (kept site-wide), so a new scope
+never moves an old colour; roots alternate two lightness bands, and a child sits in an arc round
+its parent, darker. A span, its line, knob and card dot take the colour of its card's kind. Spans
+over the same text are layers: the text is washed in the innermost one's colour, 20% plus 12% per
+layer around it up to 70% and never below 4.5:1 for the text, with one line per layer under it,
+the outermost lowest.
 
 When three rows of a page carry a label written in the editor, the margin offers it as a quick
 chip, and the offer stays until it is answered; a yes puts it at the top of the editor of an

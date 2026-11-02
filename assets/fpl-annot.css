@@ -1,11 +1,12 @@
 /*
  * fpl-annot.css: the spans, cards, lines and editor of fpl-annot.js. A
- * span's colour is the weave's (lit/weave.py): a sidecar row found on
- * the page is green, a row of this browser blue, a lost row (stale or
- * dubbel) ochre. Surfaces and text take Bootstrap's own variables, so
- * they follow the site's theme; the three colours switch when the site
- * marks itself dark (cosmo alone does not, so a dark OS setting changes
- * nothing here).
+ * span, its line, knob and card dot take its label's colour from the
+ * hue tree in fpl-annot.js (colourOf); a span without a label keeps the
+ * weave's (lit/weave.py): a sidecar row found on the page green, a row
+ * of this browser blue, and a lost row (stale or dubbel) is ochre.
+ * Surfaces and text take Bootstrap's own variables, so they follow the
+ * site's theme; the weave's colours switch when the site marks itself
+ * dark (cosmo alone does not, so a dark OS setting changes nothing here).
  */
 :root {
   --fpl-vers: #2f7d6b; --fpl-vers-wash: rgba(47, 125, 107, .12);
@@ -26,15 +27,15 @@
   --fpl-con: #e0857c;
 }
 
-/* spans: a thin line under the text, a wash when its card is near */
-mark.fact { background: none; color: inherit; padding: 0; cursor: pointer;
-  text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: .22em;
-  text-decoration-color: var(--fpl-vers); transition: background-color .12s; }
-mark.fact-mine { text-decoration-color: var(--fpl-mine); }
-mark.fact mark.fact { text-underline-offset: .42em; }
-mark.fact.fpl-long { text-decoration-color: transparent; }   /* three lines or more: the bar in the gutter marks it */
-mark.fact:hover, mark.fact.is-hot { background: var(--fpl-vers-wash); }
-mark.fact-mine:hover, mark.fact-mine.is-hot { background: var(--fpl-mine-wash); }
+/* spans (boards V3, V4): washed in their label's colour, a 2px line per layer under them, the outermost lowest;
+   --lc, --wash and --u are set per mark by paint() in fpl-annot.js, which keeps the text at 4.5:1 or more on the wash.
+   A mark not painted yet (the editor's draft) falls back to the weave's colours. */
+mark.fact { color: inherit; padding: 0; cursor: pointer; border-radius: 2px;
+  background: var(--wash, var(--fpl-vers-wash)); box-shadow: var(--u, inset 0 -2px 0 var(--lc, var(--fpl-vers)));
+  transition: outline-color .12s; outline: 2px solid transparent; outline-offset: 1px; }
+mark.fact code { background: transparent; }
+mark.fact.fpl-long { box-shadow: none; }   /* three lines or more: the bar in the gutter marks it */
+mark.fact:hover, mark.fact.is-hot { outline-color: var(--lc, var(--fpl-vers)); }
 
 /* room for the margin (boards A-J at 1440): Quarto centres the 740px column, which leaves 350px right of it at
    1440 and no room for the bar (344px) and a card (316px) behind a 40px gutter. Where 380px fits, the outer right
@@ -55,16 +56,16 @@ mark.fact-mine:hover, mark.fact-mine.is-hot { background: var(--fpl-mine-wash); 
 #quarto-margin-sidebar.fpl-column.zindex-bottom { z-index: 1 !important; }
 .fpl-margin { position: relative; font-size: .86rem; line-height: 1.4; color: var(--fpl-fg); }
 .fpl-lines { position: absolute; top: 0; left: 0; pointer-events: none; z-index: 1; }
-.fpl-line { fill: none; stroke: var(--fpl-vers); stroke-width: 1.25; stroke-linecap: round; opacity: .5; transition: opacity .12s; }
-.fpl-line.mine { stroke: var(--fpl-mine); }
+.fpl-line { fill: none; stroke: var(--lc, var(--fpl-vers)); stroke-width: 1.25; stroke-linecap: round; opacity: .5; transition: opacity .12s; }
+.fpl-line.mine { stroke: var(--lc, var(--fpl-mine)); }
 .fpl-line.is-hot { opacity: 1; stroke-width: 1.75; }
-.fpl-stretch { fill: var(--fpl-vers); opacity: .7; transition: opacity .12s; }
-.fpl-stretch.mine { fill: var(--fpl-mine); }
+.fpl-stretch { fill: var(--lc, var(--fpl-vers)); opacity: .7; transition: opacity .12s; }
+.fpl-stretch.mine { fill: var(--lc, var(--fpl-mine)); }
 .fpl-stretch.is-hot { opacity: 1; }
 /* the knob is a handle (board C): a transparent stroke widens its hit; it grows in place, a plain dot, no ring */
-.fpl-knob { fill: var(--fpl-vers); stroke: transparent; stroke-width: 8; pointer-events: all; cursor: grab; touch-action: none;
+.fpl-knob { fill: var(--lc, var(--fpl-vers)); stroke: transparent; stroke-width: 8; pointer-events: all; cursor: grab; touch-action: none;
   outline: none; transition: opacity .12s, r .12s; }
-.fpl-knob.mine { fill: var(--fpl-mine); }
+.fpl-knob.mine { fill: var(--lc, var(--fpl-mine)); }
 .fpl-knob:hover, .fpl-knob:focus-visible, .fpl-knob.is-hot, .fpl-knob.is-drag { opacity: 1; r: 6; }
 /* a connect in flight: a dashed line from the span's stub, a dot under the pointer, the end lit */
 .fpl-aim-line { fill: none; stroke: var(--fpl-mine); stroke-width: 1.75; stroke-dasharray: 5 4; }
@@ -84,7 +85,7 @@ body.fpl-dragging .fpl-knob.is-drag { pointer-events: none; }
 mark.fact.fpl-target, .fpl-target:is(.fpl-c, .fpl-s, .fpl-p, li, [data-fact]) { background: color-mix(in srgb, var(--fpl-vers) 12%, transparent);
   outline: 1.5px solid var(--fpl-vers); outline-offset: 1px; border-radius: 2px; }
 .fpl-card.fpl-target, .fpl-card.mine.fpl-target { z-index: 3; background: color-mix(in srgb, var(--fpl-vers) 6%, var(--fpl-bg)); border-color: var(--fpl-vers); }
-mark.fact[data-id="draft"] { text-decoration-color: transparent; background: color-mix(in srgb, var(--fpl-mine) 22%, transparent); }   /* board B: a selection, washed, no line yet */
+mark.fact[data-id="draft"] { box-shadow: none; background: color-mix(in srgb, var(--fpl-mine) 22%, transparent); }   /* board B: a selection, washed, no line yet */
 
 /* paragraph and sentence numbers, outside the reading stand */
 .fpl-p { position: relative; }
@@ -129,8 +130,8 @@ body.fpl-numbered .fpl-s:hover .fpl-c::before { opacity: 1; }
 .fpl-head { display: flex; gap: 7px; min-width: 0; }
 .fpl-q { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-style: italic; color: var(--fpl-mute); }
 .fpl-editor .fpl-dot { background: var(--fpl-mine); }
-.fpl-dot { width: .5rem; height: .5rem; border-radius: 50%; background: var(--fpl-vers); align-self: center; flex: none; }
-.mine .fpl-dot { background: var(--fpl-mine); }
+.fpl-dot { width: .5rem; height: .5rem; border-radius: 50%; background: var(--lc, var(--fpl-vers)); align-self: center; flex: none; }
+.mine .fpl-dot { background: var(--lc, var(--fpl-mine)); }
 .fpl-lost { color: var(--fpl-lost); }
 .fpl-mine { color: var(--fpl-mine); }
 /* a quote is one line and a note two, until the card is hot or holds the focus */
@@ -163,6 +164,7 @@ body.fpl-numbered .fpl-s:hover .fpl-c::before { opacity: 1; }
    and the block's address show when the card is open (a click, its menu) or holds the focus, never on hover alone */
 .fpl-title { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 600; color: var(--fpl-fg); }
 .fpl-cardhead > .fpl-chip { flex: none; }
+.fpl-chip.is-kind { border-color: transparent; }   /* the kind in a card's head: plain, the colour is the dot's */
 .fpl-ib { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; margin: -2px 0;
   padding: 0; border: 0; border-radius: 4px; background: none; color: var(--fpl-mute); cursor: pointer; opacity: 0;
   transition: opacity .12s, background-color .12s; }
@@ -353,6 +355,9 @@ label.fpl-item { cursor: text; }
 .fpl-filter .fpl-chip { cursor: pointer; }
 .fpl-filter .fpl-chip.is-on { background: var(--fpl-vers-wash); border-color: transparent; color: var(--fpl-vers); }
 .fpl-filter .fpl-chip.is-off { background: none; color: var(--fpl-mute); text-decoration: line-through; }
+/* a label's colour, as a square before it (board 4a): the colour never carries text, so a light band may stay light */
+.fpl-sq { display: inline-block; width: 9px; height: 9px; margin-right: 5px; border-radius: 2px; background: var(--lc); vertical-align: -.5px; }
+.fpl-filter .fpl-chip.is-off .fpl-sq { opacity: .4; }
 .fpl-link { font: inherit; font-size: .74rem; font-weight: 600; border: 0; background: none; color: var(--bs-link-color, #2b6cb0); cursor: pointer; padding: 0; }
 .fpl-card, .fpl-line { animation: fpl-in .12s ease-out; }
 @keyframes fpl-in { from { opacity: 0; } }
@@ -484,6 +489,6 @@ body.fpl-picking .fpl-c[id], body.fpl-picking .fpl-s[id] { cursor: crosshair; }
 .fpl-chain { font: 700 .58em var(--bs-font-sans-serif, sans-serif); color: var(--fpl-mine); margin-left: .1em; user-select: none; }
 
 .fpl-card.fpl-faded { opacity: .25; }
-mark.fact.fpl-faded { text-decoration-color: transparent; }
+mark.fact.fpl-faded { background: none; box-shadow: none; }
 .fpl-c[data-tfa].fpl-faded, .fpl-s[data-tfa].fpl-faded { background: none; box-shadow: none; }
 

@@ -212,14 +212,30 @@
  * comes on demand). The
  * editor ranks the labels by use, on this page and in this browser across
  * the site, and shows the first six as chips; its field completes from
- * all of them. The seeds under fn/ only start the list and sink, never go.
- * Striking a scope in the filter strikes everything under it. When three
+ * all of them. The seeds under fn/ and code/ (code/stijl, code/bug: who
+ * found it is the row's by, not a label) only start the list and sink,
+ * never go. Striking a scope in the filter strikes everything under it,
+ * and each label there has a square of its colour. When three
  * rows on a page share a label, the margin offers it once as a quick
  * chip, one click in the editor of an address; nothing is imposed. Rows
  * on one address share one card, side by side; with different labels
  * they are readings, as Empson reads one passage several ways at once,
  * and so are facts on one span with different labels. A row that passes
  * the filter shows its group.
+ *
+ * Colours (boards V3, V4; feedback 17). A label's colour is a place on a
+ * hue tree over the OKLCH wheel, colourOf below: dit, niet and slop keep
+ * the hues of the review surface, every other root takes the middle of
+ * the largest free gap in a fixed order and then in the order this
+ * browser first meets it (kept site-wide), so a new scope never moves an
+ * old colour; roots alternate two lightness bands and a child sits in an
+ * arc round its parent, darker. A row is drawn in the colour of the kind
+ * its card shows (a row with no label in the weave's green or blue): its
+ * span, line, knob and dot. The spans over a stretch of text are its
+ * layers, the longest outermost: the text is washed in the innermost
+ * one's colour, 20% and 12% more per layer around it up to 70%, never
+ * below 4.5:1 for the text, with a line per layer under it, the outermost
+ * lowest. Under the mouse a span is outlined in its colour.
  *
  * The graph: every row of the page and everything a row names, in the
  * layers shown, laid out by a force model (Fruchterman and Reingold 1991)
@@ -270,8 +286,9 @@
   const LABELS = ["reason", "claim", "question", "history", "slop", "good",
     "because", "supports", "attacks", "contradicts", "cites", "relates", "checkedBy",
     "resumes", "coref", "parts", "tfa/t", "tfa/c", "tfa/f",
-    "fn/definition", "fn/example", "fn/transition", "fn/claim", "fn/evidence", "fn/aside", "fn/hedge"];
-  const LABEL = /^[^/ \t\n\r\f\v]+(?:\/[^/ \t\n\r\f\v]+)*$/;   // lit's facts.LABEL, whitespace spelt out alike
+    "fn/definition", "fn/example", "fn/transition", "fn/claim", "fn/evidence", "fn/aside", "fn/hedge",
+    "code/stijl", "code/bug"];
+  const LABEL =/^[^/ \t\n\r\f\v]+(?:\/[^/ \t\n\r\f\v]+)*$/;   // lit's facts.LABEL, whitespace spelt out alike
   /** A label and every scope above it: fn/claim/strong gives fn, fn/claim, fn/claim/strong. */
   const scopes = (l) => l.split("/").map((_, i, a) => a.slice(0, i + 1).join("/"));
   /** Whether a label lies at or under a scope. */
@@ -285,6 +302,79 @@
   const tally = store("fpl-annot:used", {});        // label -> times saved in this browser, site-wide
   const quick = store("fpl-annot:quick", []);       // labels confirmed as quick chips
   const declined = store("fpl-annot:declined", []); // labels whose offer was turned down
+
+  /*
+   * The colour of a label: a tree over the OKLCH wheel (feedback 17).
+   * dit, niet and slop keep the hues of the review surface's colours;
+   * every other root takes the middle of the largest free arc, in the
+   * order of HUES and then of first sight in this browser
+   * (localStorage["fpl-annot:hues"], site-wide), so a new scope never
+   * moves an old one. Roots alternate two lightness bands; a child takes
+   * the middle of the largest free stretch of an arc around its parent's
+   * hue (the first child sits on it), each level down darker and greyer.
+   * The tree is drawn for a light page; a dark one gets the same hues.
+   */
+  /* the OKLCH hues of #1d7a46, #c0392b and #b8620a as tree.py reads them, to the last digit: a tie between two gaps
+     falls the way it fell for the boards */
+  const ANCHORS = { dit: 153.69175324544503, niet: 29.696698619015162, slop: 56.519342372371014 };
+  const HUES = ["waarom", "lang", "verhaal", "code", "anders", "onduidelijk", "group", "role", "fn", "claim", "note", "order",
+    "coref", "tfa", "resumes", "supports", "attacks", ...LABELS];
+  const BANDS = [0.52, 0.64], ARC = 12;   // OKLCH lightness of even and odd roots; a child's arc, in degrees either side
+  const sighted = store("fpl-annot:hues", []);
+  /** OKLCH to linear sRGB (Ottosson 2020). */
+  const lrgb = (L, C, h) => {
+    const a = C * Math.cos(h * Math.PI / 180), b = C * Math.sin(h * Math.PI / 180);
+    const l = (L + 0.3963377774 * a + 0.2158037573 * b) ** 3, m = (L - 0.1055613458 * a - 0.0638541728 * b) ** 3,
+      s = (L - 0.0894841775 * a - 1.2914855480 * b) ** 3;
+    return [4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s, -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
+      -0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s];
+  };
+  /** An OKLCH colour as #rrggbb, its chroma lowered until sRGB holds it. */
+  const hex = (L, C, h) => {
+    let c = lrgb(L, C, h);
+    while (c.some((v) => v < -1e-4 || v > 1 + 1e-4)) c = lrgb(L, C -= 0.002, h);
+    const enc = (x) => (x = Math.min(1, Math.max(0, x)), x <= 0.0031308 ? 12.92 * x : 1.055 * x ** (1 / 2.4) - 0.055);
+    return "#" + c.map((v) => Math.round(enc(v) * 255).toString(16).padStart(2, "0")).join("");
+  };
+  const lin = (x) => (x /= 255, x <= 0.04045 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4);
+  /** #rrggbb or rgb()/rgba() as three numbers 0-255. */
+  const rgbOf = (s) => s.startsWith("#") ? [1, 3, 5].map((i) => parseInt(s.slice(i, i + 2), 16)) : s.match(/[\d.]+/g).slice(0, 3).map(Number);
+  /** WCAG's contrast of two colours. */
+  const contrast = (x, y) => {
+    const Y = (s) => { const [r, g, b] = rgbOf(s).map(lin); return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
+    const [a, b] = [Y(x), Y(y)].sort((p, q) => q - p);
+    return (a + 0.05) / (b + 0.05);
+  };
+  /** A fraction p of colour c over the ground g, as #rrggbb. */
+  const mix = (c, p, g) => { const [x, y] = [rgbOf(c), rgbOf(g)];
+    return "#" + x.map((v, i) => Math.round(y[i] + (v - y[i]) * p).toString(16).padStart(2, "0")).join(""); };
+  const hue = new Map(Object.entries(ANCHORS)), roots = Object.keys(ANCHORS);
+  /** Degrees mod 360 as Python's %, which tree.py used: a remainder, then one turn added only when it is negative. */
+  const mod = (x) => { const m = x % 360; return m < 0 ? m + 360 : m; };
+  /** Place a scope, its parent first: the middle of the largest gap among its placed siblings, on the wheel or in the parent's arc. */
+  function placeHue(p) {
+    if (hue.has(p)) return;
+    const cut = p.lastIndexOf("/"), up = cut < 0 ? null : p.slice(0, cut);
+    if (up) placeHue(up);
+    const sibs = [...hue].filter(([k]) => (k.lastIndexOf("/") < 0 ? null : k.slice(0, k.lastIndexOf("/"))) === up).map(([, h]) => h);
+    const a = up && ARC / 2 ** (p.split("/").length - 2), hs = (up ? [hue.get(up) - a, hue.get(up) + a, ...sibs] : sibs).sort((x, y) => x - y);
+    let best = [-1, 0];
+    for (let i = 0; i < hs.length - (up ? 1 : 0); i++) {
+      const g = up ? hs[i + 1] - hs[i] : mod(hs[(i + 1) % hs.length] - hs[i]) || 360;
+      if (g > best[0] || (g === best[0] && hs[i] > best[1])) best = [g, hs[i]];   // a tie to the later start, as tree.py's max()
+    }
+    if (!up) roots.push(p);
+    hue.set(p, up ? best[1] + best[0] / 2 : mod(best[1] + best[0] / 2));   // a child's hue stays unwrapped, so its own arc sorts
+  }
+  for (const s of [...HUES, ...sighted()].flatMap(scopes)) placeHue(s);
+  /** The colour of a label; a scope new to this browser is remembered where it landed. */
+  function colourOf(label) {
+    const fresh = scopes(label).filter((s) => !hue.has(s));
+    if (fresh.length) { fresh.forEach(placeHue); sighted([...sighted(), ...fresh]); }
+    const d = label.split("/").length - 1;
+    return hex(BANDS[roots.indexOf(label.split("/")[0]) % 2] - 0.08 * d, 0.13 - 0.02 * d, hue.get(label));
+  }
+  window.fplAnnotColour = colourOf;   // for the headless tests, and a console
   const LAYERS = ["span", "fact", "thread", "argument", "tfa", "coref", "relation"];
   const RELATIONS = new Set(["because", "supports", "attacks", "contradicts", "supersedes", "checkedBy", "cites", "relates", "resumes"]);
   const AROUND = 32;
@@ -505,6 +595,39 @@
   }
   const passes = (row) => { const off = [...hidden()]; return [...labelsOf(row)].some((l) => !off.some((h) => under(l, h))); };
 
+  const css = getComputedStyle(document.documentElement);
+  /** A row's colour: its label's (the kind its card shows), else the weave's for a row of the sidecar or of this browser. */
+  const tone = (row) => { const k = row && kindOfCard(wholeOf(row.id) ?? row);
+    return k ? colourOf(k) : css.getPropertyValue(!row || row.mine ? "--fpl-mine" : "--fpl-vers").trim(); };
+  /**
+   * Colour the marks as the boards do: the spans over a stretch of text
+   * are its layers, the longest outermost. The text is washed in the
+   * innermost span's colour, 20% and 12% more for each layer around it,
+   * at most 70% and never so much that the text falls under 4.5:1 on it;
+   * under it one 2px line per layer, the outermost lowest, thinner past
+   * three layers so the stack stays clear of the letters. A mark's
+   * marks around it in the DOM are the layers of its own text, in
+   * whatever order they were wrapped.
+   */
+  function paint(size) {
+    const fg = getComputedStyle(body).color, bg = getComputedStyle(document.body).backgroundColor;
+    const ground = /^rgba\(.*, 0\)$/.test(bg) ? "#ffffff" : bg;   // a transparent body is the white canvas
+    const tones = {};
+    for (const m of body.querySelectorAll("mark.fact")) {
+      const ids = [];
+      for (let e = m; e; e = e.parentElement?.closest("mark.fact")) if (!ids.includes(e.dataset.id)) ids.push(e.dataset.id);
+      ids.sort((a, b) => (size[b] ?? 0) - (size[a] ?? 0));
+      const cs = ids.map((id) => tones[id] ??= tone(all.find((r) => r.id === id)));
+      const lc = cs.at(-1), d = cs.length - 1;
+      let p = Math.min(0.7, 0.2 + 0.12 * d);
+      while (p > 0 && contrast(fg, mix(lc, p, ground)) < 4.5) p -= 0.02;
+      m.style.setProperty("--lc", lc);
+      m.style.setProperty("--wash", mix(lc, Math.max(0, p), ground));
+      const t = Math.min(2, 6 / cs.length);   // never taller than three lines: a deeper stack would cross the letters
+      m.style.setProperty("--u", cs.map((c, i) => `inset 0 -${+(t * (i + 1)).toFixed(2)}px 0 ${c}`).join(", "));
+    }
+  }
+
   /** Remove the marks, draw every row the stand and the filter allow, and lay the margin out. */
   function draw() {
     for (const m of body.querySelectorAll("mark.fact")) m.replaceWith(...m.childNodes);
@@ -512,13 +635,15 @@
     all = rows();
     if (asked) try { found = new Set(QUERY.query(all, asked)); } catch { found = null; }   // an edit changes what the query finds
     state = {};
+    const size = {};
     for (const row of all) {
       if (typeof row.text !== "string" || !row.text.trim()) continue;
       const ix = shown(), at = find(ix, row);
       state[row.id] = typeof at === "string" ? at : "vers";
       const p = wholeOf(row.id);   // a piece shows when its whole does
-      if (typeof at !== "string" && mode() !== "lezen" && (p ? passes(p) : passes(row))) wrap(ix, at[0], at[1], row);
+      if (typeof at !== "string" && mode() !== "lezen" && (p ? passes(p) : passes(row))) { wrap(ix, at[0], at[1], row); size[row.id] = at[1] - at[0]; }
     }
+    paint(size);
     for (const row of all) if (addressed(row)) state[row.id] = "vers";
     for (const p of all.filter((r) => r.labels?.[0] === "parts"))   // a whole is found only when every piece is
       state[p.id] = leavesOf(p).every((t) => state[t] === "vers") ? "vers" : "stale";
@@ -739,6 +864,7 @@
       el("p", { className: "fpl-panel-head" }, "Labels", off.size ? button("alles aan", () => { hidden(new Set()); draw(); }, "fpl-link") : null),
       labels.length ? el("div", { className: "fpl-chips fpl-filter" }, ...labels.map((l) => {
         const struck = [...off].some((h) => under(l, h)), c = chip(l, struck ? "is-off" : "is-on");
+        if (l !== NONE) c.prepend(el("span", { className: "fpl-sq", style: `--lc: ${colourOf(l)}` }));
         c.dataset.chip = "l:" + l;
         c.style.marginLeft = `${(l.split("/").length - 1) * 0.6}rem`;
         return toggle(c, () => {
@@ -1041,6 +1167,7 @@
     const gone = orphan(row), st = gone ? "weg" : state[row.id], cls = row.mine ? "is-mine" : "is-vers";
     const card = el("div", { className: `fpl-card ${row.mine ? "mine" : ""} ${st !== "vers" ? "lost" : ""}` });
     card.dataset.id = row.id;
+    card.style.setProperty("--lc", tone(row));
     if (row.id === openId) card.classList.add("is-open");
     const head = headOf(row);
     const readings = typeof row.text === "string" || st !== "vers" ? []
@@ -1063,7 +1190,7 @@
       const dot = el("span", { className: "fpl-dot" });
       const kind = readings.length ? null : kindOfCard(row);
       card.append(el("div", { className: "fpl-cardhead" }, dot, el("span", { className: "fpl-title", title: clip(head, 300) }, head),
-        kind ? chip(kind, cls) : null, graphBtn, more));
+        kind ? chip(kind, "is-kind") : null, graphBtn, more));
     }
     if (row.labels?.[0] === "parts") card.append(piecesOf(row, card));
     if (readings.length) {
@@ -2354,14 +2481,14 @@
     for (const c of margin.querySelectorAll(".fpl-card[data-id]")) {
       const id = c.dataset.id, at = reach(id);
       if (!at) continue;
-      const cls = c.classList.contains("mine") ? "mine" : "";
-      svg("path", { d: curve(at.y, c), class: `fpl-line ${cls}` }, id);
+      const cls = c.classList.contains("mine") ? "mine" : "", style = `--lc: ${c.style.getPropertyValue("--lc")}`;
+      svg("path", { d: curve(at.y, c), class: `fpl-line ${cls}`, style }, id);
       if (at.long) {
         for (const m of anchorsOf(id)) if (m.matches("mark.fact")) m.classList.add("fpl-long");
-        svg("rect", { x: gx - 1.25, y: at.top, width: 2.5, height: at.bottom - at.top, rx: 1.25, class: `fpl-stretch ${cls}` }, id);
+        svg("rect", { x: gx - 1.25, y: at.top, width: 2.5, height: at.bottom - at.top, rx: 1.25, class: `fpl-stretch ${cls}`, style }, id);
       }
       if (id === "draft") continue;   // a selection being written has nothing to drag yet (board B)
-      const knob = svg("circle", { cx: at.end + 3, cy: at.foot, r: 4, class: `fpl-knob ${cls}`, tabindex: 0, role: "button",
+      const knob = svg("circle", { cx: at.end + 3, cy: at.foot, r: 4, class: `fpl-knob ${cls}`, style, tabindex: 0, role: "button",
         "aria-label": `Bolletje van “${clip(said(id), 40)}”: sleep het naar een andere span, kaart of feit, of druk l; langs de tekst, of met Shift en de pijlen, rek je de span` }, id);
       knob.appendChild(document.createElementNS("http://www.w3.org/2000/svg", "title")).textContent = "Sleep naar een span, kaart of feit om te verbinden, of langs de tekst om te rekken";
     }
