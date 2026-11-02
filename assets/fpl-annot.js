@@ -2901,10 +2901,11 @@
     svg.classList.add("fpl-arcs");
     const H = document.documentElement.scrollHeight;
     svg.setAttribute("width", "100%"); svg.setAttribute("height", H);
-    const left = Math.max(body.getBoundingClientRect().left + scrollX - 8, 44);
+    // in the gutter left of the text, however narrow (feedback 20: with the graph open the column stands at x 24)
+    const left = Math.max(body.getBoundingClientRect().left + scrollX - 8, 10);
     for (const [r, a, b] of arcs) {
       const [ya, yb] = [a, b].map((e) => { const r = seen(e).getBoundingClientRect(); return r.top + scrollY + r.height / 2; });
-      const bow = Math.min(40, 8 + Math.abs(ya - yb) / 12);
+      const bow = Math.min(40, 8 + Math.abs(ya - yb) / 12, (left - 4) * 4 / 3);   // a cubic's controls at left - bow reach 3/4 of it
       const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
       path.setAttribute("d", `M ${left} ${ya} C ${left - bow} ${ya}, ${left - bow} ${yb}, ${left} ${yb}`);
       path.dataset.id = r.id;
