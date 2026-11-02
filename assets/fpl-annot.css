@@ -137,12 +137,14 @@ body.fpl-numbered .fpl-s:hover .fpl-c::before { opacity: 1; }
 .mine .fpl-dot { background: var(--fpl-mine); }
 .fpl-lost { color: var(--fpl-lost); }
 .fpl-mine { color: var(--fpl-mine); }
-/* a quote is one line and a note two, until the card is hot or holds the focus */
+/* a quote is one line and a note two, until the card is hot or holds the
+   focus; a card folded in under its block stands in the text's flow, so
+   there only the focus opens them: a hover must not push the text down */
 .fpl-excerpt { font-size: .8rem; font-style: italic; color: var(--fpl-mute); margin: .15rem 0;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .fpl-card .fpl-note { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.fpl-card.is-hot .fpl-excerpt, .fpl-card:focus-within .fpl-excerpt { white-space: normal; }
-.fpl-card.is-hot .fpl-note, .fpl-card:focus-within .fpl-note { display: block; }
+.fpl-card:not(.fpl-inline).is-hot .fpl-excerpt, .fpl-card:focus-within .fpl-excerpt { white-space: normal; }
+.fpl-card:not(.fpl-inline).is-hot .fpl-note, .fpl-card:focus-within .fpl-note { display: block; }
 .fpl-chips { display: flex; flex-wrap: wrap; gap: .3rem; align-items: center; margin-top: .3rem; }
 .fpl-chip { font-size: 11px; font-weight: 600; line-height: 1; padding: 4px 7px; border-radius: 999px;
   border: 1px solid var(--fpl-rule); background: var(--fpl-wash); color: var(--fpl-fg); white-space: nowrap; }

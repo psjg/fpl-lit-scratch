@@ -2854,7 +2854,9 @@
     if (link) id = link.from;   // while a connect is in flight its start stays lit, whatever the pointer passes
     else id ??= around.id;   // while a card's graph is up, that card is lit
     const group = new Set(id ? groupOf(id) : []);   // a piece lights its whole, the whole its pieces
-    for (const n of [...body.querySelectorAll("mark.fact, .is-hot"), ...margin.querySelectorAll(".fpl-card"), ...lines.children])
+    // a card folded in under its block (a narrow screen) is in the body
+    for (const n of [...body.querySelectorAll("mark.fact, .is-hot, .fpl-card"),
+      ...margin.querySelectorAll(".fpl-card"), ...lines.children])
       n.classList.toggle("is-hot", group.has(n.dataset.id));
     if (id) for (const e of anchorsOf(id)) if (!e.matches("mark.fact")) e.classList.add("is-hot");
     for (const n of body.querySelectorAll(".fpl-coref")) n.classList.remove("fpl-coref");
