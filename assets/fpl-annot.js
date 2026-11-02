@@ -726,13 +726,15 @@
     for (const [i, t] of [...tabs.children].entries()) { t.ariaSelected = String(MODES[i] === cur); t.classList.toggle("is-on", MODES[i] === cur); }
     picker.value = cur;
     // "/" is Quarto's site search outside Kantlijn (feedback 22)
-    search.querySelector(".fpl-key").textContent = cur === "kantlijn" ? "/" : "z";
+    search.querySelector(".fpl-key").textContent =
+      cur === "kantlijn" ? "/" : "z";
     const spans = all.filter((r) => typeof r.text === "string" || addressed(r));
     const lost = spans.filter((r) => state[r.id] !== "vers").length + all.filter(orphan).length, mine = local().length;
     // a reply or a fact on a span is no relation: only rows with two ends
     const rels = all.filter((r) => typeof r.text !== "string" && relates(r));
     const head = all.length
-      ? `${some(spans.length, "span", "spans")} · ${some(rels.length, "relatie", "relaties")}`
+      ? `${some(spans.length, "span", "spans")} · `
+        + some(rels.length, "relatie", "relaties")
       : "Nog geen spans op deze pagina";
     const line = el("p", {}, head,
       lost ? el("span", { className: "fpl-lost" }, ` · ${lost} kwijt`) : null,
@@ -746,7 +748,8 @@
       const kept = new Set([...body.querySelectorAll("mark.fact")]
         .filter((m) => !m.matches(".fpl-faded")).map((m) => m.dataset.id));
       const k = spans.filter((r) => kept.has(r.id)).length;
-      count.replaceChildren(`${k} van ${some(spans.length, "span", "spans")} · `,
+      count.replaceChildren(
+        `${k} van ${some(spans.length, "span", "spans")} · `,
         el("b", {}, "ingevouwen tot de spans"), `, context ${context}`);
     } else count.replaceChildren(...line.childNodes);
     filterBtn.classList.toggle("is-on", hidden().size + offLayers().size > 0);
@@ -901,7 +904,10 @@
     menu.focus({ preventScroll: true });
   }
 
-  /** / or z: the search field, in the panel when the bar is folded; with no query yet, the filter panel opens under it. */
+  /**
+   * / or z: the search field, in the panel when the bar is folded; with
+   * no query yet, the filter panel opens under it.
+   */
   function seek() {
     if (!bar.classList.contains("is-full") && panel.hidden) flip(panel, filterBtn, fillChips);
     field.focus();
@@ -1610,7 +1616,8 @@
     }
     const ends = document.querySelectorAll(
       ".fpl-card[data-id], .fpl-card .fpl-msg[data-fact]");
-    const ids = [...new Set([...ends].map((c) => c.dataset.id ?? c.dataset.fact))]
+    const ids = [...new Set([...ends]
+      .map((c) => c.dataset.id ?? c.dataset.fact))]
       .filter((id) => id !== "draft" && id !== from);
     if (!ids.length) {
       refuse("verbind", from, "Geen ander eind op deze pagina");
@@ -2190,7 +2197,10 @@
     }
     return { nodes: [...in2.values()], edges };
   }
-  /** What a node of a graph (a card's or the page's) is called: its first words, never an id. */
+  /**
+   * What a node of a graph (a card's or the page's) is called: its first
+   * words, never an id.
+   */
   function nodeName(nid, own) {
     const r = all.find((x) => x.id === nid), d = decision(nid);
     const span = typeof r?.text === "string";
@@ -3408,7 +3418,8 @@
     }
     const range = sel.getRangeAt(0);
     if (!body.contains(range.commonAncestorContainer)) return;
-    if (mode() !== "kantlijn") {   // the copy is untouched; the toast says why no span
+    // the copy is untouched; the toast says why no span
+    if (mode() !== "kantlijn") {
       const here = mode() === "lezen" ? "Lezen" : "Spans";
       refuse("selectie", null,
         `In ${here} maakt een selectie geen span: kies Kantlijn (a)`);
