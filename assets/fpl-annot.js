@@ -126,8 +126,9 @@
  * The bar. One bar, fixed above the margin column, holds the three
  * stands as tabs (Lezen, Spans, Kantlijn, also the key "a"), the search
  * field (the key "/" in Kantlijn; elsewhere / stays Quarto's site search,
- * as f and s always do), Graph and a menu ⋯: Naam, Importeer rijen,
- * Exporteer rijen, Exporteer logboek, Boom (also "b"), Vouw tot de spans, Context 0-3,
+ * as f and s always do), the menu Weergave (Kantlijn, Graph, Boom: what
+ * stands beside the text) and a menu ⋯: Naam, Importeer rijen,
+ * Exporteer rijen, Exporteer logboek, Vouw tot de spans, Context 0-3,
  * Sneltoetsen (also "?") and Wis mijn rijen. A quiet line under it
  * counts the spans, the relations, the lost rows and this browser's,
  * and says "filter aan" while a filter holds. The label and layer
@@ -254,7 +255,7 @@
  *
  * The graph (boards V2b-V2d, V4d): every row of the page and everything
  * a row names, in the layers shown, as a plane beside the page. Graph in
- * the bar opens it, pressed, and closes it; the text column slides to the
+ * the Weergave menu opens it, Kantlijn there closes it; the text column slides to the
  * window's left edge, the left nav and the margin's cards give way, and
  * the bar heads the plane. A row is a card with the first words of its
  * quote, laid out by a force model (Fruchterman and Reingold 1991) and
@@ -328,8 +329,8 @@
  * knobs (no cards, no lines), a knob dropped on the tray pulls its span
  * and on a block puts it in that group, a sentence dragged from the tray
  * onto a block joins the group and leaves the tray, and the tray's
- * sentences are dashed in the text while the tree is open. Graph turns
- * the plane back in place; the Weergave menu is still to come.
+ * sentences are dashed in the text while the tree is open. Graph in the
+ * Weergave menu turns the plane back in place, Kantlijn closes it.
  *
  * The coref lens: coref rows that share a member are one chain (a
  * union-find over the sets), numbered in page order, and each member on
@@ -771,7 +772,7 @@
     layout();
   }
 
-  /* ---- the bar: the stands, the search, Graph and a menu, in one place ---- */
+  /* ---- the bar: the stands, the search, Weergave and a menu, in one place ---- */
 
   /** The bar's icons, one stroke on a 16-unit grid (the canvas boards' set). */
   const ICONS = {
@@ -803,6 +804,8 @@
     attacks: '<g fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="5.5"/><path d="M5.5 8h5"/></g>',
     same: '<g fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6" cy="8" r="4"/><circle cx="10" cy="8" r="4"/></g>',
     cites: '<path fill="none" stroke="currentColor" stroke-width="1.5" d="M3 12V9a3.5 3.5 0 0 1 3.5-3.5M9 12V9a3.5 3.5 0 0 1 3.5-3.5"/>',
+    margin: '<g fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 3.5h6M2 6.5h6M2 9.5h6M2 12.5h4"/><rect x="10" y="3" width="4" height="5" rx="1"/></g>',
+    check: '<path fill="none" stroke="currentColor" stroke-width="1.8" d="m3 8.5 3 3 7-7.5"/>',
   };
   const ico = (name) => {
     const s = el("span", { className: "fpl-ico" });
@@ -823,14 +826,29 @@
     ...MODES.map((m) => Object.assign(button(STANDS[m], () => stand(m), "fpl-tab"), { role: "tab" })));
   const picker = el("select", { className: "fpl-stand", ariaLabel: "Stand", onchange: () => stand(picker.value) },
     ...MODES.map((m) => el("option", { value: m }, STANDS[m])));
-  const graphBtn = tool("graph", "Graph", () => { shut(); plane?.view === "graph" ? plane.close() : graph(null); });
-  /** The tree in the plane, or closed: the menu's Boom and the key b. */
+  /*
+   * The Weergave menu (board V4b; feedback 18): what stands beside the
+   * text, one of three. Kantlijn is the page with its margin, the plane
+   * closed (not the stand of that name: a stand says what the text
+   * shows, a view what stands beside it); Graph and Boom open the plane
+   * in that view, or turn it in place. Canvas, the boards' fourth, is
+   * left out until it is built: the list holds what works. The button
+   * names the view while the plane is open ("Weergave: Boom"); folded,
+   * it is the view's icon.
+   */
+  const VIEWS = [["kantlijn", "Kantlijn", "margin"], ["graph", "Graph", "graph"], ["boom", "Boom", "tree"]];
+  const viewOf = () => plane?.view ?? "kantlijn";
+  const view = (v) => { shut(); if (v === "kantlijn") plane?.close(); else graph(null, v); };
+  /** The tree in the plane, or closed: the key b. */
   const boom = () => { shut(); plane?.view === "boom" ? plane.close() : graph(null, "boom"); };
-  graphBtn.ariaPressed = "false";
+  const viewBtn = button("", () => {
+    flip(views, viewBtn, fillViews);
+    views.querySelector('[aria-checked="true"]')?.focus({ preventScroll: true });
+  }, "fpl-tool fpl-view");
   const moreBtn = tool("more", "Meer", () => flip(menu, moreBtn, fillMenu));
   const filterBtn = tool("filter", "Filter: labels en lagen", () => flip(panel, filterBtn, fillChips));
   moreBtn.classList.add("fpl-icon", "fpl-more"); filterBtn.classList.add("fpl-icon", "fpl-filter-btn");
-  for (const b of [moreBtn, filterBtn]) { b.ariaHasPopup = "true"; b.ariaExpanded = "false"; }
+  for (const b of [moreBtn, filterBtn, viewBtn]) { b.ariaHasPopup = "true"; b.ariaExpanded = "false"; }
   const field = el("input", { className: "fpl-query", placeholder: "Zoek of filter, bv. label:claim", ariaLabel: "Zoek of filter",
     autocomplete: "off", spellcheck: false });
   // a query asked (board H): the field is lit, its / gives way to an x
@@ -840,9 +858,34 @@
   const search = el("div", { className: "fpl-search" },
     ico("search"), field, el("kbd", {}, "/"), clear);
   const count = el("p", { className: "fpl-count" });
-  const row = el("div", { className: "fpl-row" }, tabs, el("span", { className: "fpl-picker" }, picker, ico("chevron")), graphBtn, moreBtn);
+  const row = el("div", { className: "fpl-row" }, tabs, el("span", { className: "fpl-picker" }, picker, ico("chevron")), viewBtn, moreBtn);
   const bar = el("div", { className: "fpl-annot-ui fpl-topbar", role: "region", ariaLabel: "Kantlijn" }, row, search, count);
   const menu = el("div", { className: "fpl-annot-ui fpl-menu", hidden: true });
+  const views = el("div", { className: "fpl-annot-ui fpl-menu fpl-views", hidden: true, role: "menu", ariaLabel: "Weergave" });
+  /** The button: Weergave, or Weergave: and the view while the plane is open; the view's icon for the folded bar. */
+  function drawView() {
+    const v = viewOf(), [, name, icon] = VIEWS.find(([k]) => k === v);
+    viewBtn.replaceChildren(ico(icon), el("span", { className: "fpl-name" },
+      ...v === "kantlijn" ? ["Weergave"] : [el("span", { className: "fpl-vl" }, "Weergave: "), name]), ico("chevron"));
+    if (!views.hidden) fillViews();
+  }
+  /** The menu: the three views as radio items, a check on the one shown; ↑ ↓ move, Enter chooses. */
+  function fillViews() {
+    const v = viewOf();
+    views.replaceChildren(...VIEWS.map(([k, name]) => {
+      const b = button("", () => view(k), "fpl-item");
+      b.role = "menuitemradio"; b.ariaChecked = String(k === v);
+      b.append(k === v ? ico("check") : el("span", { className: "fpl-ico" }), name);
+      if (k === "boom") b.append(el("kbd", {}, "b"));
+      return b;
+    }));
+  }
+  views.onkeydown = (e) => {
+    if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
+    e.preventDefault();
+    const items = [...views.children], i = items.indexOf(document.activeElement);
+    items[(i + (e.key === "ArrowDown" ? 1 : items.length - 1)) % items.length]?.focus();
+  };
   const chips = el("div", { className: "fpl-filters" });
   const panel = el("div", { className: "fpl-annot-ui fpl-menu fpl-panel", hidden: true, role: "group", ariaLabel: "Filter" }, chips);
   const file = el("input", { type: "file", accept: ".json", hidden: true });
@@ -896,9 +939,10 @@
     if (bar.dataset.form !== String(full)) {   // the folded bar keeps the search in its panel
       bar.dataset.form = full;
       if (full) { filterBtn.remove(); bar.insertBefore(search, file); bar.insertBefore(count, file); }
-      else { row.insertBefore(filterBtn, graphBtn); panel.prepend(search, count); }
+      else { row.insertBefore(filterBtn, viewBtn); panel.prepend(search, count); }
     }
     if (!menu.hidden) hang(menu, moreBtn);
+    if (!views.hidden) hang(views, viewBtn);
     if (!panel.hidden) hang(panel, full ? search : filterBtn);
   }
 
@@ -929,6 +973,7 @@
         el("b", {}, "ingevouwen tot de spans"), `, context ${context}`);
     } else count.replaceChildren(...line.childNodes);
     filterBtn.classList.toggle("is-on", hidden().size + offLayers().size > 0);
+    drawView();
     if (!panel.hidden) fillChips(); else fillSheets();
     dock();
   }
@@ -955,7 +1000,7 @@
   /** Close the menu, the filter panel and a card's menu. */
   function shut() {
     if (link?.open) { link = null; drawAim(); hot(null); toast("Niet verbonden"); }   // the chooser closed unanswered
-    for (const [pop, btn] of [[menu, moreBtn], [panel, filterBtn]]) { pop.hidden = true; btn.ariaExpanded = "false"; btn.classList.remove("is-open"); }
+    for (const [pop, btn] of [[menu, moreBtn], [panel, filterBtn], [views, viewBtn]]) { pop.hidden = true; btn.ariaExpanded = "false"; btn.classList.remove("is-open"); }
     cardMenu.hidden = true;
     if (menuOf) for (const b of margin.querySelectorAll(".fpl-card-more")) b.ariaExpanded = "false";
     menuOf = null;
@@ -963,7 +1008,7 @@
   document.addEventListener("pointerdown", (ev) => {
     const t = ev.target;
     if (link?.open && t.closest?.(".fpl-knob")) { link = null; drawAim(); }   // a new drag replaces the question, quietly
-    if (!t.closest?.(".fpl-menu, .fpl-card-more") && !moreBtn.contains(t) && !filterBtn.contains(t) && t !== field) shut();
+    if (!t.closest?.(".fpl-menu, .fpl-card-more") && !moreBtn.contains(t) && !filterBtn.contains(t) && !viewBtn.contains(t) && t !== field) shut();
   }, true);
   /** A click outside every card, menu and panel lets the open card close; not while a new fact is written. */
   document.addEventListener("click", (ev) => {
@@ -1124,8 +1169,6 @@
       ask === "export" ? el("p", { className: "fpl-cmd" }, "Dan, vanuit 01-bootstrap/: ",
         el("code", {}, `lit facts --import ${stem}.annot.json --item ${item}=${item}@${commit}`)) : null,
       none(entry("log", "Exporteer logboek", null, why("nog niet"))),
-      el("hr"),
-      entry("tree", "Boom", boom, el("kbd", {}, "b")),
       el("hr"),
       entry("fold", "Vouw tot de spans", () => { shut(); squeeze(); }),
       el("div", { className: "fpl-item" }, ico("context"), "Context", ctx),
@@ -2459,7 +2502,7 @@
     };
     const close = () => {
       p.remove(); plane = null; hot(null); pulled(false);
-      graphBtn.classList.remove("is-on"); graphBtn.ariaPressed = "false";
+      drawView();
       slide(() => document.body.classList.remove("fpl-beside"));
       layout();
       opener?.focus?.({ preventScroll: true });
@@ -2944,7 +2987,7 @@
       const shift = new DOMMatrix(getComputedStyle(body).transform).m41;   // where the column ends, not where its slide is now
       p.x = p.beside ? Math.round(body.getBoundingClientRect().right - shift) + 24 : 0;
       p.style.left = `${p.x}px`;
-      p.style.top = p.beside ? "" : `${Math.max(0, bar.getBoundingClientRect().bottom)}px`;   // a sheet under the bar, whose Graph closes it
+      p.style.top = p.beside ? "" : `${Math.max(0, bar.getBoundingClientRect().bottom)}px`;   // a sheet under the bar, whose Weergave closes it
       pulled(p.view === "boom");   // a draw wraps the marks anew
       build();
     };
@@ -2958,7 +3001,7 @@
       p.classList.toggle("is-boom", v === "boom");
       p.ariaLabel = v === "boom" ? "Boom" : "Graph";
       foot.hidden = v === "boom"; tray.hidden = v !== "boom";
-      graphBtn.classList.toggle("is-on", v === "graph"); graphBtn.ariaPressed = String(v === "graph");
+      drawView();
       pulled(v === "boom");
       if (p.isConnected) layout();   // the knobs come or go with the tree
     };
@@ -4073,8 +4116,8 @@
       if (id) cardEl(id)?.querySelector(".fpl-card-more")?.focus({ preventScroll: true });
       return;
     }
-    if (ev.key === "Escape" && (!menu.hidden || !panel.hidden)) {   // an open popover first, focus back to its button
-      const back = menu.hidden ? filterBtn : moreBtn, inside = menu.contains(document.activeElement) || panel.contains(document.activeElement);
+    if (ev.key === "Escape" && (!menu.hidden || !panel.hidden || !views.hidden)) {   // an open popover first, focus back to its button
+      const back = !views.hidden ? viewBtn : menu.hidden ? filterBtn : moreBtn, inside = [menu, panel, views].some((x) => x.contains(document.activeElement));
       shut();
       if (inside) back.focus();
       return;
@@ -4149,7 +4192,7 @@
   addEventListener("resize", relayout);
   document.fonts?.ready.then(relayout);
 
-  document.body.append(pop, menu, panel, cardMenu);
+  document.body.append(pop, menu, views, panel, cardMenu);
   const decisions = (snap ? Promise.resolve(snap.decisions ?? "") : fetch(`${stem}.decisions.tsv`).then((r) => (r.ok ? r.text() : "")))
     .catch(() => "");
   Promise.all([(snap ? Promise.resolve(snap.rows) : fetch(`${stem}.facts.json`).then((r) => (r.ok ? r.json() : []))).catch(() => []), decisions])

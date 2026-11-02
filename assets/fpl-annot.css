@@ -237,7 +237,7 @@ button.fpl-end:hover, button.fpl-end:focus-visible { color: var(--fpl-fg); text-
 .fpl-cardmenu header { padding: 4px 13px 6px; font-size: 12.5px; color: var(--fpl-mute); }   /* the chooser: Verbind met “…” als */
 .fpl-cardmenu header b { font-weight: 600; color: var(--fpl-fg); }
 
-/* the bar (fpl-annot.js dock): the stands, the search, Graph and ⋯, fixed above the margin.
+/* the bar (fpl-annot.js dock): the stands, the search, Weergave and ⋯, fixed above the margin.
    Nothing in it changes size or place on hover or state: hover and state change colour only. */
 .fpl-topbar { z-index: 1000; box-sizing: border-box; font: 14px/1.4 var(--bs-font-sans-serif, sans-serif); color: var(--fpl-fg); }
 .fpl-topbar.is-full { position: fixed; top: 0; height: 118px; padding-top: 14px; background: var(--fpl-bg);
@@ -258,6 +258,16 @@ button.fpl-end:hover, button.fpl-end:focus-visible { color: var(--fpl-fg); text-
 .fpl-tool:hover, .fpl-tool.is-open { background: var(--fpl-wash); }
 .fpl-tool.is-open { border-color: var(--fpl-edge); }
 .fpl-tool.is-on { color: var(--fpl-mine); }
+/* Weergave (board V4b): the name and a chevron in the full bar, "Weergave:" muted before an open plane's view;
+   folded, the view's icon alone. A narrow plane's bar drops the "Weergave:" and keeps the view. */
+.fpl-topbar.is-full { container-type: inline-size; }
+.fpl-topbar.is-full .fpl-view > .fpl-ico:first-child, .fpl-topbar:not(.is-full) .fpl-view > .fpl-ico:last-child { display: none; }
+.fpl-view .fpl-vl { font-weight: 400; color: var(--fpl-mute); }
+@container (max-width: 419px) { .fpl-view .fpl-vl { display: none; } }
+.fpl-menu.fpl-views { width: 220px; }
+.fpl-views .fpl-item[aria-checked="true"], .fpl-views .fpl-item[aria-checked="true"] .fpl-ico { color: var(--fpl-mine); }
+.fpl-views .fpl-item[aria-checked="true"] { font-weight: 600; }
+.fpl-views .fpl-ico { width: 16px; }
 .fpl-topbar :focus-visible, .fpl-menu :focus-visible { outline: 2px solid var(--fpl-mine); outline-offset: 1px; }
 .fpl-search { margin-top: 8px; display: flex; align-items: center; gap: 8px; height: 32px; box-sizing: border-box; padding: 0 3px 0 8px;
   border: 1px solid var(--fpl-rule); border-radius: 5px; color: var(--fpl-mute); background: var(--fpl-bg); }
