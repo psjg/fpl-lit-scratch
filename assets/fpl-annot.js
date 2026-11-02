@@ -2008,17 +2008,18 @@
   /* query: begin. Self-contained: tests/test_query_js.py runs this block in node against tests/query_cases.json. */
   const QUERY = (() => {
     const RELS = new Set(["because", "supports", "attacks", "contradicts", "supersedes", "checkedBy", "cites", "relates", "resumes"]);
-    const SETS = new Set(["coref", "parts"]);
+    const SETS = new Set(["coref", "parts", "group"]);
     const KEYS = ["label", "layer", "by", "text", "has", "gives"];
-    const LAYERS = ["span", "fact", "thread", "argument", "tfa", "coref", "relation"];
+    const LAYERS = ["span", "fact", "thread", "argument", "tfa", "coref", "group", "relation"];
     const CHAIN_BUDGET = 100000;   // steps one chain walk may take, rather than freeze the tab (lit's facts.CHAIN_BUDGET)
     const strs = (v) => Array.isArray(v) && v.every((x) => typeof x === "string");
     const first = (r) => (strs(r.labels) && r.labels.length ? r.labels[0] : "");
+    const kind = (r) => (first(r).startsWith("group/") ? "group" : first(r));   // lit's facts.kind
     function layer(r, by) {   // lit's facts.layer
-      const k = first(r);
+      const k = kind(r);
       if ("item" in r) return "span";
       if (k === "parts") return "span";
-      if (k === "coref") return "coref";
+      if (k === "coref" || k === "group") return k;
       if (k === "resumes" || k.startsWith("tfa/")) return "tfa";
       if (k === "supports" || k === "attacks") return "argument";
       if (RELS.has(k)) return "relation";
@@ -2061,7 +2062,7 @@
       const back = new Map(), ahead = new Map();   // kind -> node -> the nodes an edge joins it to, into it / out of it
       const link = (m, k, a, b) => { if (!m.has(k)) m.set(k, new Map()); add(m.get(k), a, b); };
       for (const r of rows) {   // lit's facts.relation_edges: no node joins itself
-        const k = first(r), t = r.targets;
+        const k = kind(r), t = r.targets;
         if (!strs(t) || !t.length) continue;
         const edges = SETS.has(k) ? t.flatMap((a) => t.filter((b) => a !== b).map((b) => [a, b])) : t.slice(1).filter((b) => b !== t[0]).map((b) => [t[0], b]);
         for (const [a, b] of edges) { link(ahead, k, a, b); link(back, k, b, a); }
@@ -2091,7 +2092,7 @@
       };
       const about = (r) => {   // a fact on an address speaks for the address; one on a row, or a relation, only for itself
         const t0 = strs(r.targets) && r.targets.length ? r.targets[0] : null;
-        const own = "item" in r || RELS.has(first(r)) || SETS.has(first(r));
+        const own = "item" in r || RELS.has(first(r)) || SETS.has(kind(r));
         return own || !t0 || by.has(t0) ? [r.id] : [r.id, t0];
       };
       const holds = (r, key, v, n, col) => {   // bare has:R is has:R+1; bare gives:R is gives:R+1 for a relation, never for a set

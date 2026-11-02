@@ -1367,6 +1367,492 @@
    "ids": [
     "v"
    ]
+  },
+  {
+   "q": "has:group",
+   "rows": [
+    {
+     "id": "a",
+     "item": "p.md",
+     "text": "A"
+    },
+    {
+     "id": "b",
+     "item": "p.md",
+     "text": "B"
+    },
+    {
+     "id": "c",
+     "item": "p.md",
+     "text": "C"
+    },
+    {
+     "id": "g",
+     "labels": [
+      "group/twee",
+      "role/bewijs",
+      "order/2"
+     ],
+     "note": "Twee",
+     "targets": [
+      "a",
+      "b"
+     ]
+    },
+    {
+     "id": "t",
+     "labels": [
+      "group/gepakt"
+     ],
+     "targets": [
+      "c"
+     ]
+    },
+    {
+     "id": "n",
+     "labels": [
+      "note"
+     ],
+     "targets": [
+      "g"
+     ]
+    }
+   ],
+   "ids": [
+    "a",
+    "b"
+   ]
+  },
+  {
+   "q": "has:group+1",
+   "rows": [
+    {
+     "id": "a",
+     "item": "p.md",
+     "text": "A"
+    },
+    {
+     "id": "b",
+     "item": "p.md",
+     "text": "B"
+    },
+    {
+     "id": "c",
+     "item": "p.md",
+     "text": "C"
+    },
+    {
+     "id": "g",
+     "labels": [
+      "group/twee",
+      "role/bewijs",
+      "order/2"
+     ],
+     "note": "Twee",
+     "targets": [
+      "a",
+      "b"
+     ]
+    },
+    {
+     "id": "t",
+     "labels": [
+      "group/gepakt"
+     ],
+     "targets": [
+      "c"
+     ]
+    },
+    {
+     "id": "n",
+     "labels": [
+      "note"
+     ],
+     "targets": [
+      "g"
+     ]
+    }
+   ],
+   "ids": [
+    "a",
+    "b"
+   ]
+  },
+  {
+   "q": "gives:group+1",
+   "rows": [
+    {
+     "id": "a",
+     "item": "p.md",
+     "text": "A"
+    },
+    {
+     "id": "b",
+     "item": "p.md",
+     "text": "B"
+    },
+    {
+     "id": "c",
+     "item": "p.md",
+     "text": "C"
+    },
+    {
+     "id": "g",
+     "labels": [
+      "group/twee",
+      "role/bewijs",
+      "order/2"
+     ],
+     "note": "Twee",
+     "targets": [
+      "a",
+      "b"
+     ]
+    },
+    {
+     "id": "t",
+     "labels": [
+      "group/gepakt"
+     ],
+     "targets": [
+      "c"
+     ]
+    },
+    {
+     "id": "n",
+     "labels": [
+      "note"
+     ],
+     "targets": [
+      "g"
+     ]
+    }
+   ],
+   "ids": [
+    "a",
+    "b"
+   ]
+  },
+  {
+   "q": "layer:group",
+   "rows": [
+    {
+     "id": "a",
+     "item": "p.md",
+     "text": "A"
+    },
+    {
+     "id": "b",
+     "item": "p.md",
+     "text": "B"
+    },
+    {
+     "id": "c",
+     "item": "p.md",
+     "text": "C"
+    },
+    {
+     "id": "g",
+     "labels": [
+      "group/twee",
+      "role/bewijs",
+      "order/2"
+     ],
+     "note": "Twee",
+     "targets": [
+      "a",
+      "b"
+     ]
+    },
+    {
+     "id": "t",
+     "labels": [
+      "group/gepakt"
+     ],
+     "targets": [
+      "c"
+     ]
+    },
+    {
+     "id": "n",
+     "labels": [
+      "note"
+     ],
+     "targets": [
+      "g"
+     ]
+    }
+   ],
+   "ids": [
+    "g",
+    "t"
+   ]
+  },
+  {
+   "q": "label:group/gepakt",
+   "rows": [
+    {
+     "id": "a",
+     "item": "p.md",
+     "text": "A"
+    },
+    {
+     "id": "b",
+     "item": "p.md",
+     "text": "B"
+    },
+    {
+     "id": "c",
+     "item": "p.md",
+     "text": "C"
+    },
+    {
+     "id": "g",
+     "labels": [
+      "group/twee",
+      "role/bewijs",
+      "order/2"
+     ],
+     "note": "Twee",
+     "targets": [
+      "a",
+      "b"
+     ]
+    },
+    {
+     "id": "t",
+     "labels": [
+      "group/gepakt"
+     ],
+     "targets": [
+      "c"
+     ]
+    },
+    {
+     "id": "n",
+     "labels": [
+      "note"
+     ],
+     "targets": [
+      "g"
+     ]
+    }
+   ],
+   "ids": [
+    "t"
+   ]
+  },
+  {
+   "q": "label:role",
+   "rows": [
+    {
+     "id": "a",
+     "item": "p.md",
+     "text": "A"
+    },
+    {
+     "id": "b",
+     "item": "p.md",
+     "text": "B"
+    },
+    {
+     "id": "c",
+     "item": "p.md",
+     "text": "C"
+    },
+    {
+     "id": "g",
+     "labels": [
+      "group/twee",
+      "role/bewijs",
+      "order/2"
+     ],
+     "note": "Twee",
+     "targets": [
+      "a",
+      "b"
+     ]
+    },
+    {
+     "id": "t",
+     "labels": [
+      "group/gepakt"
+     ],
+     "targets": [
+      "c"
+     ]
+    },
+    {
+     "id": "n",
+     "labels": [
+      "note"
+     ],
+     "targets": [
+      "g"
+     ]
+    }
+   ],
+   "ids": [
+    "g"
+   ]
+  },
+  {
+   "q": "layer:thread",
+   "rows": [
+    {
+     "id": "a",
+     "item": "p.md",
+     "text": "A"
+    },
+    {
+     "id": "b",
+     "item": "p.md",
+     "text": "B"
+    },
+    {
+     "id": "c",
+     "item": "p.md",
+     "text": "C"
+    },
+    {
+     "id": "g",
+     "labels": [
+      "group/twee",
+      "role/bewijs",
+      "order/2"
+     ],
+     "note": "Twee",
+     "targets": [
+      "a",
+      "b"
+     ]
+    },
+    {
+     "id": "t",
+     "labels": [
+      "group/gepakt"
+     ],
+     "targets": [
+      "c"
+     ]
+    },
+    {
+     "id": "n",
+     "labels": [
+      "note"
+     ],
+     "targets": [
+      "g"
+     ]
+    }
+   ],
+   "ids": [
+    "n"
+   ]
+  },
+  {
+   "q": "label:group !layer:group",
+   "rows": [
+    {
+     "id": "a",
+     "item": "p.md",
+     "text": "A"
+    },
+    {
+     "id": "b",
+     "item": "p.md",
+     "text": "B"
+    },
+    {
+     "id": "c",
+     "item": "p.md",
+     "text": "C"
+    },
+    {
+     "id": "g",
+     "labels": [
+      "group/twee",
+      "role/bewijs",
+      "order/2"
+     ],
+     "note": "Twee",
+     "targets": [
+      "a",
+      "b"
+     ]
+    },
+    {
+     "id": "t",
+     "labels": [
+      "group/gepakt"
+     ],
+     "targets": [
+      "c"
+     ]
+    },
+    {
+     "id": "n",
+     "labels": [
+      "note"
+     ],
+     "targets": [
+      "g"
+     ]
+    }
+   ],
+   "ids": []
+  },
+  {
+   "q": "has:group+1 layer:grup",
+   "rows": [
+    {
+     "id": "a",
+     "item": "p.md",
+     "text": "A"
+    },
+    {
+     "id": "b",
+     "item": "p.md",
+     "text": "B"
+    },
+    {
+     "id": "c",
+     "item": "p.md",
+     "text": "C"
+    },
+    {
+     "id": "g",
+     "labels": [
+      "group/twee",
+      "role/bewijs",
+      "order/2"
+     ],
+     "note": "Twee",
+     "targets": [
+      "a",
+      "b"
+     ]
+    },
+    {
+     "id": "t",
+     "labels": [
+      "group/gepakt"
+     ],
+     "targets": [
+      "c"
+     ]
+    },
+    {
+     "id": "n",
+     "labels": [
+      "note"
+     ],
+     "targets": [
+      "g"
+     ]
+    }
+   ],
+   "error": "'grup' is no layer at 13"
   }
  ]
 }

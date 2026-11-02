@@ -526,6 +526,60 @@ def test_layer_is_read_from_the_labels() -> None:
     ]  # fmt: skip
 
 
+GROUPED: list[facts.Row] = [
+    {"id": "a", "item": "p.md", "start": 0, "end": 1, "text": "#"},
+    {"id": "b", "item": "p.md", "start": 2, "end": 6, "text": "Demo"},
+    {
+        "id": "g1",
+        "labels": ["group/twee-regels", "role/bewijs", "order/1"],
+        "note": "Twee regels, één teller",
+        "targets": ["a", "b"],
+    },
+    {"id": "g2", "labels": ["group/gepakt"], "targets": ["b"]},
+    {"id": "g3", "labels": ["group"], "targets": ["a"]},
+    {"id": "g4", "labels": ["claim", "group/x"], "targets": ["a"]},
+    {"id": "g5", "labels": ["group/x", "group/y"], "targets": ["a"]},
+    {"id": "g6", "labels": ["claim", "role/bewijs"], "targets": ["a"]},
+    {"id": "g7", "labels": ["group/z", "role/a", "role/b"], "targets": ["a"]},
+    {"id": "g8", "labels": ["group/z2", "order/0"], "targets": ["a"]},
+    {"id": "g9", "labels": ["group/gepakt", "role/claim"], "targets": ["a"]},
+    {"id": "g10", "labels": ["group/leeg"], "targets": []},
+    {"id": "g11", "labels": ["group/dubbel"], "targets": ["a", "a"]},
+    {"id": "g12", "labels": ["group/zelf"], "targets": ["g12"]},
+    {"id": "g13", "labels": ["group/twee-regels"], "targets": ["g1"]},
+    {"id": "n", "labels": ["note"], "targets": ["g1"]},
+]
+
+
+def test_a_group_is_a_named_set_of_one_member_or_more() -> None:
+    """``group/<naam>`` first, one role and order, the tray roleless.
+
+    One member is a group (the tray may hold one sentence); none, one
+    twice, itself, or a name a page already gave, is not.
+    """
+    got = facts.validate(GROUPED, "p.facts.json", {"p.md": "# Demo"}, set())
+    assert [(f.line, f.rule, f.message) for f in got] == [
+        (5, "lit-facts-set", "a group is named: group/<naam>"),
+        (6, "lit-facts-set", "a group's name is the row's first label"),
+        (7, "lit-facts-set", "one row is one group, 2 names given"),
+        (8, "lit-facts-set", "role/ and order/ stand on a group row only"),
+        (9, "lit-facts-set", "a group has one role and one order at most"),
+        (10, "lit-facts-set", "'order/0' is no order/<n>, n from 1"),
+        (11, "lit-facts-set", "the tray, group/gepakt, has no role"),
+        (12, "lit-facts-set", "group needs one member at least, each once"),
+        (13, "lit-facts-set", "group needs one member at least, each once"),
+        (14, "lit-facts-set", "group row 'g12' names itself"),
+        (11, "lit-facts-set", "'group/gepakt' names the group at row 4"),
+        (15, "lit-facts-set", "'group/twee-regels' names the group at row 3"),
+    ]
+    by = {cast_id(r): r for r in GROUPED}
+    assert [facts.layer(r, by) for r in GROUPED[2:4]] == ["group", "group"]
+    assert facts.layer(GROUPED[-1], by) == "thread"  # a note on a row
+    assert facts.query(GROUPED[:4], "has:group") == ["a", "b"]
+    assert facts.query(GROUPED[:4], "layer:group") == ["g1", "g2"]
+    assert facts.query(GROUPED[:4], "label:role/bewijs") == ["g1"]
+
+
 def test_relates_is_the_neutral_relation() -> None:
     """The knob's "verbindt": a relation with no stance, two ends."""
     rows: list[facts.Row] = [

@@ -577,7 +577,18 @@ RELATIONS = ARGUING | {
 # row about that span names the ``parts`` row; a piece may itself be a
 # ``parts`` row, a tree with one whole per piece. Both are read and
 # gated here, and the overlay draws a ``parts`` row as one span.
-SETS = frozenset({"coref", "parts"})
+# ``group`` is a set a reader names, ``group/<naam>`` its first label:
+# rows put together as one thing (a frame in the graph, a chip on each
+# card), with at most one ``role/<rol>`` (claim, bewijs, tegen: free,
+# as every label) and one ``order/<n>``, its place among the groups.
+# ``group/gepakt`` is the tray of pulled sentences, a group without a
+# role. A group may hold one member, as the tray may hold one sentence.
+GROUP = "group"
+SETS = frozenset({"coref", "parts", GROUP})
+# The tray of pulled sentences: a group like any other, without a role.
+TRAY = "group/gepakt"
+# A group's place among the groups, as the chain length is written.
+ORDER = re.compile(r"order/[1-9][0-9]*")
 # Topic-focus articulation as the Prague t-layer marks it (Mikulova et
 # al. 2006, ch. 10): one value per unit, ``t`` contextually bound, ``c``
 # bound and contrastive, ``f`` not bound; topic and focus as wholes
@@ -1065,24 +1076,95 @@ def first(row: Row) -> str:
     return cast("list[str]", labels)[0] if strings(labels) and labels else ""
 
 
-def set_faults(row: Row, spans: Collection[str]) -> Iterator[str]:
-    """What keeps a ``coref`` or ``parts`` row from being a set.
+def kind(row: Row) -> str:
+    """A row's kind, its first label, ``group/<naam>`` read ``group``.
 
-    Two members at least, none twice, not itself; a ``parts`` row's
-    members are span rows, the pieces of one discontinuous span, or
-    ``parts`` rows, a piece that is itself in pieces (``spans`` holds
-    both kinds of id).
+    Every other first label is its own kind, so a relation or a set is
+    read here as `first` reads it.
     """
-    kind, targets = first(row), row.get("targets", [])
-    if kind not in SETS or not strings(targets):
+    label = first(row)
+    return GROUP if label.startswith(GROUP + "/") else label
+
+
+def set_faults(row: Row, spans: Collection[str]) -> Iterator[str]:
+    """What keeps a ``coref``, ``parts`` or ``group`` row from a set.
+
+    Two members at least (a group one: the tray may hold one
+    sentence), none twice, not itself; a ``parts`` row's members are
+    span rows, the pieces of one discontinuous span, or ``parts`` rows,
+    a piece that is itself in pieces (``spans`` holds both kinds of id).
+    """
+    k, targets = kind(row), row.get("targets", [])
+    yield from group_faults(row)
+    if k not in SETS or not strings(targets):
         return
     ts = cast("list[str]", targets)
-    if len(set(ts)) < 2 or len(set(ts)) < len(ts):
-        yield f"{kind} needs two members at least, each once"
+    least = 1 if k == GROUP else 2
+    if len(set(ts)) < least or len(set(ts)) < len(ts):
+        many = "one member" if least == 1 else "two members"
+        yield f"{k} needs {many} at least, each once"
     elif row.get("id") in ts:
-        yield f"{kind} row {row.get('id')!r} names itself"
-    elif kind == "parts" and (odd := [t for t in ts if t not in spans]):
+        yield f"{k} row {row.get('id')!r} names itself"
+    elif k == "parts" and (odd := [t for t in ts if t not in spans]):
         yield f"parts are span or parts rows, {odd[0]!r} is neither"
+
+
+def group_faults(row: Row) -> Iterator[str]:
+    """What is wrong with a row's group, role or order labels.
+
+    A group is named: ``group/<naam>`` is its first label and its only
+    one under ``group``. ``role/`` and ``order/`` stand on a group row
+    only, one of each, the order a whole number from 1; the tray,
+    ``group/gepakt``, has no role.
+    """
+    labels = row.get("labels")
+    if not strings(labels):
+        return
+    ls = cast("list[str]", labels)
+    named = [x for x in ls if x == GROUP or x.startswith(GROUP + "/")]
+    roles = [x for x in ls if x.startswith("role/")]
+    orders = [x for x in ls if x.startswith("order/")]
+    if GROUP in named:
+        yield "a group is named: group/<naam>"
+    elif named and first(row) != named[0]:
+        yield "a group's name is the row's first label"
+    elif len(named) > 1:
+        yield f"one row is one group, {len(named)} names given"
+    elif (roles or orders) and not named:
+        yield "role/ and order/ stand on a group row only"
+    elif named:
+        yield from role_faults(first(row), roles, orders)
+
+
+def role_faults(
+    name: str, roles: list[str], orders: list[str]
+) -> Iterator[str]:
+    """What is wrong with the role and order labels of a group."""
+    if len(roles) > 1 or len(orders) > 1:
+        yield "a group has one role and one order at most"
+    elif odd := [x for x in orders if not ORDER.fullmatch(x)]:
+        yield f"{odd[0]!r} is no order/<n>, n from 1"
+    elif roles and name == TRAY:
+        yield "the tray, group/gepakt, has no role"
+
+
+def twice_named(rows: list[Row], where: str) -> list[web.Finding]:
+    """A ``lit-facts-set`` finding for each group named twice on a page.
+
+    A name is one group, so that the tray, and a chip, say which.
+    """
+    seen: dict[str, int] = {}
+    out: list[web.Finding] = []
+    for n, row in enumerate(rows, 1):
+        if kind(row) != GROUP:
+            continue
+        name = first(row)
+        if name in seen:
+            m = f"{name!r} names the group at row {seen[name]}"
+            out.append(web.Finding(where, n, "lit-facts-set", m))
+        else:
+            seen[name] = n
+    return out
 
 
 def bundles(rows: list[Row]) -> dict[str, tuple[int, list[str]]]:
@@ -1172,19 +1254,19 @@ def layer(row: Row, rows: Mapping[str, Row]) -> str:
 
     A span (it names an item, or it is a ``parts`` set of spans); an
     ``argument`` (supports, attacks); ``tfa`` (a topic-focus value, or
-    a clause resuming another); ``coref``; another ``relation``; a
-    ``thread`` (a fact whose first target is a row that is no span);
-    else a ``fact``. One spelling: a layer field beside the labels could
-    disagree with them.
+    a clause resuming another); ``coref``; a ``group``; another
+    ``relation``; a ``thread`` (a fact whose first target is a row that
+    is no span); else a ``fact``. One spelling: a layer field beside the
+    labels could disagree with them.
     """
-    kind = first(row)
-    named = {"parts": "span", "coref": "coref", RESUMES: "tfa"}
+    k = kind(row)
+    named = {"parts": "span", "coref": "coref", RESUMES: "tfa", GROUP: GROUP}
     named |= dict.fromkeys(ARGUING, "argument")
     if "item" in row:
         return "span"
-    if kind in named or kind.startswith("tfa/"):
-        return named.get(kind, "tfa")
-    if kind in RELATIONS:
+    if k in named or k.startswith("tfa/"):
+        return named.get(k, "tfa")
+    if k in RELATIONS:
         return "relation"
     ts = row.get("targets")
     up = rows.get(cast("list[str]", ts)[0]) if strings(ts) and ts else None
@@ -1278,7 +1360,9 @@ DEFUSE = str.maketrans("[]{}", "()()")
 
 
 QUERY_KEYS = ("label", "layer", "by", "text", "has", "gives")
-LAYERS = ("span", "fact", "thread", "argument", "tfa", "coref", "relation")
+LAYERS = (
+    "span", "fact", "thread", "argument", "tfa", "coref", "group", "relation"
+)  # fmt: skip
 
 # A query term: (negated, key, value, chain length, column). The
 # chain length is 0 for a bare ``has:R`` or ``gives:R`` and other keys.
@@ -1383,18 +1467,18 @@ def relation_edges(rows: list[Row]) -> tuple[Edges, Edges]:
     back: Edges = {}
     ahead: Edges = {}
     for r in rows:
-        kind, ts = first(r), r.get("targets")
+        k, ts = kind(r), r.get("targets")
         if not strings(ts):
             continue
         t = cast("list[str]", ts)
         pairs = (
             [(a, b) for a in t for b in t if a != b]
-            if kind in SETS
+            if k in SETS
             else [(t[0], b) for b in t[1:] if b != t[0]]
         )
         for a, b in pairs:
-            ahead.setdefault(kind, {}).setdefault(a, {})[b] = None
-            back.setdefault(kind, {}).setdefault(b, {})[a] = None
+            ahead.setdefault(k, {}).setdefault(a, {})[b] = None
+            back.setdefault(k, {}).setdefault(b, {})[a] = None
     return back, ahead
 
 
@@ -1476,7 +1560,7 @@ def query(rows: list[Row], q: str) -> list[str]:
         # a relation, only for itself
         ts = r.get("targets")
         t0 = cast("list[str]", ts)[:1] if strings(ts) else []
-        own = "item" in r or first(r) in RELATIONS | SETS
+        own = "item" in r or kind(r) in RELATIONS | SETS
         up = [] if own or not t0 or t0[0] in by else t0
         return [cast("str", r.get("id")), *up]
 
@@ -1559,6 +1643,7 @@ def validate(
         ):
             out += [web.Finding(where, n, rule, m) for m in faults]
     out += twice_marked(rows, where)
+    out += twice_named(rows, where)
     out += nested(rows, where)
     return out
 

@@ -64,6 +64,7 @@ EDGELESS: list[facts.Row] = [
     {"id": "b", "labels": ["because"], "targets": ["x"]},
     {"id": "k", "labels": ["coref"], "targets": ["x"]},
     {"id": "q", "labels": ["parts"], "targets": ["x", "x"]},
+    {"id": "g", "labels": ["group/alleen"], "targets": ["x"]},
 ]
 
 # Each bare term beside its one-edge chain: every relation and set for
