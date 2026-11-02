@@ -66,6 +66,18 @@
  * once fpl-nav.js has moved the page's sections to the left, and holds
  * the cards; where the column is hidden (a narrow window) each card
  * folds under the block its span is in, and the editor is a popover.
+ * A card stands at the height of its span's last line, in the order of
+ * those lines, and is only pushed down, by the card above it; the
+ * editor is a card in that stack and pushes the rest down, never over
+ * them. Its line stays in the gutter: a stub at the text's edge, then
+ * one curve to the card's dot, so no two lines cross and none crosses
+ * the text. A span over three lines or more gets a thin bar in the
+ * gutter instead of an underline on every line. A quote in a card is
+ * one line and a note two, until the card is hot (its span, knob,
+ * line or card under the mouse, all lit together) or holds the focus;
+ * a hot card opens over the one below it, so nothing moves. A card's
+ * colour is its dot's. A clause's number shows only on the sentence
+ * under the mouse, above the clause.
  *
  * The bar. One bar, fixed above the margin column, holds the three
  * stands as tabs (Lezen, Spans, Kantlijn, also the key "a"), the search
@@ -85,8 +97,7 @@
  * Three stands: lezen shows nothing; spans underlines the spans whose
  * labels pass the filter, and a click on a span opens
  * its card alone; kantlijn shows every card, the lines and the editor.
- * A line carries the type of the edge it draws: the first label of the
- * first fact about the span, else the span's own. localStorage["fpl-annot:mode"] keeps the stand
+ * localStorage["fpl-annot:mode"] keeps the stand
  * and "fpl-annot:hide" the labels switched off, for the whole site.
  *
  * Bands (after LiquidText's collapse, Tashman & Edwards, CHI 2011). A
@@ -142,8 +153,9 @@
  * slop/beeld/dood), after Marshall (1997: no fixed palette of marks)
  * and VIKI (Marshall et al. 1994: types arise from examples, structure
  * comes on demand). The
- * editor ranks its chips by use, on this page and in this browser across
- * the site; the seeds under fn/ only start the list and sink, never go.
+ * editor ranks the labels by use, on this page and in this browser across
+ * the site, and shows the first six as chips; its field completes from
+ * all of them. The seeds under fn/ only start the list and sink, never go.
  * Striking a scope in the filter strikes everything under it. When three
  * rows on a page share a label, the margin offers it once as a quick
  * chip, one click in the editor of an address; nothing is imposed. Rows
@@ -222,6 +234,9 @@
   const SKIP = "script, style, button, .fpl-annot-ui";
   const QUOTE = { "‘": "'", "’": "'", "“": '"', "”": '"' };
   const GAP = 12;
+  const HEAD = 19;   // a card's top to the middle of its first row: its border, padding and half the row
+  const LONG = 56;
+  const CARD = 360;  // px: the widest a card in the margin gets   // px: a span taller than this (three lines) gets a bar in the gutter, not an underline
 
   const snap = window.FPL_SNAPSHOT;
   const root = snap ? "" : new URL("../", document.currentScript.src).href;
@@ -1263,8 +1278,10 @@
   /* ---- the editor ---- */
 
   /**
-   * The editor of a row: the note first, labels as chips (the known ones
-   * and the sidecar's) plus a field for one more, ⌘↩ saves, esc closes.
+   * The editor of a row: what it is about on one line, the note, the six
+   * labels most used as chips (and those the row has) plus a field for
+   * one more, which completes from every label known; ⌘↩ saves, esc
+   * closes.
    */
   function editor(row, onDone) {
     const on = new Set(row.labels ?? []);
@@ -1276,9 +1293,11 @@
       .map((l, i) => [l, i]).sort((a, b) => rank(b[0]) - rank(a[0]) || a[1] - b[1]).map(([l]) => l);   // by use, then seed order
     const note = el("textarea", { placeholder: "Notitie", value: row.note ?? "", rows: 2 });
     const chips = el("div", { className: "fpl-chips" });
-    const more = el("input", { placeholder: "label/sub…", autocomplete: "off" });
+    const more = el("input", { placeholder: "ander label…", autocomplete: "off", title: "Een label, of naam/sub" });
+    const known = el("datalist", { id: `fpl-labels-${Date.now().toString(36)}` }, ...seen.map((l) => el("option", { value: l })));
+    more.setAttribute("list", known.id);
     const render = () => chips.replaceChildren(
-      ...[...new Set([...seen, ...on])].map((l) => {
+      ...[...new Set([...seen.slice(0, 6), ...on])].map((l) => {
         const b = chip(l, on.has(l) ? "is-on" : "");
         b.onclick = () => { on.has(l) ? on.delete(l) : on.add(l); render(); };
         b.tabIndex = 0;
@@ -1286,13 +1305,13 @@
         return b;
       }), more);
     render();
-    more.onkeydown = (e) => {
-      if (e.key !== "Enter" || !more.value.trim()) return;
-      e.preventDefault();
+    const add = () => {
       const l = more.value.trim();
       if (!LABEL.test(l)) { toast("Een label is naam/scope/…: geen spatie, geen leeg stuk"); return; }
-      on.add(l); more.value = ""; render();
+      on.add(l); more.value = ""; render(); more.focus();
     };
+    more.onkeydown = (e) => { if (e.key === "Enter" && more.value.trim()) { e.preventDefault(); add(); } };
+    more.oninput = (e) => { if (!e.inputType || e.inputType === "insertReplacementText") add(); };   // a pick from the list
     const keys = el("div", { className: "fpl-bar fpl-keys" },
       row.id ? button("Verwijder", () => onDone("delete")) : null,
       el("span", { className: "fpl-space" }),
@@ -1310,7 +1329,8 @@
           return b; }))
       : null;
     // el, not form.append: append writes a null kid (no quick chips yet) as the text "null"
-    const form = el("form", { className: "fpl-editor" }, el("div", { className: "fpl-excerpt" }, about), fast, note, chips, keys);
+    const head = el("div", { className: "fpl-head" }, el("span", { className: "fpl-dot" }), el("span", { className: "fpl-q", title: about }, about));
+    const form = el("form", { className: "fpl-editor" }, head, fast, note, chips, known, keys);
     form.onsubmit = (ev) => { ev.preventDefault(); onDone({ note: note.value.trim(), labels: [...on] }); };
     form.onkeydown = (e) => {
       if (e.key === "Escape") { e.stopPropagation(); onDone(null); disarm(); }
@@ -1372,8 +1392,9 @@
       c.replaceChildren(form);
       if (!card) {
         margin.append(c);
-        c.style.top = `${rect.top + scrollY - top0()}px`;
-        if (marksOf("draft").length) c.dataset.id = "draft";   // the selection, lit while written
+        const at = marksOf("draft").length ? reach("draft") : null;   // the selection, lit while written
+        if (at) c.dataset.id = "draft";
+        c.style.top = `${(at ? at.y - HEAD : rect.top + scrollY) - top0()}px`;
       }
       editing = c;
       makeRoom(c);
@@ -1388,13 +1409,17 @@
     }
   }
 
-  /** The cards below the one being written move down out of its way, and back on close (layout). */
+  /**
+   * The card being written is a card in the stack: it stands below the
+   * cards above it, and those below move down out of its way, so it never
+   * covers one and the order of the lines holds; layout puts them back.
+   */
   function makeRoom(c) {
-    const top = c.offsetTop, bottom = top + c.offsetHeight + GAP;
-    let floor = bottom;
-    const below = [...margin.querySelectorAll(".fpl-card")].filter((o) => o !== c && o.offsetTop + o.offsetHeight > top)
-      .sort((a, b) => a.offsetTop - b.offsetTop);
-    for (const o of below) {
+    const cards = [...margin.querySelectorAll(".fpl-card")].filter((o) => o !== c).sort((a, b) => a.offsetTop - b.offsetTop);
+    const above = cards.filter((o) => o.offsetTop < c.offsetTop);
+    c.style.top = `${Math.max(c.offsetTop, ...above.map((o) => o.offsetTop + o.offsetHeight + GAP))}px`;
+    let floor = c.offsetTop + c.offsetHeight + GAP;
+    for (const o of cards.filter((o) => !above.includes(o))) {
       const y = Math.max(o.offsetTop, floor);
       o.style.top = `${y}px`;
       floor = y + o.offsetHeight + GAP;
@@ -1435,15 +1460,19 @@
     lens();   // now as well as at the end: an early return below must not leave the lens of another stand
     margin.replaceChildren();
     lines.replaceChildren();
+    unbar();
     margin.style.minHeight = "";
     const full = mode() === "kantlijn";
     if (wide()) {
       column.classList.add("fpl-column");
       if (margin.parentElement !== column) column.append(margin);
+      // the cards end where the bar ends (16px from the window's edge), past Quarto's narrow column, at most CARD wide
+      margin.style.width = `${Math.min(document.documentElement.clientWidth - 16 - column.getBoundingClientRect().left, 28 + CARD)}px`;
       if (lines.parentElement !== document.body) document.body.append(lines);
     } else {
       column?.classList.remove("fpl-column");
       lines.remove();
+      margin.style.width = "";
       if (margin.parentElement !== body) body.prepend(margin);
     }
     if (mode() === "lezen") return;
@@ -1458,9 +1487,8 @@
       return;
     }
     const lost = spans.filter((r) => state[r.id] !== "vers" || orphan(r));
-    const found = spans.map((r) => ({ r, m: anchorsOf(r.id)[0] })).filter((x) => x.m)
-      .map((x) => ({ r: x.r, m: seen(x.m) }))
-      .sort((a, b) => a.m.getBoundingClientRect().top - b.m.getBoundingClientRect().top);
+    // by the line each draws: a card's order is its line's, so no two lines cross
+    const found = spans.map((r) => ({ r, at: reach(r.id) })).filter((x) => x.at).sort((a, b) => a.at.y - b.at.y);
     if (wide()) {
       let y = y0;
       for (const r of lost) {
@@ -1470,11 +1498,11 @@
         y += c.offsetHeight + GAP;
       }
       const base = top0();
-      for (const { r, m } of found) {
+      for (const { r, at } of found) {   // at its line, its dot on it; pushed down only, by the card above
         const c = cardOf(r);
         margin.append(c);
-        const want = m.getBoundingClientRect().top + scrollY - base;
-        y = Math.max(want, y);
+        c.dataset.y = at.y;
+        y = Math.max(at.y - base - HEAD, y);
         c.style.top = `${y}px`;
         y += c.offsetHeight + GAP;
       }
@@ -1482,7 +1510,7 @@
       drawLines();
     } else {
       for (const r of lost) margin.append(cardOf(r));
-      for (const { r, m } of found) {
+      for (const { r, at: { m } } of found) {
         const c = cardOf(r);
         c.classList.add("fpl-inline");
         (m.closest("p, li, pre, h1, h2, h3, h4, td, th, blockquote") ?? m).after(c);
@@ -1492,51 +1520,59 @@
     fade();
   }
 
-  /** A line from the end of each span to its card, in the span's colour. */
+  /**
+   * Where a span meets the gutter, in page coordinates: y, the middle of
+   * its last line, where its line leaves and its card's dot stands; top
+   * and bottom, its first and last line; end and foot, the end of its
+   * last line, where the knob sits on the underline; and long, a span
+   * over three lines or more, which the gutter marks with a bar instead
+   * of an underline on every line. A folded span is its band's.
+   */
+  function reach(id) {
+    const ms = anchorsOf(id).map(seen);
+    if (!ms.length) return null;
+    const rs = ms.flatMap((m) => [...m.getClientRects()]);
+    if (!rs.length) rs.push(ms[0].getBoundingClientRect());
+    const last = rs.reduce((a, r) => (r.bottom > a.bottom + 1 || (r.bottom > a.bottom - 1 && r.right > a.right) ? r : a));
+    const top = Math.min(...rs.map((r) => r.top));
+    return { m: ms[0], y: last.bottom - Math.min(last.height, 24) / 2 + scrollY, top: top + scrollY, bottom: last.bottom + scrollY,
+      end: last.right + scrollX, foot: last.bottom - 2 + scrollY, long: last.bottom - top > LONG };
+  }
+  const unbar = () => { for (const m of body.querySelectorAll("mark.fpl-long")) m.classList.remove("fpl-long"); };
+  const svg = (tag, attrs, id) => {
+    const n = document.createElementNS("http://www.w3.org/2000/svg", tag);
+    for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v);
+    n.dataset.id = id;
+    return lines.appendChild(n);
+  };
+
+  /**
+   * A line from each span to its card, in the span's colour, all in the
+   * gutter: a short stub at the text's edge at the span's last line, then
+   * one curve to the card's dot. Every line has the same x geometry and
+   * the cards stand in the order of their lines, pushed only down, so
+   * the lines never cross and never run through the text. A long span
+   * has its bar at the stub; the knob sits at the end of every span.
+   */
   function drawLines() {
     const h = Math.max(document.documentElement.scrollHeight, body.getBoundingClientRect().bottom + scrollY);
     lines.setAttribute("width", document.documentElement.scrollWidth);
     lines.setAttribute("height", h);
     lines.replaceChildren();
+    unbar();
+    const gx = body.getBoundingClientRect().right + scrollX + 2;
     for (const c of margin.querySelectorAll(".fpl-card[data-id]")) {
-      const rects = anchorsOf(c.dataset.id).map(seen).flatMap((m) => [...m.getClientRects()]);
-      if (!rects.length) continue;
-      const last = rects[rects.length - 1], cr = c.getBoundingClientRect();
-      // from under the end of the span, along the gap below its line out of
-      // the text, then in one curve to the card; the type sits before the card
-      const x1 = last.right + scrollX + 2, y1 = last.bottom + scrollY - 1, yb = y1 + 4;
-      const x2 = cr.left + scrollX - 1, y2 = cr.top + scrollY + 10;
-      const gx = Math.max(x1 + 8, body.getBoundingClientRect().right + scrollX + 6);
-      const dx = Math.max(16, (x2 - gx) / 2);
-      const p = document.createElementNS("http://www.w3.org/2000/svg", "path");
-      p.setAttribute("d", `M${x1},${yb} H${gx} C${gx + dx},${yb} ${x2 - dx},${y2} ${x2},${y2}`);
-      p.setAttribute("class", `fpl-line ${c.classList.contains("mine") ? "mine" : ""}`);
-      p.dataset.id = c.dataset.id;
-      lines.append(p);
-      const dot = document.createElementNS("http://www.w3.org/2000/svg", "circle");   // the lollipop at the span
-      dot.setAttribute("cx", x1);
-      dot.setAttribute("cy", yb);
-      dot.setAttribute("r", 2.5);
-      dot.setAttribute("class", `fpl-knob ${c.classList.contains("mine") ? "mine" : ""}`);
-      dot.dataset.id = c.dataset.id;
-      lines.append(dot);
-      const type = edgeType(c.dataset.id);
-      if (type) {   // just before the card, where the line arrives, in a halo that breaks the line
-        const t = document.createElementNS("http://www.w3.org/2000/svg", "text");
-        t.setAttribute("x", x2 - 6);
-        t.setAttribute("y", y2);
-        t.setAttribute("class", `fpl-edge ${c.classList.contains("mine") ? "mine" : ""}`);
-        t.dataset.id = c.dataset.id;
-        t.textContent = type + " ›";
-        lines.append(t);
+      const id = c.dataset.id, at = reach(id);
+      if (!at) continue;
+      const cls = c.classList.contains("mine") ? "mine" : "", cr = c.getBoundingClientRect();
+      const x2 = cr.left + scrollX - 1, y2 = cr.top + scrollY + HEAD, k = Math.max(0, x2 - gx - 6) / 2;
+      svg("path", { d: `M${gx},${at.y} h6 C${gx + 6 + k},${at.y} ${x2 - k},${y2} ${x2},${y2}`, class: `fpl-line ${cls}` }, id);
+      if (at.long) {
+        for (const m of anchorsOf(id)) if (m.matches("mark.fact")) m.classList.add("fpl-long");
+        svg("rect", { x: gx - 1.25, y: at.top, width: 2.5, height: at.bottom - at.top, rx: 1.25, class: `fpl-stretch ${cls}` }, id);
       }
+      svg("circle", { cx: at.end + 3, cy: at.foot, r: 3.5, class: `fpl-knob ${cls}` }, id);
     }
-  }
-
-  /** The type of the edge from a span to its card: the first fact's first label, else the span's. */
-  function edgeType(id) {
-    const row = all.find((r) => r.id === id), first = facts(id)[0];
-    return first?.labels?.[0] ?? row?.labels?.[0] ?? "";
   }
 
   /** The span, card and line of one row light up together. */

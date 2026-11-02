@@ -147,8 +147,12 @@ and 0.60 and 0.61 with the examples stripped.
 
 Every page of the site loads `assets/fpl-annot.js`. It draws the page's sidecar (shipped
 beside the page) as underlined spans, each with a card in the right margin at the height of
-its span and a line between the two: the span's labels and note, then the facts about it
-(a relation as `contradicts L-G2`, a fact about a fact nested under it). A row whose text is
+its span's last line and a line between the two: the span's labels and note, then the facts
+about it (a relation as `contradicts L-G2`, a fact about a fact nested under it). The cards
+stand in the order of their lines and are only pushed down, so the lines, which stay in the
+gutter between the text and the cards, never cross; a span over three lines or more gets a
+thin bar in the gutter instead of an underline. A card's quote is one line and its note two
+until the card is under the mouse or holds the focus. A row whose text is
 not on the page any more, or is there more than once, gets a card at the top of the margin
 with its old text struck through. The right margin is free because `assets/fpl-nav.js` moves
 the page's own sections under its entry in the left sidebar, and `essay.lua` nests the
@@ -173,8 +177,9 @@ id in the page, `strings-and-comments/b4`, `…/b4s2`, `…/b4s2c3`, `…/b5l12`
 name one, and a fact can cite one: a row without text whose first target is such an id gets
 a card at that element, with a line to it.
 
-A reader selects text, writes a note and picks labels (chips; type `label/sub` for one more) in
-a card at that height, and saves it (⌘↩) as a quote row: `{id, item, commit, by, text, prefix,
+A reader selects text, writes a note and picks labels (the six most used as chips; a field that
+completes from every label, or takes a new `label/sub`) in a card at that height, a card in
+the stack that pushes the cards below it down, and saves it (⌘↩) as a quote row: `{id, item, commit, by, text, prefix,
 suffix, labels, note, targets, createdAt, updatedAt}`, the text as shown and 32 characters of
 shown text either side; `by` is who wrote it, the name given under Naam in the menu or an agent's
 model id. A reply, or a fact about a fact or an address, is the same row without `text`,

@@ -32,6 +32,7 @@ mark.fact { background: none; color: inherit; padding: 0; cursor: pointer;
   text-decoration-color: var(--fpl-vers); transition: background-color .12s; }
 mark.fact-mine { text-decoration-color: var(--fpl-mine); }
 mark.fact mark.fact { text-underline-offset: .42em; }
+mark.fact.fpl-long { text-decoration-color: transparent; }   /* three lines or more: the bar in the gutter marks it */
 mark.fact:hover, mark.fact.is-hot { background: var(--fpl-vers-wash); }
 mark.fact-mine:hover, mark.fact-mine.is-hot { background: var(--fpl-mine-wash); }
 
@@ -44,14 +45,13 @@ mark.fact-mine:hover, mark.fact-mine.is-hot { background: var(--fpl-mine-wash); 
 .fpl-lines { position: absolute; top: 0; left: 0; pointer-events: none; z-index: 1; }
 .fpl-line { fill: none; stroke: var(--fpl-vers); stroke-width: 1; stroke-linecap: round; opacity: .35; transition: opacity .12s; }
 .fpl-line.mine { stroke: var(--fpl-mine); }
-.fpl-line.is-hot { opacity: 1; stroke-width: 1.5; }
-.fpl-edge { font: 600 .62rem var(--bs-font-sans-serif, sans-serif); fill: var(--fpl-vers); opacity: .7; transition: opacity .12s;
-  text-anchor: end; dominant-baseline: middle; paint-order: stroke; stroke: var(--fpl-bg); stroke-width: 6px; stroke-linejoin: round; }
-.fpl-edge.mine { fill: var(--fpl-mine); }
-.fpl-edge.is-hot { opacity: 1; }
-.fpl-knob { fill: var(--fpl-vers); opacity: .5; transition: opacity .12s, r .12s; }
+.fpl-line.is-hot { opacity: 1; stroke-width: 1.75; }
+.fpl-stretch { fill: var(--fpl-vers); opacity: .5; transition: opacity .12s; }
+.fpl-stretch.mine { fill: var(--fpl-mine); }
+.fpl-stretch.is-hot { opacity: 1; }
+.fpl-knob { fill: var(--fpl-vers); opacity: .6; transition: opacity .12s, r .12s; }
 .fpl-knob.mine { fill: var(--fpl-mine); }
-.fpl-knob.is-hot { opacity: 1; r: 3.5; }
+.fpl-knob.is-hot { opacity: 1; r: 4.5; }
 mark.fact[data-id="draft"] { text-decoration-color: var(--fpl-mine); background: var(--fpl-mine-wash); }
 
 /* paragraph and sentence numbers, outside the reading stand */
@@ -66,31 +66,43 @@ body.fpl-numbered .fpl-p::after { opacity: .8; }
   display: none; user-select: none; }
 body.fpl-numbered .fpl-p::before { opacity: .8; }
 body.fpl-numbered .fpl-s::before { display: inline-block; }
-.fpl-c { position: relative; }   /* the clause number takes no room: it hangs below the clause's start */
-.fpl-c::before { content: attr(data-n); position: absolute; left: -.6em; bottom: -.4em; font-size: .55em; line-height: 1;
+/* the clause number takes no room and shows on the sentence under the mouse only, small, above its first word;
+   top and left, never bottom: a clause over two lines would hang it under the last line, far from its start */
+.fpl-c { position: relative; }
+.fpl-c::before { content: attr(data-n); position: absolute; left: 0; top: -.8em; font-size: .55em; line-height: 1;
   color: var(--fpl-mute); opacity: 0; transition: opacity 80ms; user-select: none; pointer-events: none; }
-body.fpl-numbered .fpl-c::before { opacity: .55; }
 body.fpl-numbered .fpl-s:hover .fpl-c::before { opacity: 1; }
 .fpl-p[data-kind="C"]::before { top: .5rem; }
 .fpl-s:target, .fpl-p:target > p, .fpl-p.is-hot > p, .fpl-s.is-hot { background: var(--fpl-vers-wash); }
 .fpl-p pre code > span:target, .fpl-p pre code > span.is-hot { background: var(--fpl-vers-wash); display: inline-block; width: 100%; }
 
-/* cards */
-.fpl-card { padding: 0 0 0 .7rem; border-left: 2px solid var(--fpl-vers); cursor: pointer; }
-.fpl-column .fpl-card { position: absolute; left: 4.5rem; right: 0; transition: opacity .12s; }   /* 4.5rem of gutter for the line and its type */
-.fpl-card.mine { border-left-color: var(--fpl-mine); }
-.fpl-card.lost { border-left-style: dotted; border-left-color: var(--fpl-lost); }
-.fpl-card.is-hot { background: var(--fpl-wash); }
-.fpl-card.fpl-editing { cursor: auto; background: var(--fpl-bg); z-index: 2; }
-.fpl-inline { margin: -.5rem 0 1rem; padding: .45rem .7rem; background: var(--fpl-wash); border-radius: 0 4px 4px 0; }
+/* cards (boards B, E): the colour is the dot's, no border of its own; hot, a tint and a hairline, raised over the card
+   below, since the one-line quote and the clamped note open in place and nothing else may move */
+.fpl-card { box-sizing: border-box; padding: 8px 10px 9px; border: 1px solid transparent; border-radius: 6px; background: var(--fpl-bg);
+  cursor: pointer; transition: opacity .12s, background-color .12s, border-color .12s; }
+.fpl-column .fpl-card { position: absolute; left: 28px; right: 0; }   /* 28px of the gutter's curve inside the column */
+.fpl-card > .fpl-who:first-child, .fpl-head { min-height: 20px; align-items: center; }   /* HEAD in fpl-annot.js: the line meets this row */
+.fpl-card.is-hot { z-index: 3; background: color-mix(in srgb, var(--fpl-vers) 6%, var(--fpl-bg));
+  border-color: color-mix(in srgb, var(--fpl-vers) 30%, var(--fpl-bg)); }
+.fpl-card.mine.is-hot { background: color-mix(in srgb, var(--fpl-mine) 6%, var(--fpl-bg)); border-color: color-mix(in srgb, var(--fpl-mine) 30%, var(--fpl-bg)); }
+.fpl-card.fpl-editing { cursor: auto; z-index: 4; background: var(--fpl-bg); border-color: color-mix(in srgb, var(--fpl-mine) 28%, var(--fpl-bg));
+  box-shadow: 0 6px 20px rgba(20, 30, 50, .14), 0 1px 3px rgba(20, 30, 50, .08); }
+.fpl-inline { margin: -.5rem 0 1rem; padding: .45rem .7rem; background: var(--fpl-wash); }
+.fpl-head { display: flex; gap: 7px; min-width: 0; }
+.fpl-q { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-style: italic; color: var(--fpl-mute); }
+.fpl-editor .fpl-dot { background: var(--fpl-mine); }
 .fpl-who { display: flex; gap: .45rem; align-items: baseline; font-size: .72rem; color: var(--fpl-mute); }
 .fpl-dot { width: .5rem; height: .5rem; border-radius: 50%; background: var(--fpl-vers); align-self: center; flex: none; }
 .mine .fpl-dot { background: var(--fpl-mine); }
 .lost .fpl-dot { background: var(--fpl-lost); }
 .fpl-lost { color: var(--fpl-lost); }
 .fpl-mine { color: var(--fpl-mine); }
+/* a quote is one line and a note two, until the card is hot or holds the focus */
 .fpl-excerpt { font-size: .8rem; font-style: italic; color: var(--fpl-mute); margin: .15rem 0;
-  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fpl-card .fpl-note { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.fpl-card.is-hot .fpl-excerpt, .fpl-card:focus-within .fpl-excerpt { white-space: normal; }
+.fpl-card.is-hot .fpl-note, .fpl-card:focus-within .fpl-note { display: block; }
 .lost .fpl-excerpt { text-decoration: line-through; text-decoration-color: var(--fpl-lost); }
 .fpl-chips { display: flex; flex-wrap: wrap; gap: .3rem; align-items: center; margin-top: .3rem; }
 .fpl-chip { font-size: .7rem; font-weight: 600; line-height: 1; padding: .28rem .5rem; border-radius: 999px;
@@ -247,7 +259,7 @@ label.fpl-item { cursor: text; }
 .fpl-editor input { font: inherit; font-size: .7rem; font-weight: 600; padding: .28rem .5rem; border-radius: 999px; width: 7rem;
   border: 1px dashed var(--fpl-rule); background: none; color: var(--fpl-fg); }
 .fpl-editor input::placeholder { font-weight: 400; color: var(--fpl-mute); }
-.fpl-keys kbd { font-size: .7rem; opacity: .8; }
+.fpl-keys kbd { font-size: .7rem; padding: 0; background: none; box-shadow: none; color: inherit; opacity: .8; }   /* no box inside the button */
 .fpl-pop { position: absolute; z-index: 1001; width: min(22rem, calc(100vw - 16px)); padding: .7rem .8rem; font-size: .86rem;
   background: var(--fpl-bg); color: var(--fpl-fg); border: 1px solid var(--fpl-rule); border-radius: 6px;
   box-shadow: 0 6px 24px rgba(0, 0, 0, .18); }
