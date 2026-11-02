@@ -95,8 +95,9 @@
  * thread, replies one step in, a reply arrow per message, and one field
  * Antwoord… whose Enter saves a reply row; past four messages the thread
  * folds to "n reacties". The ⋯ menu stands left of its card: Verbind
- * met… (key l), Graph van deze kaart, Toon beide, Verwijder (a sidecar
- * row says why not).
+ * met… (key l; the knob's drag under the mouse), Graph van deze kaart,
+ * Toon beide, Pak, Groepeer…, Verwijder (a sidecar row says why not,
+ * under the mouse).
  *
  * The knob (board C) at the end of a span is a handle: a plain dot that
  * grows under the mouse, on focus and while carried, never a ring. Drag
@@ -126,15 +127,18 @@
  * The bar. One bar, fixed above the margin column, holds the three
  * stands as tabs (Lezen, Spans, Kantlijn, also the key "a"), the search
  * field (the key "/" in Kantlijn; elsewhere / stays Quarto's site search,
- * as f and s always do), the menu Weergave (Kantlijn, Graph, Boom: what
- * stands beside the text) and a menu ⋯: Naam, Importeer rijen,
- * Exporteer rijen, Exporteer logboek, Vouw tot de spans, Context 0-3,
- * Sneltoetsen (also "?") and Wis mijn rijen. A quiet line under it
- * counts the spans, the relations, the lost rows and this browser's,
- * and says "filter aan" while a filter holds. The label and layer
- * filters are a panel that a click into the empty search field (or /
- * with no query) opens, hover never does, and nothing in the bar changes size
- * or place on hover or on a change of stand.
+ * as f and s always do), the menu Weergave (Kaarten, Graph, Boom: what
+ * stands beside the text; not Kantlijn, the stand's name, and Graph and
+ * Boom off on a page with no row and no chunk) and a menu ⋯: Naam,
+ * Importeer rijen, Exporteer rijen, Exporteer logboek, Vouw tot de
+ * spans, Context 0-3, Sneltoetsen (also "?") and Wis mijn rijen; what
+ * an item would act on, or why it cannot, shows under the mouse. No
+ * line counts anything on screen (QA, block 4): the counts are read
+ * out to a screen reader only (role status), a lost row is its strip,
+ * and a filter lights the funnel at the field's right end, which opens
+ * the label and layer filters as a panel; a click into the field only
+ * types, hover opens nothing, and nothing in the bar changes size or
+ * place on hover or on a change of stand.
  *
  * The filter panel (board V4a). First the layers, four buttons:
  * Argument, Coref, Topic-focus and Progressie (keys 1-4 outside Lezen),
@@ -314,7 +318,8 @@
  * their own (a hot card would open over the next). Shift-click cards in
  * the graph to choose them: a form asks a name and a role, and Enter
  * saves the row, or the cards join the group of ours with that name;
- * the tab of a group of ours opens it there, to rename or let go, and
+ * Groepeer… in a card's menu opens the graph with that card chosen and
+ * the form open; the tab of a group of ours opens it there, to rename or let go, and
  * Esc lets a choice go before it closes the graph. group/gepakt is the
  * tray of pulled sentences, a group without a role: Pak in a card's
  * menu adds the card to it, Leg terug takes it out, and the row goes
@@ -1188,13 +1193,13 @@
       b.append(ico(name), text, ...after ? [after] : []);
       return b;
     };
-    const why = (text) => el("small", {}, text);
     const none = (b) => { b.disabled = true; return b; };
     const name = el("input", { value: by(), placeholder: "jij", onchange: (ev) => by(ev.target.value.trim()) });
     const ctx = el("span", { className: "fpl-ctx", role: "group", ariaLabel: "Context rond elke span, in blokken" },
       ...[0, 1, 2, 3].map((n) => Object.assign(button(String(n), () => { setContext(n); fillMenu(); }), { ariaPressed: String(n === context) })));
-    const exp = entry("export", "Exporteer rijen", () => { exportRows(); fillMenu("export"); }, why(mine ? `${mine} van jou` : "geen van jou"));
-    const wipe = entry("wipe", "Wis mijn rijen op deze pagina…", () => fillMenu("wipe"), mine ? null : why("geen"), "fpl-danger");
+    // what an item would act on, or why it cannot, under the mouse: a menu holds no status words (QA, block 4)
+    const exp = Object.assign(entry("export", "Exporteer rijen", () => { exportRows(); fillMenu("export"); }), { title: mine ? `${rows} van jou` : "Nog geen rijen van jou" });
+    const wipe = Object.assign(entry("wipe", "Wis mijn rijen op deze pagina…", () => fillMenu("wipe"), null, "fpl-danger"), { title: mine ? `${rows} van jou` : "Nog geen rijen van jou" });
     menu.classList.remove("fpl-keysheet");
     menu.replaceChildren(...[
       el("label", { className: "fpl-item" }, ico("name"), "Naam", name),
@@ -1203,7 +1208,7 @@
       mine ? exp : none(exp),
       ask === "export" ? el("p", { className: "fpl-cmd" }, "Dan, vanuit 01-bootstrap/: ",
         el("code", {}, `lit facts --import ${stem}.annot.json --item ${item}=${item}@${commit}`)) : null,
-      none(entry("log", "Exporteer logboek", null, why("nog niet"))),
+      Object.assign(none(entry("log", "Exporteer logboek", null)), { title: "Komt nog" }),
       el("hr"),
       entry("fold", "Vouw tot de spans", () => { shut(); squeeze(); }),
       el("div", { className: "fpl-item" }, ico("context"), "Context", ctx),
@@ -1643,18 +1648,20 @@
         button("Verwijder", () => { shut(); save(row, "delete"); openId = null; draw(); toast("Verwijderd"); }, "fpl-danger"),
         button("Nee", () => fillCardMenu(row))));
       cardMenu.querySelector(".fpl-confirm button")?.focus();
-    }, mine ? null : el("small", {}, "uit de sidecar"));
+    });
+    if (!mine) del.title = "Uit de sidecar";
     del.classList.add("fpl-danger");
     if (!mine) del.ariaDisabled = "true";
     cardMenu.ariaLabel = "Acties voor deze kaart";
     cardMenu.replaceChildren(...[
-      entry("link", "Verbind met…", () => { shut(); pick(row.id); }, el("kbd", {}, "l")),
+      Object.assign(entry("link", "Verbind met…", () => { shut(); pick(row.id); }, el("kbd", {}, "l")),
+        { title: "Of sleep het bolletje naar een andere span: steunt, valt aan, zelfde als" }),
       entry("graph", "Graph van deze kaart", () => { shut(); graph(row.id); }),
       ...ends.map((t) => entry("fold", `Toon beide · ${clip(said(t), 22)}`, () => { shut(); both(row.id, t); })),
       tray && !tray.mine ? null : entry("tray", tray?.targets?.includes(row.id) ? "Leg terug" : "Pak", () => { shut(); pull(row.id); }),
+      entry("group", "Groepeer…", () => { shut(); graph(row.id).then(() => plane?.group(row.id)); }),
       el("hr"),
-      del,
-      el("footer", {}, "Steunt, valt aan, zelfde als: sleep het bolletje naar een andere span.")].filter(Boolean));
+      del].filter(Boolean));
   }
   cardMenu.onkeydown = (e) => {
     const items = [...cardMenu.querySelectorAll("button")];
@@ -3077,6 +3084,7 @@
       pulled(v === "boom");
       if (p.isConnected) layout();   // the knobs come or go with the tree
     };
+    p.group = (nid) => { p.show("graph"); if (!chosen.has(nid)) choose(nid); };   // Groepeer… in a card's menu
     p.letGo = () => { if (!chosen.size && !sheet) return false; chosen.clear(); sheet?.remove(); sheet = null; for (const n of nodes) n.el.classList.remove("is-picked"); return true; };
     p.tabIndex = -1;
     p.insertBefore(tray, foot);
