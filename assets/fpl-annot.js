@@ -599,6 +599,7 @@
 
   /** Run the query in the field; a query in Lezen shows the spans, since Lezen draws none. */
   const ask = () => {
+    const was = bands.length > 0 && folded(runsNear(context));   // to the spans
     asked = field.value.replace(/^ +| +$/g, "");   // only U+0020 apart, as the parser
     try { found = asked ? new Set(QUERY.query(all, asked)) : null; bad = ""; }
     catch (e) { found = null; bad = e.message; }
@@ -606,6 +607,8 @@
     search.classList.toggle("is-on", !!asked);
     field.title = bad;
     if (asked && mode() === "lezen") stand("spans"); else layout();
+    // folded to the spans: refold to the new ones, as a new Context does
+    if (was) setBands(runsNear(context) ?? []);
   };
   /** The full bar has no filter button: a click into the empty field opens the panel, typing a query closes it. */
   const filters = () => { if (bar.classList.contains("is-full") && !field.value && panel.hidden) flip(panel, filterBtn, fillChips, false); };
