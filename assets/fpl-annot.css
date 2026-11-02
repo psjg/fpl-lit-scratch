@@ -93,8 +93,13 @@ body.fpl-numbered .fpl-s:hover .fpl-c::before { opacity: 1; }
 .fpl-card { box-sizing: border-box; padding: 8px 10px 9px; border: 1px solid transparent; border-radius: 6px; background: var(--fpl-bg);
   cursor: pointer; transition: opacity .12s, background-color .12s, border-color .12s; }
 .fpl-column .fpl-card { position: absolute; left: 28px; right: 0; }   /* 28px of the gutter's curve inside the column */
-.fpl-card > .fpl-who:first-child, .fpl-head { min-height: 20px; align-items: center; }   /* HEAD in fpl-annot.js: the line meets this row */
-.fpl-card:focus-within { z-index: 3; }
+.fpl-column .fpl-card { min-width: 220px; }
+.fpl-card { font-size: 14px; line-height: 1.4; }   /* board F: 14px cards, 12.5px meta, 11px chips, whatever the site's rem */   /* NARROW in fpl-annot.js: never a card of one word a line */
+.fpl-head, .fpl-cardhead { min-height: 20px; align-items: center; }   /* HEAD in fpl-annot.js: the line meets this row */
+.fpl-cardhead { display: flex; gap: 7px; min-width: 0; }
+.fpl-card:focus-within, .fpl-card.is-open { z-index: 3; }
+.fpl-card.is-open { border-color: color-mix(in srgb, var(--fpl-vers) 30%, var(--fpl-bg)); }
+.fpl-card.mine.is-open { border-color: color-mix(in srgb, var(--fpl-mine) 30%, var(--fpl-bg)); }
 .fpl-card.is-hot { z-index: 3; background: color-mix(in srgb, var(--fpl-vers) 6%, var(--fpl-bg));
   border-color: color-mix(in srgb, var(--fpl-vers) 30%, var(--fpl-bg)); }
 .fpl-card.mine.is-hot { background: color-mix(in srgb, var(--fpl-mine) 6%, var(--fpl-bg)); border-color: color-mix(in srgb, var(--fpl-mine) 30%, var(--fpl-bg)); }
@@ -104,10 +109,8 @@ body.fpl-numbered .fpl-s:hover .fpl-c::before { opacity: 1; }
 .fpl-head { display: flex; gap: 7px; min-width: 0; }
 .fpl-q { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-style: italic; color: var(--fpl-mute); }
 .fpl-editor .fpl-dot { background: var(--fpl-mine); }
-.fpl-who { display: flex; gap: .45rem; align-items: baseline; font-size: .72rem; color: var(--fpl-mute); }
 .fpl-dot { width: .5rem; height: .5rem; border-radius: 50%; background: var(--fpl-vers); align-self: center; flex: none; }
 .mine .fpl-dot { background: var(--fpl-mine); }
-.lost .fpl-dot { background: var(--fpl-lost); }
 .fpl-lost { color: var(--fpl-lost); }
 .fpl-mine { color: var(--fpl-mine); }
 /* a quote is one line and a note two, until the card is hot or holds the focus */
@@ -116,9 +119,8 @@ body.fpl-numbered .fpl-s:hover .fpl-c::before { opacity: 1; }
 .fpl-card .fpl-note { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .fpl-card.is-hot .fpl-excerpt, .fpl-card:focus-within .fpl-excerpt { white-space: normal; }
 .fpl-card.is-hot .fpl-note, .fpl-card:focus-within .fpl-note { display: block; }
-.lost .fpl-excerpt { text-decoration: line-through; text-decoration-color: var(--fpl-lost); }
 .fpl-chips { display: flex; flex-wrap: wrap; gap: .3rem; align-items: center; margin-top: .3rem; }
-.fpl-chip { font-size: .7rem; font-weight: 600; line-height: 1; padding: .28rem .5rem; border-radius: 999px;
+.fpl-chip { font-size: 11px; font-weight: 600; line-height: 1; padding: 4px 7px; border-radius: 999px;
   border: 1px solid var(--fpl-rule); background: var(--fpl-wash); color: var(--fpl-fg); white-space: nowrap; }
 .fpl-chip small { font-weight: 400; color: var(--fpl-mute); }
 .fpl-chip.is-vers { background: var(--fpl-vers-wash); border-color: transparent; color: var(--fpl-vers); }
@@ -135,16 +137,79 @@ body.fpl-numbered .fpl-s:hover .fpl-c::before { opacity: 1; }
 .fpl-unpiece { font: inherit; font-style: normal; flex-shrink: 0; margin-left: .3rem; padding: 0; border: 0; background: none; color: var(--fpl-mute); cursor: pointer; }
 .fpl-unpiece:hover, .fpl-unpiece:focus-visible { color: var(--fpl-lost); }
 .fpl-note { margin: .3rem 0 0; }
-.fpl-by { color: var(--fpl-fg); font-weight: 600; }
-.fpl-fact > .fpl-who { margin-top: .35rem; }
-.fpl-reply { display: block; font: 600 .72rem var(--bs-font-sans-serif, sans-serif); color: var(--bs-link-color, #2b6cb0);
-  background: none; border: 0; padding: .15rem 0 0; cursor: pointer; opacity: 0; transition: opacity .12s; }
-.fpl-card:hover .fpl-reply, .fpl-reply:focus-visible { opacity: 1; }
-.fpl-fact { margin-top: .4rem; }
-.fpl-sub { margin-left: .5rem; padding-left: .5rem; border-left: 1px solid var(--fpl-rule); }
-.fpl-rel { font-size: .78rem; color: var(--fpl-mute); }
-.fpl-rel b { color: var(--fpl-fg); }
-.fpl-rel code { font-size: .76rem; background: none; padding: 0; color: inherit; }
+
+/* a card's head (board F): the first words of its quote, its kind, and Graph and ⋯, which keep their place while
+   hidden, so nothing moves when they show on hover (board E); under it one meta line. The thread, the answer field
+   and the block's address show when the card is open (a click, its menu) or holds the focus, never on hover alone */
+.fpl-title { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 600; color: var(--fpl-fg); }
+.fpl-cardhead > .fpl-chip { flex: none; }
+.fpl-ib { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; margin: -2px 0;
+  padding: 0; border: 0; border-radius: 4px; background: none; color: var(--fpl-mute); cursor: pointer; opacity: 0;
+  transition: opacity .12s, background-color .12s; }
+.fpl-cardhead > .fpl-ib:last-child { margin-right: -4px; }
+.fpl-card.is-hot .fpl-cardhead > .fpl-ib, .fpl-card.is-open .fpl-cardhead > .fpl-ib, .fpl-card:focus-within .fpl-cardhead > .fpl-ib,
+.fpl-inline .fpl-cardhead > .fpl-ib, .fpl-ib:focus-visible { opacity: 1; }
+.fpl-ib:hover, .fpl-ib[aria-expanded="true"] { background: var(--fpl-vers-wash); color: var(--fpl-vers); }
+.mine .fpl-ib:hover, .mine .fpl-ib[aria-expanded="true"] { background: var(--fpl-mine-wash); color: var(--fpl-mine); }
+.fpl-ib:focus-visible { outline: 2px solid var(--fpl-mine); outline-offset: 0; }
+.fpl-card > .fpl-note, .fpl-card > .fpl-meta, .fpl-card > .fpl-pieces, .fpl-card > .fpl-ledger, .fpl-card > .fpl-args { margin-left: 15px; }
+.fpl-card > .fpl-args { margin-top: 3px; font-size: 12.5px; }
+.fpl-card > .fpl-args > summary { font-weight: 400; }
+.fpl-where { white-space: nowrap; }
+.fpl-card > .fpl-note { margin-top: 3px; }
+.fpl-meta { margin: 3px 0 0; font-size: 12.5px; color: var(--fpl-mute); }
+.fpl-meta b { font-weight: 600; color: var(--fpl-fg); }
+.fpl-meta .fpl-arm { color: var(--bs-link-color, #2b6cb0); font-weight: 600; }
+.fpl-where, .fpl-thread { display: none; }
+/* open only, not on focus: a press on "n reacties" focuses it, and the press must stay on it until the click */
+.fpl-card.is-open .fpl-where { display: inline; }
+.fpl-card.is-open .fpl-count-r { display: none; }
+.fpl-card.is-open .fpl-thread, .fpl-card:focus-within .fpl-thread { display: block; }
+/* a relation by its other end: a quote (a click folds what lies between), or a decision of the ledger as a chip */
+.fpl-end { font: inherit; color: inherit; background: none; border: 0; padding: 0; }
+button.fpl-end { cursor: pointer; }
+button.fpl-end:hover, button.fpl-end:focus-visible { color: var(--fpl-fg); text-decoration: underline; text-underline-offset: 2px; }
+.fpl-decision { display: inline-block; max-width: min(100%, 150px); box-sizing: border-box; vertical-align: bottom; overflow: hidden; white-space: nowrap;
+  text-overflow: ellipsis; font: inherit; font-size: 12px; line-height: 1.35; padding: 0 6px; border: 1px solid var(--fpl-rule); border-radius: 4px;
+  background: var(--fpl-wash); color: var(--fpl-fg); cursor: pointer; }
+.fpl-decision b { font-weight: 600; }
+.fpl-decision:hover, .fpl-decision[aria-expanded="true"] { border-color: var(--fpl-edge); }
+.fpl-ledger { margin-top: 6px; padding: 6px 8px; border-radius: 4px; background: var(--fpl-wash); font-size: 12.5px; line-height: 1.4; cursor: auto; }
+.fpl-ledger p { margin: 0; }
+.fpl-ledger .fpl-why, .fpl-ledger .fpl-when { margin-top: 4px; color: var(--fpl-mute); }
+/* a lost row (board B): one amber line */
+.fpl-card.lost { padding-top: 6px; padding-bottom: 6px; }
+.fpl-lostline { flex: 1; min-width: 0; margin: 0; font-size: 12.5px; line-height: 1.4; color: var(--fpl-lost); }
+.fpl-lostline b { font-weight: 600; }
+.fpl-lostline .fpl-excerpt { font: inherit; color: inherit; white-space: normal; margin: 0; }
+/* the thread: messages, nested ones one step in and no further, no rule beside them; one answer field */
+.fpl-msgs { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.fpl-msg { position: relative; padding: 6px 30px 7px 15px; border-radius: 5px; }
+.fpl-msg:hover, .fpl-msg.is-aimed { background: var(--fpl-bg); }
+.fpl-msg.mine { cursor: pointer; }
+.fpl-msg .fpl-text { margin: 2px 0 0; color: var(--fpl-fg); }
+.fpl-msg > .fpl-meta { margin-top: 2px; }
+.fpl-mhead { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-height: 18px; font-size: 12.5px; color: var(--fpl-mute); }
+.fpl-mhead b { font-weight: 600; color: var(--fpl-fg); }
+.fpl-mhead code { font-size: 12px; background: none; padding: 0; color: inherit; }
+.fpl-rep { position: absolute; right: 4px; top: 4px; margin: 0; }
+.fpl-msg:hover > .fpl-rep, .fpl-msg.is-aimed > .fpl-rep { opacity: 1; }
+.fpl-msgs.sub { margin-top: 6px; padding-left: 14px; }
+.fpl-msgs.sub .fpl-msgs.sub { padding-left: 0; }
+.fpl-msgs.sub .fpl-msg { padding: 4px 26px 2px 0; }
+.fpl-card > .fpl-readings { margin-top: 4px; }
+.fpl-thread-fold { display: block; margin: 8px 0 0 15px; font-size: 12.5px; }
+.fpl-answer { display: flex; align-items: center; margin: 10px 0 0 15px; height: 32px; box-sizing: border-box; padding: 0 10px;
+  border: 1px solid var(--fpl-rule); border-radius: 5px; background: var(--fpl-bg); cursor: text; }
+.fpl-answer:focus-within { border-color: var(--fpl-mine); }
+.fpl-answer input { flex: 1; min-width: 0; border: 0; outline: 0; padding: 0; font: inherit; font-size: 14px; color: var(--fpl-fg); background: transparent; }
+.fpl-answer input::placeholder { color: var(--fpl-mute); }
+.fpl-vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+/* a card's menu: the bar's menu shell, standing left of its card */
+.fpl-menu.fpl-cardmenu { position: absolute; max-height: none; }   /* beside its card, scrolling with the page */
+.fpl-menu footer { margin-top: 5px; padding: 7px 13px 3px; border-top: 1px solid var(--fpl-rule); font-size: 12.5px; color: var(--fpl-mute); }
+.fpl-item[aria-disabled="true"], .fpl-item.fpl-danger[aria-disabled="true"], .fpl-item.fpl-danger[aria-disabled="true"] .fpl-ico { color: var(--fpl-mute); cursor: default; }
+.fpl-cardmenu .fpl-panel-head { margin: 4px 13px 2px; }
 
 /* the bar (fpl-annot.js dock): the stands, the search, Graph and ⋯, fixed above the margin.
    Nothing in it changes size or place on hover or state: hover and state change colour only. */
@@ -327,7 +392,6 @@ label.fpl-item { cursor: text; }
 .fpl-s.fpl-here { background: var(--fpl-vers-wash); }
 
 /* arguments: a claim's tree, + supports and − attacks, undercuts under the inference */
-.fpl-argue { display: flex; gap: .8rem; }
 .fpl-args { margin-top: .4rem; font-size: .8rem; }
 .fpl-args > summary { cursor: pointer; color: var(--fpl-mute); font-weight: 600; }
 .fpl-arg { list-style: none; margin: .2rem 0 0; padding-left: .55rem; border-left: 1px solid var(--fpl-rule); }
@@ -361,9 +425,6 @@ body.fpl-picking .fpl-c[id], body.fpl-picking .fpl-s[id] { cursor: crosshair; }
 .fpl-quick small, .fpl-filter small { color: var(--fpl-mute); margin-right: .2rem; }
 .fpl-offer { display: flex; gap: .5rem; align-items: center; }
 .fpl-offer button { font: inherit; font-weight: 600; background: none; border: 1px solid var(--fpl-rule); border-radius: 999px; padding: 0 .5rem; cursor: pointer; color: inherit; }
-.fpl-readings { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .3rem; }
-.fpl-reading { flex: 1 1 7rem; min-width: 0; padding: .25rem .4rem; border: 1px solid var(--fpl-rule); border-radius: 4px; margin-top: 0; }
-.fpl-reading.mine { cursor: pointer; border-color: var(--fpl-mine); }
 
 /* the graph: a panel over the page */
 .fpl-graph { position: fixed; z-index: 1003; top: 50%; left: 50%; transform: translate(-50%, -50%); padding: .5rem .6rem .6rem;

@@ -147,14 +147,23 @@ and 0.60 and 0.61 with the examples stripped.
 
 Every page of the site loads `assets/fpl-annot.js`. It draws the page's sidecar (shipped
 beside the page) as underlined spans, each with a card in the right margin at the height of
-its span's last line and a line between the two: the span's labels and note, then the facts
-about it (a relation as `contradicts L-G2`, a fact about a fact nested under it). The cards
+its span's last line and a line between the two. A card is headed by the first words of its
+quote (never an id) and its kind as a chip; under it the note and one line: who wrote it, when
+the row says so, its relations by their other end's text (`spreekt tegen → grammar-theory ·
+Lexing splits…`: a target `L-<id>` in `<stem>.decisions.tsv` is a decision chip, topic and
+first words, and a click opens the ledger row, its reason, date and who, in the card), and `n
+reacties`. Open (a click, its menu `⋯`, `n reacties` on a card of one's own) it shows its thread:
+each message with its labels, author and time when known, replies one step in and no further,
+a reply arrow on hover that answers that message, and one field `Antwoord…` that saves a reply
+(Enter); a thread of more than four folds to `n reacties`. The menu `⋯` holds Verbind met… (`l`:
+steunt, valt aan, zelfde als, then a click on the other end), Graph van deze kaart, Toon beide,
+and Verwijder (a sidecar row says why it cannot). The cards
 stand in the order of their lines and are only pushed down, so the lines, which stay in the
 gutter between the text and the cards, never cross; a span over three lines or more gets a
 thin bar in the gutter instead of an underline. A card's quote is one line and its note two
-until the card is under the mouse or holds the focus. A row whose text is
-not on the page any more, or is there more than once, gets a card at the top of the margin
-with its old text struck through. The right margin is free because `assets/fpl-nav.js` moves
+until the card is under the mouse or holds the focus; nothing moves on hover, and a card
+is never narrower than 220 px (narrower, the cards fold in). A row whose text is not on the page
+any more, or is there more than once, is one amber line at the top of the margin that says so. The right margin is free because `assets/fpl-nav.js` moves
 the page's own sections under its entry in the left sidebar, and `essay.lua` nests the
 headings' anchors (`#strings-and-comments/counted`), so a URL reads `page#scope/subscope`.
 
@@ -162,8 +171,9 @@ One bar, fixed above the margin, holds three stands as tabs, also cycled with th
 *Lezen* shows nothing; *Spans* underlines the spans whose labels pass the filter and a click
 on a span opens its card alone; *Kantlijn* shows every card, the lines and the editor. Beside
 the tabs stand `Graph` and a menu `⋯`; under them the search field (key `z`) and a quiet line
-of counts. The label filter (a struck chip hides its spans) and the layers are a panel the
-filter button in the search field opens on a click, never on hover. Where Quarto shows its top
+of counts. The label filter (a struck chip hides its spans) and the layers are a panel that
+opens on a click into the empty search field or on `z` with no query, never on hover; an
+active filter reads `filter aan` in the count line. Where Quarto shows its top
 bar (a narrow window) the bar folds into it as a stand picker and three icons. The stand and
 the filter are remembered in that browser for the whole site; a page opens in Lezen. In
 Kantlijn an empty margin says in three lines how to annotate, connect and fold. From about
@@ -212,8 +222,8 @@ premise. `lit facts` refuses an arguing row with fewer than two targets, one tha
 or one that runs from a row to that row (`lit-facts-argument`). The rows stay a graph, so one
 premise may serve two claims; a card shows the tree read from its row as `Argument · 2 voor ·
 1 tegen`, grounds under the claim (+ supports, − attacks), undercuts under the inference they
-attack, a cycle marked where it closes. `Steunt…` and `Valt aan…` on a card arm a pick: the
-next click on a span, card, fact or branch is the end of a new row, and Esc cancels it.
+attack, a cycle marked where it closes. Verbind met… in a card's menu arms a pick of a kind
+(`Steunt…`, `Valt aan…`, `Zelfde als…`, keys 1-3): the next click on a span, card, fact or branch is the end of a new row, and Esc cancels it.
 
 An arguing row may carry a `weight`, an integer 1 to 5 (Kialo's impact): how much the reader
 thinks the inference bears. `lit facts` refuses a weight outside 1 to 5 or on a row that does
@@ -285,8 +295,8 @@ address (a sentence number, a clause), saved with one click, and a no is kept to
 label is asked about until it has an answer. Rows made by an Alt-click or a pick count
 neither toward the ranking nor toward an offer. The tool proposes, the reader decides.
 
-Several rows on one address share one card, side by side, each whole (its replies, its
-argument, its other ends for Toon beide). With different first labels they are readings, as
+Several rows on one address share one card, one under the other, each whole (its replies,
+its argument, its other ends for Toon beide). With different first labels they are readings, as
 Empson reads one passage several ways at once (*Seven Types of Ambiguity*, 1930; read in the
 1947 edition), and so are several facts with different labels on one span. A row that passes
 the filter shows its whole group.
@@ -316,7 +326,7 @@ They are the next work on this layer, not ideas:
    its pieces left loose; text a piece of a shown bundle already covers is refused); a chip's × takes its piece out of the targets and leaves the span row as a loose
    span. Down to one piece, it asks and then deletes the `parts` row, since a one-member set is
    refused (`lit-facts-set`); a fact on that row is kept, the ask says how many, and it shows
-   as a lost card at the top of the margin ("wijst nergens heen", with the id that is gone),
+   as a lost line at the top of the margin ("kwijt · “its note” wijst nergens heen"),
    counted under `kwijt` in the head, as any fact whose row is gone: open it to delete or
    rewrite it, since lit refuses it (`lit-facts-target`) until it names something. A sidecar
    `parts` row lists its chips read-only. A piece of a piece, built 2026-11-02: an Alt-select
@@ -328,7 +338,7 @@ They are the next work on this layer, not ideas:
 2. **Coreference as a layer of its own: built 2026-11-01.** `coref` rows that share a member
    are one chain (union-find), as PDT links an anaphor to its antecedent and a chain follows
    (Mikulová et al. 2006 ch. 9); chains are numbered by where their first member stands, and
-   each member on the page carries its number. `Zelfde als…` on a card arms a pick whose end
+   each member on the page carries its number. `Zelfde als…` (Verbind met… on a card) arms a pick whose end
    joins the chain. Still open: the PDT's link types (textual, grammatical) as sub-labels
    (`coref/text`), and a gutter column of the chains.
 3. **Querying across layers: built 2026-11-01** (Müller's objection, PML-TQ's answer).

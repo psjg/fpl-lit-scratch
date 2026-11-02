@@ -24,9 +24,9 @@
  *
  * by is who wrote the row: the name this browser was given under Naam
  * in the bar's menu (localStorage["fpl-annot:by"]), or, for a row an agent
- * imported with lit, that agent's model id. A reply is a row without
- * text whose first target is the fact it answers; it shows nested under
- * that fact, with its author, as deep as the thread goes.
+ * imported with lit, that agent's model id; a row without one shows no
+ * author, never a "?". A reply is a row without text whose first target
+ * is the fact it answers: a message in its card's thread, one step in.
  *
  * A quote row has no offsets: lit finds it in the raw page by text, and
  * prefix and suffix choose among several hits. Rows of the sidecar keep
@@ -54,8 +54,8 @@
  * node and offset it came from. A row's text is read the way lit reads
  * markdown (`name' as name, [text](url) as text, heading marks dropped)
  * and searched for in it; found once it is drawn, more than once it is
- * dubbel, nowhere stale. Both get a card at the top of the margin, not
- * a span.
+ * dubbel, nowhere stale. Both get one amber line at the top of the
+ * margin that says so, not a span.
  *
  * A saved copy. A page saved with its overlay (the snapshot artifact PSJ
  * annotates) has no site URL and no sidecar beside it; it sets
@@ -70,7 +70,7 @@
  * lets the right side of Quarto's grid take room from the left, so that
  * at 1440 the column stands at x320 and the bar (344px) and a card
  * (316px) fit, as on the boards. Where the column is hidden or a card
- * there would be narrower than 132px, each card folds under the block
+ * there would be narrower than NARROW (220px), each card folds under the block
  * its span is in, and the editor is a popover.
  * A card stands at the height of its span's last line, in the order of
  * those lines, and is only pushed down, by the card above it; the
@@ -85,14 +85,28 @@
  * colour is its dot's. A clause's number shows only on the sentence
  * under the mouse, above the clause.
  *
+ * A card (board F) is headed by the first words of its quote, never an
+ * id, and its kind as a chip; its Graph and ⋯ keep their room while
+ * hidden and show on hover. Under the note one meta line: who, when
+ * known, the relations by their other end's text, a decision of the
+ * page's ledger (<stem>.decisions.tsv, ids L-<id>) as a chip whose click
+ * opens the row in the card, and "n reacties". A card opened (a click,
+ * its ⋯, its "n reacties") is laid out open and pushes the rest down: its
+ * thread, replies one step in, a reply arrow per message, and one field
+ * Antwoord… whose Enter saves a reply row; past four messages the thread
+ * folds to "n reacties". The ⋯ menu stands left of its card: Verbind
+ * met… (key l), Graph van deze kaart, Toon beide, Verwijder (a sidecar
+ * row says why not).
+ *
  * The bar. One bar, fixed above the margin column, holds the three
  * stands as tabs (Lezen, Spans, Kantlijn, also the key "a"), the search
  * field (the key "z"), Graph and a menu ⋯: Naam, Importeer rijen,
  * Exporteer rijen, Exporteer logboek, Vouw tot de spans, Context 0-3,
  * Sneltoetsen (also "?") and Wis mijn rijen. A quiet line under it
- * counts the spans, the relations, the lost rows and this browser's.
- * The label and layer filters are a panel the filter button opens; a
- * click opens it, hover never does, and nothing in the bar changes size
+ * counts the spans, the relations, the lost rows and this browser's,
+ * and says "filter aan" while a filter holds. The label and layer
+ * filters are a panel that a click into the empty search field (or z
+ * with no query) opens, hover never does, and nothing in the bar changes size
  * or place on hover or on a change of stand. Where Quarto shows its top
  * bar (a narrow window) the bar folds into it, a stand picker and three
  * icons, the search and the counts in the filter panel; where neither
@@ -117,7 +131,8 @@
  * ?scrunch=a..b,c..d (block ids such as the-plan/b3) and in
  * localStorage["fpl-annot:scrunch:" + item]; at load the URL wins. A
  * card whose row points at another place on the page has "Toon beide",
- * which folds what lies between the two so both are in view. A span
+ * which folds what lies between the two so both are in view (its menu,
+ * or a click on the other end in its meta line). A span
  * inside a band draws its line, and places its card, at the band.
  * On a touch screen two fingers drawn together fold the blocks between
  * them, from the middle out, as many as the fingers closed by; drawn
@@ -140,8 +155,9 @@
  * the inference rather than its premise. The data stays a graph (a
  * premise may serve two claims); a card shows the tree read from its
  * row, grounds under the claim, undercuts under the inference they
- * attack. "Steunt…" and "Valt aan…" on a card arm a pick: the next
- * click on a span, a card, a fact or a branch of a tree is the end.
+ * attack. Verbind met… in a card's menu offers "Steunt…" and "Valt
+ * aan…" (keys 1, 2): each arms a pick, and the next click on a span, a
+ * card, a fact or a branch of a tree is the end.
  *
  * Layers, after the Prague Dependency Treebank's stacked annotation:
  * only a span anchors in the text, every other row names an id. A row's
@@ -202,7 +218,8 @@
  * union-find over the sets), numbered in page order, and each member on
  * the page carries its chain's number, as the PDT links an anaphor to its
  * antecedent (Mikulova et al. 2006, ch. 9) and a chain follows from the
- * links. "Zelfde als…" on a card arms a pick; its end joins the chain.
+ * links. "Zelfde als…" under a card's Verbind met… arms a pick; its end
+ * joins the chain.
  *
  * Querying across the layers (after PML-TQ, Pajas and Stepanek 2009):
  * the bar's search field takes terms [!]key:value, all to hold, in
@@ -243,6 +260,7 @@
   const HEAD = 19;   // a card's top to the middle of its first row: its border, padding and half the row
   const LONG = 56;   // px: an address taller than this (a block, one rect) is long, as a span over three lines is
   const CARD = 360;  // px: the widest a card in the margin gets
+  const NARROW = 220;   // px: the narrowest; below it the cards fold in under their blocks (a card of one word a line, feedback 17)
   const RAIL = 12;   // px: from the text column's edge to the margin (the bar's left edge); a card stands 28px further in
   const RIGHT = 24;  // px: from the margin's right edge to the window's
 
@@ -493,6 +511,11 @@
     select: '<path fill="none" stroke="currentColor" stroke-width="1.5" d="M6 2.5h4M6 13.5h4M8 2.5v11"/>',
     knob: '<circle cx="8" cy="8" r="3.5" style="fill: var(--fpl-mine)"/>',
     shift: '<path fill="none" stroke="currentColor" stroke-width="1.5" d="m5 6 3-3 3 3M5 10l3 3 3-3"/>',
+    reply: '<path fill="none" stroke="currentColor" stroke-width="1.5" d="M6.5 4 2.5 8l4 4M2.5 8H10a3.5 3.5 0 0 1 3.5 3.5V13"/>',
+    link: '<path fill="none" stroke="currentColor" stroke-width="1.5" d="M6.5 9.5l3-3M7 4.5l1-1a2.8 2.8 0 0 1 4 4l-1 1M9 11.5l-1 1a2.8 2.8 0 0 1-4-4l1-1"/>',
+    supports: '<path fill="none" stroke="currentColor" stroke-width="1.5" d="M8 3v10M3 8h10"/>',
+    attacks: '<path fill="none" stroke="currentColor" stroke-width="1.5" d="M3 8h10"/>',
+    same: '<path fill="none" stroke="currentColor" stroke-width="1.5" d="M3 6h10M3 10h10"/>',
   };
   const ico = (name) => {
     const s = el("span", { className: "fpl-ico" });
@@ -541,6 +564,10 @@
     field.title = bad;
     if (asked && mode() === "lezen") stand("spans"); else layout();
   };
+  /** The full bar has no filter button: a click into the empty field opens the panel, typing a query closes it. */
+  const filters = () => { if (bar.classList.contains("is-full") && !field.value && panel.hidden) flip(panel, filterBtn, fillChips, false); };
+  field.onclick = filters;
+  field.oninput = () => { if (field.value && bar.classList.contains("is-full") && !panel.hidden) shut(); };
   field.onkeydown = (e) => {
     e.stopPropagation();   // j, k, a, z and Esc belong to the page, not while typing a query
     if (e.key === "Enter") ask();
@@ -567,7 +594,7 @@
     else if (bar.parentElement !== document.body) document.body.append(bar);
     if (bar.dataset.form !== String(full)) {   // the folded bar keeps the search in its panel
       bar.dataset.form = full;
-      if (full) { search.append(filterBtn); bar.insertBefore(search, file); bar.insertBefore(count, file); }
+      if (full) { filterBtn.remove(); bar.insertBefore(search, file); bar.insertBefore(count, file); }
       else { row.insertBefore(filterBtn, graphBtn); panel.prepend(search, count); }
     }
     if (!menu.hidden) hang(menu, moreBtn);
@@ -584,15 +611,16 @@
     count.replaceChildren(...el("p", {}, all.length ? `${spans.length} spans · ${all.length - spans.length} relaties` : "Nog geen spans op deze pagina",
       lost ? el("span", { className: "fpl-lost" }, ` · ${lost} kwijt`) : null,
       mine ? el("span", { className: "fpl-mine" }, ` · ${mine} van jou`) : null,
-      bad ? el("span", { className: "fpl-bad" }, ` · ${bad}`) : found ? ` · ${found.size} gevonden` : null).childNodes);
+      bad ? el("span", { className: "fpl-bad" }, ` · ${bad}`) : found ? ` · ${found.size} gevonden` : null,
+      hidden().size + offLayers().size ? el("span", { className: "fpl-mine" }, " · filter aan") : null).childNodes);
     count.title = count.textContent;
     filterBtn.classList.toggle("is-on", hidden().size + offLayers().size > 0);
     if (!panel.hidden) fillChips();
     dock();
   }
 
-  /** Open one popover under its button, or close it if it was open; one at a time. */
-  function flip(pop, btn, fill) {
+  /** Open one popover under its button, or close it if it was open; one at a time. focus false leaves the focus where it is. */
+  function flip(pop, btn, fill, focus = true) {
     const was = !pop.hidden;
     shut();
     if (was) return;
@@ -601,7 +629,7 @@
     btn.ariaExpanded = "true";
     btn.classList.add("is-open");
     hang(pop, pop === panel && bar.classList.contains("is-full") ? search : btn);
-    pop.querySelector("button:not(:disabled), [tabindex='0']")?.focus({ preventScroll: true });
+    if (focus) pop.querySelector("button:not(:disabled), [tabindex='0']")?.focus({ preventScroll: true });
   }
   /** A popover hangs under what opened it, right edges flush, inside the window. */
   function hang(pop, at) {
@@ -610,13 +638,23 @@
     pop.style.right = `${Math.max(8, innerWidth - r.right)}px`;
     pop.style.width = at === search ? `${r.width}px` : "";
   }
-  /** Close the menu and the filter panel. */
+  /** Close the menu, the filter panel and a card's menu. */
   function shut() {
     for (const [pop, btn] of [[menu, moreBtn], [panel, filterBtn]]) { pop.hidden = true; btn.ariaExpanded = "false"; btn.classList.remove("is-open"); }
+    cardMenu.hidden = true;
+    if (menuOf) for (const b of margin.querySelectorAll(".fpl-card-more")) b.ariaExpanded = "false";
+    menuOf = null;
   }
   document.addEventListener("pointerdown", (ev) => {
-    if (!ev.target.closest?.(".fpl-menu") && !moreBtn.contains(ev.target) && !filterBtn.contains(ev.target)) shut();
+    const t = ev.target;
+    if (!t.closest?.(".fpl-menu, .fpl-card-more") && !moreBtn.contains(t) && !filterBtn.contains(t) && t !== field) shut();
   }, true);
+  /** A click outside every card, menu and panel lets the open card close; not while a new fact is written. */
+  document.addEventListener("click", (ev) => {
+    if (!openId || ev.target.closest?.(".fpl-card, .fpl-menu, .fpl-pop, .fpl-graph, .fpl-toast, .fpl-topbar")) return;
+    openId = null;
+    if (!editing) layout();
+  });
 
   /** The filter panel: the labels to show, as a tree of chips, and the layers. */
   function fillChips() {
@@ -708,11 +746,12 @@
     menu.focus({ preventScroll: true });
   }
 
-  /** z: the search field, in the panel when the bar is folded. */
+  /** z: the search field, in the panel when the bar is folded; with no query yet, the filter panel opens under it. */
   function seek() {
     if (!bar.classList.contains("is-full") && panel.hidden) flip(panel, filterBtn, fillChips);
     field.focus();
     field.select();
+    filters();
   }
 
   /** The margin when Kantlijn has no card yet: how to annotate, connect and fold, in three lines. */
@@ -722,7 +761,7 @@
       ["shift", "", ["Houd ", el("kbd", {}, "Shift"), " en scroll boven de tekst om hem in te vouwen. Terug scrollen opent."]]]
       .map(([i, b, rest]) => el("li", {}, ico(i), el("span", {}, b ? el("b", {}, b) : null, ...[rest].flat()))));
 
-  /* ---- what a card shows ---- */
+  /* ---- what a card shows: a head, its relations, a thread (board F) ---- */
 
   const chip = (label, cls) => {
     const [head, sub] = label.split(/\/(.*)/);
@@ -730,92 +769,367 @@
   };
   // a parts row names its pieces, it says nothing about the first one
   const facts = (id) => all.filter((r) => typeof r.text !== "string" && r.labels?.[0] !== "parts" && r.targets?.[0] === id && shows(r));
+  /** A row that ties its first target to others (supports, cites, coref): a line on the card, not a message. */
+  const relates = (r) => (r.targets ?? []).length > 1;
+  /** The first words of a text, cut at a word, with an ellipsis when cut. */
+  const clip = (s, n = 40) => {
+    const t = String(s ?? "").replace(/\s+/g, " ").trim();
+    return t.length <= n ? t : `${t.slice(0, n).replace(/\s+\S*$/, "")}…`;
+  };
+  const VERB = { supports: "steunt", attacks: "valt aan", contradicts: "spreekt tegen", because: "omdat", cites: "citeert",
+    checkedBy: "getoetst door", resumes: "neemt op", supersedes: "vervangt", coref: "zelfde als" };
+  /** A relation's verb: Dutch for the labels lit knows, else the label as written. */
+  const verb = (r) => VERB[r.labels?.[0]] ?? ((r.labels ?? []).join(" ") || "verbindt");
+  /** Who wrote a row, when the row says so; a row without a name has no author line, never a "?". */
+  const author = (r) => (typeof r.by === "string" && r.by.trim()) || null;
+  /** A row's time, from createdAt: the clock today, else the day; nothing for a row without a real time. */
+  const stamp = (t) => {
+    if (!Number.isFinite(t) || t < 1e11) return "";
+    const d = new Date(t);
+    return d.toDateString() === new Date().toDateString()
+      ? d.toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" })
+      : d.toLocaleDateString("nl-NL", { day: "numeric", month: "short" });
+  };
 
-  /** A fact about something: a relation line or labels, its note, and the facts about it. */
-  const reply = (id, at) => button("Reageer", (ev) => {
-    ev.stopPropagation();
-    edit({ targets: [id] }, null, (at ?? ev.target).getBoundingClientRect());
-  }, "fpl-reply");
-  function factView(r, cls) {
-    const f = el("div", { className: "fpl-fact" });
-    f.dataset.fact = r.id;
-    if (r.by || r.mine) f.append(el("div", { className: "fpl-who" }, el("span", {}, r.by || "?")));
-    const rest = (r.targets ?? []).slice(1);
-    if (rest.length)
-      f.append(el("div", { className: "fpl-rel" }, el("b", {}, (r.labels ?? []).join(" ") || "→"), " ",
-        ...rest.flatMap((t, i) => [i ? ", " : "", el("code", {}, t)])));
-    else if (r.labels?.length)
-      f.append(el("div", { className: "fpl-chips" }, ...r.labels.map((l) => chip(l, cls))));
-    if (r.note) f.append(el("p", { className: "fpl-note" }, r.note));
+  /**
+   * The page's decision ledger, <stem>.decisions.tsv beside the page
+   * (columns id, topic, date, who, decision, reason), read once at load.
+   * lit makes each of its rows a span L-<id> (facts.generate), so a
+   * relation that ends at L-I4 ends at a decision: the card draws it as a
+   * chip, its topic and the first words of the decision, and a click opens
+   * the row, its reason, date and who, in the card.
+   */
+  let ledger = new Map();
+  const readLedger = (tsv) => {
+    const [head, ...rest] = String(tsv ?? "").split("\n").filter((l) => l.trim());
+    const ks = head?.split("\t") ?? [];
+    return new Map(rest.map((l) => { const v = l.split("\t"); return Object.fromEntries(ks.map((k, i) => [k, v[i] ?? ""])); })
+      .filter((r) => r.id).map((r) => [r.id, r]));
+  };
+  const decision = (t) => { const m = /^L-(.+)$/.exec(t); return m ? { id: m[1], ...ledger.get(m[1]) } : null; };
+  const told = new Set();   // "<card id> <decision id>": ledger rows opened in a card, kept across draws
+  function decisionChip(d, owner) {
+    const k = `${owner} ${d.id}`;
+    const b = el("button", { type: "button", className: "fpl-decision", title: d.decision ? `Besluit ${d.id} uit de ledger` : `${d.id} staat niet in de ledger` },
+      el("b", {}, d.topic || `besluit ${d.id}`), d.decision ? ` · ${clip(d.decision, 34)}` : " · niet in de ledger");
+    b.ariaExpanded = String(told.has(k));
+    b.onclick = (ev) => {
+      ev.stopPropagation();
+      if (!d.decision) { toast(`Besluit ${d.id} staat niet in ${stem}.decisions.tsv`); return; }
+      told.has(k) ? told.delete(k) : told.add(k);
+      openId = owner;
+      layout();
+    };
+    return b;
+  }
+  /** A ledger row opened in a card: the decision whole, why, and when and by whom. */
+  const ledgerRow = (d) => el("div", { className: "fpl-ledger" },
+    el("p", {}, d.decision), d.reason ? el("p", { className: "fpl-why" }, d.reason) : null,
+    el("p", { className: "fpl-when" }, [`besluit ${d.id}`, d.date, d.who && d.who !== "unclear" ? d.who : null].filter(Boolean).join(" · ")));
+
+  /** What a target that is not a row is called: a chunk by its name, a test, a refusal; a row id that names nothing, "". */
+  const named = (t) => {
+    let v = t;
+    try { v = decodeURIComponent(t); } catch { /* a stray % */ }
+    const m = /^(chunk|test|refusal):(.*)$/.exec(v);
+    if (m) return { chunk: `«${m[2].replace(/:\d+$/, "")}»`, test: `test ${m[2].replace(/:\d+$/, "")}`, refusal: `weigering “${m[2]}”` }[m[1]];
+    return ROWLIKE.test(t) ? "" : v;
+  };
+  /**
+   * The other end of a relation, by its text: a decision as its chip, a
+   * row or a place on the page by its first words (a click folds what lies
+   * between, Toon beide), anything else by its name; never a bare id.
+   */
+  function endOf(t, owner) {
+    const d = decision(t);
+    if (d) return decisionChip(d, owner);
+    const r = all.find((x) => x.id === t), e = place(t);
+    const said = r ? (typeof r.text === "string" ? plain(r.text) : r.note || (r.labels ?? []).join(" ")) : e?.textContent;
+    const name = said ? `“${clip(said, 32)}”` : named(t);
+    if (!name) return el("span", { className: "fpl-lost", title: t }, "iets dat weg is");
+    if (!e) return el("span", { className: "fpl-end", title: t }, name);
+    return el("button", { type: "button", className: "fpl-end", title: "Toon beide", onclick: (ev) => { ev.stopPropagation(); both(owner, t); } }, name);
+  }
+  /** A relation as a line: its verb and its other ends; data-fact lets a pick end at the relation itself (an undercut). */
+  function relLine(r, owner) {
+    const line = el("span", { className: "fpl-rel" }, el("b", {}, verb(r)), " → ", ...r.targets.slice(1).flatMap((t, i) => [i ? ", " : "", endOf(t, owner)]));
+    line.dataset.fact = r.id;
+    return line;
+  }
+  /** The ledger rows opened under some relations, in a card. */
+  const ledgerRows = (rels, owner) => rels.flatMap((r) => r.targets.slice(1).map(decision))
+    .filter((d) => d?.decision && told.has(`${owner} ${d.id}`)).map(ledgerRow);
+
+  /**
+   * What hangs from an id: the relations it starts, and the messages
+   * about it or about those relations (a note on "contradicts L-G2" is a
+   * message of the span's thread, as on board F).
+   */
+  function about(id) {
+    const rels = [], msgs = [], seenIds = new Set([id]);
+    for (const r of facts(id)) (relates(r) ? rels : msgs).push(r);
+    for (const r of rels) for (const f of facts(r.id)) if (!seenIds.has(f.id)) { seenIds.add(f.id); (relates(f) ? rels : msgs).push(f); }
+    return { rels, msgs };
+  }
+  /** The messages in a thread, all the way down. */
+  function replies(id, been = new Set([id])) {
+    let n = 0;
+    for (const m of about(id).msgs) if (!been.has(m.id)) { been.add(m.id); n += 1 + replies(m.id, been); }
+    return n;
+  }
+  const unfolded = new Set();   // the ids whose long thread is shown whole, kept across draws
+  const LONG_THREAD = 4;        // more messages than this fold to "n reacties"
+
+  /**
+   * One message of a thread: its labels, who and when when known, its
+   * text, the relations it starts, an arrow (on hover or focus) that
+   * answers this message in the card's one field, and, one step in, the
+   * messages about it. Deeper replies stay at that step, so a long
+   * exchange does not walk off the card. A message of ours opens in the
+   * editor on a click.
+   */
+  function msgView(r, owner, been) {
+    const li = el("li", { className: `fpl-msg fpl-fact${r.mine ? " mine" : ""}` });
+    li.dataset.fact = r.id;
+    const who = author(r), when = stamp(r.createdAt), own = relates(r) ? [] : r.labels ?? [];
+    if (who || when || own.length)
+      li.append(el("div", { className: "fpl-mhead" }, ...own.map((l) => chip(l, r.mine ? "is-mine" : "is-vers")),
+        who ? el("b", {}, who) : null, when ? el("span", {}, when) : null));
+    const { rels, msgs } = about(r.id);
+    if (relates(r)) rels.unshift(r);
+    if (r.note) li.append(el("p", { className: "fpl-text" }, r.note));
+    if (rels.length) li.append(el("p", { className: "fpl-meta" }, ...rels.flatMap((x, i) => [i ? " · " : "", relLine(x, owner)])), ...ledgerRows(rels, owner));
     const box = argBox(r.id);
-    if (box) f.append(box);
-    f.append(reply(r.id));
-    for (const sub of facts(r.id)) f.append(Object.assign(factView(sub, cls), { className: "fpl-fact fpl-sub" }));
-    return f;
+    if (box) li.append(box);
+    const to = el("button", { type: "button", className: "fpl-ib fpl-rep", ariaLabel: "Antwoord op dit bericht", title: "Antwoord op dit bericht" }, ico("reply"));
+    to.onclick = (ev) => { ev.stopPropagation(); aim(li.closest(".fpl-card"), r); };
+    li.append(to);
+    const sub = msgs.filter((m) => !been.has(m.id));
+    if (sub.length) {
+      for (const m of sub) been.add(m.id);
+      li.append(el("ol", { className: "fpl-msgs sub" }, ...sub.map((m) => msgView(m, owner, been))));
+    }
+    if (r.mine) li.onclick = (ev) => {
+      if (picking || ev.target.closest("button, a, details, input, label, .fpl-msg .fpl-msg")) return;
+      ev.stopPropagation();
+      edit(r, null, li.getBoundingClientRect());
+    };
+    return li;
+  }
+  /** Point the card's one answer field at a message: its placeholder says whom it answers; Esc points it back at the card. */
+  function aim(card, r) {
+    const field = card?.querySelector(".fpl-answer input");
+    if (!field) return;
+    for (const m of card.querySelectorAll(".fpl-msg.is-aimed")) m.classList.remove("is-aimed");
+    if (r) {
+      field.dataset.to = r.id;
+      field.placeholder = author(r) ? `Antwoord aan ${author(r)}…` : `Antwoord op “${clip(r.note || verb(r), 22)}”…`;
+      card.querySelector(`.fpl-msg[data-fact="${CSS.escape(r.id)}"]`)?.classList.add("is-aimed");
+    } else {
+      field.dataset.to = card.dataset.id;
+      field.placeholder = "Antwoord…";
+    }
+    field.focus({ preventScroll: true });
+  }
+  /** The card's one answer field: Enter saves a reply row to what it points at, the card stays open. */
+  function answerField(id) {
+    const field = el("input", { type: "text", placeholder: "Antwoord…", autocomplete: "off" });
+    field.dataset.to = id;
+    field.onkeydown = (e) => {
+      e.stopPropagation();   // j, k, a, z, l and Esc belong to the page, not while typing
+      if (e.key === "Escape") { if (field.dataset.to !== id) aim(field.closest(".fpl-card"), null); else field.blur(); return; }
+      if (e.key !== "Enter" || e.isComposing) return;
+      e.preventDefault();
+      const note = field.value.trim();
+      if (!note) { toast("Leeg antwoord: typ eerst iets"); return; }
+      save({ targets: [field.dataset.to] }, { note, labels: [] });
+      openId = id;
+      draw();
+      margin.querySelector(`.fpl-card[data-id="${CSS.escape(id)}"] .fpl-answer input`)?.focus({ preventScroll: true });
+    };
+    return el("label", { className: "fpl-answer" }, el("span", { className: "fpl-vh" }, "Antwoord op deze kaart"), field);
   }
 
-  /** The card of a span: its labels and note, then the facts about it. */
+  /** The text a card is headed by: a span's quote, an address's text, a bundle's pieces, a lost fact's note; never its id. */
+  function headOf(row) {
+    if (row.labels?.[0] === "parts") return leavesOf(row).map((t) => { const r = all.find((x) => x.id === t); return typeof r?.text === "string" ? plain(r.text).trim() : ""; })
+      .filter(Boolean).join(" … ");
+    if (typeof row.text === "string") return plain(row.text).trim();
+    const at = anchorsOf(row.id)[0];
+    return at ? at.textContent.replace(/\s+/g, " ").trim() : row.note || "een feit";
+  }
+  /** A card's kind, its chip: its own first label, else that of the first fact or relation hanging from it. */
+  const kindOfCard = (row) => (row.labels?.[0] !== "parts" && row.labels?.[0]) || facts(row.id).find((r) => r.labels?.length)?.labels[0] || null;
+
+  /**
+   * The card of a span (board F). At rest two rows: a head (the dot in the
+   * row's colour, the first words of the quote, the kind as a chip, and
+   * the card's Graph and ⋯, whose place is kept while they are hidden so
+   * nothing moves when they show) and a meta line (who, the relations by
+   * their other end, "n reacties"), and the argument's tree, folded, in
+   * reach of a pick. Open (a click, its menu, a ledger row, "n reacties")
+   * or holding the focus, the thread shows under it, then one field,
+   * Antwoord…; hover alone shows the icons and opens the clamped note over
+   * the card below, as board E. An open card is laid out open and pushes
+   * the rest down. A row lost from the text is one amber line that says so.
+   */
   function cardOf(row) {
     const gone = orphan(row), st = gone ? "weg" : state[row.id], cls = row.mine ? "is-mine" : "is-vers";
     const card = el("div", { className: `fpl-card ${row.mine ? "mine" : ""} ${st !== "vers" ? "lost" : ""}` });
     card.dataset.id = row.id;
-    card.append(el("div", { className: "fpl-who" }, el("span", { className: "fpl-dot" }), el("span", {}, row.id),
-      row.by ? el("span", { className: "fpl-by" }, row.by) : null,
-      st === "stale" ? el("span", { className: "fpl-lost" }, "niet meer gevonden")
-        : st === "dubbel" ? el("span", { className: "fpl-lost" }, "meer dan één keer gevonden")
-        : gone ? el("span", { className: "fpl-lost" }, "wijst nergens heen") : null));
-    if (row.labels?.[0] === "parts") card.append(piecesOf(row, card));
-    else if (gone) card.append(el("div", { className: "fpl-excerpt" }, el("code", {}, row.targets[0]), " bestaat niet meer"));
-    else if (st !== "vers") card.append(el("div", { className: "fpl-excerpt" }, plain(row.text)));
-    else if (typeof row.text !== "string") card.append(el("div", { className: "fpl-excerpt" },
-      `${row.targets[0]}: ${anchorsOf(row.id)[0].textContent.replace(/\s+/g, " ").trim().slice(0, 140)}`));
-    const readings = typeof row.text === "string" ? []
+    if (row.id === openId) card.classList.add("is-open");
+    const head = headOf(row);
+    const readings = typeof row.text === "string" || st !== "vers" ? []
       : all.filter((r) => r !== row && addressed(r) && shows(r) && r.targets[0] === row.targets[0]);
+    const { rels, msgs } = readings.length ? { rels: [], msgs: [] } : about(row.id);
+    if (relates(row) && typeof row.text !== "string" && !readings.length) rels.unshift(row);   // a fact on an address may itself relate
+    const n = readings.length ? 0 : replies(row.id);
+    const graphBtn = el("button", { type: "button", className: "fpl-ib", ariaLabel: "Graph van deze kaart", title: "Graph van deze kaart" }, ico("graph"));
+    graphBtn.onclick = (ev) => { ev.stopPropagation(); graph(row.id); };
+    const more = el("button", { type: "button", className: "fpl-ib fpl-card-more", ariaLabel: "Meer acties voor deze kaart", title: "Meer acties" }, ico("more"));
+    more.ariaHasPopup = "menu";
+    more.ariaExpanded = String(menuOf === row.id && !cardMenu.hidden);
+    more.onclick = (ev) => { ev.stopPropagation(); openMenu(row.id, false); };
+    if (st !== "vers") {   // board B: one amber line, the same card underneath
+      const what = gone ? "wijst nergens heen" : st === "dubbel" ? "staat meer dan eens in de tekst" : "staat niet meer in de tekst";
+      card.append(el("div", { className: "fpl-cardhead" },   // no Graph: a lost row has no place to draw from
+        el("p", { className: "fpl-lostline" }, el("b", {}, st === "dubbel" ? "dubbel" : "kwijt"), " · ",
+          el("span", { className: "fpl-excerpt" }, `“${clip(head, 44)}”`), ` ${what}`), more));
+    } else {
+      const dot = el("span", { className: "fpl-dot" });
+      const kind = readings.length ? null : kindOfCard(row);
+      card.append(el("div", { className: "fpl-cardhead" }, dot, el("span", { className: "fpl-title", title: clip(head, 300) }, head),
+        kind ? chip(kind, cls) : null, graphBtn, more));
+    }
+    if (row.labels?.[0] === "parts") card.append(piecesOf(row, card));
     if (readings.length) {
       const differ = new Set([row, ...readings].map((r) => r.labels?.[0] ?? "")).size > 1;
-      card.append(el("div", { className: "fpl-rel" }, el("b", {}, `${readings.length + 1} ${differ ? "lezingen" : "rijen"}`)),
+      const been = new Set([row, ...readings].map((r) => r.id));
+      card.append(el("p", { className: "fpl-meta" }, el("b", {}, `${readings.length + 1} ${differ ? "lezingen" : "rijen"}`)),
         // each reading is a whole fact: its replies, its argument, data-fact for a pick
-        el("div", { className: "fpl-readings" }, ...[row, ...readings].map((r) => {
-          const v = factView(r, r.mine ? "is-mine" : "is-vers");
-          v.className = "fpl-fact fpl-reading" + (r.mine ? " mine" : "");
-          if (r.mine) v.onclick = (ev) => { if (picking || ev.target.closest("button, a, details")) return; ev.stopPropagation(); edit(r, card); };
+        el("ol", { className: "fpl-msgs fpl-readings" }, ...[row, ...readings].map((r) => {
+          const v = msgView(r, row.id, been);
+          v.classList.add("fpl-reading");
           return v;
         })));
-    } else {
-      if (row.labels?.length) card.append(el("div", { className: "fpl-chips" }, ...row.labels.map((l) => chip(l, cls))));
-      if (row.note) card.append(el("p", { className: "fpl-note" }, row.note));
-    }
-    const fs = readings.length ? [] : facts(row.id), plainFacts = fs.filter((r) => !(r.targets ?? []).slice(1).length && r.labels?.length);
-    const tops = new Set(plainFacts.map((r) => r.labels[0]));
-    if (plainFacts.length > 1 && tops.size > 1) {   // facts on one span with different labels: readings
-      card.append(el("div", { className: "fpl-rel" }, el("b", {}, `${plainFacts.length} lezingen`)),
-        el("div", { className: "fpl-readings" }, ...plainFacts.map((r) => Object.assign(factView(r, cls), { className: "fpl-fact fpl-reading" }))));
-      for (const r of fs.filter((x) => !plainFacts.includes(x))) card.append(factView(r, cls));
-    } else for (const r of fs) card.append(factView(r, cls));
-    if (row.labels?.[0] === "parts")   // a bundle inside has no card: its facts hang here, under its name
-      for (const d of treeOf(row).slice(1).filter(bundleOf)) for (const r of facts(d)) {
-        const v = factView(r, cls);
-        v.prepend(el("div", { className: "fpl-rel" }, "over deel ", el("code", {}, d)));
-        card.append(v);
-      }
-    const box = readings.length ? null : argBox(row.id);   // a reading's factView drew it
+    } else if (row.note && st === "vers") card.append(el("p", { className: "fpl-note" }, row.note));
+    // the meta line: what always shows, then "n reacties" at rest or the block's address open, never both
+    const base = [author(row) ? el("b", {}, author(row)) : null, ...rels.map((r) => relLine(r, row.id)),
+      // a bundle of ours takes more pieces: the next Alt-selects join it
+      row.labels?.[0] === "parts" && row.mine ? button("Deel erbij…", (ev) => { ev.stopPropagation(); arm(row.id); }, "fpl-end fpl-arm") : null].filter(Boolean);
+    const u = st === "vers" ? place(row.id)?.closest(".fpl-p") : null, sep = base.length ? " · " : "";
+    const opener = n ? button(`${n} ${n === 1 ? "reactie" : "reacties"}`, (ev) => { ev.stopPropagation(); openId = row.id; layout(); hot(row.id); }, "fpl-end") : null;
+    if (opener) opener.title = "Open de thread";   // a card of ours opens its editor on a click; this opens its thread
+    const tail = [n ? el("span", { className: "fpl-count-r" }, sep, opener) : null,
+      u?.dataset.n ? el("span", { className: "fpl-where" }, sep, addr(u)) : null].filter(Boolean);
+    if ((base.length || tail.length) && !readings.length)
+      card.append(el("p", { className: "fpl-meta" }, ...base.flatMap((x, i) => [i ? " · " : "", x]), ...tail));
+    card.append(...ledgerRows(rels, row.id));
+    // the argument stays in reach at rest (feedback 19): its tree's branches are ends a pick may click
+    const box = readings.length ? null : argBox(row.id);   // a reading's message drew it
     if (box) card.append(box);
-    const ends = (r) => (r.targets ?? []).slice(typeof r.text === "string" ? 0 : 1);
-    for (const t of new Set([row, ...readings, ...facts(row.id)].flatMap(ends)))
-      if (place(t)) card.append(button(`Toon beide · ${t}`, (ev) => { ev.stopPropagation(); both(row.id, t); }, "fpl-reply"));
-    card.append(el("div", { className: "fpl-bar fpl-argue" }, reply(row.id, card), argue(row.id, "supports"), argue(row.id, "attacks"), argue(row.id, "coref"),
-      row.labels?.[0] === "parts" && row.mine ? button("Deel erbij…", (ev) => { ev.stopPropagation(); arm(row.id); }, "fpl-reply fpl-arm") : null,
-      button("Graph", (ev) => { ev.stopPropagation(); graph(row.id); }, "fpl-reply")));
+    const over = new Map();   // a bundle inside has no card: its facts hang here, under its name
+    if (row.labels?.[0] === "parts") for (const d of treeOf(row).slice(1).filter(bundleOf)) for (const r of facts(d)) { msgs.push(r); over.set(r.id, d); }
+    const been = new Set([row.id, ...msgs.map((m) => m.id)]);
+    const thread = el("div", { className: "fpl-thread" });
+    if (msgs.length > 0 && n > LONG_THREAD && !unfolded.has(row.id))
+      thread.append(button(`${n} reacties`, (ev) => { ev.stopPropagation(); unfolded.add(row.id); openId = row.id; layout(); }, "fpl-link fpl-thread-fold"));
+    else if (msgs.length) thread.append(el("ol", { className: "fpl-msgs" }, ...msgs.map((m) => {
+      const v = msgView(m, row.id, been);
+      if (over.has(m.id)) v.prepend(el("div", { className: "fpl-mhead" }, "over deel ", el("code", {}, over.get(m.id))));
+      return v;
+    })));
+    thread.append(answerField(row.id));
+    card.append(thread);
     card.onmouseenter = () => hot(row.id);
     card.onmouseleave = () => hot(null);
     card.onclick = (ev) => {
-      if (ev.target.closest("button, a, .fpl-editor, .fpl-ask")) return;
+      if (picking || ev.target.closest("button, a, input, label, details, .fpl-editor, .fpl-ask")) return;
       const m = anchorsOf(row.id)[0];
       m && seen(m).scrollIntoView({ block: "center", behavior: "smooth" });
-      if (row.mine && (m || gone)) edit(row, card);   // a lost fact of ours: open it to delete or rewrite
+      if (row.mine && (m || gone)) { edit(row, card); return; }   // a lost fact of ours: open it to delete or rewrite
+      if (openId !== row.id) { openId = row.id; layout(); hot(row.id); }
     };
     return card;
   }
+
+  /* ---- a card's menu ⋯ (board F): Verbind met…, Graph, Toon beide, Verwijder ---- */
+
+  let openId = null;   // the card laid out open: its thread shows and the cards below make room
+  let menuOf = null;   // the id of the card whose menu is open
+  const cardMenu = el("div", { className: "fpl-annot-ui fpl-menu fpl-cardmenu", hidden: true, role: "menu", ariaLabel: "Acties voor deze kaart" });
+  const cardEl = (id) => margin.querySelector(`.fpl-card[data-id="${CSS.escape(id)}"]`);
+  /**
+   * Open the menu of a card, left of it as on board F (under its ⋯ where
+   * there is no room), with the card laid out open; connect opens it at
+   * Verbind met…, as the key l does. Until the knob's drag (unit 4) the
+   * three kinds arm the pick: the next click on a span, card or fact ends it.
+   */
+  function openMenu(id, connect) {
+    const was = menuOf === id && !cardMenu.hidden;
+    shut();
+    if (was && !connect) return;
+    if (openId !== id) { openId = id; layout(); }
+    const card = cardEl(id), row = all.find((r) => r.id === id);
+    if (!card || !row) return;
+    hot(id);
+    menuOf = id;
+    fillCardMenu(row, connect);
+    cardMenu.hidden = false;
+    const btn = card.querySelector(".fpl-card-more");
+    btn.ariaExpanded = "true";
+    const r = card.getBoundingClientRect(), b = btn.getBoundingClientRect(), w = 240, left = r.left - 8 - w >= 8;
+    cardMenu.style.width = `${w}px`;
+    cardMenu.style.left = `${scrollX + (left ? r.left - 8 - w : Math.max(8, b.right - w))}px`;
+    cardMenu.style.top = `${scrollY + (left ? r.top - 2 : b.bottom + 6)}px`;
+    cardMenu.querySelector("button:not([aria-disabled='true'])")?.focus({ preventScroll: true });
+  }
+  function fillCardMenu(row, connect) {
+    const item = (name, text, onclick, after) => {
+      const b = button("", onclick, "fpl-item");
+      b.role = "menuitem";
+      b.append(ico(name), text, ...after ? [after] : []);
+      return b;
+    };
+    const ends = [...new Set([row, ...facts(row.id)].flatMap((r) => (r.targets ?? []).slice(typeof r.text === "string" ? 0 : 1)))]
+      .filter((t) => place(t) && t !== row.id).slice(0, 3);
+    const kinds = ["supports", "attacks", "coref"].map((k, i) => item(k === "coref" ? "same" : k, ASK[k][0],
+      () => { shut(); pick(row.id, k); }, el("kbd", {}, String(i + 1))));
+    const mine = !!row.mine, n = replies(row.id);
+    const del = item("wipe", "Verwijder", () => {
+      if (!mine) { toast("Een rij uit de sidecar verwijder je met lit facts, niet hier"); return; }
+      del.replaceWith(el("div", { className: "fpl-item fpl-confirm" }, n ? `Verwijderen? ${n} ${n === 1 ? "reactie wijst" : "reacties wijzen"} dan nergens heen.` : "Verwijderen?",
+        button("Verwijder", () => { shut(); save(row, "delete"); openId = null; draw(); toast("Verwijderd"); }, "fpl-danger"),
+        button("Nee", () => fillCardMenu(row, false))));
+      cardMenu.querySelector(".fpl-confirm button")?.focus();
+    }, mine ? null : el("small", {}, "uit de sidecar"));
+    del.classList.add("fpl-danger");
+    if (!mine) del.ariaDisabled = "true";
+    cardMenu.replaceChildren(...[
+      ...connect ? [el("p", { className: "fpl-panel-head" }, "Verbind met…"), ...kinds]
+        : [item("link", "Verbind met…", () => { fillCardMenu(row, true); cardMenu.querySelector(".fpl-item")?.focus(); }, el("kbd", {}, "l"))],
+      item("graph", "Graph van deze kaart", () => { shut(); graph(row.id); }),
+      ...ends.map((t) => item("fold", `Toon beide · ${clip(said(t), 22)}`, () => { shut(); both(row.id, t); })),
+      el("hr"),
+      del,
+      el("footer", {}, "Verbind met…: kies het soort en klik dan de andere span, kaart of feit.")]);
+    if (connect) cardMenu.querySelector(".fpl-item")?.focus({ preventScroll: true });
+  }
+  cardMenu.onkeydown = (e) => {
+    const items = [...cardMenu.querySelectorAll("button")];
+    const i = items.indexOf(document.activeElement);
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      e.preventDefault();
+      items[(i + (e.key === "ArrowDown" ? 1 : items.length - 1)) % items.length]?.focus();
+    } else if (/^[1-3]$/.test(e.key) && cardMenu.querySelector("kbd")?.textContent === "1") {
+      e.preventDefault();
+      [...cardMenu.querySelectorAll(".fpl-item")].find((x) => x.querySelector("kbd")?.textContent === e.key)?.click();
+    } else if (e.key === "l" && !cardMenu.querySelector(".fpl-panel-head")) {
+      e.preventDefault();
+      const row = all.find((r) => r.id === menuOf);
+      if (row) fillCardMenu(row, true);
+    }
+  };
 
   /**
    * The pieces of a parts row as chips, in its order. On a row of ours a
@@ -860,6 +1174,8 @@
     const s = r?.note || (typeof r?.text === "string" ? plain(r.text) : "") || place(id)?.textContent || "";
     return s.replace(/\s+/g, " ").trim().slice(0, 120) || id;
   }
+  /** What a row is called in a sentence: a span by its quote, anything else by its gist. */
+  const said = (id) => { const r = all.find((x) => x.id === id); return typeof r?.text === "string" ? plain(r.text).trim() : gist(id); };
   /**
    * The tree read from an id: each ground a branch, + when it supports
    * and − when it attacks; under a branch first the attacks and supports
@@ -942,13 +1258,13 @@
   let picking = null;   // {from, kind}: the next click on a row ends a new supports or attacks row from it
   let picked = 0;       // when the last pick landed: the gesture's late touchend (pointerDone) is swallowed
   const ASK = { supports: ["Steunt…", "steunt"], attacks: ["Valt aan…", "aanvalt"], coref: ["Zelfde als…", "zelfde is als"] };
-  const argue = (from, kind) => button(ASK[kind][0], (ev) => {
-    ev.stopPropagation();
+  /** Arm a pick from a row (a card's menu, Verbind met…): the next click on a row ends a new row of that kind. */
+  const pick = (from, kind) => {
     adding = null;   // one armed gesture at a time
     picking = { from, kind };
     document.body.classList.add("fpl-picking");
-    toast(`Klik wat ${from} ${ASK[kind][1]}: een span, kaart, feit, tak of bijzin. Esc breekt af.`);
-  }, "fpl-reply");
+    toast(`Klik wat “${clip(said(from), 28)}” ${ASK[kind][1]}: een span, kaart, feit, tak of bijzin. Esc breekt af.`);
+  };
   const unpick = () => { picking = null; document.body.classList.remove("fpl-picking"); };
   /** The pick's click: the row under it, from the innermost of a branch, a fact, a card, a span or a block. */
   document.addEventListener("click", (ev) => {
@@ -967,7 +1283,7 @@
     save({ targets: [from, to] }, { note: "", labels: [kind] });
     opened.add(to);
     draw();
-    toast(`${from} ${kind} ${to}`);
+    toast(`“${clip(said(from), 24)}” ${VERB[kind] ?? kind} “${clip(said(to), 24)}”`);
   }, true);
 
   /* ---- the graph: rows and what they name, laid out by force ---- */
@@ -1458,8 +1774,8 @@
   const rail = () => body.getBoundingClientRect().right + RAIL;
   /** The margin's width: RIGHT from the window's edge, at most a CARD and the gutter's 28px. */
   const reserve = () => Math.min(document.documentElement.clientWidth - RIGHT - rail(), 28 + CARD);
-  /** Cards stand in the margin while Quarto shows its column and a card there is 132px or more; else they fold in. */
-  const wide = () => !!column && column.offsetWidth > 120 && reserve() >= 160;
+  /** Cards stand in the margin while Quarto shows its column and a card there is NARROW or more; else they fold in. */
+  const wide = () => !!column && column.offsetWidth > 120 && reserve() >= 28 + NARROW;
   const top0 = () => margin.getBoundingClientRect().top + scrollY;
 
   /** Lay every card out: the head, the lost rows, then one card per span in page order. */
@@ -2252,6 +2568,12 @@
       if (e && body.contains(e)) e.classList.add("fpl-coref");
   });
   document.addEventListener("keydown", (ev) => {
+    if (ev.key === "Escape" && !cardMenu.hidden) {   // a card's menu: closed, focus back on its ⋯
+      const id = menuOf;
+      shut();
+      if (id) cardEl(id)?.querySelector(".fpl-card-more")?.focus({ preventScroll: true });
+      return;
+    }
     if (ev.key === "Escape" && (!menu.hidden || !panel.hidden)) {   // an open popover first, focus back to its button
       const back = menu.hidden ? filterBtn : moreBtn, inside = menu.contains(document.activeElement) || panel.contains(document.activeElement);
       shut();
@@ -2262,6 +2584,7 @@
     if (ev.key === "Escape" && g) { g.close(); return; }
     if (ev.key === "Escape" && editing) { closeEditor(); layout(); disarm(); return; }
     if (ev.key === "Escape" && picking) { unpick(); toast("Afgebroken"); return; }
+    if (ev.key === "Escape" && openId && !ev.target.closest?.("input, textarea, [contenteditable]")) { openId = null; layout(); return; }
     if (adding && (ev.key === "Escape" || ev.key === "Enter") && !ev.defaultPrevented
       && !ev.target.closest?.(ev.key === "Enter" ? "input, textarea, select, [contenteditable], button, a, [role=button], .fpl-chip, summary"
         : "input, textarea, select, [contenteditable]")) {
@@ -2285,6 +2608,14 @@
     if (ev.key === "?" && !typing && !ev.metaKey && !ev.ctrlKey && !ev.altKey) { ev.preventDefault(); menu.hidden || !menu.classList.contains("fpl-keysheet") ? keysheet() : shut(); return; }
     if (typing || ev.metaKey || ev.ctrlKey || ev.altKey || ev.shiftKey) return;
     if (ev.key === "z") { ev.preventDefault(); seek(); return; }
+    if (ev.key === "l") {   // Verbind met…: the card under the mouse, or the one holding the focus
+      ev.preventDefault();
+      if (mode() !== "kantlijn") { toast("Verbinden doe je in de stand Kantlijn (a)"); return; }
+      const c = margin.querySelector(".fpl-card.is-hot[data-id], .fpl-card:focus-within[data-id]");
+      if (!c || c.dataset.id === "draft") { toast("l verbindt de kaart onder de muis: wijs er eerst een aan"); return; }
+      openMenu(c.dataset.id, true);
+      return;
+    }
     if (ev.key === "j" || ev.key === "k") { ev.preventDefault(); step(ev.key === "j" ? 1 : -1); return; }
     if (ev.key === "Enter" && reading && !ev.target.closest?.("button, a, [role=button]")) {
       ev.preventDefault();
@@ -2307,9 +2638,10 @@
   addEventListener("resize", relayout);
   document.fonts?.ready.then(relayout);
 
-  document.body.append(pop, menu, panel);
-  (snap ? Promise.resolve(snap.rows) : fetch(`${stem}.facts.json`).then((r) => (r.ok ? r.json() : [])))
-    .catch(() => [])
-    .then((got) => { sidecar = Array.isArray(got) ? got : []; draw(); persist();
+  document.body.append(pop, menu, panel, cardMenu);
+  const decisions = (snap ? Promise.resolve(snap.decisions ?? "") : fetch(`${stem}.decisions.tsv`).then((r) => (r.ok ? r.text() : "")))
+    .catch(() => "");
+  Promise.all([(snap ? Promise.resolve(snap.rows) : fetch(`${stem}.facts.json`).then((r) => (r.ok ? r.json() : []))).catch(() => []), decisions])
+    .then(([got, tsv]) => { ledger = readLedger(tsv); sidecar = Array.isArray(got) ? got : []; draw(); persist();
       sync(); });
 })();
