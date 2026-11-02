@@ -128,7 +128,8 @@
  *
  * The bar. One bar, fixed above the margin column, holds the three
  * stands as tabs (Lezen, Spans, Kantlijn, also the key "a"), the search
- * field (the key "z"), Graph and a menu ⋯: Naam, Importeer rijen,
+ * field (the key "/" in Kantlijn, where it is taken from Quarto's site
+ * search, and "z" in every stand), Graph and a menu ⋯: Naam, Importeer rijen,
  * Exporteer rijen, Exporteer logboek, Vouw tot de spans, Context 0-3,
  * Sneltoetsen (also "?") and Wis mijn rijen. A quiet line under it
  * counts the spans, the relations, the lost rows and this browser's,
@@ -178,7 +179,7 @@
  * new context refolds. A card whose row points at another place on the
  * page has "Toon beide", which folds what lies between the two so both
  * are in view (its menu, or a click on the other end in its meta line).
- * A query asked lights the search field, whose z gives way to an x
+ * A query asked lights the search field, whose key gives way to an x
  * that clears it.
  *
  * Close reading. Outside Lezen each block carries a bar in its left
@@ -648,12 +649,12 @@
   for (const b of [moreBtn, filterBtn]) { b.ariaHasPopup = "true"; b.ariaExpanded = "false"; }
   const field = el("input", { className: "fpl-query", placeholder: "Zoek of filter, bv. label:claim", ariaLabel: "Zoek of filter",
     autocomplete: "off", spellcheck: false });
-  // a query asked (board H): the field is lit, its z gives way to an x
+  // a query asked (board H): the field is lit, its key gives way to an x
   const clear = el("button", { type: "button", className: "fpl-x",
     ariaLabel: "Wis het filter", title: "Wis het filter",
     onclick: () => { field.value = ""; ask(); field.focus(); } }, ico("clear"));
   const search = el("div", { className: "fpl-search" },
-    ico("search"), field, el("kbd", {}, "z"), clear);
+    ico("search"), field, el("kbd", { className: "fpl-key" }, "/"), clear);
   const count = el("p", { className: "fpl-count" });
   const row = el("div", { className: "fpl-row" }, tabs, el("span", { className: "fpl-picker" }, picker, ico("chevron")), graphBtn, moreBtn);
   const bar = el("div", { className: "fpl-annot-ui fpl-topbar", role: "region", ariaLabel: "Kantlijn" }, row, search, count);
@@ -722,6 +723,8 @@
     const cur = mode();
     for (const [i, t] of [...tabs.children].entries()) { t.ariaSelected = String(MODES[i] === cur); t.classList.toggle("is-on", MODES[i] === cur); }
     picker.value = cur;
+    // "/" is Quarto's site search outside Kantlijn (feedback 22)
+    search.querySelector(".fpl-key").textContent = cur === "kantlijn" ? "/" : "z";
     const spans = all.filter((r) => typeof r.text === "string" || addressed(r));
     const lost = spans.filter((r) => state[r.id] !== "vers").length + all.filter(orphan).length, mine = local().length;
     const head = all.length
@@ -878,7 +881,9 @@
   function keysheet() {
     if (menu.hidden) flip(menu, moreBtn, () => {});
     menu.classList.add("fpl-keysheet");
-    const keys = [["a", "Volgende stand"], ["z", "Zoek of filter"], ["j  k", "Volgende, vorige zin"],
+    const keys = [["a", "Volgende stand"],
+      ["/  z", "Zoek of filter; / alleen in Kantlijn"],
+      ["j  k", "Volgende, vorige zin"],
       ["Enter", "Een feit op de zin onder de cursor"], ["⌘↩", "Bewaar in de editor"],
       ["Shift + scroll",
         "Vouwt rond de muis in, terug opent; met een filter tot de spans"],
@@ -892,7 +897,7 @@
     menu.focus({ preventScroll: true });
   }
 
-  /** z: the search field, in the panel when the bar is folded; with no query yet, the filter panel opens under it. */
+  /** / or z: the search field, in the panel when the bar is folded; with no query yet, the filter panel opens under it. */
   function seek() {
     if (!bar.classList.contains("is-full") && panel.hidden) flip(panel, filterBtn, fillChips);
     field.focus();
@@ -3628,6 +3633,14 @@
     const typing = ev.defaultPrevented || ev.target.closest?.("input, textarea, select, [contenteditable], .fpl-editor");
     if (ev.key === "Escape" && reading && !typing) { read(null); return; }
     if (ev.key === "?" && !typing && !ev.metaKey && !ev.ctrlKey && !ev.altKey) { ev.preventDefault(); menu.hidden || !menu.classList.contains("fpl-keysheet") ? keysheet() : shut(); return; }
+    // "/" before the Shift test: some layouts type it with Shift. Quarto
+    // opens its search on the keyup, and leaves it be: the field has focus
+    if (ev.key === "/" && mode() === "kantlijn" && !typing
+      && !ev.metaKey && !ev.ctrlKey && !ev.altKey) {
+      ev.preventDefault();
+      seek();
+      return;
+    }
     if (typing || ev.metaKey || ev.ctrlKey || ev.altKey || ev.shiftKey) return;
     if (ev.key === "z") { ev.preventDefault(); seek(); return; }
     if (ev.key === "l") {   // Verbind met…: the knob or card holding the focus, else the card under the mouse
