@@ -98,10 +98,11 @@ body.fpl-numbered .fpl-p::after { opacity: .8; }
   display: none; user-select: none; }
 body.fpl-numbered .fpl-p::before { opacity: .8; }
 body.fpl-numbered .fpl-s::before { display: inline-block; }
-/* the clause number takes no room and shows on the sentence under the mouse only, small, above its first word;
-   top and left, never bottom: a clause over two lines would hang it under the last line, far from its start */
-.fpl-c { position: relative; }
-.fpl-c::before { content: attr(data-n); position: absolute; left: 0; top: -.8em; font-size: .55em; line-height: 1;
+/* the clause number takes no room and shows on the sentence under the mouse only, small, above its first word.
+   A box of no width at the clause's start, raised: not absolute in the clause, whose containing block, once the
+   clause runs over two lines, spans its fragments and dropped the number into the middle of a word (feedback 1) */
+.fpl-c::before { content: attr(data-n); display: inline-block; width: 0; position: relative; top: -1.6em;
+  font-size: .55em; line-height: 1; white-space: nowrap;
   color: var(--fpl-mute); opacity: 0; transition: opacity 80ms; user-select: none; pointer-events: none; }
 body.fpl-numbered .fpl-s:hover .fpl-c::before { opacity: 1; }
 .fpl-p[data-kind="C"]::before { top: .5rem; }
