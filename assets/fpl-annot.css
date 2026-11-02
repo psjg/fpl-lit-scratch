@@ -568,3 +568,42 @@ body.fpl-nospans mark.fact { background: none; box-shadow: none; outline-color: 
 /* one layer alone (board V4b): the text dimmed, only that layer in colour */
 body.fpl-solo main :is(p, li, h1, h2, h3, h4, h5, a, code, td, th, figcaption, .breadcrumb, .fpl-n):not(.fpl-margin *, .fpl-inline *) { color: var(--fpl-mute); }   /* a narrow margin lives in main: its cards stay legible */
 body.fpl-solo .fpl-arcs path { stroke-width: 2; opacity: 1; }
+
+/* groups (boards V3a-V3d): a chip on each member's card, a frame round its cards in the graph, the group form. The
+   group scope's colour marks them all; a group's members light in a class of their own, several at once. */
+.fpl-card > .fpl-groups { margin: 5px 0 0 15px; display: flex; flex-wrap: wrap; gap: 4px; }
+.fpl-gchip { display: inline-flex; align-items: center; gap: 5px; max-width: 100%; height: 20px; padding: 0 8px 0 6px; box-sizing: border-box;
+  border: 1px solid var(--fpl-rule); border-radius: 999px; background: var(--fpl-bg); font-size: 11.5px; font-weight: 600; line-height: 1;
+  color: var(--fpl-fg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: default; }
+.fpl-gchip:hover { border-color: var(--fpl-group); }
+.fpl-gchip .fpl-sq, .fpl-gtab .fpl-sq { flex: none; width: 8px; height: 8px; border-radius: 2px; background: var(--fpl-group); }
+mark.fact.fpl-ingroup, .fpl-p.fpl-ingroup, .fpl-ingroup:not(.fpl-card):not(.fpl-node) { outline: 1.5px solid var(--fpl-group); outline-offset: 1px; border-radius: 2px; }
+.fpl-card.fpl-ingroup { box-shadow: 0 0 0 1.5px var(--fpl-group); }
+.fpl-node.fpl-ingroup { border-color: var(--fpl-group); box-shadow: 0 0 0 3px color-mix(in srgb, var(--fpl-group) 18%, transparent); }
+.fpl-node.is-picked { border-color: var(--fpl-mine); border-width: 1.5px; box-shadow: 0 0 0 3px var(--fpl-mine-wash); }
+.fpl-gframe { position: absolute; box-sizing: border-box; border: 1px solid var(--fpl-node); border-radius: 12px;
+  background: color-mix(in srgb, var(--fpl-group) 6%, var(--fpl-bg)); transition: border-color .12s, box-shadow .12s; }
+.fpl-gframe:hover { border-color: var(--fpl-group); box-shadow: 0 0 0 3px color-mix(in srgb, var(--fpl-group) 14%, transparent); }
+.fpl-gtab { position: absolute; left: 10px; top: 0; transform: translateY(-50%); display: inline-flex; align-items: center; gap: 6px; max-width: calc(100% - 20px);
+  height: 20px; padding: 0 8px 0 7px; box-sizing: border-box; border: 1px solid var(--fpl-node); border-radius: 999px; background: var(--fpl-bg);
+  font: 600 11.5px/1 var(--bs-font-sans-serif, sans-serif); color: var(--fpl-fg); cursor: pointer; white-space: nowrap; }
+.fpl-gtab .fpl-gname { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.fpl-grole { flex: none; padding: 2px 5px; border-radius: 4px; background: color-mix(in srgb, var(--fpl-role) 14%, var(--fpl-bg)); color: var(--fpl-role);
+  font-size: 10.5px; font-weight: 600; }
+.fpl-gtab:focus-visible { outline: 2px solid var(--fpl-mine); outline-offset: 1px; }
+.fpl-gform { position: absolute; z-index: 3; left: 24px; bottom: 60px; width: min(392px, calc(100% - 48px)); box-sizing: border-box; padding: 14px 16px 12px;
+  border: 1px solid var(--fpl-rule); border-radius: 10px; background: var(--fpl-bg);
+  box-shadow: 0 12px 32px rgba(20, 30, 50, .16), 0 2px 6px rgba(20, 30, 50, .08); display: grid; gap: 10px; }
+.fpl-gform-h { margin: 0; font-size: 14px; font-weight: 700; }
+.fpl-gform label { display: grid; gap: 4px; margin: 0; }
+.fpl-gform label > span, .fpl-glabel { display: block; margin-bottom: 4px; font-size: 12px; font-weight: 600; color: var(--fpl-mute); }
+.fpl-gform input { font: inherit; font-size: 13.5px; height: 32px; padding: 0 9px; border: 1px solid var(--fpl-rule); border-radius: 6px;
+  background: var(--fpl-bg); color: var(--fpl-fg); }
+.fpl-gform input:focus { outline: none; border-color: var(--fpl-mine); box-shadow: 0 0 0 3px var(--fpl-mine-wash); }
+.fpl-roles { display: grid; grid-template-columns: repeat(4, 1fr); border: 1px solid var(--fpl-rule); border-radius: 6px; overflow: hidden; }
+.fpl-roles button { font: inherit; font-size: 12.5px; font-weight: 600; height: 30px; border: 0; border-left: 1px solid var(--fpl-rule);
+  background: var(--fpl-bg); color: var(--fpl-fg); cursor: pointer; }
+.fpl-roles button:first-child { border-left: 0; }
+.fpl-roles button[aria-checked="true"] { background: var(--fpl-mine-wash); color: var(--fpl-mine); box-shadow: inset 0 -2px 0 var(--fpl-mine); }
+.fpl-roles button:focus-visible { outline: 2px solid var(--fpl-mine); outline-offset: -2px; }
+.fpl-gform .fpl-bar button.fpl-danger { color: var(--fpl-con); }

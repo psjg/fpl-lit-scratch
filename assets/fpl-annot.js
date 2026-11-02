@@ -211,8 +211,8 @@
  * Layers, after the Prague Dependency Treebank's stacked annotation:
  * only a span anchors in the text, every other row names an id. A row's
  * layer is read from what it is, as lit's facts.layer reads it (span,
- * fact, thread, argument, tfa, coref, relation), and the filter panel's
- * buttons hide one; a resumes row, in lit's tfa layer, has its own
+ * fact, thread, argument, tfa, coref, group, relation), and the filter
+ * panel's buttons hide one (fact, group and relation have none); a resumes row, in lit's tfa layer, has its own
  * (Progressie). A coref row groups ids that name
  * one referent: hovering one lights the others. The tfa lens marks a
  * clause t (bound), c (bound, contrastive) or f (not bound), after the
@@ -289,6 +289,26 @@
  * bracketed pieces, a click writes a fact about it, and its facts hang
  * there under "over deel <id>". lit keeps the bundles a tree.
  *
+ * Groups (boards V3a, V3b, V3d): a set row whose first label is
+ * group/<naam> puts rows together as one thing, its targets the members
+ * (one at least: the tray may hold one sentence), with at most one
+ * role/<rol> (claim, bewijs, tegen) and one order/<n> beside it; its
+ * note is its name on screen. It has no card and no node: each member's
+ * card carries the group as a chip, and the graph draws a frame round
+ * its members, laid out as one block of cells with the row above it
+ * empty for the frame's tab, which names the group and its role; a
+ * card in two groups stands in the first one's block. Under the mouse a
+ * chip or a frame lights the members, spans and cards, in a class of
+ * their own (a hot card would open over the next). Shift-click cards in
+ * the graph to choose them: a form asks a name and a role, and Enter
+ * saves the row, or the cards join the group of ours with that name;
+ * the tab of a group of ours opens it there, to rename or let go, and
+ * Esc lets a choice go before it closes the graph. group/gepakt is the
+ * tray of pulled sentences, a group without a role: Pak in a card's
+ * menu adds the card to it, Leg terug takes it out, and the row goes
+ * with its last sentence. The labels of a group count for each member
+ * in the filter, so group and role are scopes there.
+ *
  * The coref lens: coref rows that share a member are one chain (a
  * union-find over the sets), numbered in page order, and each member on
  * the page carries its chain's number, as the PDT links an anaphor to its
@@ -327,6 +347,7 @@
     because: "Omdat: een besluit als reden", supports: "Steunt een bewering", attacks: "Valt een bewering aan",
     contradicts: "Spreekt tegen", cites: "Citeert", relates: "Verbindt, zonder soort", checkedBy: "Nagekeken door",
     resumes: "Neemt een eerdere bijzin op (Daneš)", coref: "Noemt hetzelfde", parts: "Delen van één span",
+    group: "Hoort bij een groep", "group/gepakt": "Gepakte zinnen", role: "Wat een groep doet in het betoog", order: "Plaats van een groep",
     tfa: "Topic-focus van een bijzin", "tfa/t": "Gebonden: bekend", "tfa/c": "Gebonden, contrastief", "tfa/f": "Focus: nieuw",
     fn: "Wat een zin doet", "fn/definition": "Definieert", "fn/example": "Een voorbeeld", "fn/transition": "Een overgang",
     "fn/claim": "Beweert", "fn/evidence": "Bewijs", "fn/aside": "Terzijde", "fn/hedge": "Zwakt af",
@@ -420,8 +441,8 @@
   }
   window.fplAnnotColour = colourOf;   // for the headless tests, and a console
   // the layers drawn by CSS (tfa washes, resumes arcs, chain numbers) take the colours their buttons show
-  for (const k of ["coref", "tfa", "resumes"]) document.documentElement.style.setProperty(`--fpl-${k}`, colourOf(k));
-  const LAYERS = ["span", "fact", "thread", "argument", "tfa", "coref", "relation"];
+  for (const k of ["coref", "tfa", "resumes", "group", "role"]) document.documentElement.style.setProperty(`--fpl-${k}`, colourOf(k));
+  const LAYERS = ["span", "fact", "thread", "argument", "tfa", "coref", "group", "relation"];
   const RELATIONS = new Set(["because", "supports", "attacks", "contradicts", "supersedes", "checkedBy", "cites", "relates", "resumes"]);
   const AROUND = 32;
   const SKIP = "script, style, button, .fpl-annot-ui";
@@ -593,6 +614,22 @@
     const p = bundleOf(id), w = wholeOf(id) ?? p;
     return w ? treeOf(w) : [id];
   };
+  /**
+   * A named group (boards V3a-V3d): a set row, group/<naam> its first
+   * label, with role/<rol> and order/<n> beside it; its targets are its
+   * members, never a fact about the first. group/gepakt is the tray of
+   * pulled sentences, a group without a role. Its name on screen is its
+   * note, else the name in its label.
+   */
+  const TRAY = "group/gepakt";
+  const isGroup = (r) => /^group\//.test(r?.labels?.[0] ?? "");
+  const groupName = (g) => g.note?.trim() || (g.labels[0] === TRAY ? "Gepakte zinnen" : g.labels[0].slice(6).replace(/-/g, " "));
+  const roleOf = (g) => g.labels.find((l) => l.startsWith("role/"))?.slice(5) ?? "";
+  /** The shown groups that hold an id, or the whole it is a piece of. */
+  const groupsOf = (id) => { const w = wholeOf(id)?.id;
+    return all.filter((r) => isGroup(r) && shows(r) && r.targets?.some((t) => t === id || t === w)); };
+  /** A group's name as a label: lower case, no accents, words joined by "-". */
+  const slug = (name) => name.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "-").replace(/^-|-$/g, "");
   function anchorsOf(id) {
     const pr = bundleOf(id);
     if (pr) return leavesOf(pr).flatMap((t) => [...marksOf(t)]);   // a discontinuous span: its pieces' marks
@@ -604,7 +641,7 @@
     return e && body.contains(e) ? [e] : [];
   }
   // a tfa row is drawn by the lens on its clause, not as a card
-  const addressed = (r) => typeof r.text !== "string" && layerOf(r) !== "tfa" && anchorsOf(r.id).length > 0;
+  const addressed = (r) => typeof r.text !== "string" && layerOf(r) !== "tfa" && !isGroup(r) && anchorsOf(r.id).length > 0;
   /**
    * A fact whose row is gone (an unbundled parts row, a deleted span):
    * no text, its first target shaped as a row id (lit's generated ids
@@ -620,7 +657,7 @@
     if (orphans.of !== all) {
       const ids = new Set(all.map((x) => x.id));
       orphans = { of: all, ids: new Set(all.filter((x) => typeof x.text !== "string" && !RELATIONS.has(x.labels?.[0] ?? "")
-        && !SETKINDS.has(x.labels?.[0] ?? "") && layerOf(x) !== "tfa" && typeof x.targets?.[0] === "string"
+        && !SETKINDS.has(x.labels?.[0] ?? "") && !isGroup(x) && layerOf(x) !== "tfa" && typeof x.targets?.[0] === "string"
         && ROWLIKE.test(x.targets[0]) && !ids.has(x.targets[0]) && !place(x.targets[0])).map((x) => x.id)) };
     }
     return orphans.ids.has(r.id);
@@ -637,6 +674,7 @@
     if (k === "supports" || k === "attacks") return "argument";
     if (k === "resumes" || k.startsWith("tfa/")) return "tfa";
     if (k === "coref") return "coref";
+    if (isGroup(r)) return "group";
     if (RELATIONS.has(k)) return "relation";
     const up = all.find((x) => x.id === r.targets?.[0]);
     return up && typeof up.text !== "string" && up.labels?.[0] !== "parts" ? "thread" : "fact";
@@ -647,9 +685,10 @@
   /** The labels a span is filtered by: its own and those of the facts about it, in the layers shown. */
   function labelsOf(row) {
     const got = new Set(row.labels ?? []);
-    const walk = (id) => { for (const r of all.filter((x) => typeof x.text !== "string" && x.labels?.[0] !== "parts" && x.targets?.[0] === id && shows(x))) {
+    const walk = (id) => { for (const r of all.filter((x) => typeof x.text !== "string" && x.labels?.[0] !== "parts" && !isGroup(x) && x.targets?.[0] === id && shows(x))) {
       for (const l of r.labels ?? []) got.add(l); walk(r.id); } };
     for (const id of bundleOf(row.id) ? treeOf(bundleOf(row.id)).filter(bundleOf) : [row.id]) walk(id);   // a bundle in it is the whole's too
+    for (const g of groupsOf(row.id)) for (const l of g.labels) got.add(l);   // a group names its members, each of them
     return got.size ? got : new Set([NONE]);
   }
   const passes = (row) => { const off = [...hidden()]; return [...labelsOf(row)].some((l) => !off.some((h) => under(l, h))); };
@@ -735,6 +774,7 @@
       + ' d="m4 4 8 8M12 4l-8 8"/>',
     shift: '<path fill="none" stroke="currentColor" stroke-width="1.5" d="m5 6 3-3 3 3M5 10l3 3 3-3"/>',
     reply: '<path fill="none" stroke="currentColor" stroke-width="1.5" d="M6.5 4 2.5 8l4 4M2.5 8H10a3.5 3.5 0 0 1 3.5 3.5V13"/>',
+    tray: '<path fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" d="M2.5 9.5 4 3.5h8l1.5 6v3h-11zM2.5 9.5h3.5l.8 1.5h2.4l.8-1.5h3.5"/>',
     link: '<path fill="none" stroke="currentColor" stroke-width="1.5" d="M6.5 9.5l3-3M7 4.5l1-1a2.8 2.8 0 0 1 4 4l-1 1M9 11.5l-1 1a2.8 2.8 0 0 1-4-4l1-1"/>',
     supports: '<g fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="5.5"/><path d="M8 5.5v5M5.5 8h5"/></g>',
     attacks: '<g fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="5.5"/><path d="M5.5 8h5"/></g>',
@@ -1112,7 +1152,7 @@
     return el("span", { className: "fpl-chip " + cls }, head, sub ? el("small", {}, "/" + sub) : null);
   };
   // a parts row names its pieces, it says nothing about the first one
-  const facts = (id) => all.filter((r) => typeof r.text !== "string" && r.labels?.[0] !== "parts" && r.targets?.[0] === id && shows(r));
+  const facts = (id) => all.filter((r) => typeof r.text !== "string" && r.labels?.[0] !== "parts" && !isGroup(r) && r.targets?.[0] === id && shows(r));
   /** A row that ties its first target to others (supports, cites, coref): a line on the card, not a message. */
   const relates = (r) => (r.targets ?? []).length > 1;
   /** The first words of a text, cut at a word, with an ellipsis when cut. */
@@ -1305,6 +1345,30 @@
   /** A card's kind, its chip: its own first label, else that of the first fact or relation hanging from it. */
   const kindOfCard = (row) => (row.labels?.[0] !== "parts" && row.labels?.[0]) || facts(row.id).find((r) => r.labels?.length)?.labels[0] || null;
 
+  /** A group on a card (board V3b): its square and name; under the mouse its members light, spans and cards. */
+  function groupChip(g) {
+    const c = el("span", { className: "fpl-gchip", title: roleOf(g) ? `${groupName(g)} · ${roleOf(g)}` : groupName(g) },
+      el("span", { className: "fpl-sq" }), groupName(g));
+    c.dataset.group = g.id;
+    c.onmouseenter = () => lightGroup(g.id);
+    c.onmouseleave = () => lightGroup(null);
+    return c;
+  }
+  /**
+   * Light a group's members, their spans, cards and graph cards, in a
+   * class of their own: is-hot opens a card over the one below it, and
+   * a group lights several at once.
+   */
+  function lightGroup(gid) {
+    for (const n of document.querySelectorAll(".fpl-ingroup")) n.classList.remove("fpl-ingroup");
+    const g = gid && all.find((r) => r.id === gid);
+    if (!g) return;
+    const ids = new Set(g.targets.flatMap(groupOf));
+    for (const id of ids) { const a = anchorsOf(id); for (const e of a.length ? a : [place(id)].filter(Boolean)) e.classList.add("fpl-ingroup"); }
+    for (const n of [...margin.querySelectorAll(".fpl-card"), ...(plane?.querySelectorAll(".fpl-node") ?? [])])
+      if (ids.has(n.dataset.id)) n.classList.add("fpl-ingroup");
+  }
+
   /**
    * The card of a span (board F). At rest two rows: a head (the dot in the
    * row's colour, the first words of the quote, the kind as a chip, and
@@ -1358,6 +1422,8 @@
           return v;
         })));
     } else if (row.note && st === "vers") card.append(el("p", { className: "fpl-note" }, row.note));
+    const gs = st === "vers" ? groupsOf(row.id) : [];
+    if (gs.length) card.append(el("p", { className: "fpl-groups" }, ...gs.map(groupChip)));
     // the meta line: what always shows, then "n reacties" at rest or the block's address open, never both
     const base = [author(row) ? el("b", {}, author(row)) : null, ...rels.map((r) => relLine(r, row.id)),
       // a bundle of ours takes more pieces: the next Alt-selects join it
@@ -1435,7 +1501,22 @@
     b.append(ico(name), text, ...after ? [after] : []);
     return b;
   };
+  /**
+   * Pull a row into the tray of pulled sentences, group/gepakt (board
+   * V3d), or lay it back: the tray is a group row of this browser, made
+   * on the first pull and let go with its last sentence, since a group
+   * holds one member at least. A tray of the sidecar only reads.
+   */
+  function pull(id) {
+    const tray = all.find((r) => r.labels?.[0] === TRAY), ts = tray?.targets ?? [], back = ts.includes(id);
+    const rest = back ? ts.filter((t) => t !== id) : [...ts, id];
+    if (tray && !rest.length) save(tray, "delete");
+    else save(tray ?? {}, { note: tray?.note ?? "", labels: tray?.labels ?? [TRAY], targets: rest });
+    draw();
+    toast(back ? "Teruggelegd" : "Gepakt");
+  }
   function fillCardMenu(row) {
+    const tray = all.find((r) => r.labels?.[0] === TRAY);
     const ends = [...new Set([row, ...facts(row.id)].flatMap((r) => (r.targets ?? []).slice(typeof r.text === "string" ? 0 : 1)))]
       .filter((t) => place(t) && t !== row.id).slice(0, 3);
     const mine = !!row.mine, n = replies(row.id);
@@ -1453,9 +1534,10 @@
       entry("link", "Verbind met…", () => { shut(); pick(row.id); }, el("kbd", {}, "l")),
       entry("graph", "Graph van deze kaart", () => { shut(); graph(row.id); }),
       ...ends.map((t) => entry("fold", `Toon beide · ${clip(said(t), 22)}`, () => { shut(); both(row.id, t); })),
+      tray && !tray.mine ? null : entry("tray", tray?.targets?.includes(row.id) ? "Leg terug" : "Pak", () => { shut(); pull(row.id); }),
       el("hr"),
       del,
-      el("footer", {}, "Steunt, valt aan, zelfde als: sleep het bolletje naar een andere span.")]);
+      el("footer", {}, "Steunt, valt aan, zelfde als: sleep het bolletje naar een andere span.")].filter(Boolean));
   }
   cardMenu.onkeydown = (e) => {
     const items = [...cardMenu.querySelectorAll("button")];
@@ -2150,7 +2232,9 @@
       return r ? layerOf(r) : kinds.get(id) ?? (document.getElementById(id) ? "address" : "elders");
     };
     const node = (id) => nodes.get(id) ?? nodes.set(id, { id, kind: kindOf(id), x: 0, y: 0, dx: 0, dy: 0 }).get(id);
-    for (const r of all.filter((x) => shows(x) && !["tfa", "resumes"].includes(sheetOf(x)))) {
+    const groups = all.filter((x) => isGroup(x) && shows(x));   // no node: a frame round its members
+    for (const g of groups) for (const t of g.targets ?? []) node(t).member = true;
+    for (const r of all.filter((x) => shows(x) && !isGroup(x) && !["tfa", "resumes"].includes(sheetOf(x)))) {
       const k = r.labels?.[0] ?? "", ts = (r.targets ?? []).filter(Boolean), n = node(r.id);
       n.row = true;
       if (typeof r.text === "string") continue;
@@ -2163,7 +2247,7 @@
     }
     for (const n of code?.nodes ?? []) node(n.id).label = n.label;
     for (const e of code?.edges ?? []) edges.push({ a: node(e.a), b: node(e.b), kind: "code" });
-    return { nodes: [...nodes.values()], edges };
+    return { nodes: [...nodes.values()], edges, groups };
   }
   /**
    * The code block a chunk stands in: the k-th block whose header names
@@ -2255,7 +2339,8 @@
     const area = el("div", { className: "fpl-plane-area" });
     const foot = el("div", { className: "fpl-plane-foot", role: "group", ariaLabel: "Soorten relaties" });
     const p = plane = el("div", { className: "fpl-annot-ui fpl-graph fpl-plane", role: "region", ariaLabel: "Graph" }, area, foot);
-    let g = null, sel = id, built = "", nodes = [];
+    let g = null, sel = id, built = "", nodes = [], frames = [], sheet = null;
+    const chosen = new Set();   // the cards Shift-clicked for a group
     const slide = (fn) => {   // the column moves left (or back) in one motion: FLIP on main
       const a = body.getBoundingClientRect().left;
       fn();
@@ -2292,7 +2377,7 @@
     const shown = () => {
       const es = g.edges.filter((e) => !offKinds.has(e.kind));
       const ends = new Set(es.flatMap((e) => [e.a.id, e.b.id]));
-      const ns = g.nodes.filter((n) => (n.row && !n.rel) || ends.has(n.id));
+      const ns = g.nodes.filter((n) => (n.row && !n.rel) || n.member || ends.has(n.id));
       const on = new Set(ns.map((n) => n.id));
       return { ns, es: es.filter((e) => on.has(e.a.id) && on.has(e.b.id)) };
     };
@@ -2316,12 +2401,32 @@
       settleGraph({ nodes: cards, edges: flat }, cols * cw, rows * chh);
       const free = new Set(Array.from({ length: cols * rows }, (_, i) => i));
       const mid = { x: (cols * cw) / 2, y: (rows * chh) / 2 };
-      for (const n of [...cards].sort((a, b) => Math.hypot(a.x - mid.x, a.y - mid.y) - Math.hypot(b.x - mid.x, b.y - mid.y))) {
+      const cell = (n, i) => { free.delete(i); n.cell = i; n.x = PAD + (i % cols + 0.5) * cw; n.y = PAD + (Math.floor(i / cols) + 0.5) * chh; };
+      // a group's cards first, as one block of cells nearest where the force left them, so its frame holds no other card,
+      // with the cells above it kept empty for its tab; a card in two groups stands in the first one's block, and the
+      // second frame is drawn round it where it is
+      for (const gr of g.groups) {
+        const ms = cards.filter((n) => gr.targets.includes(n.id) && n.cell === undefined);
+        if (!ms.length) continue;
+        const bw = Math.min(ms.length, 2, cols), bh = Math.ceil(ms.length / bw);
+        const cx = ms.reduce((t, n) => t + n.x, 0) / ms.length, cy = ms.reduce((t, n) => t + n.y, 0) / ms.length;
+        let best = -1, bd = Infinity;
+        const room = (r0, c0) => Array.from({ length: bw * (bh + 1) }, (_, k) => (r0 - 1 + Math.floor(k / bw)) * cols + c0 + (k % bw)).filter((i) => i >= 0);
+        for (let r0 = 0; r0 + bh <= rows; r0++) for (let c0 = 0; c0 + bw <= cols; c0++) {
+          if (!room(r0, c0).every((i) => free.has(i))) continue;
+          const d = Math.hypot((c0 + bw / 2) * cw - cx, (r0 + bh / 2) * chh - cy);
+          if (d < bd) { bd = d; best = r0 * cols + c0; }
+        }
+        if (best < 0) continue;   // no room for the block: its cards go one by one below
+        ms.forEach((n, k) => cell(n, best + Math.floor(k / bw) * cols + (k % bw)));
+        for (const i of room(Math.floor(best / cols), best % cols)) free.delete(i);   // its tab's row and an empty cell stay empty
+      }
+      for (const n of [...cards].filter((x) => x.cell === undefined).sort((a, b) => Math.hypot(a.x - mid.x, a.y - mid.y) - Math.hypot(b.x - mid.x, b.y - mid.y))) {
         let best = -1, bd = Infinity;   // the nearest free cell to where the force left it
         for (const i of free) { const d = Math.hypot((i % cols + 0.5) * cw - n.x, (Math.floor(i / cols) + 0.5) * chh - n.y); if (d < bd) { bd = d; best = i; } }
-        free.delete(best);
-        n.x = PAD + (best % cols + 0.5) * cw; n.y = PAD + (Math.floor(best / cols) + 0.5) * chh;
+        cell(n, best);
       }
+      for (const n of cards) delete n.cell;   // the next layout places them anew
       area.replaceChildren();
       const sv = document.createElementNS("http://www.w3.org/2000/svg", "svg");
       sv.classList.add("fpl-edges");
@@ -2330,6 +2435,7 @@
       for (const k of new Set(es.map((e) => e.kind))) if (ARROWS.has(k)) defs.insertAdjacentHTML("beforeend",
         `<marker id="fpl-to-${k}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" markerUnits="userSpaceOnUse" orient="auto"><path d="M0 1L9 5L0 9z" fill="${edgeColour(k)}"/></marker>`);
       area.append(sv);
+      frames = g.groups.map((gr) => ({ g: gr, ms: ns.filter((n) => !n.rel && gr.targets.includes(n.id)) })).filter((f) => f.ms.length).map(frameOf);
       for (const e of es) {
         e.path = sv.appendChild(document.createElementNS("http://www.w3.org/2000/svg", "path"));
         e.path.setAttribute("class", "fpl-edge"); e.path.dataset.kind = e.kind;
@@ -2349,6 +2455,7 @@
       }
       place2(chh);
       p.dataset.nodes = ns.map((n) => `${n.id}@${Math.round(n.x)},${Math.round(n.y)}`).join(" ");   // for tests: where each node landed
+      p.dataset.groups = frames.map((f) => `${f.g.id}@${f.box.join(",")}`).join(" ");   // and each frame: left, top, right, bottom
       const kinds = [...new Set(g.edges.map((e) => e.kind))].filter((k) => k !== "over" && k !== "parts");
       foot.replaceChildren(...kinds.map((k) => {
         const c = button("", () => { offKinds.has(k) ? offKinds.delete(k) : offKinds.add(k); build(); foot.querySelector(`[data-kind="${k}"]`)?.focus(); }, "fpl-kchip");
@@ -2373,6 +2480,14 @@
         if (xs.length) { n.x = xs.reduce((s, x) => s + x.x, 0) / xs.length; n.y = xs.reduce((s, x) => s + x.y, 0) / xs.length; }
         if (row) n.y = PAD + Math.round((n.y - PAD) / row) * row;   // a cell boundary: the middle of the nearest gap
       }
+      for (const f of frames) {   // round its cards where they stand, also while one is dragged
+        const xs = f.ms.map((n) => n.x), ys = f.ms.map((n) => n.y);
+        // 13px above the cards, so the tab on the frame's top edge stands clear of them
+        f.box = [Math.min(...xs) - CW / 2 - 8, Math.min(...ys) - CH / 2 - 13, Math.max(...xs) + CW / 2 + 8, Math.max(...ys) + CH / 2 + 8].map(Math.round);
+        Object.assign(f.el.style, { left: `${f.box[0]}px`, top: `${f.box[1]}px`, width: `${f.box[2] - f.box[0]}px`, height: `${f.box[3] - f.box[1]}px` });
+        const w = f.el.firstChild.offsetWidth;   // a diamond in the gap would sit on the tab: it steps past its end
+        for (const n of nodes.filter((x) => x.rel && Math.abs(x.y - f.box[1]) < 18 && x.x > f.box[0] && x.x < f.box[0] + w + 22)) n.x = f.box[0] + w + 22;
+      }
       for (const n of nodes) { n.el.style.left = `${n.x}px`; n.el.style.top = `${n.y}px`; }
       const rim = (n, dx, dy) => {   // where the line from a node's middle, along dx dy, leaves its card
         const hw = n.rel ? 7 : CW / 2 + 2, hh = n.rel ? 7 : CH / 2 + 2, t = Math.min(hw / (Math.abs(dx) || 1e-9), hh / (Math.abs(dy) || 1e-9), 1);
@@ -2396,9 +2511,86 @@
         place2();
       };
       n.el.onpointerup = () => { from = null; n.el.classList.remove("is-lift"); };
-      n.el.onclick = (ev) => { ev.stopPropagation(); if (moved) { moved = false; return; } select(n.id); jump(n); };
+      n.el.onclick = (ev) => {
+        ev.stopPropagation();
+        if (moved) { moved = false; return; }
+        if (ev.shiftKey && !n.rel) { choose(n.id); return; }   // Shift chooses cards for a group (board V3a)
+        select(n.id); jump(n);
+      };
+      n.el.classList.toggle("is-picked", chosen.has(n.id));
       n.el.onmouseenter = () => { hot(n.id); light(n.id); };
       n.el.onmouseleave = () => { hot(null); light(sel); };
+    }
+    /**
+     * A group's frame (board V3b): a rounded field behind its cards, on
+     * its top edge a tab with its name and its role. Under the mouse its
+     * members light, here and in the text; a click on the tab of a group
+     * of ours opens it in the form, where the cards chosen join it.
+     */
+    function frameOf(f) {
+      const role = roleOf(f.g);
+      const tab = el("button", { type: "button", className: "fpl-gtab", title: groupName(f.g) },
+        el("span", { className: "fpl-sq" }), el("span", { className: "fpl-gname" }, groupName(f.g)),
+        role ? el("span", { className: "fpl-grole" }, role) : null);
+      tab.onclick = (ev) => { ev.stopPropagation(); if (f.g.mine) form(f.g); else toast("Een groep uit de sidecar wijzig je met lit facts"); };
+      f.el = el("div", { className: "fpl-gframe" }, tab);
+      f.el.dataset.group = f.g.id;
+      f.el.onmouseenter = () => lightGroup(f.g.id);
+      f.el.onmouseleave = () => lightGroup(null);
+      area.append(f.el);
+      return f;
+    }
+    /** Shift-click: a card joins the choice, or leaves it; the form shows while any is chosen. */
+    function choose(nid) {
+      chosen.has(nid) ? chosen.delete(nid) : chosen.add(nid);
+      for (const n of nodes) n.el.classList.toggle("is-picked", chosen.has(n.id));
+      if (chosen.size && !sheet) form(null);   // an open form keeps what was typed in it, and the focus
+      else if (!chosen.size && !sheet?.group) { sheet?.remove(); sheet = null; }
+      sheet?.querySelector("input").focus({ preventScroll: true });   // the click took it to the card
+    }
+    /**
+     * The group form (board V3a, without its sentences): a name, a role
+     * of four, Annuleer and Groep maken. Enter in the name saves: a new
+     * row group/<naam> of the cards chosen, or, for a name a group of ours
+     * has, those cards join it; an open group of ours takes its new name
+     * and role, and its Verwijder lets it go. Esc lets the choice go.
+     */
+    function form(gr) {
+      sheet?.remove();
+      const name = el("input", { type: "text", value: gr ? groupName(gr) : "", autocomplete: "off" });
+      const roles = el("div", { className: "fpl-roles", role: "radiogroup", ariaLabel: "Rol" }, ...["", "claim", "bewijs", "tegen"].map((r) => {
+        const b = button(r || "geen rol", () => { for (const x of roles.children) x.ariaChecked = String(x === b); });
+        b.role = "radio"; b.ariaChecked = String(r === (gr ? roleOf(gr) : "")); b.dataset.role = r;
+        return b;
+      }));
+      const go = el("button", { type: "submit", className: "fpl-go" }, gr ? "Bewaar " : "Groep maken ", el("kbd", {}, "↩"));
+      const f = sheet = el("form", { className: "fpl-gform", ariaLabel: gr ? "Groep" : "Nieuwe groep" },
+        el("p", { className: "fpl-gform-h" }, gr ? "Groep" : "Nieuwe groep"),
+        el("label", {}, el("span", {}, "Naam"), name), el("div", {}, el("span", { className: "fpl-glabel" }, "Rol"), roles),
+        el("div", { className: "fpl-bar fpl-keys" }, gr ? button("Verwijder", () => { save(gr, "delete"); done(); }, "fpl-danger") : null,
+          el("span", { className: "fpl-space" }), button("Annuleer", () => done()), go));
+      f.group = gr;
+      const done = () => { chosen.clear(); f.remove(); sheet = null; draw(); };
+      f.onsubmit = (ev) => {
+        ev.preventDefault();
+        const label = slug(name.value);
+        if (!label) { toast("Een groep heeft een naam"); name.focus(); return; }
+        const role = roles.querySelector('[aria-checked="true"]')?.dataset.role ?? "";
+        const named = all.find((r) => isGroup(r) && r.labels[0] === `group/${label}` && r !== gr);
+        if (named && !named.mine) { toast("Die naam heeft een groep uit de sidecar"); name.focus(); return; }
+        if (`group/${label}` === TRAY && role) { toast("Gepakte zinnen hebben geen rol"); return; }
+        const into = named ?? gr, keep = (into?.labels ?? []).filter((l) => /^order\//.test(l));
+        const labels = [`group/${label}`, ...role ? [`role/${role}`] : [], ...keep];
+        const targets = [...new Set([...into?.targets ?? [], ...gr && named ? gr.targets : [], ...chosen])];
+        if (gr && named) save(gr, "delete");   // renamed onto a group of ours: the two are one
+        save(into ?? {}, { note: name.value.trim(), labels, targets });
+        toast(into ? "Groep bewaard" : "Groep gemaakt");
+        done();
+      };
+      f.onkeydown = (ev) => { if (ev.key === "Escape") { ev.preventDefault(); ev.stopPropagation(); done(); } };
+      p.insertBefore(f, foot);
+      name.focus({ preventScroll: true });
+      name.select();
     }
     /** The edges of a node drawn heavier, each with its kind as a pill at its middle. */
     function light(nid) {
@@ -2443,6 +2635,7 @@
     };
     p.select = (nid) => select(nid);
     p.close = close;
+    p.letGo = () => { if (!chosen.size && !sheet) return false; chosen.clear(); sheet?.remove(); sheet = null; for (const n of nodes) n.el.classList.remove("is-picked"); return true; };
     p.tabIndex = -1;
     graphBtn.classList.add("is-on"); graphBtn.ariaPressed = "true";
     document.body.append(p);
@@ -3540,7 +3733,7 @@
       return;
     }
     const g = document.querySelector(".fpl-graph");   // an open graph takes Esc first, wherever focus is
-    if (ev.key === "Escape" && g) { g.close(); return; }
+    if (ev.key === "Escape" && g) { if (!g.letGo()) g.close(); return; }   // a choice of cards first, then the plane
     if (ev.key === "Escape" && editing) { closeEditor(); layout(); disarm(); return; }
     if (ev.key === "Escape" && picking) { unpick(); toast("Afgebroken"); return; }
     if (ev.key === "Escape" && openId && !ev.target.closest?.("input, textarea, [contenteditable]")) { openId = null; layout(); return; }

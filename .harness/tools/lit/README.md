@@ -274,11 +274,11 @@ not speak in representation details. The answer here is a query over the layers 
 
 A row's layer is read from what it is and never written down (`facts.layer`, and `layerOf`
 in the overlay): `span` (it names an item, or it is a `parts` set), `argument` (`supports`,
-`attacks`), `tfa` (`tfa/t`, `tfa/c`, `tfa/f`, `resumes`), `coref`, `relation` (any other
+`attacks`), `tfa` (`tfa/t`, `tfa/c`, `tfa/f`, `resumes`), `coref`, `group`, `relation` (any other
 relation: `because`, `contradicts`, `supersedes`, `checkedBy`, `cites`, and `relates`, the
 neutral link with no stance that the overlay's knob writes for "verbindt"), `thread` (a fact whose first target is a row that is no span), else `fact`. The filter
 panel's buttons hide a layer; there `resumes` has a button of its own (Progressie) beside
-the rest of `tfa` (Topic-focus), and `fact` and `relation` have none.
+the rest of `tfa` (Topic-focus), and `fact`, `group` and `relation` have none.
 
 - **Sets** group instead of pointing. `coref` is Müller's set relation, undirected and
   transitive: its targets name one referent, and hovering one (a span, a card, a clause)
@@ -287,6 +287,17 @@ the rest of `tfa` (Topic-focus), and `fact` and `relation` have none.
   of one discontinuous span. A piece may be a `parts` row itself, a piece in pieces; the
   bundles form a tree, so each piece has one whole and no bundle holds itself. Both need two
   members at least, each once (`lit-facts-set`).
+- **Groups** put rows together as one thing a reader names: a set row whose first label is
+  `group/<naam>` (its only `group/` label; a bare `group` is refused), its note the name on
+  screen, its targets the members, any id. Beside the name at most one `role/<rol>` (the overlay
+  offers claim, bewijs, tegen; the vocabulary stays free) and one `order/<n>`, `n` from 1, the
+  group's place among the groups; `role/` and `order/` stand on a group row only. A group needs
+  one member at least, not two: `group/gepakt`, the tray of pulled sentences, may hold one
+  sentence, and has no role. A name is one group per page, so a chip and the tray say which
+  (`lit-facts-set` for each). `facts.kind` reads `group/<naam>` as `group`, so `has:group`
+  finds the members and `layer:group` the groups. The overlay draws no card or node for a group:
+  a chip on each member's card, a frame round its members in the graph (Shift-click cards there
+  to make one), and Pak in a card's menu for the tray.
 - **Topic-focus** after the t-layer manual (Mikulová et al. 2006, ch. 10): one value per
   clause, `tfa/t` bound, `tfa/c` bound and contrastive, `tfa/f` not bound; topic and focus as
   wholes are not marked, they follow (`lit-facts-tfa`: the value is the row's first label, one
@@ -303,8 +314,8 @@ the rest of `tfa` (Topic-focus), and `fact` and `relation` have none.
 
 Labels are free. A label is a name scoped by names to any depth, `fn/claim`,
 `slop/beeld/dood` (`lit-facts-field` refuses an empty segment or a space). Only the reserved
-kinds are vocabulary: a relation or set as the first label (`supports`, `coref`, …) and the
-`tfa/` scope, which their own gates read. This follows
+kinds are vocabulary: a relation or set as the first label (`supports`, `coref`, `group/…`, …),
+the `tfa/` scope, and `role/` and `order/` beside a group, which their own gates read. This follows
 Marshall: no fixed palette of marks (1997, https://doi.org/10.1145/263690.263806), and types
 that arise from examples, with structure available on demand (Marshall, Shipman & Coombs, VIKI, 1994,
 https://doi.org/10.1145/192757.192759). The editor ranks its chips by use, the rows of the page
@@ -342,7 +353,8 @@ the filter shows its whole group.
 layers shown, on a canvas laid out by force (Fruchterman & Reingold 1991,
 https://doi.org/10.1002/spe.4380211102), the same layout each time for the same rows. A
 relation row is a node of its own, a small diamond between its ends, so an undercut has a node
-to aim at; a fact hangs from what it is about (`over`). `Graph` on a card draws that row and
+to aim at; a fact hangs from what it is about (`over`); a group is a frame round its members,
+laid out as one block, its tab naming it and its role. `Graph` on a card draws that row and
 what lies within two steps. A click on a node closes the graph and goes to the node's place on
 the page; Esc closes it. Plain JavaScript, no outside assets.
 
