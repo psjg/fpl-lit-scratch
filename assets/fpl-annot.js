@@ -718,6 +718,8 @@
     if (!panel.hidden) hang(panel, full ? search : filterBtn);
   }
 
+  /** A count with its noun: "1 span", "3 spans". */
+  const some = (n, one, more) => `${n} ${n === 1 ? one : more}`;
   /** The bar's state: which stand, the counts, the filter's mark; the open panel's chips. */
   function drawBar() {
     const cur = mode();
@@ -727,8 +729,10 @@
     search.querySelector(".fpl-key").textContent = cur === "kantlijn" ? "/" : "z";
     const spans = all.filter((r) => typeof r.text === "string" || addressed(r));
     const lost = spans.filter((r) => state[r.id] !== "vers").length + all.filter(orphan).length, mine = local().length;
+    // a reply or a fact on a span is no relation: only rows with two ends
+    const rels = all.filter((r) => typeof r.text !== "string" && relates(r));
     const head = all.length
-      ? `${spans.length} spans · ${all.length - spans.length} relaties`
+      ? `${some(spans.length, "span", "spans")} · ${some(rels.length, "relatie", "relaties")}`
       : "Nog geen spans op deze pagina";
     const line = el("p", {}, head,
       lost ? el("span", { className: "fpl-lost" }, ` · ${lost} kwijt`) : null,
@@ -742,7 +746,7 @@
       const kept = new Set([...body.querySelectorAll("mark.fact")]
         .filter((m) => !m.matches(".fpl-faded")).map((m) => m.dataset.id));
       const k = spans.filter((r) => kept.has(r.id)).length;
-      count.replaceChildren(`${k} van ${spans.length} spans · `,
+      count.replaceChildren(`${k} van ${some(spans.length, "span", "spans")} · `,
         el("b", {}, "ingevouwen tot de spans"), `, context ${context}`);
     } else count.replaceChildren(...line.childNodes);
     filterBtn.classList.toggle("is-on", hidden().size + offLayers().size > 0);
