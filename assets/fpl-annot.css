@@ -418,6 +418,11 @@ label.fpl-item { cursor: text; }
 .fpl-band > .fpl-tip { left: 0; top: calc(100% + 4px); opacity: 0;
   transition: opacity .12s; }
 .fpl-band:is(:hover, :focus-visible) > .fpl-tip { opacity: 1; }
+/* the tip never widens the page: it wraps in a narrow column, and a touch
+   screen, which never hovers, does not draw it */
+.fpl-band > .fpl-tip { max-width: 100%; box-sizing: border-box;
+  white-space: normal; }
+@media (hover: none) { .fpl-band > .fpl-tip { display: none; } }
 
 /* density: a bar in a block's gutter (or a band's), three greys by how many rows hang from it (fpl-annot.js heat);
    the padding widens the bar's hover target, the grey stays in the content box */
