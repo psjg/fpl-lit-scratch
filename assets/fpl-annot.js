@@ -997,9 +997,19 @@
     if (!e) return el("span", { className: "fpl-end", title: t }, name);
     return el("button", { type: "button", className: "fpl-end", title: "Toon beide", onclick: (ev) => { ev.stopPropagation(); both(owner, t); } }, name);
   }
-  /** A relation as a line: its verb and its other ends; data-fact lets a pick end at the relation itself (an undercut). */
-  function relLine(r, owner) {
-    const line = el("span", { className: "fpl-rel" }, el("b", {}, verb(r)), " → ", ...r.targets.slice(1).flatMap((t, i) => [i ? ", " : "", endOf(t, owner)]));
+  /**
+   * A relation as a line: its verb, its other ends and, unless its note
+   * is already on screen (noted, the row whose note its card or message
+   * shows), that note after a colon. data-fact lets a pick end at the
+   * relation itself (an undercut).
+   */
+  function relLine(r, owner, noted = null) {
+    const ends = r.targets.slice(1)
+      .flatMap((t, i) => [i ? ", " : "", endOf(t, owner)]);
+    const note = r.note && r.id !== noted
+      ? el("span", { className: "fpl-relnote" }, `: ${r.note}`) : null;
+    const line = el("span", { className: "fpl-rel" },
+      el("b", {}, verb(r)), " → ", ...ends, note);
     line.dataset.fact = r.id;
     return line;
   }
@@ -1045,7 +1055,9 @@
     const { rels, msgs } = about(r.id);
     if (relates(r)) rels.unshift(r);
     if (r.note) li.append(el("p", { className: "fpl-text" }, r.note));
-    if (rels.length) li.append(el("p", { className: "fpl-meta" }, ...rels.flatMap((x, i) => [i ? " · " : "", relLine(x, owner)])), ...ledgerRows(rels, owner));
+    if (rels.length) li.append(el("p", { className: "fpl-meta" },
+      ...rels.flatMap((x, i) => [i ? " · " : "", relLine(x, owner, r.id)])),
+    ...ledgerRows(rels, owner));
     const box = argBox(r.id);
     if (box) li.append(box);
     const to = el("button", { type: "button", className: "fpl-ib fpl-rep", ariaLabel: "Antwoord op dit bericht", title: "Antwoord op dit bericht" }, ico("reply"));
@@ -1165,7 +1177,8 @@
         })));
     } else if (row.note && st === "vers") card.append(el("p", { className: "fpl-note" }, row.note));
     // the meta line: what always shows, then "n reacties" at rest or the block's address open, never both
-    const base = [author(row) ? el("b", {}, author(row)) : null, ...rels.map((r) => relLine(r, row.id)),
+    const base = [author(row) ? el("b", {}, author(row)) : null,
+      ...rels.map((r) => relLine(r, row.id, row.id)),
       // a bundle of ours takes more pieces: the next Alt-selects join it
       row.labels?.[0] === "parts" && row.mine ? button("Deel erbij…", (ev) => { ev.stopPropagation(); arm(row.id); }, "fpl-end fpl-arm") : null].filter(Boolean);
     const u = st === "vers" ? place(row.id)?.closest(".fpl-p") : null, sep = base.length ? " · " : "";
