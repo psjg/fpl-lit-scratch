@@ -136,13 +136,17 @@
  * with no query) opens, hover never does, and nothing in the bar changes size
  * or place on hover or on a change of stand.
  *
- * The filter panel (board V4a). First the layers, six buttons: Argument,
- * Coref, Topic-focus and Progressie (keys 1-4 outside Lezen), Spans and
- * Draden. A click turns a layer on or off; Shift-click (Shift+1-4) shows
- * it alone, the others and the threads off and the text dimmed (board
- * V4b: what the old lenses were), and again shows all. Spans off leaves
- * their marks in the text as anchors, unpainted, and takes their cards
- * from the margin. Then the labels: a field over their scopes, the list
+ * The filter panel (board V4a). First the layers, four buttons:
+ * Argument, Coref, Topic-focus and Progressie (keys 1-4 outside Lezen),
+ * each saying its key and Shift-klik under the mouse, and a (?) by the
+ * heading that says what each draws; under them, after Ook, Markeringen
+ * and Draden, which are no layer to read by but the spans and the
+ * threads (one list holds one kind). A click turns a layer on or off;
+ * Shift-click (Shift+1-4) shows it alone, the others, the threads and
+ * (but for Argument, drawn on them) the markings off and the text
+ * dimmed (board V4b: what the old lenses were), and again shows all.
+ * Markeringen off leaves the marks in the text as anchors, unpainted,
+ * and takes their cards from the margin. Then the labels: a field over their scopes, the list
  * one level at a time with how many spans carry each; up and down
  * choose, right goes a level deeper, left back up, Enter or a click
  * strikes a label and all under it, Shift shows it alone. A label of
@@ -531,7 +535,7 @@
    * in the tfa layer, here it has a button of its own (sheetOf).
    */
   const SHEETS = [["argument", "Argument"], ["coref", "Coref"], ["tfa", "Topic-focus"], ["resumes", "Progressie"],
-    ["span", "Spans"], ["thread", "Draden"]];
+    ["span", "Markeringen"], ["thread", "Draden"]];   // not Spans: that is a stand
   const FOUR = SHEETS.slice(0, 4).map(([k]) => k);
   /** The layers switched off, site-wide; a key of an older panel (fact, relation) has no button and counts for nothing. */
   const offLayers = (set) => {
@@ -1004,7 +1008,7 @@
     btn.ariaExpanded = "true";
     btn.classList.add("is-open");
     hang(pop, pop === panel && bar.classList.contains("is-full") ? search : btn);
-    if (focus) pop.querySelector("button:not(:disabled), [tabindex='0']")?.focus({ preventScroll: true });
+    if (focus) pop.querySelector("button:not(:disabled):not(.fpl-why), [tabindex='0']")?.focus({ preventScroll: true });   // not a (?)
   }
   /** A popover hangs under what opened it, right edges flush, inside the window. */
   function hang(pop, at) {
@@ -1046,13 +1050,19 @@
    * one / per screen, the search's.
    */
   const sheets = el("div", { className: "fpl-sheets", role: "group", ariaLabel: "Lagen" });
+  // the spans and the threads are no layer to read by: a row of their own, under Ook (board V4a; QA: one list, one kind)
+  const also = el("div", { className: "fpl-sheets fpl-also", role: "group", ariaLabel: "Ook" });
+  const LAYERWHY = "Argument: steunt en valt aan, als boom op de kaart. Coref: een ketennummer bij elk lid. "
+    + "Topic-focus: een waas per bijzin, t, c of f. Progressie: bogen in de linker goot naar wat een bijzin opneemt. "
+    + "Shift-klik of Shift+1-4: alleen die laag.";
   const labelHead = el("p", { className: "fpl-panel-head" });
   const labelField = el("input", { className: "fpl-labelq", placeholder: "Typ een label, → een laag dieper", ariaLabel: "Label zoeken",
     autocomplete: "off", spellcheck: false, role: "combobox", ariaExpanded: "true", ariaAutoComplete: "list" });
   const labelList = el("ul", { className: "fpl-scopes", role: "listbox", id: "fpl-scopes", ariaLabel: "Labels",
     title: "Klik verbergt een label en alles eronder; Shift-klik toont alleen dat label" });
   labelField.setAttribute("aria-controls", labelList.id);
-  chips.append(el("p", { className: "fpl-panel-head" }, "Lagen"), sheets, labelHead, labelField, labelList);
+  chips.append(el("p", { className: "fpl-panel-head" }, "Lagen", el("button", { type: "button", className: "fpl-why", title: LAYERWHY,
+    ariaLabel: `Wat zijn de lagen? ${LAYERWHY}`, onclick: () => toast(LAYERWHY) }, ico("why"))), sheets, also, labelHead, labelField, labelList);
   let lit = 0;   // the chosen row of the label list
 
   /** A layer on or off; shift: alone, the other three and the threads off (an argument keeps its spans), or, alone already, all back. */
@@ -1141,18 +1151,20 @@
 
   /** The layer buttons, pressed as they stand; drawn with the bar, so they never lag behind a key. */
   function fillSheets() {
-    const off = offLayers(), was = sheets.contains(document.activeElement) ? document.activeElement.dataset.sheet : null;
+    const off = offLayers(), was = chips.contains(document.activeElement) ? document.activeElement.dataset.sheet : null;
     const swatch = { argument: ["line", "supports"], coref: ["sq", "coref"], tfa: ["sq", "tfa"], resumes: ["line", "resumes"] };
-    sheets.replaceChildren(...SHEETS.map(([k, name]) => {
-      const [form, c] = swatch[k] ?? [];
+    const make = ([k, name]) => {
+      const [form, c] = swatch[k] ?? [], i = FOUR.indexOf(k);
       const b = el("button", { type: "button", className: "fpl-sheet", ariaPressed: String(!off.has(k)),
-        onclick: (e) => toggleLayer(k, e.shiftKey) },
+        title: i < 0 ? `${name} aan of uit` : `${name} · ${i + 1} · Shift-klik: alleen deze`, onclick: (e) => toggleLayer(k, e.shiftKey) },
       form ? el("span", { className: form === "sq" ? "fpl-sq" : "fpl-line", style: `--lc: ${colourOf(c)}` }) : null,
-      name, FOUR.includes(k) ? el("kbd", {}, String(FOUR.indexOf(k) + 1)) : null);
+      name, i < 0 ? null : el("kbd", {}, String(i + 1)));
       b.dataset.sheet = k;
       return b;
-    }));
-    if (was) sheets.querySelector(`[data-sheet="${was}"]`)?.focus();
+    };
+    sheets.replaceChildren(...SHEETS.slice(0, 4).map(make));
+    also.replaceChildren(el("span", { className: "fpl-also-head" }, "Ook"), ...SHEETS.slice(4).map(make));
+    if (was) chips.querySelector(`[data-sheet="${was}"]`)?.focus();
   }
   /** Fill the panel: the layer buttons and the label list for the field. */
   function fillChips() {

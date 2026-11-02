@@ -558,6 +558,10 @@ mark.fact.fpl-faded { background: none; box-shadow: none; }
 
 /* the filter panel (board V4a): six layer buttons, then the labels as a field over their scopes */
 .fpl-sheets { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 4px; }
+.fpl-also { align-items: center; margin-top: 2px; }
+.fpl-also-head { font-size: 12px; color: var(--fpl-mute); margin-right: 2px; }
+.fpl-also .fpl-sheet { height: 26px; padding: 0 10px; border-radius: 13px; font-size: 12.5px; }
+.fpl-panel-head .fpl-why { align-self: center; }
 .fpl-sheet { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 9px; box-sizing: border-box; border: 1px solid var(--fpl-rule);
   border-radius: 6px; background: var(--fpl-bg); font: 600 13px/1 var(--bs-font-sans-serif, sans-serif); color: var(--fpl-mute); cursor: pointer; }
 .fpl-sheet:hover { background: var(--fpl-wash); color: var(--fpl-fg); }
