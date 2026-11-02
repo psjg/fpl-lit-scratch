@@ -130,6 +130,9 @@ body.fpl-numbered .fpl-s:hover .fpl-c::before { opacity: 1; }
 .fpl-card.fpl-editing, .fpl-card.mine.fpl-editing.is-hot { cursor: auto; z-index: 4; background: var(--fpl-bg); border-color: color-mix(in srgb, var(--fpl-mine) 28%, var(--fpl-bg));
   box-shadow: 0 6px 20px rgba(20, 30, 50, .14), 0 1px 3px rgba(20, 30, 50, .08); }
 .fpl-inline { margin: -.5rem 0 1rem; padding: .45rem .7rem; background: var(--fpl-wash); }
+/* narrow, a lost row is a pale strip under the title block (board K) */
+.fpl-margin.is-narrow > .fpl-card { margin: 0 0 1rem; padding: .45rem .7rem;
+  background: var(--fpl-wash); border-radius: 6px; }
 .fpl-head { display: flex; gap: 7px; min-width: 0; }
 .fpl-q { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-style: italic; color: var(--fpl-mute); }
 .fpl-editor .fpl-dot { background: var(--fpl-mine); }

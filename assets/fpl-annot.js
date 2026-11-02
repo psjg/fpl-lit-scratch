@@ -2718,6 +2718,7 @@
     lines.replaceChildren();
     unbar();
     margin.style.minHeight = "";
+    margin.classList.toggle("is-narrow", !wide());
     const full = mode() === "kantlijn";
     if (wide()) {
       column.classList.add("fpl-column");
@@ -2730,7 +2731,10 @@
       column?.classList.remove("fpl-column");
       if (lines.parentElement !== document.body) document.body.append(lines);
       margin.style.width = margin.style.marginLeft = "";
-      if (margin.parentElement !== body) body.prepend(margin);
+      // under the title block (board K), not above the page's title
+      const top = body.querySelector(":scope > #title-block-header");
+      if (top ? margin.previousElementSibling !== top : margin.parentElement !== body)
+        top ? top.after(margin) : body.prepend(margin);
     }
     if (mode() === "lezen") return;
     const y0 = wide() ? Math.max(0, bar.getBoundingClientRect().bottom + GAP - top0()) : 0;   // the first card clears the bar
