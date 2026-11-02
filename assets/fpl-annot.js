@@ -258,8 +258,10 @@
  * a row names, in the layers shown, as a plane beside the page. Graph in
  * the Weergave menu opens it, Kantlijn there closes it; the text column slides to the
  * window's left edge, the left nav and the margin's cards give way, and
- * the bar heads the plane. A row is a card with the first words of its
- * quote, laid out by a force model (Fruchterman and Reingold 1991) and
+ * the bar heads the plane. A row is a card (board V2b): its kind on a
+ * line (a label, besluit and its topic, weigering, test, chunk) over two
+ * lines of its quote, a decision's words, or an id's words, never the id
+ * (refusal:dedent%20below… reads "dedent below …"), laid out by a force model (Fruchterman and Reingold 1991) and
  * set on a lattice so no two overlap; a relation row is a diamond on the
  * edge between its ends, so an undercut has something to aim at (AIF); a
  * fact hangs from what it is about; a tfa or resumes row has no node.
@@ -2472,17 +2474,38 @@
   let plane = null;
   const jumps = [];   // the scroll before each jump from the graph, for Alt ←
   const offKinds = new Set(["code"]);   // the edge kinds switched off, for this visit only
-  const CW = 168, CH = 40, GY = 18, PAD = 24, FOOT = 52;   // a card, the gap between rows, the plane's padding, its foot
+  const CW = 168, CH = 58, GY = 18, PAD = 24, FOOT = 52;   // a card (its kind and two lines of quote), the gap between rows, the plane's padding, its foot
   const ARROWS = new Set(["supports", "attacks", "cites", "because", "contradicts", "checkedBy", "supersedes"]);
   const GREY = new Set(["relates", "cites", "checkedBy", "supersedes", "over", "parts", "code"]);
   const edgeColour = (k) => (GREY.has(k) ? css.getPropertyValue("--fpl-mute").trim() || "#6c757d" : colourOf(k));
   const kindName = (k) => (k === "code" ? "code" : VERB[k] ?? k);
-  /** What a node says: a row's quote, a fact's note, a decision's topic, an address's text, a chunk's name. */
+  /**
+   * The words of an id outside the page: a refusal's message, a test's
+   * name without test_ and its line, any other scheme's path decoded
+   * (QA, block 4: a node read "refusal:dedent%20belo…"); null for an id
+   * without a scheme.
+   */
+  const extText = (id) => {
+    const m = /^(\w+):(.+)$/.exec(id);
+    if (!m) return null;
+    let t = m[2];
+    try { t = decodeURIComponent(t); } catch { /* a stray % stays as written */ }
+    return m[1] === "test" ? t.replace(/:\d+$/, "").replace(/^test_/, "").replace(/_/g, " ") : t;
+  };
+  const EXT = { refusal: "weigering", test: "test", chunk: "chunk", file: "bestand" };
+  /** What a node says: a row's quote, a fact's note, a decision's words, an address's text, a chunk's name, an id's words. */
   function nodeText(n) {
     const r = all.find((x) => x.id === n.id), d = decision(n.id);
     if (r) return typeof r.text === "string" ? r.text : r.note || (r.labels ?? []).join(" ") || r.id;
-    if (d) return d.topic || `besluit ${d.id}`;
-    return n.label ?? (document.getElementById(n.id)?.textContent.trim() || n.id);
+    if (d) return d.decision || d.topic || "besluit";
+    return n.label ?? (document.getElementById(n.id)?.textContent.trim() || extText(n.id) || n.id);
+  }
+  /** What a node is, the line over its quote (board V2b): a row's kind, a decision's topic, a place, a chunk, a test. */
+  function nodeKind(n) {
+    const r = all.find((x) => x.id === n.id), d = decision(n.id);
+    if (r) return r.labels?.[0] ? kindName(r.labels[0]) : typeof r.text === "string" ? "span" : "notitie";
+    if (d) return d.topic ? `besluit · ${d.topic}` : "besluit";
+    return document.getElementById(n.id) ? "plek" : EXT[n.id.split(":")[0]] ?? "elders";
   }
   /**
    * Open the plane, with an id selected (a card's Graph) or none (the
@@ -2614,7 +2637,8 @@
         n.el = n.rel
           ? el("button", { type: "button", className: "fpl-node fpl-dia", ariaLabel: `${kindName(r.labels[0])}: ${clip(nodeText({ id: r.targets[0] }), 30)}` })
           : el("button", { type: "button", className: `fpl-node${r ? (typeof r.text === "string" ? "" : " is-note") : " is-ext"}`, title: text },
-            r && typeof r.text === "string" ? el("span", { className: "fpl-sq", style: `--lc: ${tone(r)}` }) : null, el("span", {}, clip(text, 80)));
+            el("span", { className: "fpl-nkind" }, r && typeof r.text === "string" ? el("span", { className: "fpl-sq", style: `--lc: ${tone(r)}` }) : null,
+              nodeKind(n)), el("span", { className: "fpl-nq" }, clip(text, 120)));
         n.el.dataset.id = n.id;
         if (n.rel) n.el.style.setProperty("--lc", edgeColour(n.kind));
         area.append(n.el);
