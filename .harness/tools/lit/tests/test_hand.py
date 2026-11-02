@@ -477,12 +477,41 @@ def test_sets_tfa_and_addresses_are_gated() -> None:
         (17, "lit-facts-argument"),
         (18, "lit-facts-field"),
         (18, "lit-facts-tfa"),
+        (19, "lit-facts-set"),
         (20, "lit-facts-tfa"),
         (21, "lit-facts-target"),
         (23, "lit-facts-field"),
         (24, "lit-facts-field"),
         (25, "lit-facts-field"),
     }
+
+
+NESTED: list[facts.Row] = [
+    {"id": "a", "item": "p.md", "start": 0, "end": 1, "text": "#"},
+    {"id": "b", "item": "p.md", "start": 2, "end": 6, "text": "Demo"},
+    {"id": "c", "item": "p.md", "start": 2, "end": 4, "text": "De"},
+    {"id": "d", "item": "p.md", "start": 4, "end": 6, "text": "mo"},
+    {"id": "g1", "labels": ["parts"], "targets": ["a", "b"]},
+    {"id": "g2", "labels": ["parts"], "targets": ["g1", "c"]},
+    {"id": "g3", "labels": ["parts"], "targets": ["g1", "chunk:m.py:1"]},
+    {"id": "g4", "labels": ["parts"], "targets": ["g5", "d"]},
+    {"id": "g5", "labels": ["parts"], "targets": ["g4", "chunk:m.py:2"]},
+    {"id": "n", "labels": ["note"], "targets": ["g1"]},
+]
+
+
+def test_a_piece_may_be_a_bundle_of_one_whole() -> None:
+    """A bundle may be a piece: one whole per piece, and no ring."""
+    known = {"chunk:m.py:1", "chunk:m.py:2"}
+    got = facts.validate(NESTED, "p.facts.json", {"p.md": "# Demo"}, known)
+    assert [(f.line, f.rule, f.message) for f in got] == [
+        (7, "lit-facts-set", "'g1' is a piece of g2 already"),
+        (8, "lit-facts-set", "parts g4 holds itself through 'g5'"),
+        (9, "lit-facts-set", "parts g5 holds itself through 'g4'"),
+    ]
+    by = {cast_id(r): r for r in NESTED}
+    assert facts.layer(NESTED[5], by) == "span"
+    assert facts.layer(NESTED[-1], by) == "fact"
 
 
 def test_layer_is_read_from_the_labels() -> None:

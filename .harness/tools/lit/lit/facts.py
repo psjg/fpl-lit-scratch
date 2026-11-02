@@ -569,9 +569,9 @@ RELATIONS = ARGUING | {
 # relation, undirected and transitive: its targets name one referent.
 # ``parts`` holds what Mueller keeps as a span of several token ranges:
 # its targets, spans, are the pieces of one discontinuous span, and a
-# row about that span names the ``parts`` row. Both are read and gated
-# here; drawing a ``parts`` row as one span is the overlay's, still to
-# come (README, "Not yet built").
+# row about that span names the ``parts`` row; a piece may itself be a
+# ``parts`` row, a tree with one whole per piece. Both are read and
+# gated here, and the overlay draws a ``parts`` row as one span.
 SETS = frozenset({"coref", "parts"})
 # Topic-focus articulation as the Prague t-layer marks it (Mikulova et
 # al. 2006, ch. 10): one value per unit, ``t`` contextually bound, ``c``
@@ -1064,7 +1064,9 @@ def set_faults(row: Row, spans: Collection[str]) -> Iterator[str]:
     """What keeps a ``coref`` or ``parts`` row from being a set.
 
     Two members at least, none twice, not itself; a ``parts`` row's
-    members are span rows, the pieces of one discontinuous span.
+    members are span rows, the pieces of one discontinuous span, or
+    ``parts`` rows, a piece that is itself in pieces (``spans`` holds
+    both kinds of id).
     """
     kind, targets = first(row), row.get("targets", [])
     if kind not in SETS or not strings(targets):
@@ -1075,7 +1077,49 @@ def set_faults(row: Row, spans: Collection[str]) -> Iterator[str]:
     elif row.get("id") in ts:
         yield f"{kind} row {row.get('id')!r} names itself"
     elif kind == "parts" and (odd := [t for t in ts if t not in spans]):
-        yield f"parts are span rows, {odd[0]!r} is none"
+        yield f"parts are span or parts rows, {odd[0]!r} is neither"
+
+
+def bundles(rows: list[Row]) -> dict[str, tuple[int, list[str]]]:
+    """Each ``parts`` row's id: its line and its pieces."""
+    out: dict[str, tuple[int, list[str]]] = {}
+    for n, row in enumerate(rows, 1):
+        targets, me = row.get("targets"), row.get("id")
+        if first(row) == "parts" and strings(targets) and isinstance(me, str):
+            out[me] = (n, cast("list[str]", targets))
+    return out
+
+
+def nested(rows: list[Row], where: str) -> list[web.Finding]:
+    """A ``lit-facts-set`` finding per piece of two wholes, or ring.
+
+    Pieces nest as a tree: a row is a piece of one ``parts`` row at
+    most, and no ``parts`` row holds itself through the bundles in it,
+    or the overlay could not say which card a piece lights, nor stop
+    when it gathers a bundle's spans.
+    """
+    holds = bundles(rows)
+    owner: dict[str, str] = {}
+    out: list[web.Finding] = []
+
+    def inside(me: str, at: str, seen: set[str]) -> bool:
+        """Whether ``me`` lies in the bundle ``at``, at any depth."""
+        seen.add(at)
+        ts = holds.get(at, (0, []))[1]
+        return me in ts or any(
+            inside(me, t, seen) for t in ts if t not in seen
+        )
+
+    for me, (n, ts) in holds.items():
+        for t in ts:
+            if t in owner:
+                m = f"{t!r} is a piece of {owner[t]} already"
+                out.append(web.Finding(where, n, "lit-facts-set", m))
+            owner.setdefault(t, me)
+        if back := [t for t in ts if t in holds and inside(me, t, set())]:
+            m = f"parts {me} holds itself through {back[0]!r}"
+            out.append(web.Finding(where, n, "lit-facts-set", m))
+    return sorted(out, key=lambda f: f.line)
 
 
 def tfa_faults(row: Row) -> Iterator[str]:
@@ -1492,7 +1536,10 @@ def validate(
     ids: Counter[object] = Counter(r.get("id") for r in rows)
     names = {i for i in ids if isinstance(i, str)} | set(known)
     spans = {
-        i for r in rows if "item" in r and isinstance(i := r.get("id"), str)
+        i
+        for r in rows
+        if ("item" in r or first(r) == "parts")
+        and isinstance(i := r.get("id"), str)
     } | set(known)
     out: list[web.Finding] = []
     for n, row in enumerate(rows, 1):
@@ -1507,6 +1554,7 @@ def validate(
         ):
             out += [web.Finding(where, n, rule, m) for m in faults]
     out += twice_marked(rows, where)
+    out += nested(rows, where)
     return out
 
 
