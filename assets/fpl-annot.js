@@ -125,14 +125,28 @@
  *
  * The bar. One bar, fixed above the margin column, holds the three
  * stands as tabs (Lezen, Spans, Kantlijn, also the key "a"), the search
- * field (the key "z"), Graph and a menu ⋯: Naam, Importeer rijen,
+ * field (the key "/" in Kantlijn; elsewhere / stays Quarto's site search,
+ * as f and s always do), Graph and a menu ⋯: Naam, Importeer rijen,
  * Exporteer rijen, Exporteer logboek, Vouw tot de spans, Context 0-3,
  * Sneltoetsen (also "?") and Wis mijn rijen. A quiet line under it
  * counts the spans, the relations, the lost rows and this browser's,
  * and says "filter aan" while a filter holds. The label and layer
- * filters are a panel that a click into the empty search field (or z
+ * filters are a panel that a click into the empty search field (or /
  * with no query) opens, hover never does, and nothing in the bar changes size
- * or place on hover or on a change of stand. Where Quarto shows its top
+ * or place on hover or on a change of stand.
+ *
+ * The filter panel (board V4a). First the layers, six buttons: Argument,
+ * Coref, Topic-focus and Progressie (keys 1-4 outside Lezen), Spans and
+ * Draden. A click turns a layer on or off; Shift-click (Shift+1-4) shows
+ * it alone, the others and the threads off and the text dimmed (board
+ * V4b: what the old lenses were), and again shows all. Spans off leaves
+ * their marks in the text as anchors, unpainted, and takes their cards
+ * from the margin. Then the labels: a field over their scopes, the list
+ * one level at a time with how many spans carry each; up and down
+ * choose, right goes a level deeper, left back up, Enter or a click
+ * strikes a label and all under it, Shift shows it alone. A label of
+ * MEANING has a (?) that says what it means; any other has none. The
+ * panel holds no sentence of explanation: what a control does it shows. Where Quarto shows its top
  * bar (a narrow window) the bar folds into it, a stand picker and three
  * icons, the search and the counts in the filter panel; where neither
  * fits, the folded bar stands at the top right of the window. In
@@ -174,7 +188,7 @@
  * new context refolds. A card whose row points at another place on the
  * page has "Toon beide", which folds what lies between the two so both
  * are in view (its menu, or a click on the other end in its meta line).
- * A query asked lights the search field, whose z gives way to an x
+ * A query asked lights the search field, whose / gives way to an x
  * that clears it.
  *
  * Close reading. Outside Lezen each block carries a bar in its left
@@ -197,8 +211,9 @@
  * Layers, after the Prague Dependency Treebank's stacked annotation:
  * only a span anchors in the text, every other row names an id. A row's
  * layer is read from what it is, as lit's facts.layer reads it (span,
- * fact, thread, argument, tfa, coref, relation), and a row of chips
- * under the labels in the filter panel hides a layer. A coref row groups ids that name
+ * fact, thread, argument, tfa, coref, relation), and the filter panel's
+ * buttons hide one; a resumes row, in lit's tfa layer, has its own
+ * (Progressie). A coref row groups ids that name
  * one referent: hovering one lights the others. The tfa lens marks a
  * clause t (bound), c (bound, contrastive) or f (not bound), after the
  * t-layer manual (Mikulova et al. 2006): Alt-click a clause cycles its
@@ -288,6 +303,26 @@
     "resumes", "coref", "parts", "tfa/t", "tfa/c", "tfa/f",
     "fn/definition", "fn/example", "fn/transition", "fn/claim", "fn/evidence", "fn/aside", "fn/hedge",
     "code/stijl", "code/bug"];
+  /**
+   * What a label means, behind its (?) in the filter panel: one short
+   * line each, edited freely. A label not here has no (?): its name
+   * and its colour are all there is to say.
+   */
+  const MEANING = {
+    dit: "Zo goed: houden", niet: "Zo niet: weg of anders", slop: "Lege of opgeblazen tekst",
+    "slop/beeld": "Beeldspraak die niets draagt", "slop/beeld/dood": "Een dood beeld: cliché",
+    waarom: "Hier ontbreekt het waarom", lang: "Te lang voor wat het zegt", verhaal: "Het verhaal hapert hier",
+    anders: "Kan anders, beter", onduidelijk: "Niet te volgen", code: "Over de code",
+    "code/stijl": "De code werkt, de vorm niet", "code/bug": "De code doet iets fout",
+    claim: "Een bewering", reason: "Een reden", question: "Een vraag", history: "Hoe het zo kwam", good: "Goed zo",
+    because: "Omdat: een besluit als reden", supports: "Steunt een bewering", attacks: "Valt een bewering aan",
+    contradicts: "Spreekt tegen", cites: "Citeert", relates: "Verbindt, zonder soort", checkedBy: "Nagekeken door",
+    resumes: "Neemt een eerdere bijzin op (Daneš)", coref: "Noemt hetzelfde", parts: "Delen van één span",
+    tfa: "Topic-focus van een bijzin", "tfa/t": "Gebonden: bekend", "tfa/c": "Gebonden, contrastief", "tfa/f": "Focus: nieuw",
+    fn: "Wat een zin doet", "fn/definition": "Definieert", "fn/example": "Een voorbeeld", "fn/transition": "Een overgang",
+    "fn/claim": "Beweert", "fn/evidence": "Bewijs", "fn/aside": "Terzijde", "fn/hedge": "Zwakt af",
+    group: "Hoort bij een groep", role: "De rol in een groep", order: "De plaats in een groep",
+  };
   const LABEL =/^[^/ \t\n\r\f\v]+(?:\/[^/ \t\n\r\f\v]+)*$/;   // lit's facts.LABEL, whitespace spelt out alike
   /** A label and every scope above it: fn/claim/strong gives fn, fn/claim, fn/claim/strong. */
   const scopes = (l) => l.split("/").map((_, i, a) => a.slice(0, i + 1).join("/"));
@@ -375,6 +410,8 @@
     return hex(BANDS[roots.indexOf(label.split("/")[0]) % 2] - 0.08 * d, 0.13 - 0.02 * d, hue.get(label));
   }
   window.fplAnnotColour = colourOf;   // for the headless tests, and a console
+  // the layers drawn by CSS (tfa washes, resumes arcs, chain numbers) take the colours their buttons show
+  for (const k of ["coref", "tfa", "resumes"]) document.documentElement.style.setProperty(`--fpl-${k}`, colourOf(k));
   const LAYERS = ["span", "fact", "thread", "argument", "tfa", "coref", "relation"];
   const RELATIONS = new Set(["because", "supports", "attacks", "contradicts", "supersedes", "checkedBy", "cites", "relates", "resumes"]);
   const AROUND = 32;
@@ -420,12 +457,24 @@
     } catch { return set ?? new Set(); }
   };
 
+  /*
+   * The layers a reader turns on and off (board V4a): four to read the
+   * text by, keys 1-4, then the spans and the threads. A key is a row's
+   * layer as lit reads it, except Progressie: lit counts a resumes row
+   * in the tfa layer, here it has a button of its own (sheetOf).
+   */
+  const SHEETS = [["argument", "Argument"], ["coref", "Coref"], ["tfa", "Topic-focus"], ["resumes", "Progressie"],
+    ["span", "Spans"], ["thread", "Draden"]];
+  const FOUR = SHEETS.slice(0, 4).map(([k]) => k);
+  /** The layers switched off, site-wide; a key of an older panel (fact, relation) has no button and counts for nothing. */
   const offLayers = (set) => {
     try {
       if (set) localStorage.setItem("fpl-annot:layers", JSON.stringify([...set]));
-      return new Set(JSON.parse(localStorage.getItem("fpl-annot:layers") || "[]"));
+      return new Set(JSON.parse(localStorage.getItem("fpl-annot:layers") || "[]").filter((k) => SHEETS.some(([s]) => s === k)));
     } catch { return set ?? new Set(); }
   };
+  /** The one of the four shown alone (Shift-click, Shift+1-4): the others and the threads off; else null. */
+  const alone = () => { const o = offLayers(), on = FOUR.filter((k) => !o.has(k)); return on.length === 1 && o.has("thread") ? on[0] : null; };
 
   /** This browser's rows for the page; [] when none or unreadable. */
   const local = () => {
@@ -583,7 +632,8 @@
     const up = all.find((x) => x.id === r.targets?.[0]);
     return up && typeof up.text !== "string" && up.labels?.[0] !== "parts" ? "thread" : "fact";
   }
-  const shows = (r) => !offLayers().has(layerOf(r));
+  const sheetOf = (r) => (r.labels?.[0] === "resumes" ? "resumes" : layerOf(r));
+  const shows = (r) => !offLayers().has(sheetOf(r));
 
   /** The labels a span is filtered by: its own and those of the facts about it, in the layers shown. */
   function labelsOf(row) {
@@ -660,6 +710,8 @@
     search: '<g fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5 14 14"/></g>',
     filter: '<path fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" d="M2.5 3h11L9.5 8v4.5l-3 1.5V8z"/>',
     chevron: '<path fill="none" stroke="currentColor" stroke-width="1.6" d="m4 6 4 4 4-4"/>',
+    deeper: '<path fill="none" stroke="currentColor" stroke-width="1.6" d="m6 4 4 4-4 4"/>',
+    why: '<g fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="8" cy="8" r="6"/><path d="M6.3 6.4a1.8 1.8 0 1 1 2.5 1.6c-.5.2-.8.6-.8 1.1v.4"/></g><circle cx="8" cy="11.6" r=".8" fill="currentColor"/>',
     name: '<g fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="5.5" r="2.5"/><path d="M3 13.5a5 5 0 0 1 10 0"/></g>',
     import: '<path fill="none" stroke="currentColor" stroke-width="1.5" d="M8 2v8M5 7l3 3 3-3M3 11v2.5h10V11"/>',
     export: '<path fill="none" stroke="currentColor" stroke-width="1.5" d="M8 10V2M5 5l3-3 3 3M3 11v2.5h10V11"/>',
@@ -706,12 +758,12 @@
   for (const b of [moreBtn, filterBtn]) { b.ariaHasPopup = "true"; b.ariaExpanded = "false"; }
   const field = el("input", { className: "fpl-query", placeholder: "Zoek of filter, bv. label:claim", ariaLabel: "Zoek of filter",
     autocomplete: "off", spellcheck: false });
-  // a query asked (board H): the field is lit, its z gives way to an x
+  // a query asked (board H): the field is lit, its / gives way to an x
   const clear = el("button", { type: "button", className: "fpl-x",
     ariaLabel: "Wis het filter", title: "Wis het filter",
     onclick: () => { field.value = ""; ask(); field.focus(); } }, ico("clear"));
   const search = el("div", { className: "fpl-search" },
-    ico("search"), field, el("kbd", {}, "z"), clear);
+    ico("search"), field, el("kbd", {}, "/"), clear);
   const count = el("p", { className: "fpl-count" });
   const row = el("div", { className: "fpl-row" }, tabs, el("span", { className: "fpl-picker" }, picker, ico("chevron")), graphBtn, moreBtn);
   const bar = el("div", { className: "fpl-annot-ui fpl-topbar", role: "region", ariaLabel: "Kantlijn" }, row, search, count);
@@ -741,7 +793,7 @@
   field.onclick = filters;
   field.oninput = () => { if (field.value && bar.classList.contains("is-full") && !panel.hidden) shut(); };
   field.onkeydown = (e) => {
-    e.stopPropagation();   // j, k, a, z and Esc belong to the page, not while typing a query
+    e.stopPropagation();   // j, k, a, 1-4 and Esc belong to the page, not while typing a query
     if (e.key === "Enter") ask();
     if (e.key === "Escape") { if (field.value) { field.value = ""; ask(); } else { shut(); field.blur(); } }
   };
@@ -776,6 +828,7 @@
   /** The bar's state: which stand, the counts, the filter's mark; the open panel's chips. */
   function drawBar() {
     const cur = mode();
+    bar.dataset.stand = cur;   // the search's / shows in Kantlijn only
     for (const [i, t] of [...tabs.children].entries()) { t.ariaSelected = String(MODES[i] === cur); t.classList.toggle("is-on", MODES[i] === cur); }
     picker.value = cur;
     const spans = all.filter((r) => typeof r.text === "string" || addressed(r));
@@ -799,7 +852,7 @@
         el("b", {}, "ingevouwen tot de spans"), `, context ${context}`);
     } else count.replaceChildren(...line.childNodes);
     filterBtn.classList.toggle("is-on", hidden().size + offLayers().size > 0);
-    if (!panel.hidden) fillChips();
+    if (!panel.hidden) fillChips(); else fillSheets();
     dock();
   }
 
@@ -842,45 +895,132 @@
     if (!editing) layout();
   });
 
-  /** The filter panel: the labels to show, as a tree of chips, and the layers. */
+  /*
+   * The filter panel (board V4a): the layers as six buttons, then the
+   * labels as a field over their scopes. A layer button's click turns its
+   * layer on or off, Shift-click (or Shift with its key) shows it alone,
+   * the rest of the page dimmed, and again shows all; the keys 1-4 do the
+   * same from anywhere outside Lezen. The field narrows the list to the
+   * scopes under what it holds: up and down choose, right goes a level
+   * deeper ("slop/"), left back up, Enter or a click strikes or restores
+   * the label (and all under it), Shift shows that label alone. A label
+   * of MEANING has a (?) that says it. The field has no key of its own:
+   * one / per screen, the search's.
+   */
+  const sheets = el("div", { className: "fpl-sheets", role: "group", ariaLabel: "Lagen" });
+  const labelHead = el("p", { className: "fpl-panel-head" });
+  const labelField = el("input", { className: "fpl-labelq", placeholder: "Typ een label, → een laag dieper", ariaLabel: "Label zoeken",
+    autocomplete: "off", spellcheck: false, role: "combobox", ariaExpanded: "true", ariaAutoComplete: "list" });
+  const labelList = el("ul", { className: "fpl-scopes", role: "listbox", id: "fpl-scopes", ariaLabel: "Labels",
+    title: "Klik verbergt een label en alles eronder; Shift-klik toont alleen dat label" });
+  labelField.setAttribute("aria-controls", labelList.id);
+  chips.append(el("p", { className: "fpl-panel-head" }, "Lagen"), sheets, labelHead, labelField, labelList);
+  let lit = 0;   // the chosen row of the label list
+
+  /** A layer on or off; shift: alone, the other three and the threads off (an argument keeps its spans), or, alone already, all back. */
+  function toggleLayer(k, shift) {
+    const o = offLayers();
+    if (!shift || !FOUR.includes(k)) o.has(k) ? o.delete(k) : o.add(k);
+    else if (alone() === k) o.clear();
+    else { o.clear(); for (const [x] of SHEETS) if (x !== k && !(k === "argument" && x === "span")) o.add(x); }
+    offLayers(o);
+    draw();
+  }
+
+  /** Each scope of the labels on spans and addressed rows, with how many of those rows carry it. */
+  function scopeTally() {
+    const n = new Map();
+    for (const r of all.filter((r) => typeof r.text === "string" || addressed(r)))
+      for (const s of new Set([...labelsOf(r)].flatMap(scopes))) n.set(s, (n.get(s) ?? 0) + 1);
+    return n;
+  }
+
+  /** Strike a label, or bring it back; alone: strike every other scope beside its path, or, so already, none. */
+  function strike(l, solo) {
+    const o = hidden();
+    if (solo) {
+      const rest = [...scopeTally().keys()].filter((x) => !under(x, l) && !under(l, x)
+        && (!x.includes("/") || under(l, x.slice(0, x.lastIndexOf("/")))));
+      hidden(new Set(rest.length === o.size && rest.every((x) => o.has(x)) ? [] : rest));
+      draw();
+      return;
+    }
+    const above = [...o].find((h) => h !== l && under(l, h));
+    if (above) { toast(`Zet eerst ${above} aan`); return; }   // struck by its scope: the scope decides
+    o.has(l) ? o.delete(l) : o.add(l);
+    hidden(o);
+    draw();
+  }
+
+  /** The label list for what the field holds: the scopes one level under its last "/", the typed rest in their name. */
+  function fillLabels() {
+    const v = labelField.value.toLowerCase(), cut = v.lastIndexOf("/"), at = v.slice(0, cut + 1), typed = v.slice(cut + 1);
+    const n = scopeTally(), off = hidden(), depth = at.split("/").length;
+    const name = (l) => l.slice(l.lastIndexOf("/") + 1).toLowerCase();
+    let here = [...n.keys()].filter((l) => l.split("/").length === depth && l.toLowerCase().startsWith(at) && name(l).includes(typed));
+    if (!here.length && typed) here = [...n.keys()].filter((l) => l.toLowerCase().includes(typed));   // nothing on this level: anywhere
+    here.sort((a, b) => (a === NONE) - (b === NONE) || n.get(b) - n.get(a) || a.localeCompare(b));
+    lit = Math.max(0, Math.min(lit, here.length - 1));
+    labelList.replaceChildren(...here.map((l, i) => {
+      const deeper = [...n.keys()].some((x) => x.startsWith(l + "/")), struck = [...off].some((h) => under(l, h));
+      const cut = l.lastIndexOf("/") + 1, why = MEANING[l];
+      const li = el("li", { id: `fpl-scope-${i}`, role: "option", className: struck ? "is-off" : "", ariaSelected: String(i === lit) },
+        l === NONE ? null : el("span", { className: "fpl-sq", style: `--lc: ${colourOf(l)}` }),
+        el("span", { className: "fpl-scope" }, cut && !at ? el("small", {}, l.slice(0, cut)) : null, l.slice(cut)),
+        el("span", { className: "fpl-ct" }, String(n.get(l))),
+        why ? el("button", { type: "button", className: "fpl-why", title: why, ariaLabel: `Wat is ${l}? ${why}`,
+          onclick: (e) => { e.stopPropagation(); toast(`${l}: ${why}`); } }, ico("why")) : null,
+        deeper ? el("button", { type: "button", className: "fpl-deeper", ariaLabel: `Onder ${l}`,
+          onclick: (e) => { e.stopPropagation(); descend(l); } }, ico("deeper")) : null);
+      li.dataset.label = l;
+      li.onclick = (e) => strike(l, e.shiftKey);
+      return li;
+    }));
+    if (!here.length) labelList.append(el("li", { className: "fpl-panel-none" }, n.size ? "Geen label zo" : "Nog geen labels op deze pagina"));
+    labelField.setAttribute("aria-activedescendant", here.length ? `fpl-scope-${lit}` : "");
+  }
+  const descend = (l) => { labelField.value = l + "/"; lit = 0; fillLabels(); labelField.focus(); };
+  labelField.oninput = () => { lit = 0; fillLabels(); };
+  labelField.onkeydown = (e) => {
+    e.stopPropagation();   // j, k, 1-4 and / belong to the page, not while typing a label
+    const items = [...labelList.querySelectorAll("[data-label]")], cur = items[lit]?.dataset.label, v = labelField.value;
+    const end = labelField.selectionStart === v.length;
+    if ((e.key === "ArrowDown" || e.key === "ArrowUp") && items.length) {
+      e.preventDefault();
+      lit = (lit + (e.key === "ArrowDown" ? 1 : -1) + items.length) % items.length;
+      fillLabels();
+    } else if (e.key === "ArrowRight" && end && cur && items[lit].querySelector(".fpl-deeper")) { e.preventDefault(); descend(cur); }
+    else if (e.key === "ArrowLeft" && v.endsWith("/")) {   // back up: the scope we came from chosen
+      e.preventDefault();
+      const from = v.slice(0, -1), up = from.slice(0, from.lastIndexOf("/") + 1);
+      labelField.value = up;
+      fillLabels();
+      lit = Math.max(0, [...labelList.querySelectorAll("[data-label]")].findIndex((x) => x.dataset.label.toLowerCase() === from));
+      fillLabels();
+    } else if (e.key === "Enter" && cur) { e.preventDefault(); strike(cur, e.shiftKey); }
+    else if (e.key === "Escape") { e.preventDefault(); if (v) { labelField.value = ""; lit = 0; fillLabels(); } else { shut(); field.focus(); } }
+  };
+
+  /** The layer buttons, pressed as they stand; drawn with the bar, so they never lag behind a key. */
+  function fillSheets() {
+    const off = offLayers(), was = sheets.contains(document.activeElement) ? document.activeElement.dataset.sheet : null;
+    const swatch = { argument: ["line", "supports"], coref: ["sq", "coref"], tfa: ["sq", "tfa"], resumes: ["line", "resumes"] };
+    sheets.replaceChildren(...SHEETS.map(([k, name]) => {
+      const [form, c] = swatch[k] ?? [];
+      const b = el("button", { type: "button", className: "fpl-sheet", ariaPressed: String(!off.has(k)),
+        onclick: (e) => toggleLayer(k, e.shiftKey) },
+      form ? el("span", { className: form === "sq" ? "fpl-sq" : "fpl-line", style: `--lc: ${colourOf(c)}` }) : null,
+      name, FOUR.includes(k) ? el("kbd", {}, String(FOUR.indexOf(k) + 1)) : null);
+      b.dataset.sheet = k;
+      return b;
+    }));
+    if (was) sheets.querySelector(`[data-sheet="${was}"]`)?.focus();
+  }
+  /** Fill the panel: the layer buttons and the label list for the field. */
   function fillChips() {
-    const was = panel.contains(document.activeElement) ? document.activeElement.dataset.chip : null;
-    const off = hidden();
-    const bySegment = (a, b) => {   // children right after their scope: slop, slop/beeld, slop-ish
-      const x = a.split("/"), y = b.split("/");
-      for (let i = 0; i < Math.min(x.length, y.length); i++) if (x[i] !== y[i]) return x[i].localeCompare(y[i]);
-      return x.length - y.length;
-    };
-    const labels = [...new Set(all.filter((r) => typeof r.text === "string" || addressed(r))   // spans and rows on addresses
-      .flatMap((r) => [...labelsOf(r)].flatMap(scopes)))]
-      .sort((a, b) => a === NONE ? 1 : b === NONE ? -1 : bySegment(a, b));
-    const toggle = (c, act) => {
-      c.tabIndex = 0;
-      c.onclick = act;
-      c.onkeydown = (e) => { if (e.key === " " || e.key === "Enter") { e.preventDefault(); act(); } };
-      return c;
-    };
-    const offL = offLayers(), present = new Set(all.map(layerOf));
-    chips.replaceChildren(
-      el("p", { className: "fpl-panel-head" }, "Labels", off.size ? button("alles aan", () => { hidden(new Set()); draw(); }, "fpl-link") : null),
-      labels.length ? el("div", { className: "fpl-chips fpl-filter" }, ...labels.map((l) => {
-        const struck = [...off].some((h) => under(l, h)), c = chip(l, struck ? "is-off" : "is-on");
-        if (l !== NONE) c.prepend(el("span", { className: "fpl-sq", style: `--lc: ${colourOf(l)}` }));
-        c.dataset.chip = "l:" + l;
-        c.style.marginLeft = `${(l.split("/").length - 1) * 0.6}rem`;
-        return toggle(c, () => {
-          const o = hidden(), above = [...o].find((h) => h !== l && under(l, h));
-          if (above) { toast(`Zet eerst ${above} aan`); return; }   // struck by its scope: the scope decides
-          o.has(l) ? o.delete(l) : o.add(l); hidden(o); draw();
-        });
-      })) : el("p", { className: "fpl-panel-none" }, "Nog geen labels op deze pagina"),
-      el("p", { className: "fpl-panel-head" }, "Lagen"),
-      el("div", { className: "fpl-chips fpl-filter fpl-layers" }, ...LAYERS.filter((l) => present.has(l) && l !== "span").map((l) => {
-        const c = chip(l, offL.has(l) ? "is-off" : "is-on");
-        c.dataset.chip = "y:" + l;
-        return toggle(c, () => { const o = offLayers(); o.has(l) ? o.delete(l) : o.add(l); offLayers(o); draw(); });
-      })));
-    if (was) chips.querySelector(`[data-chip="${CSS.escape(was)}"]`)?.focus();
+    fillSheets();
+    labelHead.replaceChildren("Labels", ...hidden().size ? [button("alles aan", () => { hidden(new Set()); draw(); }, "fpl-link")] : []);
+    fillLabels();
   }
 
   /** The menu under ⋯; ask is "export" after an export (the lit command shows), "wipe" while wiping asks. */
@@ -923,7 +1063,8 @@
   function keysheet() {
     if (menu.hidden) flip(menu, moreBtn, () => {});
     menu.classList.add("fpl-keysheet");
-    const keys = [["a", "Volgende stand"], ["z", "Zoek of filter"], ["j  k", "Volgende, vorige zin"],
+    const keys = [["a", "Volgende stand"], ["/", "Zoek of filter, in Kantlijn"], ["1  2  3  4", "Argument, Coref, Topic-focus, Progressie aan of uit"],
+      ["Shift + 1-4", "Alleen die laag; nog eens: alles"], ["j  k", "Volgende, vorige zin"],
       ["Enter", "Een feit op de zin onder de cursor"], ["⌘↩", "Bewaar in de editor"],
       ["Shift + scroll",
         "Vouwt rond de muis in, terug opent; met een filter tot de spans"],
@@ -937,7 +1078,7 @@
     menu.focus({ preventScroll: true });
   }
 
-  /** z: the search field, in the panel when the bar is folded; with no query yet, the filter panel opens under it. */
+  /** /: the search field, in the panel when the bar is folded; with no query yet, the filter panel opens under it. */
   function seek() {
     if (!bar.classList.contains("is-full") && panel.hidden) flip(panel, filterBtn, fillChips);
     field.focus();
@@ -2367,6 +2508,9 @@
     closeEditor();
     drawBar();
     document.body.classList.toggle("fpl-numbered", mode() !== "lezen");
+    // spans off: their marks stay as anchors (a chain's number, a tfa clause), unpainted; a layer alone dims the rest (board V4b)
+    document.body.classList.toggle("fpl-nospans", mode() !== "lezen" && offLayers().has("span"));
+    document.body.classList.toggle("fpl-solo", mode() !== "lezen" && !!alone());
     for (const c of body.querySelectorAll(".fpl-inline")) c.remove();
     scrunch();
     if (reading?.closest(".fpl-scrunched")) read(null);   // folded away: nothing to read or write on
@@ -2396,7 +2540,7 @@
     const spans = all.filter((r) => (typeof r.text === "string" || addressed(r) || orphan(r) || r.labels?.[0] === "parts") && shows(r) && passes(r) && (full || open.has(r.id)))
       .filter((r) => typeof r.text === "string" || r.labels?.[0] === "parts" ? !partsOf(r.id) : orphan(r) || (!heads.has(r.targets[0]) && heads.add(r.targets[0])));
     if (!spans.length) {
-      if (!full) return;
+      if (!full || offLayers().has("span")) return;   // the how-to is for an empty margin, not for spans switched off
       const h = margin.appendChild(hint());
       if (wide()) h.style.top = `${y0 + 10}px`;   // board A: 22px under the bar's rule, where a card would stand 12px under it
       return;
@@ -2570,8 +2714,8 @@
     chainMarks();
     for (const e of body.querySelectorAll("[data-tfa]")) { delete e.dataset.tfa; delete e.dataset.tfaRow; }
     document.querySelector(".fpl-arcs")?.remove();
-    if (mode() === "lezen" || offLayers().has("tfa")) return;
-    for (const r of all) {
+    if (mode() === "lezen") return;
+    for (const r of all.filter(shows)) {
       const v = TFA.includes(r.labels?.[0]) && r.labels[0], e = v && document.getElementById(r.targets?.[0]);
       if (e && body.contains(e)) { e.dataset.tfa = v.slice(4); e.dataset.tfaRow = r.id; }
     }
@@ -3245,8 +3389,12 @@
     const typing = ev.defaultPrevented || ev.target.closest?.("input, textarea, select, [contenteditable], .fpl-editor");
     if (ev.key === "Escape" && reading && !typing) { read(null); return; }
     if (ev.key === "?" && !typing && !ev.metaKey && !ev.ctrlKey && !ev.altKey) { ev.preventDefault(); menu.hidden || !menu.classList.contains("fpl-keysheet") ? keysheet() : shut(); return; }
+    const plainish = !typing && !ev.metaKey && !ev.ctrlKey && !ev.altKey;
+    // / is the margin's search in Kantlijn; elsewhere it stays Quarto's, with f and s (feedback 22)
+    if (ev.key === "/" && plainish && mode() === "kantlijn") { ev.preventDefault(); seek(); return; }
+    const digit = /^Digit([1-4])$/.exec(ev.code);   // by code: Shift+1 is "!" on the key
+    if (digit && plainish && mode() !== "lezen" && cardMenu.hidden) { ev.preventDefault(); toggleLayer(FOUR[digit[1] - 1], ev.shiftKey); return; }
     if (typing || ev.metaKey || ev.ctrlKey || ev.altKey || ev.shiftKey) return;
-    if (ev.key === "z") { ev.preventDefault(); seek(); return; }
     if (ev.key === "l") {   // Verbind met…: the knob or card holding the focus, else the card under the mouse
       ev.preventDefault();
       if (mode() !== "kantlijn") { toast("Verbinden doe je in de stand Kantlijn (a)"); return; }

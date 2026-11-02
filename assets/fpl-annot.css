@@ -460,12 +460,13 @@ body.fpl-picking mark.fact, body.fpl-picking .fpl-card, body.fpl-picking [data-f
 /* layers, coref, and the tfa lens */
 .fpl-layers small { color: var(--fpl-mute); margin-right: .2rem; }
 mark.fact.fpl-coref, .fpl-coref { outline: 1px dashed var(--fpl-vers); outline-offset: 1px; }
-.fpl-c[data-tfa="t"], .fpl-s[data-tfa="t"] { background: var(--fpl-wash); }
-.fpl-c[data-tfa="c"], .fpl-s[data-tfa="c"] { background: rgba(154, 123, 47, .14); }
-.fpl-c[data-tfa="f"], .fpl-s[data-tfa="f"] { box-shadow: inset 0 -2px 0 var(--fpl-fg); }
+/* tfa (board V4a): one wash of the layer's colour per clause, deeper from bound to focus; --fpl-tfa etc. are set by fpl-annot.js */
+.fpl-c[data-tfa="t"], .fpl-s[data-tfa="t"] { background: color-mix(in srgb, var(--fpl-tfa, #c66897) 8%, transparent); }
+.fpl-c[data-tfa="c"], .fpl-s[data-tfa="c"] { background: color-mix(in srgb, var(--fpl-tfa, #c66897) 16%, transparent); }
+.fpl-c[data-tfa="f"], .fpl-s[data-tfa="f"] { background: color-mix(in srgb, var(--fpl-tfa, #c66897) 28%, transparent); }
 body.fpl-numbered .fpl-c[data-tfa]::before { content: attr(data-n) attr(data-tfa); opacity: 1; font-weight: 700; }
 .fpl-arcs { position: absolute; top: 0; left: 0; pointer-events: none; z-index: 1; overflow: visible; }
-.fpl-arcs path { fill: none; stroke: var(--fpl-mute); stroke-width: 1; opacity: .7; pointer-events: stroke; }
+.fpl-arcs path { fill: none; stroke: var(--fpl-resumes, var(--fpl-mute)); stroke-width: 1.25; opacity: .85; pointer-events: stroke; }
 .fpl-arcs path:hover { stroke-width: 2; opacity: 1; cursor: pointer; }
 body.fpl-picking .fpl-c[id], body.fpl-picking .fpl-s[id] { cursor: crosshair; }
 
@@ -486,9 +487,45 @@ body.fpl-picking .fpl-c[id], body.fpl-picking .fpl-s[id] { cursor: crosshair; }
 .fpl-graph .fpl-mute { color: var(--fpl-mute); }
 
 /* the coref lens: each member carries its chain's number */
-.fpl-chain { font: 700 .58em var(--bs-font-sans-serif, sans-serif); color: var(--fpl-mine); margin-left: .1em; user-select: none; }
+.fpl-chain { font: 700 .58em var(--bs-font-sans-serif, sans-serif); color: var(--fpl-coref, var(--fpl-mine)); margin-left: .1em; user-select: none; }
 
 .fpl-card.fpl-faded { opacity: .25; }
 mark.fact.fpl-faded { background: none; box-shadow: none; }
 .fpl-c[data-tfa].fpl-faded, .fpl-s[data-tfa].fpl-faded { background: none; box-shadow: none; }
 
+
+/* the filter panel (board V4a): six layer buttons, then the labels as a field over their scopes */
+.fpl-sheets { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 4px; }
+.fpl-sheet { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 9px; box-sizing: border-box; border: 1px solid var(--fpl-rule);
+  border-radius: 6px; background: var(--fpl-bg); font: 600 13px/1 var(--bs-font-sans-serif, sans-serif); color: var(--fpl-mute); cursor: pointer; }
+.fpl-sheet:hover { background: var(--fpl-wash); color: var(--fpl-fg); }
+.fpl-sheet[aria-pressed="true"] { background: var(--fpl-mine-wash); border-color: color-mix(in srgb, var(--fpl-mine) 40%, transparent); color: var(--fpl-mine); }
+.fpl-sheet[aria-pressed="false"] .fpl-sq, .fpl-sheet[aria-pressed="false"] .fpl-line { opacity: .35; }
+.fpl-sheet .fpl-sq { margin: 0; }
+.fpl-menu .fpl-sheet kbd { font-size: 10px; padding: 2px 4px; }
+.fpl-line { display: inline-block; width: 16px; border-top: 2px solid var(--lc); }
+.fpl-labelq { display: block; width: 100%; height: 32px; box-sizing: border-box; margin: 6px 0 4px; padding: 0 8px; border: 1px solid var(--fpl-rule); border-radius: 5px;
+  background: var(--fpl-bg); font: 13px var(--bs-font-sans-serif, sans-serif); color: var(--fpl-fg); }
+.fpl-labelq::placeholder { color: var(--fpl-mute); }
+.fpl-labelq:focus { outline: 0; border-color: var(--fpl-mine); }
+.fpl-scopes { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2px 10px; }
+.fpl-scopes li { display: flex; align-items: center; gap: 6px; min-width: 0; height: 28px; padding: 0 2px 0 5px; border-radius: 4px; font-size: 13px; cursor: pointer; }
+.fpl-scopes li:hover { background: var(--fpl-wash); }
+.fpl-scopes li[aria-selected="true"] { background: var(--fpl-mine-wash); }
+.fpl-scopes li.fpl-panel-none { grid-column: 1 / -1; cursor: default; background: none; }
+.fpl-scopes .fpl-sq { margin: 0; flex: none; }
+.fpl-scope { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fpl-scope small { color: var(--fpl-mute); }
+.fpl-scopes li.is-off .fpl-scope { color: var(--fpl-mute); text-decoration: line-through; }
+.fpl-scopes li.is-off .fpl-sq { opacity: .35; }
+.fpl-ct { margin-left: auto; font-size: 12px; color: var(--fpl-mute); }
+.fpl-why, .fpl-deeper { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; padding: 0; border: 0;
+  border-radius: 3px; background: none; color: var(--fpl-mute); cursor: pointer; }
+.fpl-why .fpl-ico svg { width: 13px; height: 13px; }
+.fpl-why:hover, .fpl-deeper:hover { background: var(--fpl-bg); color: var(--fpl-fg); }
+.fpl-topbar:not([data-stand="kantlijn"]) .fpl-search > kbd { visibility: hidden; }   /* / is Quarto's outside Kantlijn */
+/* spans off: the marks stay as anchors, unpainted and without their lines */
+body.fpl-nospans mark.fact { background: none; box-shadow: none; outline-color: transparent; }
+/* one layer alone (board V4b): the text dimmed, only that layer in colour */
+body.fpl-solo main :is(p, li, h1, h2, h3, h4, h5, a, code, td, th, figcaption, .breadcrumb, .fpl-n) { color: var(--fpl-mute); }
+body.fpl-solo .fpl-arcs path { stroke-width: 2; opacity: 1; }

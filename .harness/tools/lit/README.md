@@ -179,10 +179,15 @@ headings' anchors (`#strings-and-comments/counted`), so a URL reads `page#scope/
 One bar, fixed above the margin, holds three stands as tabs, also cycled with the key `a`:
 *Lezen* shows nothing; *Spans* underlines the spans whose labels pass the filter and a click
 on a span opens its card alone; *Kantlijn* shows every card, the lines and the editor. Beside
-the tabs stand `Graph` and a menu `⋯`; under them the search field (key `z`) and a quiet line
-of counts. The label filter (a struck chip hides its spans) and the layers are a panel that
-opens on a click into the empty search field or on `z` with no query, never on hover; an
-active filter reads `filter aan` in the count line. Where Quarto shows its top
+the tabs stand `Graph` and a menu `⋯`; under them the search field (key `/` in Kantlijn;
+elsewhere `/`, `f` and `s` stay Quarto's site search) and a quiet line of counts. The layers
+and the label filter are a panel that opens on a click into the empty search field or on `/`
+with no query, never on hover; an active filter reads `filter aan` in the count line. The
+layers are six buttons, Argument, Coref, Topic-focus, Progressie (keys `1`-`4`), Spans and
+Draden: a click turns one on or off, Shift-click (`Shift`+`1`-`4`) shows it alone with the text
+dimmed, and again shows all. The labels are a field over their scopes: the arrows walk the
+list (right a level deeper, left back up), Enter or a click strikes a label, Shift shows it
+alone, and a label the overlay's `MEANING` knows has a (?) that says what it means. Where Quarto shows its top
 bar (a narrow window) the bar folds into it as a stand picker and three icons. The stand and
 the filter are remembered in that browser for the whole site; a page opens in Lezen. In
 Kantlijn an empty margin says in three lines how to annotate, connect and fold. From about
@@ -271,8 +276,9 @@ A row's layer is read from what it is and never written down (`facts.layer`, and
 in the overlay): `span` (it names an item, or it is a `parts` set), `argument` (`supports`,
 `attacks`), `tfa` (`tfa/t`, `tfa/c`, `tfa/f`, `resumes`), `coref`, `relation` (any other
 relation: `because`, `contradicts`, `supersedes`, `checkedBy`, `cites`, and `relates`, the
-neutral link with no stance that the overlay's knob writes for "verbindt"), `thread` (a fact whose first target is a row that is no span), else `fact`. A row of
-chips under the label filter hides a layer.
+neutral link with no stance that the overlay's knob writes for "verbindt"), `thread` (a fact whose first target is a row that is no span), else `fact`. The filter
+panel's buttons hide a layer; there `resumes` has a button of its own (Progressie) beside
+the rest of `tfa` (Topic-focus), and `fact` and `relation` have none.
 
 - **Sets** group instead of pointing. `coref` is Müller's set relation, undirected and
   transitive: its targets name one referent, and hovering one (a span, a card, a clause)
@@ -306,8 +312,8 @@ plus the times this browser saved each label anywhere on the site; the seeds, am
 rhetorical functions under `fn/` (`fn/definition`, `fn/example`, `fn/transition`, `fn/claim`,
 `fn/evidence`, `fn/aside`, `fn/hedge`) and `code/stijl`, `code/bug` (who found it is the row's
 `by`, not a label), only start the list: unused, they sink, they never go.
-The filter lists every scope above a label, each with a square of its colour, and striking a
-scope strikes all below it.
+The filter lists the scopes one level at a time, each with a square of its colour and how many
+spans carry it, and striking a scope strikes all below it.
 
 A label's colour is its place on a hue tree over the OKLCH wheel: `dit`, `niet` and `slop` keep
 the review surface's hues, every other root takes the middle of the largest free gap, first in
