@@ -127,7 +127,7 @@
  * stands as tabs (Lezen, Spans, Kantlijn, also the key "a"), the search
  * field (the key "/" in Kantlijn; elsewhere / stays Quarto's site search,
  * as f and s always do), Graph and a menu ⋯: Naam, Importeer rijen,
- * Exporteer rijen, Exporteer logboek, Vouw tot de spans, Context 0-3,
+ * Exporteer rijen, Exporteer logboek, Boom (also "b"), Vouw tot de spans, Context 0-3,
  * Sneltoetsen (also "?") and Wis mijn rijen. A quiet line under it
  * counts the spans, the relations, the lost rows and this browser's,
  * and says "filter aan" while a filter holds. The label and layer
@@ -309,6 +309,28 @@
  * with its last sentence. The labels of a group count for each member
  * in the filter, so group and role are scopes there.
  *
+ * The tree (boards V3c, V4c): Boom in the menu, or b, turns the plane to
+ * the groups as an argument, a block per group (the tray aside) in the
+ * order of its order/<n>. A group hangs under another by a supports or
+ * attacks row from it to the other, which gives the step its kind and
+ * weight; a bewijs or tegen without one hangs under the last claim before
+ * it, a thin grey line without a sign. An attacks row aimed at a step is
+ * an undercut, a dashed block under the group whose step it attacks, its
+ * line leaving the step's diamond. A line's thickness is its weight
+ * (board V4c: 2, 2.75 and 3.5 for 2, 3 and 4), the digit shows under the
+ * mouse, and the block's head has the weight as five dots: on a step of
+ * ours a dot sets it, on a step without a row it writes one (supports for
+ * bewijs, attacks for tegen). A click on a member jumps to it, Alt ←
+ * back. The grip drags a block among the others, Alt with ↑ ↓ moves it
+ * one, and every group is numbered order/1 on down as it then stands; a
+ * group of the sidecar keeps its place, and the move is refused. At the
+ * plane's foot the tray, group/gepakt: beside the tree the text keeps its
+ * knobs (no cards, no lines), a knob dropped on the tray pulls its span
+ * and on a block puts it in that group, a sentence dragged from the tray
+ * onto a block joins the group and leaves the tray, and the tray's
+ * sentences are dashed in the text while the tree is open. Graph turns
+ * the plane back in place; the Weergave menu is still to come.
+ *
  * The coref lens: coref rows that share a member are one chain (a
  * union-find over the sets), numbered in page order, and each member on
  * the page carries its chain's number, as the PDT links an anaphor to its
@@ -441,7 +463,7 @@
   }
   window.fplAnnotColour = colourOf;   // for the headless tests, and a console
   // the layers drawn by CSS (tfa washes, resumes arcs, chain numbers) take the colours their buttons show
-  for (const k of ["coref", "tfa", "resumes", "group", "role"]) document.documentElement.style.setProperty(`--fpl-${k}`, colourOf(k));
+  for (const k of ["coref", "tfa", "resumes", "group", "role", "supports", "attacks"]) document.documentElement.style.setProperty(`--fpl-${k}`, colourOf(k));
   const LAYERS = ["span", "fact", "thread", "argument", "tfa", "coref", "group", "relation"];
   const RELATIONS = new Set(["because", "supports", "attacks", "contradicts", "supersedes", "checkedBy", "cites", "relates", "resumes"]);
   const AROUND = 32;
@@ -774,6 +796,7 @@
       + ' d="m4 4 8 8M12 4l-8 8"/>',
     shift: '<path fill="none" stroke="currentColor" stroke-width="1.5" d="m5 6 3-3 3 3M5 10l3 3 3-3"/>',
     reply: '<path fill="none" stroke="currentColor" stroke-width="1.5" d="M6.5 4 2.5 8l4 4M2.5 8H10a3.5 3.5 0 0 1 3.5 3.5V13"/>',
+    tree: '<g fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3.5 2v9.5h3M3.5 5.5h3"/><rect x="7.5" y="3.5" width="6" height="4" rx="1"/><rect x="7.5" y="9.5" width="6" height="4" rx="1"/></g>',
     tray: '<path fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" d="M2.5 9.5 4 3.5h8l1.5 6v3h-11zM2.5 9.5h3.5l.8 1.5h2.4l.8-1.5h3.5"/>',
     link: '<path fill="none" stroke="currentColor" stroke-width="1.5" d="M6.5 9.5l3-3M7 4.5l1-1a2.8 2.8 0 0 1 4 4l-1 1M9 11.5l-1 1a2.8 2.8 0 0 1-4-4l1-1"/>',
     supports: '<g fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="5.5"/><path d="M8 5.5v5M5.5 8h5"/></g>',
@@ -800,7 +823,9 @@
     ...MODES.map((m) => Object.assign(button(STANDS[m], () => stand(m), "fpl-tab"), { role: "tab" })));
   const picker = el("select", { className: "fpl-stand", ariaLabel: "Stand", onchange: () => stand(picker.value) },
     ...MODES.map((m) => el("option", { value: m }, STANDS[m])));
-  const graphBtn = tool("graph", "Graph", () => { shut(); plane ? plane.close() : graph(null); });
+  const graphBtn = tool("graph", "Graph", () => { shut(); plane?.view === "graph" ? plane.close() : graph(null); });
+  /** The tree in the plane, or closed: the menu's Boom and the key b. */
+  const boom = () => { shut(); plane?.view === "boom" ? plane.close() : graph(null, "boom"); };
   graphBtn.ariaPressed = "false";
   const moreBtn = tool("more", "Meer", () => flip(menu, moreBtn, fillMenu));
   const filterBtn = tool("filter", "Filter: labels en lagen", () => flip(panel, filterBtn, fillChips));
@@ -1100,6 +1125,8 @@
         el("code", {}, `lit facts --import ${stem}.annot.json --item ${item}=${item}@${commit}`)) : null,
       none(entry("log", "Exporteer logboek", null, why("nog niet"))),
       el("hr"),
+      entry("tree", "Boom", boom, el("kbd", {}, "b")),
+      el("hr"),
       entry("fold", "Vouw tot de spans", () => { shut(); squeeze(); }),
       el("div", { className: "fpl-item" }, ico("context"), "Context", ctx),
       el("hr"),
@@ -1121,7 +1148,8 @@
       ["Shift + scroll",
         "Vouwt rond de muis in, terug opent; met een filter tot de spans"],
       ["Esc", "Sluit of breekt af; anders opent de laatste band"], ["Alt + selectie", "Een deel van een span; Enter bundelt"],
-      ["Alt + ←", "Terug na een sprong uit de graph"], ["Alt-klik", "De tfa-waarde van een bijzin"], ["Alt-Shift-klik", "Deze bijzin neemt een eerdere op"],
+      ["b", "Boom: de groepen als betoog"], ["Alt + ↑ ↓", "Verplaats een groep in de boom, op zijn greep"],
+      ["Alt + ←", "Terug na een sprong uit de graph of de boom"], ["Alt-klik", "De tfa-waarde van een bijzin"], ["Alt-Shift-klik", "Deze bijzin neemt een eerdere op"],
       ["l", "Verbind de kaart onder de muis of de focus; Tab kiest het andere eind, Enter het soort"],
       ["Shift + ← →", "Rek je span een woord, met de focus op zijn bolletje; Enter bewaart"], ["?", "Deze lijst"]];
     menu.replaceChildren(el("p", { className: "fpl-panel-head" }, "Sneltoetsen"),
@@ -1515,6 +1543,20 @@
     draw();
     toast(back ? "Teruggelegd" : "Gepakt");
   }
+  /** Put a row in a group of ours and out of the tray (board V3c); a group of the sidecar only reads. */
+  function join(id, g) {
+    if (!g?.mine) { toast("Een groep uit de sidecar wijzig je met lit facts"); return; }
+    const tray = all.find((r) => r.labels?.[0] === TRAY), rest = tray?.targets.filter((t) => t !== id);
+    if (!g.targets.includes(id)) save(g, { targets: [...g.targets, id] });
+    if (tray?.mine && rest.length < tray.targets.length) rest.length ? save(tray, { targets: rest }) : save(tray, "delete");
+    draw();
+    toast(`In “${groupName(g)}”`);
+  }
+  /** While the tree is open, the tray's sentences are dashed in the text, as pulled out of it (board V3c). */
+  function pulled(on) {
+    for (const m of body.querySelectorAll(".fpl-pulled")) m.classList.remove("fpl-pulled");
+    for (const t of on ? all.find((r) => r.labels?.[0] === TRAY)?.targets ?? [] : []) for (const m of anchorsOf(t)) m.classList.add("fpl-pulled");
+  }
   function fillCardMenu(row) {
     const tray = all.find((r) => r.labels?.[0] === TRAY);
     const ends = [...new Set([row, ...facts(row.id)].flatMap((r) => (r.targets ?? []).slice(typeof r.text === "string" ? 0 : 1)))]
@@ -1641,20 +1683,23 @@
   /**
    * A branch's weight, 1 to 5 (Kialo's impact), as five dots. On a row
    * of ours a dot sets it and the lit last dot clears it; a sidecar row
-   * shows its weight and only `lit facts' changes it.
+   * shows its weight and only `lit facts' changes it. Without a row
+   * (rel null: a group of the tree under its claim by order alone), make
+   * writes the row a dot asks for.
    */
-  function weigh(rel) {
-    const w = rel.weight ?? 0;
+  function weigh(rel, make) {
+    const w = rel?.weight ?? 0, can = rel ? rel.mine : !!make;
     const box = el("span", { className: "fpl-weight", title: w ? `gewicht ${w}` : "geen gewicht" });
     for (let n = 1; n <= 5; n++) {
-      const dot = el(rel.mine ? "button" : "span", { className: n <= w ? "on" : "" }, "●");
-      if (rel.mine) {
+      const dot = el(can ? "button" : "span", { className: n <= w ? "on" : "" }, "●");
+      if (can) {
         dot.type = "button";
         dot.title = n === w ? "gewicht weg" : `gewicht ${n}`;
         dot.onclick = (ev) => {
           if (picking) return;
           ev.stopPropagation();
-          save(rel, { weight: n === w ? undefined : n });   // undefined: JSON drops the key
+          if (rel) save(rel, { weight: n === w ? undefined : n });   // undefined: JSON drops the key
+          else make(n);
           draw();
         };
       }
@@ -1678,6 +1723,50 @@
     d.ontoggle = () => { if (d.open === opened.has(id)) return; d.open ? opened.add(id) : opened.delete(id); layout(); };
     d.onclick = (ev) => { if (!picking) ev.stopPropagation(); };
     return d;
+  }
+
+  /**
+   * The argument read from the groups, for the tree (boards V3c, V4c):
+   * every group but the tray, in order of its order/<n> (unnumbered last,
+   * as written), each under the group it argues for or against. A group
+   * hangs under another by a supports or attacks row between the two
+   * (its first target the group, a later one the other), which brings its
+   * kind and weight; a bewijs or tegen without one hangs under the last
+   * claim before it, by order alone, a line without a sign. An attacks
+   * row aimed at such a row is an undercut, listed under the group whose
+   * step it attacks, after what hangs from that group. Depth first, so the order a reader drags is
+   * the order written back.
+   */
+  function outline() {
+    const gs = all.filter((r) => isGroup(r) && shows(r) && r.labels[0] !== TRAY);
+    const num = (g) => Number(g.labels.find((l) => /^order\/\d+$/.test(l))?.slice(6) ?? Infinity);
+    gs.sort((a, b) => num(a) - num(b) || all.indexOf(a) - all.indexOf(b));
+    const ids = new Set(gs.map((g) => g.id)), up = new Map();
+    for (const r of all) {
+      const at = kindOf(r) && shows(r) && ids.has(r.targets[0]) && r.targets.slice(1).find((t) => ids.has(t));
+      if (at && !up.has(r.targets[0])) up.set(r.targets[0], { parent: at, rel: r, kind: kindOf(r) });
+    }
+    let claim = null;
+    for (const g of gs) {
+      const role = roleOf(g);
+      if (role === "claim") claim = g;
+      else if (claim && !up.has(g.id) && (role === "bewijs" || role === "tegen"))
+        up.set(g.id, { parent: claim.id, rel: null, kind: role === "bewijs" ? "supports" : "attacks" });
+    }
+    for (const id of ids) {   // a ring of rows (the graph allows one) is cut where it closes
+      const seen = new Set([id]);
+      for (let p = up.get(id)?.parent; p; p = up.get(p)?.parent) if (seen.has(p)) { up.delete(id); break; } else seen.add(p);
+    }
+    const out = [], under = (pid) => gs.filter((g) => (up.get(g.id)?.parent ?? null) === pid);
+    const walk = (g, depth) => {
+      const u = up.get(g.id), item = { g, depth, ...u };
+      out.push(item);
+      for (const c of under(g.id)) walk(c, depth + 1);
+      if (u?.rel) for (const x of all.filter((r) => kindOf(r) === "attacks" && shows(r) && r.targets.slice(1).includes(u.rel.id)))
+        out.push({ uc: x, depth, on: item });   // after the group's own subtree: its line, from the step, passes left of it
+    };
+    for (const g of under(null)) walk(g, 0);
+    return out;
   }
 
   /**
@@ -1886,6 +1975,8 @@
       }
       if (!drag.told) { drag.told = true; toast(`${SIDECAR}; slepen verbindt`); }
     } else if (st && st.end !== st.e) { st.end = st.e; paintStretch(); }   // off its text: the span as it was
+    for (const o of document.querySelectorAll(".fpl-plane .is-over")) o.classList.remove("is-over");
+    intoTree(ev.clientX, ev.clientY)?.classList.add("is-over");
     const to = aimAt(ev.clientX, ev.clientY);
     link.x = ev.pageX;
     link.y = ev.pageY;
@@ -1909,6 +2000,17 @@
     const st = stretching, up = ev.type === "pointerup";
     if (st?.row.mine && up && onGround(st, ev.clientX, ev.clientY)) { link = null; keepStretch(); drawAim(); hot(null); return; }
     dropStretch();
+    const into = up && intoTree(ev.clientX, ev.clientY);
+    for (const o of document.querySelectorAll(".fpl-plane .is-over")) o.classList.remove("is-over");
+    if (into) {   // the tree's tray pulls the span, a group's block takes it in
+      link = null; drawAim(); hot(null);
+      const tray = all.find((r) => r.labels?.[0] === TRAY);
+      if (into.dataset.group) join(d.from, all.find((r) => r.id === into.dataset.group));
+      else if (tray?.targets.includes(d.from)) toast("Al gepakt");
+      else if (tray && !tray.mine) toast("De bak uit de sidecar wijzig je met lit facts");
+      else pull(d.from);
+      return;
+    }
     const to = up ? aimAt(ev.clientX, ev.clientY) : null;
     if (to && to !== d.from) { chooser(d.from, to, { x: ev.pageX, y: ev.pageY }, true); return; }
     link = null;
@@ -1917,6 +2019,8 @@
     toast(!up ? "Slepen afgebroken" : !to ? "Losgelaten naast een span, kaart of feit: niets verbonden"
       : st && !st.row.mine ? `${SIDECAR}; niets verbonden` : "Losgelaten op de eigen span: niets verbonden");
   }
+  /** Where a carried knob would land in the tree: its tray, or a group's block. */
+  const intoTree = (x, y) => (plane?.view === "boom" && document.elementFromPoint(x, y)?.closest?.(".fpl-tray, .fpl-tblock[data-group]")) || null;
   /** Esc while a knob is carried: the stretch put back and the connect let go; the drop that follows does nothing. */
   function cancelDrag() {
     const moved = stretching && stretching.end !== stretching.e;
@@ -2331,10 +2435,14 @@
     if (d) return d.topic || `besluit ${d.id}`;
     return n.label ?? (document.getElementById(n.id)?.textContent.trim() || n.id);
   }
-  /** Open the plane, with an id selected (a card's Graph) or none (the bar's); a second open selects. */
-  async function graph(id) {
+  /**
+   * Open the plane, with an id selected (a card's Graph) or none (the
+   * bar's); a second open selects. view is graph or boom (the tree); the
+   * plane open in the other turns to it in place, the column staying put.
+   */
+  async function graph(id, view = "graph") {
     await coded;   // the code graph first: a plane drawn before it came would lack the chunks
-    if (plane) { plane.select(id); return; }
+    if (plane) { plane.show(view); plane.select(id); return; }
     const opener = document.activeElement;
     const area = el("div", { className: "fpl-plane-area" });
     const foot = el("div", { className: "fpl-plane-foot", role: "group", ariaLabel: "Soorten relaties" });
@@ -2350,7 +2458,7 @@
           .finished.then(relayout, () => {});   // what was measured mid-slide (arcs, cards, lines) is measured again where it stopped
     };
     const close = () => {
-      p.remove(); plane = null; hot(null);
+      p.remove(); plane = null; hot(null); pulled(false);
       graphBtn.classList.remove("is-on"); graphBtn.ariaPressed = "false";
       slide(() => document.body.classList.remove("fpl-beside"));
       layout();
@@ -2383,6 +2491,7 @@
     };
     /** Lay the cards on the lattice and draw; again only when the rows, the width or the kinds changed. */
     function build() {
+      if (p.view === "boom") { tree(); return; }
       const w = area.clientWidth, cols = Math.max(1, Math.floor((w - 2 * PAD + 16) / (CW + 16))), cw = (w - 2 * PAD) / cols, chh = CH + GY;
       const key = `${cols}|${[...offKinds]}`;
       if (g && built === key && g.of === all) return;
@@ -2620,7 +2729,212 @@
       light(sel);
       if (sel && scroll) nodes.find((n) => n.id === sel).el.scrollIntoView({ block: "nearest", inline: "nearest" });
     }
-    area.onclick = (ev) => { if (ev.target === area || ev.target.closest?.(".fpl-edges")) select(null); };
+    area.onclick = (ev) => { if (p.view === "graph" && (ev.target === area || ev.target.closest?.(".fpl-edges"))) select(null); };
+    /**
+     * The tree (boards V3c, V4c): the groups as an argument, read by
+     * outline(). A block per group: a grip, its role, its name, the
+     * weight of its step as five dots (a dot on a step without a row
+     * writes one, supports for bewijs and attacks for tegen), and a line
+     * per member whose click jumps to it, as a graph card does. A block
+     * hangs from its parent by a line from the parent's foot, as thick as
+     * the step's weight, with + or − where it arrives and the step itself
+     * as a diamond, which an undercut's line leaves from; under the mouse
+     * the line says its weight. Each child has a spine of its own, the
+     * last one outermost, so no two lines cross. The grip drags a block
+     * to another place (or Alt with ↑ ↓ moves it one), and the groups are
+     * numbered order/1 on down as they then stand. At the foot the tray:
+     * a knob dropped on it pulls its span, a sentence dragged from it onto
+     * a block joins that group.
+     */
+    const IND = 72, tray = el("section", { className: "fpl-tray", ariaLabel: "Gepakte zinnen", hidden: true });
+    let treeKey = "", order = [];   // the groups in the order shown, for a drag to rewrite
+    function tree() {
+      const key = `${area.clientWidth}`;
+      if (treeKey === key && tree.of === all) return;
+      treeKey = key; tree.of = all;
+      const items = outline(), list = el("div", { className: "fpl-tree" });
+      const sv = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      sv.classList.add("fpl-edges", "fpl-tlines");
+      area.replaceChildren(list);
+      list.append(sv, ...items.map(blockOf));
+      order = items.filter((x) => x.g).map((x) => x.g);
+      sv.setAttribute("width", list.scrollWidth); sv.setAttribute("height", list.scrollHeight);
+      for (const x of items) if (x.parent || x.uc) wire(x, items, list, sv);
+      fillTray();
+      p.dataset.tree = items.map((x) => `${x.g?.id ?? x.uc.id}@${x.depth}${x.parent ? `<${x.parent}` : ""}`).join(" ");   // for tests
+    }
+    /** A group's block, or an undercut's. */
+    function blockOf(x) {
+      const g = x.g, u = x.uc, rel = g ? x.rel : u;
+      const b = el("section", { className: `fpl-tblock${u ? " is-uc" : ""}` });
+      b.style.marginLeft = `${x.depth * IND}px`;
+      b.dataset.id = (g ?? u).id;
+      if (g) b.dataset.group = g.id;
+      x.el = b;
+      const head = el("div", { className: "fpl-thead" });
+      if (g) {
+        const grip = el("button", { type: "button", className: "fpl-grip", ariaLabel: `Verplaats ${groupName(g)}`, title: g.mine ? "Sleep om te ordenen" : "Uit de sidecar" });
+        grip.innerHTML = '<svg width="10" height="16" viewBox="0 0 10 16" aria-hidden="true"><g fill="currentColor"><circle cx="3" cy="3" r="1.3"/><circle cx="7" cy="3" r="1.3"/><circle cx="3" cy="8" r="1.3"/><circle cx="7" cy="8" r="1.3"/><circle cx="3" cy="13" r="1.3"/><circle cx="7" cy="13" r="1.3"/></g></svg>';
+        reorder(grip, b, g);
+        const role = roleOf(g);
+        head.append(...[grip, role && el("span", { className: "fpl-trole" }, el("span", { className: "fpl-sq" }), role),
+          el("span", { className: "fpl-tname" }, groupName(g))].filter(Boolean));
+        b.onmouseenter = () => lightGroup(g.id);
+        b.onmouseleave = () => lightGroup(null);
+      } else head.append(el("span", { className: "fpl-tuc" }, "undercut"), el("span", { className: "fpl-tname" }, u.note || ""));
+      if (x.kind || u) head.append(weigh(rel, rel ? null : (n) => save({}, { note: "", labels: [x.kind], targets: [g.id, x.parent], weight: n })));
+      const ids = g ? g.targets : [u.targets[0]];
+      b.append(head, el("ul", { className: "fpl-trows" }, ...ids.map((t) => {
+        const r = all.find((y) => y.id === t), span = typeof r?.text === "string" || !!bundleOf(t);
+        const sq = el("span", { className: `fpl-sq${span ? "" : " is-note"}` });
+        if (span) sq.style.setProperty("--lc", tone(r ?? bundleOf(t)));
+        const go = el("button", { type: "button", className: "fpl-trow", title: said(t) }, sq, el("span", {}, said(t)));
+        go.dataset.id = t;
+        go.onclick = (ev) => { ev.stopPropagation(); jump({ id: t }); };
+        go.onmouseenter = () => hot(t);
+        go.onmouseleave = () => hot(null);
+        return el("li", {}, go);
+      })));
+      return b;
+    }
+    /**
+     * The line from a parent's foot to a block: down its own spine, then
+     * across to the block's head. The k-th of n children takes the spine
+     * 8px further in than the one after it, so a longer line is further
+     * out and none crosses another. An undercut's line leaves the diamond
+     * of the step it attacks.
+     */
+    function wire(x, items, list, sv) {
+      const box = (e) => ({ l: e.offsetLeft, t: e.offsetTop, b: e.offsetTop + e.offsetHeight });
+      const c = box(x.el), arm = c.t + 21;
+      let sx, y0;
+      if (x.uc) { sx = x.on.dia; y0 = x.on.arm + 6; }
+      else {
+        const pa = items.find((y) => y.g?.id === x.parent), sibs = items.filter((y) => y.parent === x.parent && y.g);
+        const k = sibs.indexOf(x), pb = box(pa.el);
+        sx = pb.l + 8 + 8 * Math.min(sibs.length - 1 - k, 3); y0 = pb.b;
+      }
+      const rel = x.uc ?? x.rel, w = rel?.weight ?? 0, kind = x.uc ? "attacks" : x.kind;
+      const d = `M${sx} ${y0}V${arm}H${c.l}`, ns = "http://www.w3.org/2000/svg";
+      const line = sv.appendChild(document.createElementNS(ns, "path")), hit = sv.appendChild(document.createElementNS(ns, "path"));
+      line.setAttribute("d", d); hit.setAttribute("d", d);
+      line.setAttribute("class", "fpl-tline"); hit.setAttribute("class", "fpl-thit");
+      line.dataset.id = (x.g ?? x.uc).id;
+      line.style.setProperty("--lc", rel ? `var(--fpl-${kind})` : "var(--fpl-edge)");
+      line.style.strokeWidth = w ? 0.5 + 0.75 * w : 1.25;   // board V4c: 2, 2.75, 3.5 for 2, 3, 4
+      x.arm = arm;
+      x.dia = c.l - IND + 42;   // where this step's diamond stands, should an undercut aim at it
+      if (!rel) return;
+      const sign = el("span", { className: "fpl-tsign", role: "img", ariaLabel: `${kindName(kind)}${w ? `, gewicht ${w}` : ""}` });
+      sign.innerHTML = `<svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path d="M1.5 5h7${kind === "supports" ? "M5 1.5v7" : ""}"/></svg>`;
+      sign.style.cssText = `--lc: var(--fpl-${kind}); left: ${c.l - 12}px; top: ${arm}px`;
+      const tip = el("span", { className: "fpl-wtip", hidden: true }, String(w));
+      tip.style.left = `${c.l - 12}px`; tip.style.top = `${arm + 14}px`;
+      const on = (v) => { line.classList.toggle("is-hot", v); if (w) tip.hidden = !v; };
+      for (const e of [hit, sign]) { e.onmouseenter = () => on(true); e.onmouseleave = () => on(false); }
+      list.append(sign, tip);
+      if (!x.uc) {
+        const dia = el("span", { className: "fpl-tinf" });
+        dia.style.cssText = `--lc: var(--fpl-${kind}); left: ${x.dia}px; top: ${arm}px`;
+        dia.dataset.id = rel.id;
+        list.append(dia);
+      }
+    }
+    /**
+     * A block dragged by its grip, or moved by Alt with ↑ ↓ on it: a
+     * dashed slot keeps its place among the others, and where it is let go
+     * the groups are numbered anew. A group of the sidecar keeps its place.
+     */
+    function reorder(grip, b, g) {
+      grip.onkeydown = (ev) => {
+        if (!ev.altKey || (ev.key !== "ArrowUp" && ev.key !== "ArrowDown")) return;
+        ev.preventDefault(); ev.stopPropagation();
+        const ids = order.map((y) => y.id), i = ids.indexOf(g.id), j = i + (ev.key === "ArrowUp" ? -1 : 1);
+        if (j < 0 || j >= ids.length) return;
+        ids.splice(i, 1); ids.splice(j, 0, g.id);
+        renumber(ids) && requestAnimationFrame(() => area.querySelector(`.fpl-tblock[data-group="${CSS.escape(g.id)}"] .fpl-grip`)?.focus());
+      };
+      grip.onpointerdown = (ev) => {
+        if (ev.button) return;
+        if (!g.mine) { toast("Een groep uit de sidecar ordent lit facts"); return; }
+        ev.preventDefault();
+        grip.setPointerCapture(ev.pointerId);
+        const list = b.parentElement, y0 = ev.clientY, top = b.offsetTop;
+        const slot = el("div", { className: "fpl-tslot" });
+        slot.style.height = `${b.offsetHeight}px`; slot.style.marginLeft = b.style.marginLeft;
+        let moved = false;
+        grip.onpointermove = (e) => {
+          if (!moved && Math.abs(e.clientY - y0) < 4) return;
+          if (!moved) {
+            moved = true; b.before(slot); list.classList.add("is-moving");
+            Object.assign(b.style, { position: "absolute", top: `${top}px`, width: `${b.offsetWidth}px` });
+            b.classList.add("is-lift");
+          }
+          b.style.top = `${top + e.clientY - y0}px`;
+          const mid = b.offsetTop + b.offsetHeight / 2;   // the slot goes before the first block whose middle is below the dragged one's
+          const next = [...list.querySelectorAll(".fpl-tblock[data-group]")].find((o) => o !== b && o.offsetTop + o.offsetHeight / 2 > mid);
+          next ? next.before(slot) : list.append(slot);
+        };
+        grip.onpointerup = grip.onpointercancel = (e) => {
+          grip.onpointermove = grip.onpointerup = grip.onpointercancel = null;
+          if (!moved) return;
+          slot.replaceWith(b);
+          b.classList.remove("is-lift"); b.style.position = b.style.top = b.style.width = "";
+          list.classList.remove("is-moving");
+          if (e.type === "pointercancel" || !renumber([...list.querySelectorAll(".fpl-tblock[data-group]")].map((o) => o.dataset.group))) { treeKey = ""; tree(); }
+        };
+      };
+    }
+    /** Write order/1 on down as the ids stand; false when nothing changed or a sidecar group would have to move. */
+    function renumber(ids) {
+      const gs = ids.map((id) => all.find((r) => r.id === id)), now = (r) => r.labels.find((l) => /^order\//.test(l));
+      const moved = gs.filter((r, i) => now(r) !== `order/${i + 1}`);
+      if (!moved.length) return false;
+      if (moved.some((r) => !r.mine)) { toast("Een groep uit de sidecar houdt haar plaats: die ordent lit facts"); return false; }
+      for (const r of moved) save(r, { labels: [...r.labels.filter((l) => !/^order\//.test(l)), `order/${gs.indexOf(r) + 1}`] });
+      draw();
+      return true;
+    }
+    /**
+     * The tray of pulled sentences (board V3c): a pill per member, in the
+     * colour of the tray's scope; a click jumps to it, a drag onto a block
+     * puts it in that group and out of the tray.
+     */
+    function fillTray() {
+      const g = all.find((r) => r.labels?.[0] === TRAY);
+      const pills = (g?.targets ?? []).map((t) => {
+        const c = el("button", { type: "button", className: "fpl-tpill", title: said(t) }, el("span", { className: "fpl-sq" }), el("span", {}, clip(said(t), 60)));
+        c.dataset.id = t;
+        let from = null, moved = false;
+        c.onpointerdown = (ev) => { if (ev.button) return; from = [ev.clientX, ev.clientY]; moved = false; c.setPointerCapture(ev.pointerId); };
+        c.onpointermove = (ev) => {
+          if (!from || (!moved && Math.hypot(ev.clientX - from[0], ev.clientY - from[1]) < 4)) return;
+          moved = true; c.classList.add("is-lift");
+          c.style.transform = `translate(${ev.clientX - from[0]}px, ${ev.clientY - from[1]}px)`;
+          for (const o of area.querySelectorAll(".fpl-tblock")) o.classList.remove("is-over");
+          blockAt(ev.clientX, ev.clientY, c)?.classList.add("is-over");
+        };
+        c.onpointerup = (ev) => {
+          if (!from) return;
+          from = null;
+          if (!moved) return;
+          const o = blockAt(ev.clientX, ev.clientY, c);
+          c.classList.remove("is-lift"); c.style.transform = "";
+          o?.classList.remove("is-over");
+          if (o) join(t, all.find((r) => r.id === o.dataset.group));
+        };
+        c.onclick = (ev) => { ev.stopPropagation(); if (moved) { moved = false; return; } jump({ id: t }); };
+        return c;
+      });
+      tray.replaceChildren(el("h2", {}, el("span", { className: "fpl-sq" }), "Gepakte zinnen"), el("div", { className: "fpl-pills" }, ...pills));
+    }
+    /** The group block under a point, the pill dragged there aside. */
+    const blockAt = (x, y, drag) => {
+      drag.style.visibility = "hidden";
+      const o = document.elementFromPoint(x, y)?.closest?.(".fpl-tblock[data-group]");
+      drag.style.visibility = "";
+      return o;
+    };
     /** Measure the frame: beside the column where 320px are left for the plane, else a sheet over the page. */
     p.fit = () => {
       const was = p.beside;
@@ -2631,13 +2945,27 @@
       p.x = p.beside ? Math.round(body.getBoundingClientRect().right - shift) + 24 : 0;
       p.style.left = `${p.x}px`;
       p.style.top = p.beside ? "" : `${Math.max(0, bar.getBoundingClientRect().bottom)}px`;   // a sheet under the bar, whose Graph closes it
+      pulled(p.view === "boom");   // a draw wraps the marks anew
       build();
     };
-    p.select = (nid) => select(nid);
+    p.select = (nid) => { if (p.view === "graph") select(nid); };
     p.close = close;
+    /** Turn the plane to a view: the graph and its chips, or the tree and its tray. */
+    p.show = (v) => {
+      if (p.view === v) return;
+      p.letGo?.();
+      p.view = v; built = ""; treeKey = "";
+      p.classList.toggle("is-boom", v === "boom");
+      p.ariaLabel = v === "boom" ? "Boom" : "Graph";
+      foot.hidden = v === "boom"; tray.hidden = v !== "boom";
+      graphBtn.classList.toggle("is-on", v === "graph"); graphBtn.ariaPressed = String(v === "graph");
+      pulled(v === "boom");
+      if (p.isConnected) layout();   // the knobs come or go with the tree
+    };
     p.letGo = () => { if (!chosen.size && !sheet) return false; chosen.clear(); sheet?.remove(); sheet = null; for (const n of nodes) n.el.classList.remove("is-picked"); return true; };
     p.tabIndex = -1;
-    graphBtn.classList.add("is-on"); graphBtn.ariaPressed = "true";
+    p.insertBefore(tray, foot);
+    p.show(view);
     document.body.append(p);
     layout();   // fit, and the margin gives way
     p.focus({ preventScroll: true });
@@ -2886,7 +3214,7 @@
     lines.replaceChildren();
     unbar();
     margin.style.minHeight = "";
-    if (plane) { plane.fit(); dock(); lens(); fade(); return; }   // the plane stands where the margin was: no cards, no lines
+    if (plane) { plane.fit(); dock(); lens(); fade(); knobs(); return; }   // the plane stands where the margin was: no cards, no lines
     const full = mode() === "kantlijn";
     if (wide()) {
       column.classList.add("fpl-column");
@@ -3000,12 +3328,31 @@
         svg("rect", { x: gx - 1.25, y: at.top, width: 2.5, height: at.bottom - at.top, rx: 1.25, class: `fpl-stretch ${cls}`, style }, id);
       }
       if (id === "draft") continue;   // a selection being written has nothing to drag yet (board B)
-      const knob = svg("circle", { cx: at.end + 3, cy: at.foot, r: 4, class: `fpl-knob ${cls}`, style, tabindex: 0, role: "button",
-        "aria-label": `Bolletje van “${clip(said(id), 40)}”: sleep het naar een andere span, kaart of feit, of druk l; langs de tekst, of met Shift en de pijlen, rek je de span` }, id);
-      knob.appendChild(document.createElementNS("http://www.w3.org/2000/svg", "title")).textContent = "Sleep naar een span, kaart of feit om te verbinden, of langs de tekst om te rekken";
+      knobAt(id, at, cls, style);
     }
     drawAim();
     paintStretch();   // a layout in the middle of a stretch draws it again
+  }
+  /** The knob at the end of a span: the handle that connects, stretches and, into the tree, pulls or joins. */
+  function knobAt(id, at, cls, style) {
+    const knob = svg("circle", { cx: at.end + 3, cy: at.foot, r: 4, class: `fpl-knob ${cls}`, style, tabindex: 0, role: "button",
+      "aria-label": `Bolletje van “${clip(said(id), 40)}”: sleep het naar een andere span, kaart of feit, of druk l; langs de tekst, of met Shift en de pijlen, rek je de span` }, id);
+    knob.appendChild(document.createElementNS("http://www.w3.org/2000/svg", "title")).textContent = "Sleep naar een span, kaart of feit om te verbinden, of langs de tekst om te rekken";
+  }
+  /**
+   * Beside the tree the text keeps its knobs, no lines and no cards
+   * (board V3c): a span is carried from there to the tray or into a group.
+   */
+  function knobs() {
+    if (!plane?.beside || plane.view !== "boom" || mode() !== "kantlijn") return;
+    lines.setAttribute("width", document.documentElement.scrollWidth);
+    lines.setAttribute("height", Math.max(document.documentElement.scrollHeight, body.getBoundingClientRect().bottom + scrollY));
+    if (lines.parentElement !== document.body) document.body.append(lines);
+    for (const r of all.filter((x) => (typeof x.text === "string" || x.labels?.[0] === "parts") && shows(x) && passes(x) && !partsOf(x.id))) {
+      const at = reach(r.id);
+      if (at) knobAt(r.id, at, r.mine ? "mine" : "", `--lc: ${tone(r)}`);
+    }
+    drawAim();
   }
   /** The line from a span's stub, at the height y of its last line, to the dot of its card c: the same x geometry for every line. */
   function curve(y, c) {
@@ -3780,6 +4127,7 @@
       return;
     }
     if (ev.key === "j" || ev.key === "k") { ev.preventDefault(); step(ev.key === "j" ? 1 : -1); return; }
+    if (ev.key === "b") { ev.preventDefault(); boom(); return; }
     if (ev.key === "Enter" && reading && !ev.target.closest?.("button, a, [role=button]")) {
       ev.preventDefault();
       if (mode() === "kantlijn") edit({ targets: [reading.id] }, null, reading.getBoundingClientRect());

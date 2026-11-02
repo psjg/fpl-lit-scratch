@@ -358,6 +358,19 @@ laid out as one block, its tab naming it and its role. `Graph` on a card draws t
 what lies within two steps. A click on a node closes the graph and goes to the node's place on
 the page; Esc closes it. Plain JavaScript, no outside assets.
 
+### The tree
+
+`Boom` in the menu (or `b`) turns the same plane to the groups as an argument (boards V3c, V4c),
+in the order of their `order/<n>`. A group hangs under another by a `supports` or `attacks` row
+from the one to the other, with its `weight`; a group with role `bewijs` or `tegen` and no such
+row hangs under the last `claim` before it. An `attacks` row aimed at such a row is an undercut,
+shown under the group whose step it attacks. The overlay writes three things here, all ordinary
+rows for `lit facts --import`: dragging a block renumbers every group `order/1` on down (a
+sidecar group keeps its number, so a move that would change one is refused); a weight dot on a
+step without a row writes the `supports` or `attacks` row, `weight` with it; and a span carried
+onto the tray or a block, or a sentence dragged from the tray, changes `group/gepakt` and the
+group's targets.
+
 ### Not yet built (decided 2026-11-01, keep)
 
 These are in the model now and gated, but the overlay does not draw them yet, or not fully.
