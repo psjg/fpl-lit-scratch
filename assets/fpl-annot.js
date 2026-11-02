@@ -49,7 +49,8 @@
  * rijen empties it, after asking. Exporteer logboek downloads the log
  * (below) as <stem>.log.json.
  *
- * Finding a quote. The page's text nodes are read into one string, the
+ * Finding a quote. The page's text nodes, but not the overlay's or a
+ * card's folded in under its block, are read into one string, the
  * shown text: a backtick dropped, a curly quote read as a straight one,
  * every run of space or "|" one space, each character remembering the
  * node and offset it came from. A row's text is read the way lit reads
@@ -299,7 +300,9 @@
   const LAYERS = ["span", "fact", "thread", "argument", "tfa", "coref", "relation"];
   const RELATIONS = new Set(["because", "supports", "attacks", "contradicts", "supersedes", "checkedBy", "cites", "relates", "resumes"]);
   const AROUND = 32;
-  const SKIP = "script, style, button, .fpl-annot-ui";
+  // not the page's text: a card folded in under its block (a narrow
+  // screen) shows its quote again, and would make every span dubbel
+  const SKIP = "script, style, button, .fpl-annot-ui, .fpl-card";
   const QUOTE = { "‘": "'", "’": "'", "“": '"', "”": '"' };
   const GAP = 12;
   const HEAD = 19;   // a card's top to the middle of its first row: its border, padding and half the row
