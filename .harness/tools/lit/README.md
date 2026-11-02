@@ -162,7 +162,11 @@ long press) and the end lights, a dashed line following in the gutter, never acr
 the drop a chooser asks the kind, `verbindt` (`relates`, also Enter), `steunt`, `valt aan`,
 `zelfde als`, `citeert` (keys 1-5), and Esc lets go. A click on the knob, Verbind met… or `l`
 arms a pick instead: click the other end, or Tab to it and Enter, and the chooser asks the same.
-A drop on nothing lets go and says so. The cards
+A drop on nothing lets go and says so. Carried along the text of its own block instead, the
+knob of a span of this browser stretches it by whole words, the new part dashed and a tip
+`+ n woorden · loslaten bewaart · Esc zet terug`; the drop saves `text`, `prefix` and `suffix`
+anew, Esc puts it back, and Shift with the arrows on a focused knob does the same (Enter saves).
+A sidecar span only connects: lit changes it. The cards
 stand in the order of their lines and are only pushed down, so the lines, which stay in the
 gutter between the text and the cards, never cross; a span over three lines or more gets a
 thin bar in the gutter instead of an underline. A card's quote is one line and its note two
