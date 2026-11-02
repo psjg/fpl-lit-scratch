@@ -282,3 +282,5 @@ body.fpl-picking .fpl-c[id], body.fpl-picking .fpl-s[id] { cursor: crosshair; }
 .fpl-card.fpl-faded { opacity: .25; }
 mark.fact.fpl-faded { text-decoration-color: transparent; }
 .fpl-c[data-tfa].fpl-faded, .fpl-s[data-tfa].fpl-faded { background: none; box-shadow: none; }
+
+.fpl-squeeze { align-items: baseline; }

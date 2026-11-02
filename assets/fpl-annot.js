@@ -87,6 +87,12 @@
  * card whose row points at another place on the page has "Toon beide",
  * which folds what lies between the two so both are in view. A span
  * inside a band draws its line, and places its card, at the band.
+ * On a touch screen two fingers drawn together fold the blocks between
+ * them, from the middle out, as many as the fingers closed by; drawn
+ * apart over a band they open it. Knijp tot, under the label chips,
+ * folds every block further than its context (0-3 blocks, kept in
+ * localStorage["fpl-annot:context"]) from a span the filter shows;
+ * pressed again it opens them.
  *
  * Close reading. Outside Lezen each block carries a bar in its left
  * gutter, shaded by how many rows hang from it (after Zyto 2012, where
@@ -458,7 +464,9 @@
       if (e.key === "Enter") ask();
       if (e.key === "Escape") { field.value = ""; ask(); }
     };
-    control.append(row, layers, el("div", { className: "fpl-query-row" }, field, said));
+    const squeezer = el("div", { className: "fpl-chips fpl-squeeze" }, button("Knijp tot", squeeze),
+      button(`context ${context}`, () => { context = (context + 1) % 4; try { localStorage.setItem(CONTEXT, context); } catch { /* no storage */ } drawControl(); }, "fpl-link"));
+    control.append(row, layers, squeezer, el("div", { className: "fpl-query-row" }, field, said));
   }
 
   /* ---- what a card shows ---- */
@@ -1567,7 +1575,7 @@
       let ends = bands[k];
       const move = (e) => {
         const at = bands.findIndex(([p, q]) => p === ends[0] && q === ends[1]);
-        if (at < 0) { up(); return; }
+        if (at < 0 || pinch) { up(); return; }   // gone, or a second finger made it a pinch
         const dy = e.clientY - y0;
         const [, a, b] = stops.reduce((best, s) => (Math.abs(s[0] - dy) < Math.abs(best[0] - dy) ? s : best));
         if (us[a].id === ends[0] && us[b].id === ends[1]) return;
@@ -1621,6 +1629,82 @@
     setBands([...kept, ...fold]);
     (fold.length ? bandOf(us[i + 1]) : us[i]).scrollIntoView({ block: "center", behavior: "smooth" });
   }
+
+  /**
+   * Knijp tot (LiquidText's merged highlights): fold every run of blocks
+   * further than context blocks from a span the filter lets through, so
+   * the spans stand together with their surroundings. Pressed again while
+   * the bands are just that, it opens them all.
+   */
+  const CONTEXT = "fpl-annot:context";
+  let context = (() => { try { const n = localStorage.getItem(CONTEXT); return n != null && /^[0-3]$/.test(n) ? +n : 1; } catch { return 1; } })();
+  function squeeze() {
+    const us = units(), near = new Set();
+    for (const m of body.querySelectorAll("mark.fact")) {
+      const i = us.indexOf(m.closest(".fpl-p"));
+      if (i >= 0) for (let t = i - context; t <= i + context; t++) near.add(t);
+    }
+    if (!near.size) { toast("Geen spans om tot te knijpen"); return; }
+    const runs = [];
+    for (let i = 0; i < us.length; i++)
+      if (!near.has(i)) { const a = i; while (i + 1 < us.length && !near.has(i + 1)) i++; runs.push([us[a].id, us[i].id]); }
+    const same = runs.length === bands.length && runs.every(([a, b], x) => a === bands[x][0] && b === bands[x][1]);
+    setBands(same ? [] : runs);
+    if (same) toast("Alles open");
+  }
+
+  /**
+   * Pinch (the paper's gesture): two fingers on the text, drawn together,
+   * fold the blocks between them from the middle outward, as many whole
+   * blocks as the fingers have closed by; drawn apart over a band, they
+   * open it. The fold shows while the fingers move and is kept when they
+   * lift. Only a two-finger move is cancelled, so one finger still
+   * scrolls, and the page does not zoom under a pinch.
+   */
+  let pinch = null;
+  const ys = (ts) => [...ts].map((t) => t.clientY).sort((a, b) => a - b);
+  function pinchMove(ev) {
+    if (!pinch || ev.touches.length !== 2) return;
+    ev.preventDefault();
+    const [y0, y1] = ys(ev.touches), { d0, base, us, i, j, h, open } = pinch, s = d0 - (y1 - y0);
+    let next = base;
+    if (s < -40 && open.length) next = base.filter((b) => !open.includes(b));
+    else if (s > 0 && i >= 0 && j - i > 1) {   // i < 0: the fingers are below the last block
+      let a = Math.floor((i + j) / 2), b = a - 1, sum = 0;   // [a, b], empty, grows a block a side by turns
+      const fits = (t) => t > i && t < j && sum + h[t] <= s;
+      for (let left = false; ; left = !left) {
+        const t = left ? a - 1 : b + 1;
+        if (fits(t)) { sum += h[t]; left ? a-- : b++; } else if (!fits(left ? b + 1 : a - 1)) break;
+      }
+      if (a <= b) next = [...base, [us[a].id, us[b].id]];
+    }
+    const key = JSON.stringify(next);
+    if (key !== pinch.key) { pinch.key = key; bands = next; layout(); }
+  }
+  function pinchEnd(ev) {
+    if (!pinch || ev.touches.length > 1) return;
+    for (const x of pinch.at) for (const [t, f] of PINCH) x.removeEventListener(t, f);
+    if (pinch.key) persist();
+    pinch = null;
+  }
+  /** On the elements the fingers came down on: a band is drawn anew under them, and an event on a detached element never reaches body. */
+  const PINCH = [["touchmove", pinchMove], ["touchend", pinchEnd], ["touchcancel", pinchEnd]];
+  body.addEventListener("touchstart", (ev) => {
+    if (pinch) pinchEnd({ touches: [] });
+    if (ev.touches.length !== 2 || [...ev.touches].some((t) => t.target.closest?.(".fpl-card, .fpl-mode"))) return;
+    const [y0, y1] = ys(ev.touches), us = units();
+    const at = (y) => us.findIndex((u) => !u.classList.contains("fpl-scrunched") && u.getBoundingClientRect().bottom >= y);
+    const i = at(y0), j = at(y1) < 0 ? us.length : at(y1);
+    const between = [...body.querySelectorAll(".fpl-band")].filter((b) => { const r = b.getBoundingClientRect(); return r.bottom >= y0 && r.top <= y1; });
+    const r = us.map((u) => (u.classList.contains("fpl-scrunched") ? null : u.getBoundingClientRect()));
+    const h = r.map((x, t) => {   // what folding block t takes away: down to the next block shown, headings and tables between included
+      const n = r.findIndex((y, u) => u > t && y);
+      return !x ? 0 : n < 0 ? x.height : Math.max(0, r[n].top - x.top);
+    });
+    pinch = { d0: y1 - y0, base: bands, us, i, j, h,
+      open: between.map((b) => bands[+b.dataset.k]), key: "", at: new Set([...ev.touches].map((t) => t.target)) };
+    for (const x of pinch.at) for (const [t, f] of PINCH) x.addEventListener(t, f, { passive: false });
+  }, { passive: true });
 
   /* ---- density: how many rows each block carries, in its gutter ---- */
 
