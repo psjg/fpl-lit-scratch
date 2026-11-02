@@ -172,6 +172,7 @@ body.fpl-numbered .fpl-s:hover .fpl-c::before { opacity: 1; }
 .fpl-topbar:not(.is-full) .fpl-picker .fpl-ico svg { width: 14px; height: 14px; }
 .fpl-topbar:not(.is-full):not(.is-docked) { position: fixed; top: 8px; right: 16px; padding: 2px 4px; background: var(--fpl-bg);
   border: 1px solid var(--fpl-rule); border-radius: 6px; }
+.fpl-topbar:not(.is-full):not(.is-docked) .fpl-stand { border-color: transparent; }   /* no bordered box inside the bordered bar */
 .fpl-topbar.is-docked { display: flex; align-items: center; margin-left: 4px; }
 .fpl-topbar.is-docked::after { content: ""; width: 1px; height: 24px; margin: 0 2px 0 4px; background: var(--fpl-rule); }
 .quarto-secondary-nav:has(.fpl-topbar) .quarto-page-breadcrumbs { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }

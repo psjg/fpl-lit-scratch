@@ -154,11 +154,15 @@ with its old text struck through. The right margin is free because `assets/fpl-n
 the page's own sections under its entry in the left sidebar, and `essay.lua` nests the
 headings' anchors (`#strings-and-comments/counted`), so a URL reads `page#scope/subscope`.
 
-The control floating at the top right has three stands, also cycled with the key `a`:
-*Lezen* shows nothing; *Spans* underlines the spans whose labels pass the filter (a row of
-label chips under the control while it is hovered; a struck chip hides its spans) and a click
-on a span opens its card alone; *Kantlijn* shows every card, the lines and the editor. The
-stand and the filter are remembered in that browser for the whole site; a page opens in Lezen.
+One bar, fixed above the margin, holds three stands as tabs, also cycled with the key `a`:
+*Lezen* shows nothing; *Spans* underlines the spans whose labels pass the filter and a click
+on a span opens its card alone; *Kantlijn* shows every card, the lines and the editor. Beside
+the tabs stand `Graph` and a menu `⋯`; under them the search field (key `z`) and a quiet line
+of counts. The label filter (a struck chip hides its spans) and the layers are a panel the
+filter button in the search field opens on a click, never on hover. Where Quarto shows its top
+bar (a narrow window) the bar folds into it as a stand picker and three icons. The stand and
+the filter are remembered in that browser for the whole site; a page opens in Lezen. In
+Kantlijn an empty margin says in three lines how to annotate, connect and fold.
 
 Outside Lezen every block carries its address: below the page's own number (01.02.01 Lex is
 1.2.1) the headings count (`1.2.1.3`), and under a heading the blocks, paragraphs and code
@@ -172,11 +176,12 @@ a card at that element, with a line to it.
 A reader selects text, writes a note and picks labels (chips; type `label/sub` for one more) in
 a card at that height, and saves it (⌘↩) as a quote row: `{id, item, commit, by, text, prefix,
 suffix, labels, note, targets, createdAt, updatedAt}`, the text as shown and 32 characters of
-shown text either side; `by` is who wrote it, the name given in the margin's head or an agent's
+shown text either side; `by` is who wrote it, the name given under Naam in the menu or an agent's
 model id. A reply, or a fact about a fact or an address, is the same row without `text`,
 `prefix` and `suffix`: a fact about its first target. The rows stay in that browser
-(localStorage) until Export in the margin's head downloads them as `<stem>.annot.json`; the
-head then prints the `lit facts` line that takes them into the sidecar. Run it from
+(localStorage) until Exporteer rijen in the menu downloads them as `<stem>.annot.json`; the
+menu then prints the `lit facts` line that takes them into the sidecar (Importeer rijen merges
+a file back, Wis mijn rijen empties the page after asking). Run it from
 `01-bootstrap/`, with the path of the downloaded file:
 
     lit facts --import FILE \
@@ -280,7 +285,7 @@ the filter shows its whole group.
 
 ### The graph
 
-`Graph` in the margin's head draws every row of the page and every id a row names, in the
+`Graph` in the bar draws every row of the page and every id a row names, in the
 layers shown, on a canvas laid out by force (Fruchterman & Reingold 1991,
 https://doi.org/10.1002/spe.4380211102), the same layout each time for the same rows. A
 relation row is a node of its own, a small diamond between its ends, so an undercut has a node
@@ -335,7 +340,7 @@ They are the next work on this layer, not ideas:
    past 100 000 steps a walk stops with `chain too long to search at COL` (a simple path is
    a search that grows as the factorial of a set's members), and `N` past nine digits reads
    as 10⁹. `lit facts --query Q PAGE` prints what
-   it finds; the field under the margin's filters fades the rest. One language, two
+   it finds; the bar's search field fades the rest. One language, two
    readers, held together by `tests/query_cases.json`, which both `facts.query` and the
    overlay's block (run in node, `tests/test_query_js.py`) must answer alike. Examples:
    `label:claim !has:attacks` (a claim no one attacks), `label:tfa/f !has:resumes` (a
