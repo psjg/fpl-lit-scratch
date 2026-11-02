@@ -1097,7 +1097,6 @@
     const rank = (l) => (used.get(l) ?? 0) + (Number(t.get(l)) || 0);
     const seen = [...new Set([...LABELS, ...used.keys(), ...t.keys()])]
       .map((l, i) => [l, i]).sort((a, b) => rank(b[0]) - rank(a[0]) || a[1] - b[1]).map(([l]) => l);   // by use, then seed order
-    const form = el("form", { className: "fpl-editor" });
     const note = el("textarea", { placeholder: "Notitie", value: row.note ?? "", rows: 2 });
     const chips = el("div", { className: "fpl-chips" });
     const more = el("input", { placeholder: "label/sub…", autocomplete: "off" });
@@ -1133,7 +1132,8 @@
           b.onkeydown = (e) => { if (e.key === " " || e.key === "Enter") { e.preventDefault(); e.stopPropagation(); b.onclick(); } };
           return b; }))
       : null;
-    form.append(el("div", { className: "fpl-excerpt" }, about), fast, note, chips, keys);
+    // el, not form.append: append writes a null kid (no quick chips yet) as the text "null"
+    const form = el("form", { className: "fpl-editor" }, el("div", { className: "fpl-excerpt" }, about), fast, note, chips, keys);
     form.onsubmit = (ev) => { ev.preventDefault(); onDone({ note: note.value.trim(), labels: [...on] }); };
     form.onkeydown = (e) => {
       if (e.key === "Escape") { e.stopPropagation(); onDone(null); disarm(); }
