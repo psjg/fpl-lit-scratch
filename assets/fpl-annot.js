@@ -2733,8 +2733,9 @@
       margin.style.width = margin.style.marginLeft = "";
       // under the title block (board K), not above the page's title
       const top = body.querySelector(":scope > #title-block-header");
-      if (top ? margin.previousElementSibling !== top : margin.parentElement !== body)
-        top ? top.after(margin) : body.prepend(margin);
+      const there = top ? margin.previousElementSibling === top
+        : margin.parentElement === body;
+      if (!there) top ? top.after(margin) : body.prepend(margin);
     }
     if (mode() === "lezen") return;
     const y0 = wide() ? Math.max(0, bar.getBoundingClientRect().bottom + GAP - top0()) : 0;   // the first card clears the bar
