@@ -287,9 +287,15 @@
  * and the chips at the plane's foot, each with its kind's sign, switch a
  * kind on and off; a (?)
  * at their end says what a click, a drag and Shift do. A card
- * drags, in this view only. A click selects it, lights its neighbours
- * and scrolls the page to its span; Alt ← scrolls back. Graph on a card
- * opens the plane with that card selected. Beside the rows stand the
+ * drags, in this view only. The plane stands round one card, its
+ * centre, showing it and its neighbours (feedback 25): the card it was
+ * opened from (Graph on a card), else the card open in the margin;
+ * opened from the bar with none, the whole page. Buurt and Hele pagina
+ * at its head switch between the two. A click on a card makes it the
+ * centre (beside the page, the page scrolls to its span too), a click
+ * on the centre goes to its span; each step is an entry in the
+ * browser's history, so Back and Forward walk the steps, Alt ← as
+ * Back, and Back past the first closes the plane. Beside the rows stand the
  * page's chunks and the files they tangle to, from <stem>.graph.json
  * (lit graph, written at publish), behind the chip code: a chunk uses
  * chunks, tangles to a file, and a row may name a chunk. A window too
@@ -2680,12 +2686,13 @@
    * the text. The layout is layered (layered), and the plane scrolls
    * when the drawing is wider or taller than it. Dragging a card
    * moves it in this view only: nothing is kept, and the next drawing
-   * lays the graph out anew. A click selects the card, lights its
-   * neighbours and scrolls the page to its span, which Alt ← undoes. The
+   * lays the graph out anew. A click makes the card the centre, and
+   * scrolls the page to its span, which Alt ← undoes with the step. The
    * chips at the foot are the kinds of edge, each a toggle; the code
    * graph's edges (a chunk uses a chunk, tangles to a file) start off.
    * Where the window has no room beside the column the plane is a sheet
-   * over the page under the folded bar, and a click closes it first.
+   * over the page under the folded bar, and a click on the centre
+   * closes it first.
    */
   let plane = null;
   const jumps = [];   // the scroll before each jump from the graph, for Alt ←
@@ -2751,14 +2758,20 @@
    * bar's); a second open selects. view is graph or boom (the tree); the
    * plane open in the other turns to it in place, the column staying put.
    */
-  async function graph(id, view = "graph") {
+  async function graph(id, view = "graph", push = true) {
     await coded;   // the code graph first: a plane drawn before it came would lack the chunks
-    if (plane) { plane.show(view); plane.select(id); return; }
+    if (plane) { if (id) plane.go(id, push); else plane.show(view); return; }
     const opener = document.activeElement;
     const area = el("div", { className: "fpl-plane-area" });
     const foot = el("div", { className: "fpl-plane-foot", role: "group", ariaLabel: "Soorten relaties" });
-    const p = plane = el("div", { className: "fpl-annot-ui fpl-graph fpl-plane", role: "region", ariaLabel: "Graph" }, area, foot);
-    let g = null, sel = id, built = "", nodes = [], frames = [], sheet = null;
+    const head = el("div", { className: "fpl-scope", role: "radiogroup",
+      ariaLabel: "Bereik" });
+    const p = plane = el("div", { className: "fpl-annot-ui fpl-graph fpl-plane",
+      role: "region", ariaLabel: "Graph" }, head, area, foot);
+    let g = null, sel = null, built = "", nodes = [], frames = [], sheet = null;
+    // the card the graph stands round, else the whole page (feedback 25):
+    // the card it was opened from, or the open card in the margin
+    p.centre = id ?? openId ?? null; p.last = p.centre;
     const chosen = new Set();   // the cards Shift-clicked for a group
     const slide = (fn) => {   // the column moves left (or back) in one motion: FLIP on main
       const a = body.getBoundingClientRect().left;
@@ -2783,11 +2796,11 @@
       const r = all.find((x) => x.id === nid);
       return r?.targets?.[0] ? goal(r.targets[0], been) : null;
     };
-    const jump = (n) => {
+    const jump = (n, step = false) => {
       const e = goal(n.id);
       if (!e) { toast(`“${clip(nodeText(n), 30)}” staat niet op deze pagina`); return; }
       if (!p.beside) close();
-      jumps.push(scrollY);
+      jumps.push({ y: scrollY, step });
       seen(e).scrollIntoView({ block: "center", behavior: "smooth" });
       hot(n.id);
       toast("Terug: Alt ←");
@@ -2798,12 +2811,34 @@
       const ends = new Set(es.flatMap((e) => [e.a.id, e.b.id]));
       const ns = g.nodes.filter((n) => (n.row && !n.rel) || n.member || ends.has(n.id));
       const on = new Set(ns.map((n) => n.id));
-      return { ns, es: es.filter((e) => on.has(e.a.id) && on.has(e.b.id)) };
+      const both = es.filter((e) => on.has(e.a.id) && on.has(e.b.id));
+      if (!on.has(p.centre)) { p.centre = null; return { ns, es: both }; }
+      const near = hood(p.centre, both);
+      return { ns: ns.filter((n) => near.has(n.id)),
+        es: both.filter((e) => near.has(e.a.id) && near.has(e.b.id)) };
+    };
+    /**
+     * A node's neighbourhood (feedback 25): the node, what an edge joins
+     * it to, and each relation reached with all its ends, since a sign
+     * without its ends says nothing.
+     */
+    const hood = (id, es) => {
+      const near = new Set([id]);
+      for (const e of es)
+        if (e.a.id === id || e.b.id === id) near.add(e.a.id).add(e.b.id);
+      for (let more = true; more;) {
+        more = false;
+        for (const e of es) for (const [x, y] of [[e.a, e.b], [e.b, e.a]])
+          if (e.own === x && x.rel && near.has(x.id) && !near.has(y.id)) {
+            near.add(y.id); more = true;
+          }
+      }
+      return near;
     };
     /** Lay the graph out and draw it, anew when the rows or kinds change. */
     function build() {
       if (p.view === "boom") { tree(); return; }
-      const key = `${[...offKinds]}`;
+      const key = `${[...offKinds]}|${p.centre}`;
       if (g && built === key && g.of === all) return;
       built = key;
       g = graphOf(); g.of = all;
@@ -2815,14 +2850,15 @@
       for (const n of ns) {
         const at = n.rel ? null : goal(n.id);   // page order, for column one
         Object.assign(n, { w: n.rel ? SIGN : CW, h: n.rel ? SIGN : CH,
-          grp: grp.get(n.id), first: n.row && !n.rel, moved: false,
+          grp: grp.get(n.id), moved: false,
+          first: n.kind === "span" || n.kind === "address",
           key: at ? at.getBoundingClientRect().top : 1e9 });
       }
       // each edge from what is about to what is about it, the row it
-      // draws; a relation's sign right of the spans it joins, and what
-      // else it names (a decision, a test, a fact) right of the sign
+      // draws; a relation's sign right of the rows it joins, and what
+      // else it names (a decision, a test, a file) right of the sign
       const les = es.filter((e) => e.a !== e.b).map((e) => {
-        const out = e.own?.rel && e.a === e.own && !e.b.first;
+        const out = e.own?.rel && e.a === e.own && !e.b.row;
         const t = out ? e.b : e.own ?? e.b;
         return { e, s: t === e.a ? e.b : e.a, t };
       });
@@ -2864,8 +2900,12 @@
       place2();
       p.dataset.nodes = ns.map((n) => `${n.id}@${Math.round(n.x)},${Math.round(n.y)}`).join(" ");   // for tests: where each node landed
       p.dataset.groups = frames.map((f) => `${f.g.id}@${f.box.join(",")}`).join(" ");   // and each frame: left, top, right, bottom
+      p.dataset.centre = p.centre ?? "";
+      scope();
       const kinds = [...new Set(g.edges.map((e) => e.kind))].filter((k) => k !== "over" && k !== "parts");
-      const how = "Klik: naar de span, Alt ← terug. Sleep: alleen hier. Shift-klik kaarten: een groep.";
+      const how = "Klik: de buurt van een kaart; nog eens: naar de span."
+        + " Terug: Alt ← of Terug van de browser. Sleep: alleen hier."
+        + " Shift-klik kaarten: een groep.";
       foot.replaceChildren(...kinds.map((k) => {
         const c = button("", () => { offKinds.has(k) ? offKinds.delete(k) : offKinds.add(k); build(); foot.querySelector(`[data-kind="${k}"]`)?.focus(); }, "fpl-kchip");
         c.dataset.kind = k; c.ariaPressed = String(!offKinds.has(k));
@@ -2876,8 +2916,29 @@
         c.append(kindName(k));
         return c;
       }), el("button", { type: "button", className: "fpl-why", title: how, ariaLabel: how, onclick: () => toast(how) }, ico("why")));
-      select(sel, false);
+      select(p.centre, false);
     }
+    /** Buurt or Hele pagina, the graph's reach; Buurt once it had a centre. */
+    function scope() {
+      const ways = [["hood", "Buurt"], ["page", "Hele pagina"]];
+      head.replaceChildren(...ways.map(([k, name]) => {
+        const b = button(name, () => p.go(k === "page" ? null : p.last));
+        b.role = "radio"; b.dataset.scope = k;
+        b.ariaChecked = String((k === "page") === !p.centre);
+        b.disabled = k === "hood" && !p.last;
+        return b;
+      }));
+    }
+    /**
+     * Stand round a node, or round none (the whole page), a step the
+     * browser's Back and Alt ← walk back (push false: a step walked to).
+     */
+    p.go = (nid, push = true) => {
+      p.centre = nid ?? null;
+      if (nid) p.last = nid;
+      if (push) history.pushState({ fplGraph: p.centre ?? "" }, "");
+      if (p.view !== "graph") p.show("graph"); else build();
+    };
     /**
      * A relation's sign (feedback 24): its own shape per kind, so the
      * kinds part without their colour, in a column of its own between
@@ -2949,7 +3010,9 @@
         ev.stopPropagation();
         if (moved) { moved = false; return; }
         if (ev.shiftKey && !n.rel) { choose(n.id); return; }   // Shift chooses cards for a group (board V3a)
-        select(n.id); jump(n);
+        if (n.id === p.centre) { jump(n); return; }   // the centre: to the text
+        p.go(n.id);
+        if (p.beside) jump(n, true);   // beside the page, the page follows
       };
       n.el.classList.toggle("is-picked", chosen.has(n.id));
       n.el.onmouseenter = () => { hot(n.id); light(n.id); };
@@ -3278,7 +3341,7 @@
       pulled(p.view === "boom");   // a draw wraps the marks anew
       build();
     };
-    p.select = (nid) => { if (p.view === "graph") select(nid); };
+
     p.close = close;
     /** Turn the plane to a view: the graph and its chips, or the tree and its tray. */
     p.show = (v) => {
@@ -3287,20 +3350,35 @@
       p.view = v; built = ""; treeKey = "";
       p.classList.toggle("is-boom", v === "boom");
       p.ariaLabel = v === "boom" ? "Boom" : "Graph";
-      foot.hidden = v === "boom"; tray.hidden = v !== "boom";
+      foot.hidden = head.hidden = v === "boom"; tray.hidden = v !== "boom";
       drawView();
       pulled(v === "boom");
       if (p.isConnected) layout();   // the knobs come or go with the tree
     };
-    p.group = (nid) => { p.show("graph"); if (!chosen.has(nid)) choose(nid); };   // Groepeer… in a card's menu
+    p.group = (nid) => {   // Groepeer… in a card's menu: from the whole page
+      if (p.centre || p.view !== "graph") p.go(null);
+      if (!chosen.has(nid)) choose(nid);
+    };
     p.letGo = () => { if (!chosen.size && !sheet) return false; chosen.clear(); sheet?.remove(); sheet = null; for (const n of nodes) n.el.classList.remove("is-picked"); return true; };
     p.tabIndex = -1;
     p.insertBefore(tray, foot);
     p.show(view);
     document.body.append(p);
     layout();   // fit, and the margin gives way
+    if (push && view === "graph")
+      history.pushState({ fplGraph: p.centre ?? "" }, "");
     p.focus({ preventScroll: true });
   }
+
+  // the graph's steps in the browser's history (feedback 25): Back and
+  // Forward walk them, Back past the first closes the plane, and a step
+  // walked to after the plane closed opens it there
+  addEventListener("popstate", (ev) => {
+    const f = ev.state?.fplGraph;
+    if (f === undefined) { if (plane?.view === "graph") plane.close(); return; }
+    if (plane) plane.go(f || null, false);
+    else graph(f || null, "graph", false);
+  });
 
   /** Download this browser's rows as <stem>.annot.json. */
   function exportRows() {
@@ -4435,9 +4513,16 @@
     }
     const typing = ev.defaultPrevented || ev.target.closest?.("input, textarea, select, [contenteditable], .fpl-editor");
     // back to where the page stood before a jump from the graph: our own stack, since browser Back is Cmd+[ on a Mac
-    if (ev.key === "ArrowLeft" && ev.altKey && !ev.metaKey && !ev.ctrlKey && !ev.shiftKey && !typing && jumps.length) {
+    // a step of the graph goes back as Back does, and its jump with it
+    const stepped = plane?.view === "graph"
+      && history.state?.fplGraph !== undefined;
+    const altLeft = ev.key === "ArrowLeft" && ev.altKey && !ev.metaKey
+      && !ev.ctrlKey && !ev.shiftKey && !typing;
+    if (altLeft && (jumps.length || stepped)) {
       ev.preventDefault();
-      scrollTo({ top: jumps.pop(), behavior: "smooth" });
+      const j = jumps.pop();
+      if (j) scrollTo({ top: j.y, behavior: "smooth" });
+      if (stepped && (!j || j.step)) history.back();
       return;
     }
     if (ev.key === "Escape" && reading && !typing) { read(null); return; }
