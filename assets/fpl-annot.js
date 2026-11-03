@@ -126,10 +126,12 @@
  *
  * The bar. One bar, fixed above the margin column, holds the three
  * stands as tabs (Lezen, Spans, Kantlijn, also the key "a"), the search
- * field (the key "/" in Kantlijn; elsewhere / stays Quarto's site search,
- * as f and s always do), the menu Weergave (Kaarten, Graph, Boom: what
- * stands beside the text; not Kantlijn, the stand's name, and Graph and
- * Boom off on a page with no row and no chunk) and a menu ⋯: Naam,
+ * field (the key "/" outside Lezen, the focus on the stand picker too;
+ * in Lezen / stays Quarto's site search, as f and s always do), the
+ * menu Weergave (Kaarten, Graph, Boom: what stands beside the text;
+ * folded, its icon and the view's name, as the stand picker beside it;
+ * not Kantlijn, the stand's name, and Graph and Boom off on a page with
+ * no row and no chunk) and a menu ⋯: Naam,
  * Importeer rijen, Exporteer rijen, Exporteer logboek, Vouw tot de
  * spans, Context 0-3, Sneltoetsen (also "?") and Wis mijn rijen; what
  * an item would act on, or why it cannot, shows under the mouse. No
@@ -143,13 +145,13 @@
  * The filter panel (board V4a). First the layers, four buttons:
  * Argument, Coref, Topic-focus and Progressie (keys 1-4 outside Lezen),
  * each saying its key and Shift-klik under the mouse, and a (?) by the
- * heading that says what each draws; under them, after Ook, Markeringen
- * and Draden, which are no layer to read by but the spans and the
+ * heading that says what each draws; under them, after Ook, Spans and
+ * Draden, which are no layer to read by but the spans and the
  * threads (one list holds one kind). A click turns a layer on or off;
  * Shift-click (Shift+1-4) shows it alone, the others, the threads and
  * (but for Argument, drawn on them) the markings off and the text
  * dimmed (board V4b: what the old lenses were), and again shows all.
- * Markeringen off leaves the marks in the text as anchors, unpainted,
+ * Spans off leaves the marks in the text as anchors, unpainted,
  * and takes their cards from the margin. Then the labels: a field over their scopes, the list
  * one level at a time with how many spans carry each; up and down
  * choose, right goes a level deeper, left back up, Enter or a click
@@ -559,7 +561,8 @@
    * in the tfa layer, here it has a button of its own (sheetOf).
    */
   const SHEETS = [["argument", "Argument"], ["coref", "Coref"], ["tfa", "Topic-focus"], ["resumes", "Progressie"],
-    ["span", "Markeringen"], ["thread", "Draden"]];   // not Spans: that is a stand
+    // a span is the data, a card its UI (feedback 29)
+    ["span", "Spans"], ["thread", "Draden"]];
   const FOUR = SHEETS.slice(0, 4).map(([k]) => k);
   /** The layers switched off, site-wide; a key of an older panel (fact, relation) has no button and counts for nothing. */
   const offLayers = (set) => {
@@ -908,7 +911,9 @@
    * in that view, or turn it in place. Canvas, the boards' fourth, is
    * left out until it is built: the list holds what works. The button
    * names the view while the plane is open ("Weergave: Boom"); folded,
-   * it is the view's icon.
+   * the view's icon and its name, Kaarten too (feedback 28: an icon alone
+   * went unseen in a pane of 1244px), drawn from data-name, so the name
+   * a screen reader hears stays Weergave.
    */
   const VIEWS = [["kantlijn", "Kaarten", "margin"], ["graph", "Graph", "graph"], ["boom", "Boom", "tree"]];
   const viewOf = () => plane?.view ?? "kantlijn";
@@ -944,6 +949,7 @@
   /** The button: Weergave, or Weergave: and the view while the plane is open; the view's icon for the folded bar. */
   function drawView() {
     const v = viewOf(), [, name, icon] = VIEWS.find(([k]) => k === v);
+    viewBtn.dataset.name = name;
     viewBtn.replaceChildren(ico(icon), el("span", { className: "fpl-name" },
       ...v === "kantlijn" ? ["Weergave"] : [el("span", { className: "fpl-vl" }, "Weergave: "), name]), ico("chevron"));
     if (!views.hidden) fillViews();
@@ -1180,7 +1186,12 @@
         deeper ? el("button", { type: "button", className: "fpl-deeper", ariaLabel: `Onder ${l}`,
           onclick: (e) => { e.stopPropagation(); descend(l); } }, ico("deeper")) : null);
       li.dataset.label = l;
-      li.onclick = (e) => strike(l, e.shiftKey);
+      // the focus stays in the panel, so the arrows go on
+      li.onclick = (e) => {
+        strike(l, e.shiftKey);
+        if (e.pointerType === "touch") return;
+        labelField.focus({ preventScroll: true });
+      };
       return li;
     }));
     if (!here.length) labelList.append(el("li", { className: "fpl-panel-none" }, n.size ? "Geen label zo" : "Nog geen labels op deze pagina"));
@@ -1207,6 +1218,16 @@
     } else if (e.key === "Enter" && cur) { e.preventDefault(); strike(cur, e.shiftKey); }
     else if (e.key === "Escape") { e.preventDefault(); if (v) { labelField.value = ""; lit = 0; fillLabels(); } else { shut(); field.focus(); } }
   };
+  // the arrows choose a label wherever the focus is in the open panel or
+  // on its funnel just pressed: a layer, a label clicked (feedback 31)
+  const arrows = (e) => {
+    if (panel.hidden || e.target === labelField) return;
+    if (!/^Arrow(Up|Down)$/.test(e.key)) return;
+    labelField.focus({ preventScroll: true });
+    labelField.onkeydown(e);
+  };
+  panel.addEventListener("keydown", arrows);
+  filterBtn.addEventListener("keydown", arrows);
 
   /** The layer buttons, pressed as they stand; drawn with the bar, so they never lag behind a key. */
   function fillSheets() {
@@ -1272,7 +1293,9 @@
   function keysheet() {
     if (menu.hidden) flip(menu, moreBtn, () => {});
     menu.classList.add("fpl-keysheet");
-    const keys = [["a", "Volgende stand"], ["/", "Zoek of filter, in Kantlijn"], ["1  2  3  4", "Argument, Coref, Topic-focus, Progressie aan of uit"],
+    const keys = [["a", "Volgende stand"],
+      ["/", "Zoek of filter, buiten Lezen"],
+      ["1  2  3  4", "Argument, Coref, Topic-focus, Progressie aan of uit"],
       ["Shift + 1-4", "Alleen die laag; nog eens: alles"], ["j  k", "Volgende, vorige zin"],
       ["Enter", "Een feit op de zin onder de cursor"], ["⌘↩", "Bewaar in de editor"],
       ["Shift + scroll",
@@ -3649,12 +3672,17 @@
     scrunch();
     if (reading?.closest(".fpl-scrunched")) read(null);   // folded away: nothing to read or write on
     heat();
+    numbers();
     lens();   // now as well as at the end: an early return below must not leave the lens of another stand
     margin.replaceChildren();
     lines.replaceChildren();
     unbar();
     margin.style.minHeight = "";
-    if (plane) { plane.fit(); dock(); lens(); fade(); knobs(); return; }   // the plane stands where the margin was: no cards, no lines
+    // the plane stands where the margin was: no cards, no lines
+    if (plane) {
+      plane.fit(); numbers(); dock(); lens(); fade(); knobs();
+      return;
+    }
     const full = mode() === "kantlijn";
     if (wide()) {
       column.classList.add("fpl-column");
@@ -4258,6 +4286,54 @@
     }
   }
 
+  /**
+   * The block numbers in the left gutter (feedback 26). "§9" stands 24px
+   * left of the text, ":C" in that gap, while the gutter, from the left
+   * nav or the window's edge to the text, holds the widest number of the
+   * page; narrower (the plane beside, a narrow window, the nav open at
+   * 1244px: 24-26px), "§9" alone stands in the heat bar's lane, the bar
+   * under it; narrower still, none. Never clipped; under the mouse a
+   * number shows the whole address, 1.2.1.3 §9:C, in a tip.
+   */
+  /** The width of a gutter number in its own font. */
+  const numWidth = (t) => {
+    const s = el("span", { className: "fpl-gutw" }, t);
+    body.querySelector(".fpl-p").append(s);
+    const w = s.getBoundingClientRect().width;
+    s.remove();
+    return w;
+  };
+  function numbers() {
+    const ps = body.querySelectorAll(".fpl-p");
+    if (!ps.length) return;
+    const nav = document.querySelector("#quarto-sidebar")
+      ?.getBoundingClientRect();
+    // where the column stands once a slide is over
+    const left = body.getBoundingClientRect().left
+      - new DOMMatrix(getComputedStyle(body).transform).m41;
+    const g = left - (nav?.width && nav.right <= left ? nav.right : 0);
+    const n = Math.max(...[...ps].map((p) => +p.dataset.n || 0));
+    const need = numWidth(`§${n}`) + 2, cl = document.body.classList;
+    const flag = (c, on) => cl.contains(c) !== on && cl.toggle(c, on);
+    flag("fpl-gut-narrow", g < 24 + need && g >= 3 + need);
+    flag("fpl-gut-none", g < 3 + need);
+  }
+  // the nav folds by its own button (fpl-nav.js), which runs no layout
+  new MutationObserver(numbers)
+    .observe(document.body, { attributeFilter: ["class"] });
+  const gutTip = el("div", { className: "fpl-annot-ui fpl-tip", hidden: true });
+  document.addEventListener("pointermove", (ev) => {
+    const id = ev.pointerType === "mouse" ? numberAt(ev) : null;
+    const u = id ? document.getElementById(id) : null;
+    if (!u?.classList.contains("fpl-p")) { gutTip.hidden = true; return; }
+    if (!gutTip.isConnected) document.body.append(gutTip);
+    gutTip.textContent = addr(u);
+    const r = u.getBoundingClientRect();
+    gutTip.style.left = `${Math.max(4, r.left - 60) + scrollX}px`;
+    gutTip.style.top = `${r.top + scrollY - 28}px`;
+    gutTip.hidden = false;
+  });
+
   /* ---- close reading: a cursor on one sentence, moved by keystroke ---- */
 
   let reading = null;   // the sentence the cursor is on (fpl-here), or null
@@ -4559,8 +4635,13 @@
     if (ev.key === "Escape" && reading && !typing) { read(null); return; }
     if (ev.key === "?" && !typing && !ev.metaKey && !ev.ctrlKey && !ev.altKey) { ev.preventDefault(); menu.hidden || !menu.classList.contains("fpl-keysheet") ? keysheet() : shut(); return; }
     const plainish = !typing && !ev.metaKey && !ev.ctrlKey && !ev.altKey;
-    // / is the margin's search in Kantlijn; elsewhere it stays Quarto's, with f and s (feedback 22)
-    if (ev.key === "/" && plainish && mode() === "kantlijn") { ev.preventDefault(); seek(); return; }
+    // / is the bar's search wherever the bar searches, Spans and Kantlijn;
+    // in Lezen it stays Quarto's, f and s always (feedback 22, 31). A
+    // stand just picked in the folded bar leaves the focus on its select.
+    const slash = ev.key === "/" && mode() !== "lezen" && !ev.metaKey
+      && !ev.ctrlKey && !ev.altKey
+      && (!typing || ev.target.matches?.("select"));
+    if (slash) { ev.preventDefault(); slashed = true; seek(); return; }
     const digit = /^Digit([1-4])$/.exec(ev.code);   // by code: Shift+1 is "!" on the key
     if (digit && plainish && mode() !== "lezen" && cardMenu.hidden) { ev.preventDefault(); toggleLayer(FOUR[digit[1] - 1], ev.shiftKey); return; }
     if (typing || ev.metaKey || ev.ctrlKey || ev.altKey || ev.shiftKey) return;
@@ -4589,6 +4670,15 @@
       draw();
     }
   });
+
+  // Quarto opens its search on the keyup of /: the keyup of a / that
+  // was ours is ours too, whatever holds the focus by then
+  let slashed = false;
+  addEventListener("keyup", (ev) => {
+    if (ev.key !== "/" || !slashed) return;
+    slashed = false;
+    ev.stopImmediatePropagation();
+  }, true);
 
   let timer = 0;
   // not while editing: a phone's keyboard resizes the window, and the draft would go

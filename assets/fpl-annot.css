@@ -110,6 +110,16 @@ body.fpl-numbered .fpl-s::before { display: inline-block; }
   color: var(--fpl-mute); opacity: 0; transition: opacity 80ms; user-select: none; pointer-events: none; }
 body.fpl-numbered .fpl-s:hover .fpl-c::before { opacity: 1; }
 .fpl-p[data-kind="C"]::before { top: .5rem; }
+/* a gutter too narrow for "§9" left of the heat bar's lane (feedback 26):
+   the number alone in the lane, the bar under it */
+body.fpl-gut-narrow .fpl-p::before { width: auto; margin-right: 3px; }
+body.fpl-gut-narrow .fpl-p[data-kind="C"]::after,
+body.fpl-gut-none .fpl-p::before,
+body.fpl-gut-none .fpl-p[data-kind="C"]::after { display: none; }
+body.fpl-gut-narrow .fpl-heat { top: 1.4rem; }
+.fpl-gutw { position: absolute; visibility: hidden; font-size: .68rem;
+  font-variant-numeric: tabular-nums; white-space: nowrap; }
+.fpl-tip[hidden] { display: none; }
 .fpl-s:target, .fpl-p:target > p, .fpl-p.is-hot > p, .fpl-s.is-hot { background: var(--fpl-vers-wash); }
 .fpl-p pre code > span:target, .fpl-p pre code > span.is-hot { background: var(--fpl-vers-wash); display: inline-block; width: 100%; }
 
@@ -261,10 +271,20 @@ button.fpl-end:hover, button.fpl-end:focus-visible { color: var(--fpl-fg); text-
 .fpl-tool:hover, .fpl-tool.is-open { background: var(--fpl-wash); }
 .fpl-tool.is-open { border-color: var(--fpl-edge); }
 .fpl-tool.is-on { color: var(--fpl-mine); }
-/* Weergave (board V4b): the name and a chevron in the full bar, "Weergave:" muted before an open plane's view;
-   folded, the view's icon alone. A narrow plane's bar drops the "Weergave:" and keeps the view. */
+/* Weergave (board V4b): the name and a chevron in the full bar,
+   "Weergave:" muted before an open plane's view; folded, the view's icon,
+   its name and a chevron, as the stand picker beside it (feedback 28: an
+   icon alone went unseen). A narrow plane's bar drops the "Weergave:" and
+   keeps the view. */
 .fpl-topbar.is-full { container-type: inline-size; }
-.fpl-topbar.is-full .fpl-view > .fpl-ico:first-child, .fpl-topbar:not(.is-full) .fpl-view > .fpl-ico:last-child { display: none; }
+.fpl-topbar.is-full .fpl-view > .fpl-ico:first-child { display: none; }
+.fpl-topbar:not(.is-full) .fpl-tool.fpl-view { width: auto; padding: 0 8px;
+  gap: 5px; font-size: 15px; }
+.fpl-topbar:not(.is-full) .fpl-view::after {
+  content: attr(data-name); order: 1; }
+.fpl-topbar:not(.is-full) .fpl-view > .fpl-ico:last-child { order: 2; }
+.fpl-topbar:not(.is-full) .fpl-view > .fpl-ico:last-child svg {
+  width: 14px; height: 14px; }
 .fpl-view .fpl-vl { font-weight: 400; color: var(--fpl-mute); }
 @container (max-width: 419px) { .fpl-view .fpl-vl { display: none; } }
 .fpl-menu.fpl-views { width: 220px; }
@@ -453,10 +473,16 @@ label.fpl-item { cursor: text; }
    from it (fpl-annot.js heat), each step 3:1 or more on the page. It keeps to its own lane, 2 to 6px left of the
    text; the resumes arcs start at 8px and bow left of it. The padding widens the hover target, the colour stays
    in the content box. */
-.fpl-heat { position: absolute; top: 2px; bottom: 2px; left: -9px; width: 4px; padding: 0 3px; box-sizing: content-box;
-  border-radius: 2px; background: var(--fpl-heat-1) content-box; cursor: help; }
-.fpl-heat[data-level="2"] { background-color: var(--fpl-heat-2); }
-.fpl-heat[data-level="3"] { background-color: var(--fpl-heat-3); }
+/* a level is a tone and a width (feedback 28: never colour alone), the
+   right edge 2px from the text */
+.fpl-heat { position: absolute; top: 2px; bottom: 2px; left: -7px;
+  width: 2px; min-height: 8px; padding: 0 3px; box-sizing: content-box;
+  border-radius: 2px; background: var(--fpl-heat-1) content-box;
+  cursor: help; }
+.fpl-heat[data-level="2"] { left: -9px; width: 4px;
+  background-color: var(--fpl-heat-2); }
+.fpl-heat[data-level="3"] { left: -11px; width: 6px;
+  background-color: var(--fpl-heat-3); }
 
 /* close reading: the sentence under the cursor (j / k), washed like a hot span */
 .fpl-s.fpl-here { background: var(--fpl-vers-wash); }
@@ -611,7 +637,8 @@ mark.fact.fpl-faded { background: none; box-shadow: none; }
   border-radius: 3px; background: none; color: var(--fpl-mute); cursor: pointer; }
 .fpl-why .fpl-ico svg { width: 13px; height: 13px; }
 .fpl-why:hover, .fpl-deeper:hover { background: var(--fpl-bg); color: var(--fpl-fg); }
-.fpl-topbar:not([data-stand="kantlijn"]) .fpl-search > kbd { visibility: hidden; }   /* / is Quarto's outside Kantlijn */
+/* / is Quarto's in Lezen (feedback 31) */
+.fpl-topbar[data-stand="lezen"] .fpl-search > kbd { visibility: hidden; }
 /* spans off: the marks stay as anchors, unpainted and without their lines */
 body.fpl-nospans mark.fact { background: none; box-shadow: none; outline-color: transparent; }
 /* one layer alone (board V4b): the text dimmed, only that layer in colour */
