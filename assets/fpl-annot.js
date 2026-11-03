@@ -259,7 +259,10 @@
  * the largest free gap in a fixed order and then in the order this
  * browser first meets it (kept site-wide), so a new scope never moves an
  * old colour; roots alternate two lightness bands and a child sits in an
- * arc round its parent, darker. A row is drawn in the colour of the kind
+ * arc round its parent, darker, siblings a step apart. The relations
+ * (supports, because, coref, ...) are not on the wheel: each has a pinned
+ * place in a darker, more saturated band, far from the wheel's colours
+ * and from each other (RELATION). A row is drawn in the colour of the kind
  * its card shows (a row with no label in the weave's green or blue): its
  * span, line, knob and dot. The spans over a stretch of text are its
  * layers, the longest outermost: the text is washed in the innermost
@@ -443,7 +446,16 @@
    * (localStorage["fpl-annot:hues"], site-wide), so a new scope never
    * moves an old one. Roots alternate two lightness bands; a child takes
    * the middle of the largest free stretch of an arc around its parent's
-   * hue (the first child sits on it), each level down darker and greyer.
+   * hue (the first child sits on it), each level down darker and greyer;
+   * the children of one parent cycle three lightnesses, RUNG apart, so
+   * siblings differ in lightness, not only by a few degrees of hue
+   * (code/stijl, code/bug; feedback 30).
+   *
+   * The relations stand off the wheel (feedback 30): on it, placed after
+   * the boards' roots, they fell in narrow gaps beside them (because
+   * beside claim and code, cites beside dit). Each has a place of its own
+   * in RELATION, in a band darker and more saturated than the wheel's,
+   * chosen farthest from every colour of the wheel and from each other.
    * The tree is drawn for a light page; a dark one gets the same hues.
    */
   /* the OKLCH hues of #1d7a46, #c0392b and #b8620a as tree.py reads them, to the last digit: a tie between two gaps
@@ -452,6 +464,20 @@
   const HUES = ["waarom", "lang", "verhaal", "code", "anders", "onduidelijk", "group", "role", "fn", "claim", "note", "order",
     "coref", "tfa", "resumes", "supports", "attacks", "slop/beeld", "slop/beeld/dood", ...LABELS];   // the boards' slop chain
   const BANDS = [0.52, 0.64], ARC = 12;   // OKLCH lightness of even and odd roots; a child's arc, in degrees either side
+  const RUNG = 0.07;   // between the three lightnesses of siblings
+  /* each relation's OKLCH lightness and hue at chroma RC, as the gamut
+     holds it: in this order, the candidate of a grid (lightness 0.36 or
+     0.42, every 3 degrees) farthest from the wheel's colours and the
+     relations before it; supports held between green and blue (board
+     V4c's is teal), attacks to red, because to violet, contradicts to
+     purple */
+  const RELATION = {
+    supports: [0.36, 228], attacks: [0.42, 18], because: [0.36, 285],
+    contradicts: [0.42, 312], coref: [0.42, 258], resumes: [0.42, 171],
+    cites: [0.36, 327], relates: [0.36, 0], checkedBy: [0.42, 141],
+    supersedes: [0.36, 264] };
+  const RC = 0.2;
+  const relation = (p) => Object.hasOwn(RELATION, p);
   const sighted = store("fpl-annot:hues", []);
   /** OKLCH to linear sRGB (Ottosson 2020). */
   const lrgb = (L, C, h) => {
@@ -481,14 +507,23 @@
   const mix = (c, p, g) => { const [x, y] = [rgbOf(c), rgbOf(g)];
     return "#" + x.map((v, i) => Math.round(y[i] + (v - y[i]) * p).toString(16).padStart(2, "0")).join(""); };
   const hue = new Map(Object.entries(ANCHORS)), roots = Object.keys(ANCHORS);
+  // a scope's OKLCH lightness and chroma, set where it is placed
+  const shade = new Map(roots.map((r, i) => [r, [BANDS[i % 2], 0.13]]));
   /** Degrees mod 360 as Python's %, which tree.py used: a remainder, then one turn added only when it is negative. */
   const mod = (x) => { const m = x % 360; return m < 0 ? m + 360 : m; };
+  /** The scope a label is in, null for a root. */
+  const above = (k) => k.includes("/") ? k.slice(0, k.lastIndexOf("/")) : null;
   /** Place a scope, its parent first: the middle of the largest gap among its placed siblings, on the wheel or in the parent's arc. */
   function placeHue(p) {
     if (hue.has(p)) return;
-    const cut = p.lastIndexOf("/"), up = cut < 0 ? null : p.slice(0, cut);
+    const up = above(p);
     if (up) placeHue(up);
-    const sibs = [...hue].filter(([k]) => (k.lastIndexOf("/") < 0 ? null : k.slice(0, k.lastIndexOf("/"))) === up).map(([, h]) => h);
+    if (!up && relation(p)) {
+      const [L, h] = RELATION[p];
+      return void (hue.set(p, h), shade.set(p, [L, RC]));
+    }
+    const sibs = [...hue].filter(([k]) => !relation(k) && above(k) === up)
+      .map(([, h]) => h);
     const a = up && ARC / 2 ** (p.split("/").length - 2), hs = (up ? [hue.get(up) - a, hue.get(up) + a, ...sibs] : sibs).sort((x, y) => x - y);
     let best = [-1, 0];
     for (let i = 0; i < hs.length - (up ? 1 : 0); i++) {
@@ -497,16 +532,18 @@
     }
     if (!up) roots.push(p);
     hue.set(p, up ? best[1] + best[0] / 2 : mod(best[1] + best[0] / 2));   // a child's hue stays unwrapped, so its own arc sorts
+    const [L, C] = up ? shade.get(up) : [BANDS[(roots.length - 1) % 2], 0.13];
+    const rank = sibs.length % 3;   // siblings before it, counted in threes
+    shade.set(p, up ? [L - 0.08 - RUNG * rank, Math.max(0, C - 0.02)] : [L, C]);
   }
   for (const s of [...HUES, ...sighted()].flatMap(scopes)) placeHue(s);
   /** The colour of a label; a scope new to this browser is remembered where it landed. */
   function colourOf(label) {
     const fresh = scopes(label).filter((s) => !hue.has(s));
     if (fresh.length) { fresh.forEach(placeHue); sighted([...sighted(), ...fresh]); }
-    const d = label.split("/").length - 1;
     // eight levels down the band would reach black: a deep label stops at 0.2 and grey
-    const L = BANDS[roots.indexOf(label.split("/")[0]) % 2] - 0.08 * d;
-    return hex(Math.max(0.2, L), Math.max(0, 0.13 - 0.02 * d), hue.get(label));
+    const [L, C] = shade.get(label);
+    return hex(Math.max(0.2, L), C, hue.get(label));
   }
   window.fplAnnotColour = colourOf;   // for the headless tests, and a console
   // the layers drawn by CSS (tfa washes, resumes arcs, chain numbers) take the colours their buttons show
