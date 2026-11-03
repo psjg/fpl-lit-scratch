@@ -272,9 +272,12 @@
  * the bar heads the plane. A row is a card (board V2b): its kind on a
  * line (a label, besluit and its topic, weigering, test, chunk) over two
  * lines of its quote, a decision's words, or an id's words, never the id
- * (refusal:dedent%20below… reads "dedent below …"); beside the word a
- * shape says the kind without its colour (a span a square, a fact a dot,
- * a decision a bookmark, ...), and every card has one thin solid border.
+ * (refusal:dedent%20below… reads "dedent below …"), and a span of a
+ * lone glyph its start in the text, the glyph and the words after it;
+ * the query and the filter dim cards here as in the margin. Beside the
+ * word a shape says the kind without its colour (a span a square, a fact
+ * a dot, a decision a bookmark, ...); every card has one thin solid
+ * border.
  * The plane is drawn in layers, left to right: the spans in the first
  * column in page order, what is about them to their right, so every
  * edge runs one way and none crosses a card (see layered). A relation
@@ -2427,18 +2430,41 @@
   /** Fade what the query does not find: a card stays when its row or a row in it is found, a span when its card stays. */
   function fade() {
     for (const n of document.querySelectorAll(".fpl-faded")) n.classList.remove("fpl-faded");
-    if (!found) return;
+    if (!found) { fadeGraph(null); return; }
     const stays = new Set();   // a row found, and the rows its thread hangs from, up to a span or an address
     for (const id of found) for (let r = all.find((x) => x.id === id), been = new Set(); r && !been.has(r.id); been.add(r.id), r = all.find((x) => x.id === r.targets?.[0])) {
       stays.add(r.id);
       for (const g of groupOf(r.id)) stays.add(g);
     }
+    fadeGraph(stays);
     for (const c of document.querySelectorAll(".fpl-card")) {   // inline cards too, on a narrow screen
       const ids = [c.dataset.id, ...[...c.querySelectorAll("[data-fact]")].map((x) => x.dataset.fact)];
       if (!ids.some((i) => stays.has(i))) c.classList.add("fpl-faded");
     }
     for (const m of body.querySelectorAll("mark.fact")) if (!stays.has(m.dataset.id)) m.classList.add("fpl-faded");
     for (const e of body.querySelectorAll("[data-tfa-row]")) if (!found.has(e.dataset.tfaRow)) e.classList.add("fpl-faded");
+  }
+
+  /**
+   * The graph fades as the margin does (feedback 24): a card whose row
+   * the query leaves (stays, null without a query) or whose span the
+   * filter hides, an id outside the rows while no row that stays names
+   * it, and an edge with a faded end.
+   */
+  function fadeGraph(stays) {
+    const hid = (id) => {
+      const r = all.find((x) => x.id === id);
+      if (stays && !stays.has(id) && (r || !all.some((x) => stays.has(x.id)
+        && x.targets?.includes(id)))) return true;
+      return typeof r?.text === "string" && !passes(wholeOf(r.id) ?? r);
+    };
+    const gone = new Set();
+    for (const n of plane?.querySelectorAll(".fpl-node") ?? [])
+      if (hid(n.dataset.id)) gone.add(n.dataset.id);
+    for (const x of plane?.querySelectorAll(".fpl-node, .fpl-edge") ?? []) {
+      const { id, a, b } = x.dataset;
+      if ([id, a, b].some((i) => gone.has(i))) x.classList.add("fpl-faded");
+    }
   }
 
   const SETKINDS = new Set(["coref", "parts"]);
@@ -2724,7 +2750,11 @@
   /** What a node says: a row's quote, a fact's note, a decision's words, an address's text, a chunk's name, an id's words. */
   function nodeText(n) {
     const r = all.find((x) => x.id === n.id), d = decision(n.id);
-    if (r) return typeof r.text === "string" ? r.text : r.note || (r.labels ?? []).join(" ") || r.id;
+    // a span of a lone glyph (a quote mark, a bracket) reads as where it
+    // starts in the text: the glyph and the words after it (feedback 24)
+    if (typeof r?.text === "string") return /[\p{L}\p{N}]{2}/u.test(r.text)
+      ? r.text : `${r.text.trim()} ${r.suffix ?? ""}`.trim();
+    if (r) return r.note || (r.labels ?? []).join(" ") || r.id;
     if (d) return d.decision || d.topic || "besluit";
     return n.label ?? (document.getElementById(n.id)?.textContent.trim() || extText(n.id) || n.id);
   }
@@ -2917,6 +2947,7 @@
         return c;
       }), el("button", { type: "button", className: "fpl-why", title: how, ariaLabel: how, onclick: () => toast(how) }, ico("why")));
       select(p.centre, false);
+      fade();   // the new cards as the query and the filter have them
     }
     /** Buurt or Hele pagina, the graph's reach; Buurt once it had a centre. */
     function scope() {

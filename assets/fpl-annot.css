@@ -573,6 +573,7 @@ body.fpl-beside #quarto-sidebar, body.fpl-beside #quarto-margin-sidebar { displa
 .fpl-chain { font: 700 .58em var(--bs-font-sans-serif, sans-serif); color: var(--fpl-coref, var(--fpl-mine)); margin-left: .1em; user-select: none; }
 
 .fpl-card.fpl-faded { opacity: .25; }
+.fpl-plane .fpl-node.fpl-faded, .fpl-plane .fpl-edge.fpl-faded { opacity: .2; }
 mark.fact.fpl-faded { background: none; box-shadow: none; }
 .fpl-c[data-tfa].fpl-faded, .fpl-s[data-tfa].fpl-faded { background: none; box-shadow: none; }
 
