@@ -3405,7 +3405,8 @@
       let sx, y0;
       if (x.uc) { sx = x.on.dia; y0 = x.on.arm + 6; }
       else {
-        const pa = items.find((y) => (y.g?.id ?? y.id) === x.parent);
+        // the parent's own block, not one that shows it again ("zie boven")
+        const pa = items.find((y) => !y.again && (y.g?.id ?? y.id) === x.parent);
         const sibs = items.filter((y) => y.parent === x.parent && !y.uc);
         const k = sibs.indexOf(x), pb = box(pa.el);
         sx = pb.l + 8 + 8 * Math.min(sibs.length - 1 - k, 3); y0 = pb.b;
