@@ -4469,9 +4469,11 @@
     flag("fpl-gut-narrow", g < 24 + need && g >= 3 + need);
     flag("fpl-gut-none", g < 3 + need);
   }
-  // the nav folds by its own button (fpl-nav.js), which runs no layout
+  // the nav folds by its own button (fpl-nav.js), which runs no layout;
+  // a font come late changes the numbers' width
   new MutationObserver(numbers)
     .observe(document.body, { attributeFilter: ["class"] });
+  document.fonts?.addEventListener("loadingdone", numbers);
   const gutTip = el("div", { className: "fpl-annot-ui fpl-tip", hidden: true });
   document.addEventListener("pointermove", (ev) => {
     const id = ev.pointerType === "mouse" ? numberAt(ev) : null;
