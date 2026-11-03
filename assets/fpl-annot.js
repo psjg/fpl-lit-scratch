@@ -340,12 +340,14 @@
  * their own (a hot card would open over the next). Shift-click cards in
  * the graph to choose them: a form asks a name and a role, and Enter
  * saves the row, or the cards join the group of ours with that name
- * (the name completes from them, and while it names one the form says
- * In groep, Voeg toe). A card dragged onto a group's frame joins it, the
- * frame lit while the card is over it; dragged off its frame, it leaves
- * that group, and the row goes with its last member;
- * Groepeer… in a card's menu opens the graph with that card chosen and
- * the form open; the tab of a group of ours opens it there, to rename or let go, and
+ * (the names of ours that hold what is typed stand under the field, and
+ * while it names one the form says Voeg toe aan “Paren”). A card dragged
+ * onto a group's frame joins it, the frame lit while the card is over
+ * it; dragged off its frame, it leaves that group, and the row goes with
+ * its last member; onto a frame of the sidecar it stays where it was.
+ * Groepeer… in a card's menu opens the same form in that menu, beside
+ * the card, the view as it was; the tab of a group of ours opens it in
+ * the graph, to rename or let go, and
  * Esc lets a choice go before it closes the graph. group/gepakt is the
  * tray of pulled sentences, a group without a role: Pak in a card's
  * menu adds the card to it, Leg terug takes it out, and the row goes
@@ -434,6 +436,7 @@
       return JSON.parse(localStorage.getItem(k) || "null") ?? d;
     } catch { return set ?? d; }
   };
+  const heatOn = store("fpl-annot:heat", true);   // the heat bar, site-wide
   const tally = store("fpl-annot:used", {});        // label -> times saved in this browser, site-wide
   const quick = store("fpl-annot:quick", []);       // labels confirmed as quick chips
   const declined = store("fpl-annot:declined", []); // labels whose offer was turned down
@@ -455,8 +458,10 @@
    * the boards' roots, they fell in narrow gaps beside them (because
    * beside claim and code, cites beside dit). Each has a place of its own
    * in RELATION, in a band darker and more saturated than the wheel's,
-   * chosen farthest from every colour of the wheel and from each other.
-   * The tree is drawn for a light page; a dark one gets the same hues.
+   * chosen farthest from every colour of the wheel and from each other,
+   * each near the hue it was planned at: chosen by distance alone, four
+   * of them came out purple (QA, block 5). The tree is drawn for a
+   * light page; a dark one gets the same hues.
    */
   /* the OKLCH hues of #1d7a46, #c0392b and #b8620a as tree.py reads them, to the last digit: a tie between two gaps
      falls the way it fell for the boards */
@@ -465,17 +470,19 @@
     "coref", "tfa", "resumes", "supports", "attacks", "slop/beeld", "slop/beeld/dood", ...LABELS];   // the boards' slop chain
   const BANDS = [0.52, 0.64], ARC = 12;   // OKLCH lightness of even and odd roots; a child's arc, in degrees either side
   const RUNG = 0.07;   // between the three lightnesses of siblings
-  /* each relation's OKLCH lightness and hue at chroma RC, as the gamut
-     holds it: in this order, the candidate of a grid (lightness 0.36 or
-     0.42, every 3 degrees) farthest from the wheel's colours and the
-     relations before it; supports held between green and blue (board
-     V4c's is teal), attacks to red, because to violet, contradicts to
-     purple */
+  /* each relation's OKLCH lightness (0.30-0.42) and hue at chroma RC,
+     as the gamut holds it: in this order, the candidate farthest from
+     the wheel's colours and the relations before it, inside a window of
+     hue round its planned anchor (feedback 17, 30), so the relations
+     part by hue and not by lightness alone: supports green as dit,
+     attacks red as niet, because violet as waarom, contradicts wine,
+     cites blue as verhaal, checkedBy a dark ochre; the rare four where
+     room is left, 20 degrees from the rest (relhues.cjs) */
   const RELATION = {
-    supports: [0.36, 228], attacks: [0.42, 18], because: [0.36, 285],
-    contradicts: [0.42, 312], coref: [0.42, 258], resumes: [0.42, 171],
-    cites: [0.36, 327], relates: [0.36, 0], checkedBy: [0.42, 141],
-    supersedes: [0.36, 264] };
+    supports: [0.42, 165], attacks: [0.42, 18], because: [0.36, 285],
+    contradicts: [0.36, 358], cites: [0.36, 249], checkedBy: [0.30, 90],
+    resumes: [0.36, 196], relates: [0.42, 226], supersedes: [0.42, 313],
+    coref: [0.42, 336] };
   const RC = 0.2;
   const relation = (p) => Object.hasOwn(RELATION, p);
   const sighted = store("fpl-annot:hues", []);
@@ -1009,13 +1016,30 @@
       b.append(k === v ? ico("check") : el("span", { className: "fpl-ico" }), name);
       if (k === "boom") b.append(el("kbd", {}, "b"));
       return b;
-    }));
+    }), el("hr", { role: "separator" }), heatItem());
     views.children[was]?.focus({ preventScroll: true });
+  }
+  /**
+   * The heat bar on or off (QA, block 5: it was in no menu), its three
+   * steps beside it as its legend; what it counts under the mouse.
+   */
+  function heatItem() {
+    const on = heatOn(), turn = () => { heatOn(!on); heat(); fillViews(); };
+    const b = button("", turn, "fpl-item");
+    b.role = "menuitemcheckbox"; b.ariaChecked = String(on);
+    b.title = "Links van elk blok: hoeveel rijen erop wijzen."
+      + " Breder en roder: meer.";
+    const key = el("span", { className: "fpl-heatkey", ariaHidden: "true" },
+      ...[1, 2, 3].map((n) => el("i", { className: `fpl-hk${n}` })));
+    b.append(on ? ico("check") : el("span", { className: "fpl-ico" }),
+      "Warmtebalk", key);
+    return b;
   }
   views.onkeydown = (e) => {
     if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
     e.preventDefault();
-    const items = [...views.children], i = items.indexOf(document.activeElement);
+    const items = [...views.querySelectorAll(".fpl-item:not(:disabled)")];
+    const i = items.indexOf(document.activeElement);
     items[(i + (e.key === "ArrowDown" ? 1 : items.length - 1)) % items.length]?.focus();
   };
   const chips = el("div", { className: "fpl-filters" });
@@ -1025,24 +1049,59 @@
   bar.append(file);
   let bad = "";   // why the query in the field does not parse
 
-  /** Run the query in the field; a query in Lezen shows the spans, since Lezen draws none. */
-  const ask = () => {
+  /**
+   * A word without a key searches quotes and notes (QA, block 5): grammar
+   * is text:grammar, !x is !text:x.
+   */
+  const worded = (q) =>
+    q.replace(/(^| )(!?)([^ :|][^ :]*)(?= |$)/g, "$1$2text:$3");
+  /** The parser's reason in Dutch, for the field's tip. */
+  const WHY = [
+    [/unknown key '(.*)'/,
+      "Onbekende sleutel “$1”: label, layer, by, text, has of gives"],
+    [/empty value/, "Niets na de dubbele punt"],
+    [/no key:value/, "Voor de dubbele punt een sleutel, zoals label"],
+    [/'(.*)' is no relation or set/, "“$1” is geen relatie of verzameling"],
+    [/'(.*)' is no layer/, "“$1” is geen laag"],
+    [/bad chain length/, "Na + een getal vanaf 1"],
+    [/empty group/, "Niets naast de |"],
+    [/chain too long/, "Die keten is te lang om te zoeken"]];
+  const why = (m) => {
+    const w = WHY.find(([re]) => re.test(m)), at = m.match(/at (\d+)$/)?.[1];
+    return (w ? m.match(w[0])[0].replace(w[0], w[1]) : m)
+      + (at ? ` (teken ${at})` : "");
+  };
+  /**
+   * Run the query in the field; a query in Lezen shows the spans, since
+   * Lezen draws none. live: while typing, where a query half typed
+   * leaves what was found as it was and says nothing yet.
+   */
+  const ask = (live) => {
+    // only U+0020 apart, as the parser
+    const q = worded(field.value.replace(/^ +| +$/g, ""));
+    let f = null, no = "";
+    try { f = q ? new Set(QUERY.query(all, q)) : null; }
+    catch (e) { no = why(e.message); }
+    if (live && no) return;
     const was = bands.length > 0 && folded(runsNear(context));   // to the spans
-    asked = field.value.replace(/^ +| +$/g, "");   // only U+0020 apart, as the parser
-    try { found = asked ? new Set(QUERY.query(all, asked)) : null; bad = ""; }
-    catch (e) { found = null; bad = e.message; }
+    asked = q; found = f; bad = no;
     field.classList.toggle("is-bad", !!bad);
     search.classList.toggle("is-on", !!asked);
     field.title = bad;
-    if (asked && mode() === "lezen") stand("spans"); else layout();
+    if (asked && !live && mode() === "lezen") stand("spans"); else layout();
     // folded to the spans: refold to the new ones, as a new Context does
     if (was) setBands(runsNear(context) ?? []);
   };
   /** The funnel opens the panel, in the field of the full bar as in the folded one; typing a query closes it. */
-  field.oninput = () => { if (field.value && bar.classList.contains("is-full") && !panel.hidden) shut(); };
+  let typing = 0;   // the live query waits for a pause in the typing
+  field.oninput = () => {
+    const full = bar.classList.contains("is-full");
+    if (field.value && full && !panel.hidden) shut();
+    clearTimeout(typing); typing = setTimeout(() => ask(true), 180);
+  };
   field.onkeydown = (e) => {
     e.stopPropagation();   // j, k, a, 1-4 and Esc belong to the page, not while typing a query
-    if (e.key === "Enter") ask();
+    if (e.key === "Enter") { clearTimeout(typing); ask(); }
     if (e.key === "Escape") { if (field.value) { field.value = ""; ask(); } else { shut(); field.blur(); } }
   };
 
@@ -1214,9 +1273,14 @@
   function fillLabels() {
     const v = labelField.value.toLowerCase(), cut = v.lastIndexOf("/"), at = v.slice(0, cut + 1), typed = v.slice(cut + 1);
     const n = scopeTally(), off = hidden(), depth = at.split("/").length;
-    const name = (l) => (VERB[l] ?? "") + " " + l.slice(l.lastIndexOf("/") + 1).toLowerCase();
+    // a label is found by the name it shows, never by a hidden English key
+    // (QA, block 5: c found omdat, which is because)
+    const name = (l) =>
+      (VERB[l] ?? l.slice(l.lastIndexOf("/") + 1)).toLowerCase();
     let here = [...n.keys()].filter((l) => l.split("/").length === depth && l.toLowerCase().startsWith(at) && name(l).includes(typed));
-    if (!here.length && typed) here = [...n.keys()].filter((l) => l.toLowerCase().includes(typed));   // nothing on this level: anywhere
+    // nothing on this level: anywhere
+    if (!here.length && typed)
+      here = [...n.keys()].filter((l) => name(l).includes(typed));
     here.sort((a, b) => (a === NONE) - (b === NONE) || n.get(b) - n.get(a) || a.localeCompare(b));
     lit = Math.max(0, Math.min(lit, here.length - 1));
     labelList.replaceChildren(...here.map((l, i) => {
@@ -1252,6 +1316,8 @@
       e.preventDefault();
       lit = (lit + (e.key === "ArrowDown" ? 1 : -1) + items.length) % items.length;
       fillLabels();
+      labelList.querySelector("[aria-selected=true]")
+        ?.scrollIntoView({ block: "nearest" });   // one column scrolls
     } else if (e.key === "ArrowRight" && end && cur && items[lit].querySelector(".fpl-deeper")) { e.preventDefault(); descend(cur); }
     else if (e.key === "ArrowLeft" && v.endsWith("/")) {   // back up: the scope we came from chosen
       e.preventDefault();
@@ -1693,7 +1759,10 @@
   let openId = null;   // the card laid out open: its thread shows and the cards below make room
   let menuOf = null;   // the id of the card whose menu is open
   const cardMenu = el("div", { className: "fpl-annot-ui fpl-menu fpl-cardmenu", hidden: true, role: "menu", ariaLabel: "Acties voor deze kaart" });
-  const cardEl = (id) => margin.querySelector(`.fpl-card[data-id="${CSS.escape(id)}"]`);
+  // in the margin, or folded under its block on a narrow screen (QA, block
+  // 5: there the ⋯ opened nothing)
+  const cardEl = (id, s = `.fpl-card[data-id="${CSS.escape(id)}"]`) =>
+    margin.querySelector(s) ?? body.querySelector(s);
   /**
    * Open the menu of a card, left of it as on board F (under its ⋯ where
    * there is no room), with the card laid out open. Its Verbind met… arms
@@ -1738,6 +1807,120 @@
     else save(tray ?? {}, { note: tray?.note ?? "", labels: tray?.labels ?? [TRAY], targets: rest });
     draw();
     toast(back ? "Teruggelegd" : "Gepakt");
+  }
+  /**
+   * The group form (board V3a, without its sentences): a name, a role
+   * of four, Annuleer and Groep maken. Enter in the name saves: a new
+   * row group/<naam> of the ids, or, for a name a group of ours has,
+   * they join it; an open group of ours (gr) takes its new name and
+   * role, and its Verwijder lets it go. Esc calls done, as a save does.
+   * The names of ours that hold what is typed stand under the field
+   * (feedback 27), and while it names one the form says so at once:
+   * "Voeg toe aan “Paren”", Voeg toe. The graph holds it under its
+   * cards; a card's Groepeer… in its ⋯ menu, beside the card, so the
+   * view stays (QA, block 5).
+   */
+  function groupForm(gr, ids, done) {
+    const ours = all.filter((r) => isGroup(r) && r.mine
+      && r.labels[0] !== TRAY && r !== gr);
+    const name = el("input", { type: "text", value: gr ? groupName(gr) : "",
+      autocomplete: "off", ariaLabel: "Naam" });
+    // the names of ours that hold what is typed, under the field (feedback
+    // 27; a datalist's popup showed in no pane): a click or Enter takes one
+    const sug = el("div", { className: "fpl-gsug", role: "listbox",
+      ariaLabel: "Groepen", hidden: true });
+    const suggest = () => {
+      const t = name.value.trim().toLowerCase();
+      const hit = ours.filter((r) => groupName(r).toLowerCase().includes(t)
+        && groupName(r).toLowerCase() !== t).slice(0, 5);
+      sug.replaceChildren(...hit.map((r) => {
+        const o = button(groupName(r), () => {
+          name.value = groupName(r); name.oninput(); name.focus();
+        }, "fpl-item");
+        o.role = "option";
+        return o;
+      }));
+      sug.hidden = !hit.length;
+    };
+    const roles = el("div", { className: "fpl-roles", role: "radiogroup",
+      ariaLabel: "Rol" }, ...["", "claim", "bewijs", "tegen"].map((r) => {
+      const b = button(r || "geen rol", () => {
+        for (const x of roles.children) x.ariaChecked = String(x === b);
+      });
+      b.role = "radio"; b.dataset.role = r;
+      b.ariaChecked = String(r === (gr ? roleOf(gr) : ""));
+      return b;
+    }));
+    const go = el("button", { type: "submit", className: "fpl-go" },
+      gr ? "Bewaar " : "Groep maken ", el("kbd", {}, "↩"));
+    const head = gr ? "Groep" : "Nieuwe groep";
+    const h = el("p", { className: "fpl-gform-h" }, head);
+    const del = gr && button("Verwijder", () => {
+      save(gr, "delete"); done();
+    }, "fpl-danger");
+    const f = el("form", { className: "fpl-gform", ariaLabel: head },
+      h, el("label", {}, el("span", {}, "Naam"), name), sug,
+      el("div", {}, el("span", { className: "fpl-glabel" }, "Rol"), roles),
+      el("div", { className: "fpl-bar fpl-keys" }, del || null,
+        el("span", { className: "fpl-space" }),
+        button("Annuleer", () => done()), go));
+    f.group = gr;
+    // a name of ours: the cards join that group, and the form says so
+    name.oninput = () => {
+      const label = `group/${slug(name.value)}`;
+      const into = !gr && ours.find((r) => r.labels[0] === label);
+      h.textContent = into ? `Voeg toe aan “${groupName(into)}”` : head;
+      suggest();
+      go.firstChild.textContent = into ? "Voeg toe "
+        : gr ? "Bewaar " : "Groep maken ";
+      if (!into) return;
+      for (const x of roles.children) {
+        x.ariaChecked = String(x.dataset.role === roleOf(into));
+      }
+    };
+    f.onsubmit = (ev) => {
+      ev.preventDefault();
+      const label = slug(name.value);
+      const no = (m) => { toast(m); name.focus(); };
+      if (!label) { no("Een groep heeft een naam"); return; }
+      const role = roles.querySelector('[aria-checked="true"]')?.dataset.role
+        ?? "";
+      const named = all.find((r) => isGroup(r)
+        && r.labels[0] === `group/${label}` && r !== gr);
+      if (named && !named.mine) {
+        no("Die naam heeft een groep uit de sidecar"); return;
+      }
+      if (`group/${label}` === TRAY && role) {
+        toast("Gepakte zinnen hebben geen rol"); return;
+      }
+      const into = named ?? gr;
+      const keep = (into?.labels ?? []).filter((l) => /^order\//.test(l));
+      const labels = [`group/${label}`, ...role ? [`role/${role}`] : [],
+        ...keep];
+      const targets = [...new Set([...into?.targets ?? [],
+        ...gr && named ? gr.targets : [], ...ids])];
+      // renamed onto a group of ours: the two are one
+      if (gr && named) save(gr, "delete");
+      const note = named ? into.note : name.value.trim();
+      save(into ?? {}, { note, labels, targets });
+      toast(named && !gr ? `In “${groupName(named)}”`
+        : into ? "Groep bewaard" : "Groep gemaakt");
+      done();
+    };
+    f.onkeydown = (ev) => {
+      if (ev.key === "Escape") {
+        ev.preventDefault(); ev.stopPropagation(); done();
+      }
+      // down from the name into the names of ours, up and down among them
+      if (ev.key !== "ArrowDown" && ev.key !== "ArrowUp" || sug.hidden) return;
+      const os = [...sug.children], i = os.indexOf(document.activeElement);
+      if (i < 0 && ev.target !== name) return;
+      ev.preventDefault(); ev.stopPropagation();   // not the ⋯ menu's
+      const j = i + (ev.key === "ArrowDown" ? 1 : -1);
+      (j < 0 ? name : os[Math.min(j, os.length - 1)]).focus();
+    };
+    if (!gr) suggest();   // the groups of ours at once, to join one
+    return f;
   }
   /** Put a row in a group of ours and out of the tray (board V3c); a group of the sidecar only reads. */
   function join(id, g) {
@@ -1791,7 +1974,14 @@
       entry("graph", "Graph van deze kaart", () => { shut(); graph(row.id); }),
       ...ends.map((t) => entry("fold", `Toon beide · ${clip(said(t), 22)}`, () => { shut(); both(row.id, t); })),
       tray && !tray.mine ? null : entry("tray", tray?.targets?.includes(row.id) ? "Leg terug" : "Pak", () => { shut(); pull(row.id); }),
-      entry("group", "Groepeer…", () => { shut(); graph(row.id).then(() => plane?.group(row.id)); }),
+      entry("group", "Groepeer…", () => {   // in the menu, the view stays
+        const f = groupForm(null, new Set([row.id]), () => { shut(); draw(); });
+        const l = parseFloat(cardMenu.style.left);   // 60px wider, to the left
+        Object.assign(cardMenu.style, { width: "300px",
+          left: `${Math.max(scrollX + 8, l - 60)}px` });
+        cardMenu.replaceChildren(f);
+        f.querySelector("input").focus({ preventScroll: true });
+      }),
       el("hr"),
       del].filter(Boolean));
   }
@@ -1994,14 +2184,17 @@
     // member, lifted to its group, last, where nothing hangs it yet
     const hang = (x, lifted) => {
       const a = unit(x.from);
-      const to = x.to.find((t) => !rels.has(t) && unit(t) !== a);
-      if (rels.has(x.from) || !to) return;   // an undercut, or in one unit
-      if (lifted !== (a !== x.from || unit(to) !== to)) return;
-      const step = { parent: unit(to), rel: x.rel, kind: x.kind, word: x.word };
-      if (lifted && up.has(a)) return;
-      meet(step.parent); meet(a);
-      if (!up.has(a)) up.set(a, step);
-      else if (up.get(a).parent !== step.parent) also.push({ id: a, ...step });
+      if (rels.has(x.from) || (lifted && up.has(a))) return;   // an undercut
+      for (const to of x.to) {   // each end of the step, as one step each
+        if (rels.has(to) || unit(to) === a) continue;   // in one unit
+        if (lifted !== (a !== x.from || unit(to) !== to)) continue;
+        const step = { parent: unit(to), rel: x.rel, kind: x.kind,
+          word: x.word };
+        meet(step.parent); meet(a);
+        if (!up.has(a)) up.set(a, step);
+        else if (up.get(a).parent !== step.parent)
+          also.push({ id: a, ...step });
+      }
     };
     for (const x of st) hang(x, false);
     let claim = null;
@@ -2934,8 +3127,7 @@
     const opener = document.activeElement;
     const area = el("div", { className: "fpl-plane-area" });
     const foot = el("div", { className: "fpl-plane-foot", role: "group", ariaLabel: "Soorten relaties" });
-    const head = el("div", { className: "fpl-scope", role: "radiogroup",
-      ariaLabel: "Bereik" });
+    const head = el("div", { className: "fpl-scope" });
     const p = plane = el("div", { className: "fpl-annot-ui fpl-graph fpl-plane",
       role: "region", ariaLabel: "Graph" }, head, area, foot);
     let g = null, sel = null, built = "", nodes = [], frames = [], sheet = null;
@@ -3032,7 +3224,17 @@
         const t = out ? e.b : e.own ?? e.b;
         return { e, s: t === e.a ? e.b : e.a, t };
       });
-      const box = layered(ns, les, { gap: GY });
+      // wider than the plane (QA, block 5: the last column ran past it),
+      // the columns close up, from 48px to 16 between them; the width is
+      // linear in that gap, so two layouts give the one that fits
+      const room = area.clientWidth - 2 * (PAD + 8);
+      let box = layered(ns, les, { gap: GY });
+      if (box.w > room) {
+        const tight = layered(ns, les, { gap: GY, hgap: 16 });
+        const h = 16 + 32 * (room - tight.w) / Math.max(1, box.w - tight.w);
+        box = h > 16
+          ? layered(ns, les, { gap: GY, hgap: Math.floor(h) }) : tight;
+      }
       const ox = Math.max(PAD + 8, (area.clientWidth - box.w) / 2), oy = PAD;
       for (const n of ns) { n.x += ox; n.y += oy; }
       for (const { e, s, pts } of les)
@@ -3085,20 +3287,42 @@
         if (k !== "code") c.append(ico(signOf(k)));
         c.append(kindName(k));
         return c;
-      }), el("button", { type: "button", className: "fpl-why", title: how, ariaLabel: how, onclick: () => toast(how) }, ico("why")));
+      }), g.edges.some((e) => e.kind === "over") ? over() : null,
+      el("button", { type: "button", className: "fpl-why", title: how,
+        ariaLabel: how, onclick: () => toast(how) }, ico("why")));
       select(p.centre, false);
       fade();   // the new cards as the query and the filter have them
+    }
+    /**
+     * The plain line, from a span to a note or fact about it, in the
+     * legend too (QA, block 5: the one line it lacked); no switch.
+     */
+    function over() {
+      const k = el("span", { className: "fpl-klegend" });
+      k.style.setProperty("--lc", edgeColour("over"));
+      k.innerHTML = `<svg width="16" height="10" aria-hidden="true">`
+        + `<path d="M1 5H15"/></svg>`;
+      k.append("gaat over");
+      return k;
     }
     /** Buurt or Hele pagina, the graph's reach; Buurt once it had a centre. */
     function scope() {
       const ways = [["hood", "Buurt"], ["page", "Hele pagina"]];
-      head.replaceChildren(...ways.map(([k, name]) => {
+      // a step back in sight, as Back and Alt ← (QA, block 5), while the
+      // entry is the graph's own, so it never leaves the page
+      const back = el("button", { type: "button", className: "fpl-back",
+        ariaLabel: "Terug", title: "Terug · Alt ←",
+        disabled: history.state?.fplGraph === undefined,
+        onclick: () => history.back() }, ico("deeper"));
+      const radios = el("span", { className: "fpl-ways", role: "radiogroup",
+        ariaLabel: "Bereik" }, ...ways.map(([k, name]) => {
         const b = button(name, () => p.go(k === "page" ? null : p.last));
         b.role = "radio"; b.dataset.scope = k;
         b.ariaChecked = String((k === "page") === !p.centre);
         b.disabled = k === "hood" && !p.last;
         return b;
       }));
+      head.replaceChildren(back, radios);
     }
     /**
      * Stand round a node, or round none (the whole page), a step the
@@ -3140,12 +3364,11 @@
      * to it, from border to border, until the next drawing.
      */
     function place2() {
-      // round its cards where they stand; a card carried leaves it standing
+      // round its cards where they stand; while one is carried the frame
+      // holds still, so the card can leave it and the frame still lights
       for (const f of frames) {
-        let ms = f.ms.filter((n) => !n.lift);
-        if (!ms.length && f.box) continue;
-        if (!ms.length) ms = f.ms;
-        const xs = ms.map((n) => n.x), ys = ms.map((n) => n.y);
+        if (f.box && f.ms.some((n) => n.lift)) continue;
+        const xs = f.ms.map((n) => n.x), ys = f.ms.map((n) => n.y);
         // 13px above the cards, so the tab on the frame's top edge stands clear of them
         f.box = [Math.min(...xs) - CW / 2 - 8, Math.min(...ys) - CH / 2 - 13, Math.max(...xs) + CW / 2 + 8, Math.max(...ys) + CH / 2 + 8].map(Math.round);
         Object.assign(f.el.style, { left: `${f.box[0]}px`, top: `${f.box[1]}px`, width: `${f.box[2] - f.box[0]}px`, height: `${f.box[3] - f.box[1]}px` });
@@ -3194,9 +3417,14 @@
         const was = n.lift, into = was && frameAt();
         from = null; n.lift = false; n.el.classList.remove("is-lift");
         for (const f of frames) f.el.classList.remove("is-over");
+        if (was) place2();   // the frames, held while it was carried, catch up
         if (!was || n.rel) return;
         const home = frames.find((f) => f.ms.includes(n));
         if (into && into !== home) {
+          if (!into.g.mine) {   // before leave: a refused join keeps its home
+            toast("Een groep uit de sidecar wijzig je met lit facts");
+            return;
+          }
           if (home) leave(n.id, home.g, true);
           join(n.id, into.g);
         }
@@ -3241,70 +3469,14 @@
       else if (!chosen.size && !sheet?.group) { sheet?.remove(); sheet = null; }
       sheet?.querySelector("input").focus({ preventScroll: true });   // the click took it to the card
     }
-    /**
-     * The group form (board V3a, without its sentences): a name, a role
-     * of four, Annuleer and Groep maken. Enter in the name saves: a new
-     * row group/<naam> of the cards chosen, or, for a name a group of ours
-     * has, those cards join it; an open group of ours takes its new name
-     * and role, and its Verwijder lets it go. Esc lets the choice go. The
-     * name completes from the groups of ours (feedback 27), and while it
-     * names one the form says so at once: "In groep", Voeg toe.
-     */
+    /** The group form under the graph, for the cards chosen. */
     function form(gr) {
       sheet?.remove();
-      const ours = all.filter((r) => isGroup(r) && r.mine
-        && r.labels[0] !== TRAY && r !== gr);
-      const names = el("datalist", { id: "fpl-gnames" },
-        ...ours.map((r) => el("option", { value: groupName(r) })));
-      const name = el("input", { type: "text", value: gr ? groupName(gr) : "", autocomplete: "off" });
-      name.setAttribute("list", "fpl-gnames");
-      const roles = el("div", { className: "fpl-roles", role: "radiogroup", ariaLabel: "Rol" }, ...["", "claim", "bewijs", "tegen"].map((r) => {
-        const b = button(r || "geen rol", () => { for (const x of roles.children) x.ariaChecked = String(x === b); });
-        b.role = "radio"; b.ariaChecked = String(r === (gr ? roleOf(gr) : "")); b.dataset.role = r;
-        return b;
-      }));
-      const go = el("button", { type: "submit", className: "fpl-go" }, gr ? "Bewaar " : "Groep maken ", el("kbd", {}, "↩"));
-      const head = gr ? "Groep" : "Nieuwe groep";
-      const h = el("p", { className: "fpl-gform-h" }, head);
-      const f = sheet = el("form", { className: "fpl-gform", ariaLabel: gr ? "Groep" : "Nieuwe groep" },
-        h, names,
-        el("label", {}, el("span", {}, "Naam"), name), el("div", {}, el("span", { className: "fpl-glabel" }, "Rol"), roles),
-        el("div", { className: "fpl-bar fpl-keys" }, gr ? button("Verwijder", () => { save(gr, "delete"); done(); }, "fpl-danger") : null,
-          el("span", { className: "fpl-space" }), button("Annuleer", () => done()), go));
-      f.group = gr;
-      // a name of ours: the cards join that group, and the form says so
-      name.oninput = () => {
-        const label = `group/${slug(name.value)}`;
-        const into = !gr && ours.find((r) => r.labels[0] === label);
-        h.textContent = into ? `In groep “${groupName(into)}”` : head;
-        go.firstChild.textContent = into ? "Voeg toe "
-          : gr ? "Bewaar " : "Groep maken ";
-        if (!into) return;
-        for (const x of roles.children) {
-          x.ariaChecked = String(x.dataset.role === roleOf(into));
-        }
-      };
-      const done = () => { chosen.clear(); f.remove(); sheet = null; draw(); };
-      f.onsubmit = (ev) => {
-        ev.preventDefault();
-        const label = slug(name.value);
-        if (!label) { toast("Een groep heeft een naam"); name.focus(); return; }
-        const role = roles.querySelector('[aria-checked="true"]')?.dataset.role ?? "";
-        const named = all.find((r) => isGroup(r) && r.labels[0] === `group/${label}` && r !== gr);
-        if (named && !named.mine) { toast("Die naam heeft een groep uit de sidecar"); name.focus(); return; }
-        if (`group/${label}` === TRAY && role) { toast("Gepakte zinnen hebben geen rol"); return; }
-        const into = named ?? gr, keep = (into?.labels ?? []).filter((l) => /^order\//.test(l));
-        const labels = [`group/${label}`, ...role ? [`role/${role}`] : [], ...keep];
-        const targets = [...new Set([...into?.targets ?? [], ...gr && named ? gr.targets : [], ...chosen])];
-        if (gr && named) save(gr, "delete");   // renamed onto a group of ours: the two are one
-        const note = named ? into.note : name.value.trim();
-        save(into ?? {}, { note, labels, targets });
-        toast(named && !gr ? `In “${groupName(named)}”`
-          : into ? "Groep bewaard" : "Groep gemaakt");
-        done();
-      };
-      f.onkeydown = (ev) => { if (ev.key === "Escape") { ev.preventDefault(); ev.stopPropagation(); done(); } };
-      p.insertBefore(f, foot);
+      sheet = groupForm(gr, chosen, () => {
+        chosen.clear(); sheet?.remove(); sheet = null; draw();
+      });
+      p.insertBefore(sheet, foot);
+      const name = sheet.querySelector("input");
       name.focus({ preventScroll: true });
       name.select();
     }
@@ -3369,7 +3541,7 @@
       }
       const sv = document.createElementNS("http://www.w3.org/2000/svg", "svg");
       sv.classList.add("fpl-edges", "fpl-tlines");
-      area.replaceChildren(list);
+      area.replaceChildren(legend(), list);
       list.append(sv, ...items.map(blockOf));
       order = items.filter((x) => x.g).map((x) => x.g);
       sv.setAttribute("width", list.scrollWidth); sv.setAttribute("height", list.scrollHeight);
@@ -3379,6 +3551,31 @@
         const up = x.parent ? `<${x.parent}` : "";
         return `${x.g?.id ?? x.id ?? x.uc.id}@${x.depth}${up}`;
       }).join(" ");
+    }
+    /**
+     * The tree's legend, a line over it (QA, block 5): its signs and the
+     * weight's dots, and under the mouse what it is read from.
+     */
+    function legend() {
+      const why = "Uit de relaties omdat, steunt, valt aan en spreekt tegen,"
+        + " en de groepen met hun rol. Citeert en getoetst door niet.";
+      const sign = (k) => {
+        const s = el("span", { className: "fpl-ksign" });
+        s.innerHTML = '<svg width="10" height="10" viewBox="0 0 10 10"'
+          + ` aria-hidden="true"><path d="M1.5 5h7${k === "supports"
+            ? "M5 1.5v7" : ""}"/></svg>`;
+        s.style.setProperty("--lc", `var(--fpl-${k})`);
+        return s;
+      };
+      const dia = el("span", { className: "fpl-kinf" });
+      dia.style.setProperty("--lc", "var(--fpl-edge)");
+      return el("div", { className: "fpl-tkey", ariaHidden: "true" },
+        el("span", {}, sign("supports"), "steunt"),
+        el("span", {}, sign("attacks"), "valt aan"),
+        el("span", {}, dia, "stap"),
+        el("span", {}, el("b", {}, "●●●"), "gewicht"),
+        el("button", { type: "button", className: "fpl-why", title: why,
+          ariaLabel: why, onclick: () => toast(why) }, ico("why")));
     }
     /** A group's block, a loose unit's or an undercut's. */
     function blockOf(x) {
@@ -3596,10 +3793,6 @@
       drawView();
       pulled(v === "boom");
       if (p.isConnected) layout();   // the knobs come or go with the tree
-    };
-    p.group = (nid) => {   // Groepeer… in a card's menu: from the whole page
-      if (p.centre || p.view !== "graph") p.go(null);
-      if (!chosen.has(nid)) choose(nid);
     };
     p.letGo = () => { if (!chosen.size && !sheet) return false; chosen.clear(); sheet?.remove(); sheet = null; for (const n of nodes) n.el.classList.remove("is-picked"); return true; };
     p.tabIndex = -1;
@@ -4458,7 +4651,7 @@
    */
   function heat() {
     for (const h of body.querySelectorAll(".fpl-heat")) h.remove();
-    if (mode() === "lezen") return;
+    if (mode() === "lezen" || !heatOn()) return;
     const per = new Map();
     for (const r of all) {
       const t = trunk(r), b = shows(r) && layerOf(r) !== "tfa" && passes(t) && anchorsOf(t.id)[0]?.closest(".fpl-p");   // passes: as the stand draws it

@@ -21,14 +21,18 @@
   --fpl-wash: var(--bs-tertiary-bg, #f8f9fa);
   --fpl-node: var(--bs-gray-400, #ced4da);   /* a graph card's border */
   /* the heat bar's three steps: the accent's hue, darker per step, the lightest 3:1 on white */
-  --fpl-heat-1: oklch(.66 .09 262); --fpl-heat-2: oklch(.53 .13 262); --fpl-heat-3: oklch(.40 .14 262);
+  /* warm, not the accent's blue (QA, block 5: the pale step read as a
+     quote's rule) */
+  --fpl-heat-1: oklch(.64 .13 75); --fpl-heat-2: oklch(.55 .16 48);
+  --fpl-heat-3: oklch(.45 .17 28);
 }
 [data-bs-theme="dark"], .quarto-dark {
   --fpl-vers: #63b89f; --fpl-vers-wash: rgba(99, 184, 159, .16);
   --fpl-mine: #8aa6ee; --fpl-mine-wash: rgba(138, 166, 238, .18);
   --fpl-lost: #cfa85a;
   --fpl-con: #e0857c;
-  --fpl-heat-1: oklch(.55 .09 262); --fpl-heat-2: oklch(.69 .11 262); --fpl-heat-3: oklch(.83 .08 262);
+  --fpl-heat-1: oklch(.55 .10 75); --fpl-heat-2: oklch(.68 .14 55);
+  --fpl-heat-3: oklch(.80 .12 40);
 }
 
 /* spans (boards V3, V4): washed in their label's colour, a 2px line per layer under them, the outermost lowest;
@@ -483,6 +487,15 @@ label.fpl-item { cursor: text; }
   background-color: var(--fpl-heat-2); }
 .fpl-heat[data-level="3"] { left: -11px; width: 6px;
   background-color: var(--fpl-heat-3); }
+/* its legend in Weergave: the three steps, as wide as in the gutter */
+.fpl-heatkey { display: inline-flex; align-items: stretch; gap: 3px;
+  height: 14px; margin-left: auto; }
+.fpl-heatkey i { width: 2px; border-radius: 1px;
+  background: var(--fpl-heat-1); }
+.fpl-heatkey .fpl-hk2 { width: 4px; background: var(--fpl-heat-2); }
+.fpl-heatkey .fpl-hk3 { width: 6px; background: var(--fpl-heat-3); }
+.fpl-views hr { margin: 4px 0; border: 0;
+  border-top: 1px solid var(--fpl-rule); }
 
 /* close reading: the sentence under the cursor (j / k), washed like a hot span */
 .fpl-s.fpl-here { background: var(--fpl-vers-wash); }
@@ -539,6 +552,12 @@ body.fpl-beside #quarto-sidebar, body.fpl-beside #quarto-margin-sidebar { displa
 .fpl-plane:not(.is-sheet) { padding-top: 118px; }   /* room under the bar, which heads the plane */
 .fpl-plane.is-sheet { border-left: 0; }
 .fpl-plane-area { position: relative; flex: 1; min-height: 0; overflow: auto; }
+/* below Quarto's lg the empty margin column stood past the window's edge,
+   and the page scrolled sideways (QA, block 5: 967px at 800) */
+@media (max-width: 991.98px) {
+  html:has(meta[name="fpl-commit"]) #quarto-margin-sidebar:not(.fpl-column) {
+    display: none; }
+}
 .fpl-edges { position: absolute; left: 0; top: 0; overflow: visible; pointer-events: none; }
 .fpl-edge { fill: none; stroke: var(--lc, var(--fpl-mute)); stroke-width: 1.75; stroke-opacity: .7; transition: stroke-opacity .12s, stroke-width .12s; }
 .fpl-edge[data-kind="attacks"], .fpl-edge[data-kind="contradicts"] { stroke-dasharray: 6 4; }
@@ -575,12 +594,17 @@ body.fpl-beside #quarto-sidebar, body.fpl-beside #quarto-margin-sidebar { displa
   padding: 0 6px; border: 1px solid var(--lc); border-radius: 999px;
   background: var(--fpl-bg); font-size: 11px; font-weight: 600; line-height: 16px; color: var(--fpl-fg); white-space: nowrap; pointer-events: none; }
 /* the graph's reach: Buurt (a card and its neighbours) or Hele pagina */
-.fpl-scope { flex: none; display: flex; padding: 10px 24px 0; }
+.fpl-scope { flex: none; display: flex; gap: 8px; padding: 10px 24px 0; }
+.fpl-ways { display: flex; }
+/* the graph's step back: the arrow of Verder, turned */
+.fpl-scope .fpl-back { width: 30px; padding: 0; border-radius: 999px;
+  display: inline-flex; align-items: center; justify-content: center; }
+.fpl-back svg { transform: scaleX(-1); }
 .fpl-scope button { font: inherit; font-size: 12.5px; font-weight: 500;
   height: 28px; padding: 0 12px; border: 1px solid var(--fpl-rule);
   background: var(--fpl-bg); color: var(--fpl-mute); cursor: pointer; }
-.fpl-scope button:first-child { border-radius: 999px 0 0 999px; }
-.fpl-scope button:last-child { border-left: 0; border-radius: 0 999px 999px 0; }
+.fpl-ways button:first-child { border-radius: 999px 0 0 999px; }
+.fpl-ways button:last-child { border-left: 0; border-radius: 0 999px 999px 0; }
 .fpl-scope button[aria-checked="true"] { background: var(--fpl-wash);
   color: var(--fpl-fg); font-weight: 600; }
 .fpl-scope button:disabled { opacity: .45; cursor: default; }
@@ -591,6 +615,16 @@ body.fpl-beside #quarto-sidebar, body.fpl-beside #quarto-margin-sidebar { displa
   box-sizing: border-box; border: 1px solid var(--fpl-rule); border-radius: 999px; background: var(--fpl-bg); color: var(--fpl-fg); cursor: pointer; }
 .fpl-kchip svg { color: var(--lc); }
 .fpl-kchip[aria-pressed="false"] { background: none; color: var(--fpl-mute); }
+/* a switch shows its state as a box, filled while on (QA, block 5: code,
+   off, only looked greyed); the legend's plain line has none */
+button.fpl-kchip::before { content: ""; flex: none; width: 8px; height: 8px;
+  border: 1.5px solid currentColor; border-radius: 2px; }
+button.fpl-kchip[aria-pressed="true"]::before { background: currentColor;
+  box-shadow: inset 0 0 0 1.5px var(--fpl-bg); }
+.fpl-klegend { display: inline-flex; align-items: center; gap: 6px;
+  height: 28px; padding: 0 9px; box-sizing: border-box; font-size: 12.5px;
+  font-weight: 600; color: var(--fpl-mute); }
+.fpl-klegend path { fill: none; stroke: var(--lc); stroke-width: 1.5; }
 .fpl-kchip[aria-pressed="false"] svg { opacity: .35; }
 .fpl-kchip:focus-visible { outline: 2px solid var(--fpl-mine); outline-offset: 1px; }
 .fpl-topbar.is-plane { padding-left: 16px; padding-right: 24px; border-left: 1px solid var(--fpl-rule); }
@@ -622,7 +656,9 @@ mark.fact.fpl-faded { background: none; box-shadow: none; }
   background: var(--fpl-bg); font: 13px var(--bs-font-sans-serif, sans-serif); color: var(--fpl-fg); }
 .fpl-labelq::placeholder { color: var(--fpl-mute); }
 .fpl-labelq:focus { outline: 0; border-color: var(--fpl-mine); }
-.fpl-scopes { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2px 10px; }
+/* one column: ↓ goes down (QA, block 5) */
+.fpl-scopes { list-style: none; margin: 0; padding: 0; display: grid;
+  gap: 2px; }
 .fpl-scopes li { display: flex; align-items: center; gap: 6px; min-width: 0; height: 28px; padding: 0 2px 0 5px; border-radius: 4px; font-size: 13px; cursor: pointer; }
 .fpl-scopes li:hover { background: var(--fpl-wash); }
 .fpl-scopes li[aria-selected="true"] { background: var(--fpl-mine-wash); }
@@ -690,6 +726,15 @@ mark.fact.fpl-ingroup, .fpl-p.fpl-ingroup, .fpl-ingroup:not(.fpl-card):not(.fpl-
 .fpl-roles button[aria-checked="true"] { background: var(--fpl-mine-wash); color: var(--fpl-mine); box-shadow: inset 0 -2px 0 var(--fpl-mine); }
 .fpl-roles button:focus-visible { outline: 2px solid var(--fpl-mine); outline-offset: -2px; }
 .fpl-gform .fpl-bar button.fpl-danger { color: var(--fpl-con); }
+/* in a card's ⋯ menu (Groepeer…): the menu is its frame */
+.fpl-cardmenu .fpl-gform { position: static; width: auto; padding: 8px 12px;
+  border: 0; box-shadow: none; }
+/* the names of ours that hold what is typed, under the name field */
+.fpl-gsug { display: grid; margin-top: -6px; border: 1px solid var(--fpl-rule);
+  border-radius: 6px; overflow: hidden; }
+.fpl-gsug .fpl-item { padding: 5px 9px; font-size: 13px; }
+.fpl-gsug .fpl-item:focus-visible { outline: 2px solid var(--fpl-mine);
+  outline-offset: -2px; }
 
 /* the tree (boards V3c, V4c): the groups as an argument in the plane, a block per group under its parent, the step's
    weight as the line's thickness and as dots in the block's head; at the plane's foot the tray of pulled sentences */
@@ -737,10 +782,14 @@ mark.fact.fpl-ingroup, .fpl-p.fpl-ingroup, .fpl-ingroup:not(.fpl-card):not(.fpl-
 .fpl-trow:hover, .fpl-trow:focus-visible { background: var(--fpl-mine-wash); color: var(--fpl-mine); outline: 0; }
 .fpl-trow .fpl-sq, .fpl-tpill .fpl-sq { flex: none; width: 9px; height: 9px; margin: 0; border-radius: 2px; background: var(--lc, var(--fpl-mute)); }
 .fpl-trow .fpl-sq.is-note { box-sizing: border-box; background: none; border: 1.5px dashed var(--fpl-mute); }
-.fpl-tsign { position: absolute; z-index: 3; width: 20px; height: 20px; margin: -10px 0 0 -10px; box-sizing: border-box; display: flex;
+.fpl-tsign, .fpl-ksign { position: absolute; z-index: 3; width: 20px;
+  height: 20px; margin: -10px 0 0 -10px; box-sizing: border-box; display: flex;
   align-items: center; justify-content: center; border: 1.5px solid var(--lc); border-radius: 50%; background: var(--fpl-bg); color: var(--lc); }
-.fpl-tsign path { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; }
-.fpl-tinf { position: absolute; z-index: 3; width: 11px; height: 11px; margin: -5.5px 0 0 -5.5px; box-sizing: border-box; transform: rotate(45deg);
+.fpl-tsign path, .fpl-ksign path { fill: none; stroke: currentColor;
+  stroke-width: 1.8; stroke-linecap: round; }
+.fpl-tinf, .fpl-kinf { position: absolute; z-index: 3; width: 11px;
+  height: 11px; margin: -5.5px 0 0 -5.5px; box-sizing: border-box;
+  transform: rotate(45deg);
   border: 1.5px solid var(--lc); background: var(--fpl-bg); pointer-events: none; }
 .fpl-wtip { position: absolute; z-index: 5; transform: translateX(-50%); padding: 3px 7px; border-radius: 5px; background: var(--fpl-fg);
   color: var(--fpl-bg); font: 600 12px/1.3 var(--bs-font-sans-serif, sans-serif); pointer-events: none; }
@@ -752,6 +801,16 @@ mark.fact.fpl-ingroup, .fpl-p.fpl-ingroup, .fpl-ingroup:not(.fpl-card):not(.fpl-
 .fpl-tray h2 .fpl-sq, .fpl-tpill .fpl-sq { width: 9px; height: 9px; margin: 0; border-radius: 2px; background: var(--fpl-group); }
 .fpl-pills { display: flex; flex-wrap: wrap; gap: 8px; min-height: 34px; }
 .fpl-pills:empty { box-sizing: border-box; border: 1.5px dashed var(--fpl-edge); border-radius: 6px; }
+.fpl-pills:empty::before { content: "Sleep een bolletje hierheen"; margin: auto;
+  font-size: 12.5px; color: var(--fpl-mute); }   /* the empty tray (QA 5) */
+/* the tree's legend (QA, block 5): its signs in a line over it */
+.fpl-tkey { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px;
+  margin: 0 0 12px; font-size: 12.5px; font-weight: 600;
+  color: var(--fpl-mute); }
+.fpl-tkey > span { display: inline-flex; align-items: center; gap: 6px; }
+.fpl-tkey .fpl-ksign, .fpl-tkey .fpl-kinf { position: static; margin: 0; }
+.fpl-tkey b { font-size: 9px; letter-spacing: .12em; color: var(--fpl-fg); }
+.fpl-tkey .fpl-why { margin-left: auto; }
 .fpl-tpill { font: 13.5px/1 var(--bs-font-sans-serif, sans-serif); display: inline-flex; align-items: center; gap: 7px; max-width: 100%; height: 34px;
   box-sizing: border-box; padding: 0 12px 0 10px; border: 1px solid var(--fpl-node); border-radius: 6px; background: var(--fpl-bg); color: var(--fpl-fg);
   cursor: grab; touch-action: none; }
