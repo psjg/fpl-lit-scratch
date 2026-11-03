@@ -661,6 +661,12 @@ mark.fact.fpl-ingroup, .fpl-p.fpl-ingroup, .fpl-ingroup:not(.fpl-card):not(.fpl-
 .fpl-gframe { position: absolute; box-sizing: border-box; border: 1px solid var(--fpl-node); border-radius: 12px;
   background: color-mix(in srgb, var(--fpl-group) 6%, var(--fpl-bg)); transition: border-color .12s, box-shadow .12s; }
 .fpl-gframe:hover { border-color: var(--fpl-group); box-shadow: 0 0 0 3px color-mix(in srgb, var(--fpl-group) 14%, transparent); }
+/* a card carried over it (feedback 27): lit, and its rim dashed and
+   thicker, not by colour alone */
+.fpl-gframe.is-over { border: 2px dashed var(--fpl-group);
+  background: color-mix(in srgb, var(--fpl-group) 14%, var(--fpl-bg));
+  box-shadow: 0 0 0 4px
+    color-mix(in srgb, var(--fpl-group) 18%, transparent); }
 .fpl-gtab { position: absolute; left: 10px; top: 0; transform: translateY(-50%); display: inline-flex; align-items: center; gap: 6px; max-width: calc(100% - 20px);
   height: 20px; padding: 0 8px 0 7px; box-sizing: border-box; border: 1px solid var(--fpl-node); border-radius: 999px; background: var(--fpl-bg);
   font: 600 11.5px/1 var(--bs-font-sans-serif, sans-serif); color: var(--fpl-fg); cursor: pointer; white-space: nowrap; }

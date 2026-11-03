@@ -336,7 +336,11 @@
  * chip or a frame lights the members, spans and cards, in a class of
  * their own (a hot card would open over the next). Shift-click cards in
  * the graph to choose them: a form asks a name and a role, and Enter
- * saves the row, or the cards join the group of ours with that name;
+ * saves the row, or the cards join the group of ours with that name
+ * (the name completes from them, and while it names one the form says
+ * In groep, Voeg toe). A card dragged onto a group's frame joins it, the
+ * frame lit while the card is over it; dragged off its frame, it leaves
+ * that group, and the row goes with its last member;
  * Groepeer… in a card's menu opens the graph with that card chosen and
  * the form open; the tab of a group of ours opens it there, to rename or let go, and
  * Esc lets a choice go before it closes the graph. group/gepakt is the
@@ -1706,6 +1710,22 @@
     if (tray?.mine && rest.length < tray.targets.length) rest.length ? save(tray, { targets: rest }) : save(tray, "delete");
     draw();
     toast(`In “${groupName(g)}”`);
+  }
+  /**
+   * Take a row out of a group of ours (its card dragged off the frame);
+   * the row goes with its last member, as lit refuses an empty set.
+   * quiet: on its way into another group, which says so.
+   */
+  function leave(id, g, quiet) {
+    if (!g?.mine) {
+      toast("Een groep uit de sidecar wijzig je met lit facts");
+      return;
+    }
+    const rest = g.targets.filter((t) => t !== id);
+    save(g, rest.length ? { targets: rest } : "delete");
+    if (quiet) return;
+    draw();
+    toast(`Uit “${groupName(g)}”`);
   }
   /** While the tree is open, the tray's sentences are dashed in the text, as pulled out of it (board V3c). */
   function pulled(on) {
@@ -3083,8 +3103,12 @@
      * to it, from border to border, until the next drawing.
      */
     function place2() {
-      for (const f of frames) {   // round its cards where they stand, also while one is dragged
-        const xs = f.ms.map((n) => n.x), ys = f.ms.map((n) => n.y);
+      // round its cards where they stand; a card carried leaves it standing
+      for (const f of frames) {
+        let ms = f.ms.filter((n) => !n.lift);
+        if (!ms.length && f.box) continue;
+        if (!ms.length) ms = f.ms;
+        const xs = ms.map((n) => n.x), ys = ms.map((n) => n.y);
         // 13px above the cards, so the tab on the frame's top edge stands clear of them
         f.box = [Math.min(...xs) - CW / 2 - 8, Math.min(...ys) - CH / 2 - 13, Math.max(...xs) + CW / 2 + 8, Math.max(...ys) + CH / 2 + 8].map(Math.round);
         Object.assign(f.el.style, { left: `${f.box[0]}px`, top: `${f.box[1]}px`, width: `${f.box[2] - f.box[0]}px`, height: `${f.box[3] - f.box[1]}px` });
@@ -3107,19 +3131,40 @@
         e.path.setAttribute("d", d.join(""));
       }
     }
-    /** A card is dragged in this view only; a press without a move is a click. */
+    /**
+     * A card is dragged in this view only; a press without a move is a
+     * click. Its middle over a group's frame lights the frame, and let go
+     * there the card joins that group; let go outside the frame it stood
+     * in, it leaves that group (feedback 27). Its frames hold still while
+     * it is carried, so it can leave them.
+     */
     function grab(n) {
       let from = null, moved = false;
+      const frameAt = () => n.rel ? null : frames.find(({ box: b }) => b
+        && n.x >= b[0] && n.x <= b[2] && n.y >= b[1] && n.y <= b[3]);
       n.el.onpointerdown = (ev) => { if (ev.button) return; from = [ev.clientX, ev.clientY, n.x, n.y]; moved = false; n.el.setPointerCapture(ev.pointerId); };
       n.el.onpointermove = (ev) => {
         if (!from) return;
         const dx = ev.clientX - from[0], dy = ev.clientY - from[1];
         if (!moved && Math.hypot(dx, dy) < 4) return;
-        moved = n.moved = true; n.el.classList.add("is-lift");
+        moved = n.moved = n.lift = true; n.el.classList.add("is-lift");
         n.x = from[2] + dx; n.y = from[3] + dy;
         place2();
+        const over = frameAt();
+        for (const f of frames) f.el.classList.toggle("is-over", f === over);
       };
-      n.el.onpointerup = () => { from = null; n.el.classList.remove("is-lift"); };
+      n.el.onpointerup = () => {
+        const was = n.lift, into = was && frameAt();
+        from = null; n.lift = false; n.el.classList.remove("is-lift");
+        for (const f of frames) f.el.classList.remove("is-over");
+        if (!was || n.rel) return;
+        const home = frames.find((f) => f.ms.includes(n));
+        if (into && into !== home) {
+          if (home) leave(n.id, home.g, true);
+          join(n.id, into.g);
+        }
+        else if (!into && home) leave(n.id, home.g);
+      };
       n.el.onclick = (ev) => {
         ev.stopPropagation();
         if (moved) { moved = false; return; }
@@ -3164,23 +3209,44 @@
      * of four, Annuleer and Groep maken. Enter in the name saves: a new
      * row group/<naam> of the cards chosen, or, for a name a group of ours
      * has, those cards join it; an open group of ours takes its new name
-     * and role, and its Verwijder lets it go. Esc lets the choice go.
+     * and role, and its Verwijder lets it go. Esc lets the choice go. The
+     * name completes from the groups of ours (feedback 27), and while it
+     * names one the form says so at once: "In groep", Voeg toe.
      */
     function form(gr) {
       sheet?.remove();
+      const ours = all.filter((r) => isGroup(r) && r.mine
+        && r.labels[0] !== TRAY && r !== gr);
+      const names = el("datalist", { id: "fpl-gnames" },
+        ...ours.map((r) => el("option", { value: groupName(r) })));
       const name = el("input", { type: "text", value: gr ? groupName(gr) : "", autocomplete: "off" });
+      name.setAttribute("list", "fpl-gnames");
       const roles = el("div", { className: "fpl-roles", role: "radiogroup", ariaLabel: "Rol" }, ...["", "claim", "bewijs", "tegen"].map((r) => {
         const b = button(r || "geen rol", () => { for (const x of roles.children) x.ariaChecked = String(x === b); });
         b.role = "radio"; b.ariaChecked = String(r === (gr ? roleOf(gr) : "")); b.dataset.role = r;
         return b;
       }));
       const go = el("button", { type: "submit", className: "fpl-go" }, gr ? "Bewaar " : "Groep maken ", el("kbd", {}, "↩"));
+      const head = gr ? "Groep" : "Nieuwe groep";
+      const h = el("p", { className: "fpl-gform-h" }, head);
       const f = sheet = el("form", { className: "fpl-gform", ariaLabel: gr ? "Groep" : "Nieuwe groep" },
-        el("p", { className: "fpl-gform-h" }, gr ? "Groep" : "Nieuwe groep"),
+        h, names,
         el("label", {}, el("span", {}, "Naam"), name), el("div", {}, el("span", { className: "fpl-glabel" }, "Rol"), roles),
         el("div", { className: "fpl-bar fpl-keys" }, gr ? button("Verwijder", () => { save(gr, "delete"); done(); }, "fpl-danger") : null,
           el("span", { className: "fpl-space" }), button("Annuleer", () => done()), go));
       f.group = gr;
+      // a name of ours: the cards join that group, and the form says so
+      name.oninput = () => {
+        const label = `group/${slug(name.value)}`;
+        const into = !gr && ours.find((r) => r.labels[0] === label);
+        h.textContent = into ? `In groep “${groupName(into)}”` : head;
+        go.firstChild.textContent = into ? "Voeg toe "
+          : gr ? "Bewaar " : "Groep maken ";
+        if (!into) return;
+        for (const x of roles.children) {
+          x.ariaChecked = String(x.dataset.role === roleOf(into));
+        }
+      };
       const done = () => { chosen.clear(); f.remove(); sheet = null; draw(); };
       f.onsubmit = (ev) => {
         ev.preventDefault();
@@ -3194,8 +3260,10 @@
         const labels = [`group/${label}`, ...role ? [`role/${role}`] : [], ...keep];
         const targets = [...new Set([...into?.targets ?? [], ...gr && named ? gr.targets : [], ...chosen])];
         if (gr && named) save(gr, "delete");   // renamed onto a group of ours: the two are one
-        save(into ?? {}, { note: name.value.trim(), labels, targets });
-        toast(into ? "Groep bewaard" : "Groep gemaakt");
+        const note = named ? into.note : name.value.trim();
+        save(into ?? {}, { note, labels, targets });
+        toast(named && !gr ? `In “${groupName(named)}”`
+          : into ? "Groep bewaard" : "Groep gemaakt");
         done();
       };
       f.onkeydown = (ev) => { if (ev.key === "Escape") { ev.preventDefault(); ev.stopPropagation(); done(); } };
