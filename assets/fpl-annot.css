@@ -528,16 +528,25 @@ body.fpl-beside #quarto-sidebar, body.fpl-beside #quarto-margin-sidebar { displa
 .fpl-nkind { display: flex; align-items: center; min-width: 0; font: 600 11px/15px var(--bs-font-sans-serif, sans-serif); color: var(--fpl-mute);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .fpl-nq { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-weight: 400; }
-.fpl-node.is-note { border-style: dashed; font-weight: 400; }
-.fpl-node.is-ext { border-style: dashed; background: var(--fpl-wash); color: var(--fpl-mute); font-weight: 400; }
+/* one border for every card, thin and solid; the kind is its shape */
+.fpl-node.is-ext { background: var(--fpl-wash); color: var(--fpl-mute);
+  font-weight: 400; }
+.fpl-kg { margin-right: 5px; }
+.fpl-kg svg { width: 11px; height: 11px; }
 .fpl-node:hover, .fpl-node.is-hot { border-color: var(--fpl-vers); box-shadow: 0 0 0 3px var(--fpl-vers-wash); }
 .fpl-node.is-sel { border-color: var(--fpl-mine); box-shadow: 0 0 0 3px var(--fpl-mine-wash); }
 .fpl-node.is-lift { z-index: 2; cursor: grabbing; box-shadow: 0 14px 30px rgba(20, 30, 50, .2), 0 2px 6px rgba(20, 30, 50, .1); }
 .fpl-node:focus-visible { outline: 2px solid var(--fpl-mine); outline-offset: 2px; }
 .fpl-plane.has-sel .fpl-node:not(.is-near), .fpl-plane.has-sel .fpl-edges .fpl-edge:not(.is-hot) { opacity: .3; }
-.fpl-node.fpl-dia { width: 11px; height: 11px; margin: -5.5px 0 0 -5.5px; padding: 0; gap: 0; border: 1.5px solid var(--lc); border-radius: 1px;
-  transform: rotate(45deg); z-index: 1; }
-.fpl-pill { position: absolute; z-index: 1; transform: translate(-50%, -50%); padding: 0 6px; border: 1px solid var(--lc); border-radius: 999px;
+/* a relation's sign: its kind's shape in its colour, on a disc of the
+   ground so the edges stop at it */
+.fpl-node.fpl-dia { width: 18px; height: 18px; margin: -9px 0 0 -9px;
+  padding: 0; align-items: center; justify-content: center; border: 0;
+  border-radius: 50%; background: var(--fpl-bg); color: var(--lc); z-index: 1; }
+.fpl-node.fpl-dia:hover, .fpl-node.fpl-dia.is-hot, .fpl-node.fpl-dia.is-sel {
+  box-shadow: 0 0 0 2px var(--lc); }
+.fpl-pill { position: absolute; z-index: 3; transform: translate(-50%, -50%);
+  padding: 0 6px; border: 1px solid var(--lc); border-radius: 999px;
   background: var(--fpl-bg); font-size: 11px; font-weight: 600; line-height: 16px; color: var(--fpl-fg); white-space: nowrap; pointer-events: none; }
 .fpl-plane-foot { flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 10px 24px 12px; }
 .fpl-kchip { font: inherit; font-size: 12.5px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 9px;
@@ -607,7 +616,8 @@ body.fpl-solo .fpl-arcs path { stroke-width: 2; opacity: 1; }
 mark.fact.fpl-ingroup, .fpl-p.fpl-ingroup, .fpl-ingroup:not(.fpl-card):not(.fpl-node) { outline: 1.5px solid var(--fpl-group); outline-offset: 1px; border-radius: 2px; }
 .fpl-card.fpl-ingroup { box-shadow: 0 0 0 1.5px var(--fpl-group); }
 .fpl-node.fpl-ingroup { border-color: var(--fpl-group); box-shadow: 0 0 0 3px color-mix(in srgb, var(--fpl-group) 18%, transparent); }
-.fpl-node.is-picked { border-color: var(--fpl-mine); border-width: 1.5px; box-shadow: 0 0 0 3px var(--fpl-mine-wash); }
+.fpl-node.is-picked { border-color: var(--fpl-mine);
+  box-shadow: 0 0 0 3px var(--fpl-mine-wash); }
 .fpl-gframe { position: absolute; box-sizing: border-box; border: 1px solid var(--fpl-node); border-radius: 12px;
   background: color-mix(in srgb, var(--fpl-group) 6%, var(--fpl-bg)); transition: border-color .12s, box-shadow .12s; }
 .fpl-gframe:hover { border-color: var(--fpl-group); box-shadow: 0 0 0 3px color-mix(in srgb, var(--fpl-group) 14%, transparent); }

@@ -272,12 +272,20 @@
  * the bar heads the plane. A row is a card (board V2b): its kind on a
  * line (a label, besluit and its topic, weigering, test, chunk) over two
  * lines of its quote, a decision's words, or an id's words, never the id
- * (refusal:dedent%20below… reads "dedent below …"), laid out by a force model (Fruchterman and Reingold 1991) and
- * set on a lattice so no two overlap; a relation row is a diamond on the
- * edge between its ends, so an undercut has something to aim at (AIF); a
- * fact hangs from what it is about; a tfa or resumes row has no node.
+ * (refusal:dedent%20below… reads "dedent below …"); beside the word a
+ * shape says the kind without its colour (a span a square, a fact a dot,
+ * a decision a bookmark, ...), and every card has one thin solid border.
+ * The plane is drawn in layers, left to right: the spans in the first
+ * column in page order, what is about them to their right, so every
+ * edge runs one way and none crosses a card (see layered). A relation
+ * row is a node, so an undercut has something to aim at (AIF): its
+ * kind's sign (steunt a plus, valt aan a minus, spreekt tegen a struck
+ * circle, ...) in a column of its own past its ends, its word above it
+ * under the mouse; a fact stands right of what it is about; a tfa or
+ * resumes row has no node.
  * The edges are typed (verbindt, steunt, valt aan, zelfde als, citeert),
- * and the chips at the plane's foot switch a kind on and off; a (?)
+ * and the chips at the plane's foot, each with its kind's sign, switch a
+ * kind on and off; a (?)
  * at their end says what a click, a drag and Shift do. A card
  * drags, in this view only. A click selects it, lights its neighbours
  * and scrolls the page to its span; Alt ← scrolls back. Graph on a card
@@ -833,6 +841,36 @@
     group: '<g fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1.5" y="2.5" width="13" height="11" rx="2" stroke-dasharray="2.5 1.5"/>'
       + '<path d="M4.5 6h7M4.5 10h4.5"/></g>',
     check: '<path fill="none" stroke="currentColor" stroke-width="1.8" d="m3 8.5 3 3 7-7.5"/>',
+    // the other relations' signs, each its own shape (feedback 24)
+    contradicts: '<g fill="none" stroke="currentColor" stroke-width="1.5">'
+      + '<circle cx="8" cy="8" r="5.5"/><path d="M4.2 11.8 11.8 4.2"/></g>',
+    because: '<g fill="currentColor"><circle cx="3.8" cy="5" r="1.7"/>'
+      + '<circle cx="12.2" cy="5" r="1.7"/>'
+      + '<circle cx="8" cy="11.5" r="1.7"/></g>',
+    supersedes: '<path fill="none" stroke="currentColor" stroke-width="1.6"'
+      + ' d="m3 4 4 4-4 4M9 4l4 4-4 4"/>',
+    relates: '<path fill="none" stroke="currentColor" stroke-width="1.5"'
+      + ' d="M8 2.5 13.5 8 8 13.5 2.5 8z"/>',
+    // a graph card's kind, beside its word: a span a square, a fact a dot
+    kspan: '<rect x="3" y="3" width="10" height="10" rx="2"'
+      + ' fill="currentColor"/>',
+    knote: '<circle cx="8" cy="8" r="5" fill="currentColor"/>',
+    kbesluit: '<path fill="none" stroke="currentColor" stroke-width="1.6"'
+      + ' stroke-linejoin="round" d="M4 2.5h8v11L8 10.5l-4 3z"/>',
+    kweigering: '<path fill="none" stroke="currentColor" stroke-width="1.6"'
+      + ' stroke-linejoin="round"'
+      + ' d="M5.7 2.5h4.6l3.2 3.2v4.6l-3.2 3.2H5.7l-3.2-3.2V5.7z"/>',
+    ktest: '<path fill="none" stroke="currentColor" stroke-width="1.6"'
+      + ' stroke-linejoin="round" d="M5.5 2.5h5M6.8 2.5v4L3 13.5h10'
+      + 'L9.2 6.5v-4"/>',
+    kchunk: '<path fill="none" stroke="currentColor" stroke-width="1.6"'
+      + ' d="M6 3.5 2 8l4 4.5M10 3.5l4 4.5-4 4.5"/>',
+    kbestand: '<path fill="none" stroke="currentColor" stroke-width="1.5"'
+      + ' stroke-linejoin="round" d="M3.5 1.5h6l3 3v10h-9zM9.5 1.5v3h3"/>',
+    kplek: '<path fill="none" stroke="currentColor" stroke-width="1.5"'
+      + ' d="M6.5 2 5 14M11 2 9.5 14M2.5 5.5h11M2 10.5h11"/>',
+    kelders: '<circle cx="8" cy="8" r="5" fill="none" stroke="currentColor"'
+      + ' stroke-width="1.5" stroke-dasharray="2.2 1.8"/>',
   };
   const ico = (name) => {
     const s = el("span", { className: "fpl-ico" });
@@ -2405,7 +2443,8 @@
    * an edge in to it from its first target and out to each other; a fact
    * an edge "over" to what it is about; a parts row an edge to each
    * piece. Every edge carries its kind: the relation's label, over, parts,
-   * or code for the code graph's.
+   * or code for the code graph's; and own, the node of the row it draws,
+   * which is about the edge's other end (none on a code edge).
    */
   let code = null;   // the page's code graph (lit graph), when the site shipped one
   const coded = (snap ? Promise.resolve(snap.graph ?? null) : fetch(`${stem}.graph.json`).then((r) => (r.ok ? r.json() : null)))
@@ -2426,10 +2465,14 @@
       if (typeof r.text === "string") continue;
       if (RELATIONS.has(k) || k === "coref") {
         Object.assign(n, { rel: true, kind: k });
-        if (k !== "coref" && ts[0]) edges.push({ a: node(ts[0]), b: n, kind: k });
-        for (const t of k === "coref" ? ts : ts.slice(1)) edges.push({ a: n, b: node(t), kind: k, w: r.weight ?? 0 });
-      } else if (k === "parts") for (const t of ts) edges.push({ a: n, b: node(t), kind: k });
-      else if (ts[0]) edges.push({ a: n, b: node(ts[0]), kind: "over" });
+        if (k !== "coref" && ts[0])
+          edges.push({ a: node(ts[0]), b: n, kind: k, own: n });
+        for (const t of k === "coref" ? ts : ts.slice(1))
+          edges.push({ a: n, b: node(t), kind: k, w: r.weight ?? 0, own: n });
+      } else if (k === "parts")
+        for (const t of ts) edges.push({ a: n, b: node(t), kind: k, own: n });
+      else if (ts[0])
+        edges.push({ a: n, b: node(ts[0]), kind: "over", own: n });
     }
     for (const n of code?.nodes ?? []) node(n.id).label = n.label;
     for (const e of code?.edges ?? []) edges.push({ a: node(e.a), b: node(e.b), kind: "code" });
@@ -2453,35 +2496,178 @@
     return [...body.querySelectorAll('.fpl-p[data-kind="C"]')].filter((b) => head(b) === norm(n.label))[k - 1] ?? null;
   }
   /**
-   * Fruchterman-Reingold, a fixed number of rounds from a circle (the same
-   * layout every time for the same rows): neighbours pull, all push, a
-   * weak gravity holds the loose parts of the graph near the middle
-   * (without it they drift to the walls), and the step cools to nothing.
-   * k and GRAV measured 2026-11-01 on the lex page (28 nodes, 22 edges):
-   * at 0.6 and 2 no node rests on a wall and no two lie within 12 px;
-   * gravity 0.5 left 16 nodes on the walls, 1.2 with k 0.8 left 19.
+   * A layered drawing, left to right (Sugiyama, Tagawa and Toda 1981):
+   * the spans stand in the first column and what is about them to their
+   * right, a relation's sign in a column past both its ends, so every
+   * edge runs one way (PSJ, 2026-11-03: a grid without direction read
+   * as a mess).
+   *
+   *   ranks   the longest path to a node, over edges whose cycles are
+   *           cut where a walk meets its own path; a node no edge
+   *           reaches, but a span, moves right, next to what it serves
+   *   order   each column by the barycentre of its neighbours, down and
+   *           up, then neighbours swapped while that crosses less
+   *           (Gansner et al. 1993), the order with the fewest crossings
+   *           kept; a group's
+   *           members stand together, under the room for its tab
+   *   heights each column, in its order, as near the mean of its
+   *           neighbours as the gaps allow (pooled adjacent violators)
+   *
+   * An edge longer than one column passes each column between at a
+   * point of its own, so between columns a line meets no card and in a
+   * column it runs level beside its own node: no edge crosses a card.
+   * ns carry w, h, key (page order, for the first column), grp and
+   * first (a span); es are { s, t } from what is about to what is
+   * about it, and each gets pts, its route from s to t. Returns the
+   * drawing's width and height; each node gets x and y, its middle.
+   * Measured 2026-11-03 on the lex page against elkjs 0.9.3's layered,
+   * the shelf's choice: elk.bundled.js is 467 KB gzipped (this whole
+   * file 83 KB) and took 25 ms to load and 38-50 ms a layout in
+   * Chromium; this one well under a millisecond.
    */
-  function settleGraph({ nodes, edges }, w, h, rounds = 300) {
-    const k = Math.sqrt((w * h) / Math.max(nodes.length, 1)) * 0.6, GRAV = 2;
-    nodes.forEach((n, i) => { const a = (2 * Math.PI * i) / nodes.length; n.x = w / 2 + (w / 3) * Math.cos(a); n.y = h / 2 + (h / 3) * Math.sin(a); });
-    for (let t = 0; t < rounds; t++) {
-      for (const n of nodes) { n.dx = 0; n.dy = 0; }
-      for (let i = 0; i < nodes.length; i++) for (let j = i + 1; j < nodes.length; j++) {
-        const p = nodes[i], q = nodes[j], dx = p.x - q.x, dy = p.y - q.y, d = Math.hypot(dx, dy) || 0.01, f = (k * k) / d;
-        p.dx += (dx / d) * f; p.dy += (dy / d) * f; q.dx -= (dx / d) * f; q.dy -= (dy / d) * f;
+  function layered(ns, es, { gap = 18, hgap = 48, tab = 30 } = {}) {
+    const ins = new Map(ns.map((n) => [n, []]));
+    const outs = new Map(ns.map((n) => [n, []]));
+    for (const e of es) outs.get(e.s).push(e);
+    const on = new Set(), done = new Set();
+    const walk = (n) => {   // depth first: an edge back onto the path turns
+      on.add(n);
+      for (const e of outs.get(n)) {
+        if (on.has(e.t)) e.turn = true;
+        else if (!done.has(e.t)) walk(e.t);
       }
-      for (const { a, b } of edges) {
-        const dx = a.x - b.x, dy = a.y - b.y, d = Math.hypot(dx, dy) || 0.01, f = (d * d) / k;
-        a.dx -= (dx / d) * f; a.dy -= (dy / d) * f; b.dx += (dx / d) * f; b.dy += (dy / d) * f;
-      }
-      for (const n of nodes) { n.dx += (w / 2 - n.x) * GRAV; n.dy += (h / 2 - n.y) * GRAV; }
-      const temp = (w / 10) * (1 - t / rounds);
-      for (const n of nodes) {
-        const d = Math.hypot(n.dx, n.dy) || 0.01;
-        n.x = Math.min(w - 20, Math.max(20, n.x + (n.dx / d) * Math.min(d, temp)));
-        n.y = Math.min(h - 20, Math.max(20, n.y + (n.dy / d) * Math.min(d, temp)));
-      }
+      on.delete(n); done.add(n);
+    };
+    for (const n of ns) if (!done.has(n)) walk(n);
+    for (const n of ns) outs.set(n, []);
+    for (const e of es) {
+      [e.u, e.v] = e.turn ? [e.t, e.s] : [e.s, e.t];
+      outs.get(e.u).push(e); ins.get(e.v).push(e);
     }
+    const rank = new Map();
+    const rk = (n) => {
+      if (!rank.has(n))
+        rank.set(n, Math.max(0, ...ins.get(n).map((e) => rk(e.u) + 1)));
+      return rank.get(n);
+    };
+    ns.forEach(rk);
+    for (const n of ns) {
+      const o = outs.get(n);
+      if (!n.first && !ins.get(n).length && o.length)
+        rank.set(n, Math.min(...o.map((e) => rank.get(e.v))) - 1);
+    }
+    const L = [];
+    const put = (n, r) => { rank.set(n, r); (L[r] ??= []).push(n); };
+    for (const n of [...ns].sort((a, b) => a.key - b.key)) put(n, rank.get(n));
+    const up = new Map(), down = new Map();
+    const add = (m, k, x) => (m.get(k) ?? m.set(k, []).get(k)).push(x);
+    for (const e of es) {   // a long edge: a point in each column it passes
+      e.chain = [e.u];
+      for (let r = rank.get(e.u) + 1; r < rank.get(e.v); r++) {
+        const d = { w: 0, h: 2, dummy: true };
+        put(d, r); e.chain.push(d);
+      }
+      e.chain.push(e.v);
+      e.chain.slice(1).forEach((b, i) => {
+        add(down, e.chain[i], b); add(up, b, e.chain[i]);
+      });
+    }
+    for (let r = 0; r < L.length; r++) L[r] ??= [];
+    const pos = new Map();
+    const index = () => L.forEach((l) => l.forEach((n, i) => pos.set(n, i)));
+    const avg = (xs) => xs.reduce((t, x) => t + x, 0) / xs.length;
+    const sweep = (l, nb) => {
+      const bc = new Map(l.map((n) => {
+        const xs = (nb.get(n) ?? []).map((x) => pos.get(x));
+        return [n, xs.length ? avg(xs) : pos.get(n)];
+      }));
+      const gm = new Map();   // a group's members at their mean, together
+      for (const n of l) if (n.grp) add(gm, n.grp, bc.get(n));
+      const at = (n) => (n.grp ? avg(gm.get(n.grp)) : bc.get(n));
+      const grp = (n) => String(n.grp ?? "");
+      l.sort((a, b) => at(a) - at(b) || grp(a).localeCompare(grp(b))
+        || bc.get(a) - bc.get(b));
+      l.forEach((n, i) => pos.set(n, i));
+    };
+    const crossings = () => {
+      let c = 0;
+      for (const l of L) {
+        const xs = l.flatMap((a) => (down.get(a) ?? [])
+          .map((b) => [pos.get(a), pos.get(b)]));
+        for (let i = 0; i < xs.length; i++)
+          for (let j = i + 1; j < xs.length; j++)
+            if ((xs[i][0] - xs[j][0]) * (xs[i][1] - xs[j][1]) < 0) c++;
+      }
+      return c;
+    };
+    const transpose = () => {   // swap neighbours while that crosses less
+      let c = crossings();
+      for (let more = true; more;) {
+        more = false;
+        for (const l of L) for (let i = 1; i < l.length; i++) {
+          if (l[i].grp !== l[i - 1].grp) continue;   // a group stays one
+          [l[i - 1], l[i]] = [l[i], l[i - 1]]; index();
+          const d = crossings();
+          if (d < c) { c = d; more = true; continue; }
+          [l[i - 1], l[i]] = [l[i], l[i - 1]]; index();
+        }
+      }
+      return c;
+    };
+    index();
+    let best = L.map((l) => [...l]), least = crossings();
+    for (let round = 0; round < 8 && least; round++) {
+      for (let r = 1; r < L.length; r++) sweep(L[r], up);
+      for (let r = L.length - 2; r >= 0; r--) sweep(L[r], down);
+      const c = transpose();
+      if (c < least) { least = c; best = L.map((l) => [...l]); }
+    }
+    best.forEach((l, r) => { L[r] = l; });
+    index();
+    // heights: in order, each at least its gap below the last, the leader
+    // of a group with room above for the tab
+    const lead = (l, i) => (l[i].grp && l[i - 1]?.grp !== l[i].grp ? tab : 0);
+    const sep = (l, i) => (l[i - 1].h + l[i].h) / 2 + lead(l, i)
+      + (l[i - 1].dummy || l[i].dummy ? 6 : gap);
+    const pool = (l, want) => {
+      const off = [0], bs = [];
+      for (let i = 1; i < l.length; i++) off.push(off[i - 1] + sep(l, i));
+      l.forEach((n, i) => {
+        bs.push({ s: want(n) - off[i], c: 1, i });
+        const m = (b) => b.s / b.c;
+        while (bs.length > 1 && m(bs.at(-2)) >= m(bs.at(-1))) {
+          const b = bs.pop();
+          bs.at(-1).s += b.s; bs.at(-1).c += b.c;
+        }
+      });
+      for (const b of bs) for (let k = 0; k < b.c; k++)
+        l[b.i + k].y = b.s / b.c + off[b.i + k];
+    };
+    for (const l of L) pool(l, () => 0);
+    const near = (n) => [...up.get(n) ?? [], ...down.get(n) ?? []];
+    for (let round = 0; round < 8; round++)
+      for (const l of round % 2 ? [...L].reverse() : L)
+        pool(l, (n) => (near(n).length ? avg(near(n).map((x) => x.y)) : n.y));
+    const top = Math.min(...L.filter((l) => l.length)
+      .map((l) => l[0].y - l[0].h / 2 - lead(l, 0)));
+    const W = L.map((l) => Math.max(0, ...l.map((n) => n.w)));
+    const X = W.map((_, r) => W.slice(0, r).reduce((t, w) => t + w + hgap, 0));
+    L.forEach((l, r) => l.forEach((n) => {
+      n.y -= top; n.x = X[r] + W[r] / 2;
+    }));
+    for (const e of es) {   // level through each column, straight between
+      const pts = [];
+      for (const n of e.chain) {
+        const r = rank.get(n), y = n.y;
+        if (n !== e.u) pts.push([X[r], y], [n.x - n.w / 2, y]);
+        if (n !== e.v) pts.push([n.x + n.w / 2, y], [X[r] + W[r], y]);
+      }
+      const route = pts.filter((q, i) => !i
+        || q[0] !== pts[i - 1][0] || q[1] !== pts[i - 1][1]);
+      e.pts = e.turn ? route.reverse() : route;
+    }
+    const h = Math.max(0, ...ns.map((n) => n.y + n.h / 2));
+    return { w: X.length ? X.at(-1) + W.at(-1) : 0, h };
   }
   /**
    * The graph is a plane beside the page (boards V2b-V2d, V4d): the text
@@ -2489,11 +2675,10 @@
    * and the plane takes the rest of the window under the bar, which
    * widens over it. A row is a card with the first words of its quote (a
    * fact its note, a decision its topic), in its colour; a relation row
-   * is a diamond on the edge between its ends, so an undercut has
+   * is its kind's sign in a column past its ends, so an undercut has
    * something to aim at; a tfa or resumes row has no node, its lens is
-   * the text. The cards stand on a lattice: the force layout says
-   * roughly where, the nearest free cell where exactly, so no two
-   * overlap and the plane scrolls when they are many. Dragging a card
+   * the text. The layout is layered (layered), and the plane scrolls
+   * when the drawing is wider or taller than it. Dragging a card
    * moves it in this view only: nothing is kept, and the next drawing
    * lays the graph out anew. A click selects the card, lights its
    * neighbours and scrolls the page to its span, which Alt ← undoes. The
@@ -2505,8 +2690,13 @@
   let plane = null;
   const jumps = [];   // the scroll before each jump from the graph, for Alt ←
   const offKinds = new Set(["code"]);   // the edge kinds switched off, for this visit only
-  const CW = 168, CH = 58, GY = 18, PAD = 24, FOOT = 52;   // a card (its kind and two lines of quote), the gap between rows, the plane's padding, its foot
+  // a card (its kind and two lines of quote), the gap between two in a
+  // column, the plane's padding, a relation's sign
+  const CW = 168, CH = 58, GY = 18, PAD = 24, SIGN = 18;
   const ARROWS = new Set(["supports", "attacks", "cites", "because", "contradicts", "checkedBy", "supersedes"]);
+  const SIGNS = { supports: "supports", attacks: "attacks", coref: "same",
+    cites: "cites", checkedBy: "check" };   // the rest by their own names
+  const signOf = (k) => SIGNS[k] ?? (k in ICONS ? k : "relates");
   const GREY = new Set(["relates", "cites", "checkedBy", "supersedes", "over", "parts", "code"]);
   const edgeColour = (k) => (GREY.has(k) ? css.getPropertyValue("--fpl-mute").trim() || "#6c757d" : colourOf(k));
   const kindName = (k) => (k === "code" ? "code" : VERB[k] ?? k);
@@ -2537,6 +2727,24 @@
     if (r) return r.labels?.[0] ? kindName(r.labels[0]) : typeof r.text === "string" ? "span" : "notitie";
     if (d) return d.topic ? `besluit · ${d.topic}` : "besluit";
     return document.getElementById(n.id) ? "plek" : EXT[n.id.split(":")[0]] ?? "elders";
+  }
+  /**
+   * A graph card's kind as a shape beside its colour and its word
+   * (feedback 24, for readers who do not tell the colours apart): a span
+   * a square and a fact a dot, in its label's colour; a decision, a
+   * refusal, a test, a chunk, a file, a place and an id elsewhere each
+   * its own outline.
+   */
+  function glyph(n, r) {
+    const ext = { refusal: "kweigering", test: "ktest", chunk: "kchunk",
+      file: "kbestand" }[n.id.split(":")[0]];
+    const name = r ? (typeof r.text === "string" ? "kspan" : "knote")
+      : decision(n.id) ? "kbesluit"
+        : document.getElementById(n.id) ? "kplek" : ext ?? "kelders";
+    const g = ico(name);
+    g.classList.add("fpl-kg");
+    if (r) g.style.color = tone(r);
+    return g;
   }
   /**
    * Open the plane, with an id selected (a card's Graph) or none (the
@@ -2592,90 +2800,68 @@
       const on = new Set(ns.map((n) => n.id));
       return { ns, es: es.filter((e) => on.has(e.a.id) && on.has(e.b.id)) };
     };
-    /** Lay the cards on the lattice and draw; again only when the rows, the width or the kinds changed. */
+    /** Lay the graph out and draw it, anew when the rows or kinds change. */
     function build() {
       if (p.view === "boom") { tree(); return; }
-      const w = area.clientWidth, cols = Math.max(1, Math.floor((w - 2 * PAD + 16) / (CW + 16))), cw = (w - 2 * PAD) / cols, chh = CH + GY;
-      const key = `${cols}|${[...offKinds]}`;
+      const key = `${[...offKinds]}`;
       if (g && built === key && g.of === all) return;
       built = key;
       g = graphOf(); g.of = all;
       const { ns, es } = shown();
       nodes = ns;
-      const cards = ns.filter((n) => !n.rel), rels = ns.filter((n) => n.rel);
-      // room for every card and a third more, and for the cells each group's block takes beyond its cards, the row of its
-      // tab and a block's empty corner (GPT review: two cards of a group take four cells, and a lattice sized by the cards
-      // alone ran out)
-      const blocks = g.groups.reduce((t, gr) => {
-        const m = cards.filter((n) => gr.targets.includes(n.id)).length, bw = Math.min(m, 2, cols);
-        return t + (m && bw * (Math.ceil(m / bw) + 1) - m);
-      }, 0);
-      const fit = Math.max(1, Math.floor((area.clientHeight - PAD) / chh));
-      let rows = Math.max(fit, Math.ceil((cards.length * 1.3 + blocks) / cols));
-      // the force layout over the cards alone: a relation row joins its ends directly
-      const via = new Map(rels.map((r) => [r.id, es.filter((e) => e.a === r || e.b === r).map((e) => (e.a === r ? e.b : e.a))]));
-      const flat = es.flatMap((e) => (e.a.rel || e.b.rel ? [] : [e])).concat(rels.flatMap((r) => {
-        const xs = via.get(r.id).filter((n) => !n.rel);
-        return xs.slice(1).map((b) => ({ a: xs[0], b }));
-      }));
-      settleGraph({ nodes: cards, edges: flat }, cols * cw, rows * chh);
-      const free = new Set(Array.from({ length: cols * rows }, (_, i) => i));
-      const mid = { x: (cols * cw) / 2, y: (rows * chh) / 2 };
-      const cell = (n, i) => { free.delete(i); n.cell = i; n.x = PAD + (i % cols + 0.5) * cw; n.y = PAD + (Math.floor(i / cols) + 0.5) * chh; };
-      // a group's cards first, as one block of cells nearest where the force left them, so its frame holds no other card,
-      // with the cells above it kept empty for its tab; a card in two groups stands in the first one's block, and the
-      // second frame is drawn round it where it is
-      for (const gr of g.groups) {
-        const ms = cards.filter((n) => gr.targets.includes(n.id) && n.cell === undefined);
-        if (!ms.length) continue;
-        const bw = Math.min(ms.length, 2, cols), bh = Math.ceil(ms.length / bw);
-        const cx = ms.reduce((t, n) => t + n.x, 0) / ms.length, cy = ms.reduce((t, n) => t + n.y, 0) / ms.length;
-        let best = -1, bd = Infinity;
-        const room = (r0, c0) => Array.from({ length: bw * (bh + 1) }, (_, k) => (r0 - 1 + Math.floor(k / bw)) * cols + c0 + (k % bw)).filter((i) => i >= 0);
-        for (let r0 = 0; r0 + bh <= rows; r0++) for (let c0 = 0; c0 + bw <= cols; c0++) {
-          if (!room(r0, c0).every((i) => free.has(i))) continue;
-          const d = Math.hypot((c0 + bw / 2) * cw - cx, (r0 + bh / 2) * chh - cy);
-          if (d < bd) { bd = d; best = r0 * cols + c0; }
-        }
-        if (best < 0) continue;   // no room for the block: its cards go one by one below
-        ms.forEach((n, k) => cell(n, best + Math.floor(k / bw) * cols + (k % bw)));
-        for (const i of room(Math.floor(best / cols), best % cols)) free.delete(i);   // its tab's row and an empty cell stay empty
+      const grp = new Map();   // a card in two groups stands in the first
+      for (const gr of g.groups) for (const t of gr.targets ?? [])
+        if (!grp.has(t)) grp.set(t, gr.id);
+      for (const n of ns) {
+        const at = n.rel ? null : goal(n.id);   // page order, for column one
+        Object.assign(n, { w: n.rel ? SIGN : CW, h: n.rel ? SIGN : CH,
+          grp: grp.get(n.id), first: n.row && !n.rel, moved: false,
+          key: at ? at.getBoundingClientRect().top : 1e9 });
       }
-      for (const n of [...cards].filter((x) => x.cell === undefined).sort((a, b) => Math.hypot(a.x - mid.x, a.y - mid.y) - Math.hypot(b.x - mid.x, b.y - mid.y))) {
-        if (!free.size) { for (let c = 0; c < cols; c++) free.add(rows * cols + c); rows++; }   // never a cell off the lattice
-        let best = -1, bd = Infinity;   // the nearest free cell to where the force left it
-        for (const i of free) { const d = Math.hypot((i % cols + 0.5) * cw - n.x, (Math.floor(i / cols) + 0.5) * chh - n.y); if (d < bd) { bd = d; best = i; } }
-        cell(n, best);
-      }
-      for (const n of cards) delete n.cell;   // the next layout places them anew
+      // each edge from what is about to what is about it, the row it
+      // draws; a relation's sign right of the spans it joins, and what
+      // else it names (a decision, a test, a fact) right of the sign
+      const les = es.filter((e) => e.a !== e.b).map((e) => {
+        const out = e.own?.rel && e.a === e.own && !e.b.first;
+        const t = out ? e.b : e.own ?? e.b;
+        return { e, s: t === e.a ? e.b : e.a, t };
+      });
+      const box = layered(ns, les, { gap: GY });
+      const ox = Math.max(PAD + 8, (area.clientWidth - box.w) / 2), oy = PAD;
+      for (const n of ns) { n.x += ox; n.y += oy; }
+      for (const { e, s, pts } of les)
+        e.pts = (s === e.a ? pts : [...pts].reverse())
+          .map(([x, y]) => [x + ox, y + oy]);
       area.replaceChildren();
       const sv = document.createElementNS("http://www.w3.org/2000/svg", "svg");
       sv.classList.add("fpl-edges");
-      sv.setAttribute("width", w); sv.setAttribute("height", rows * chh + 2 * PAD);
+      sv.setAttribute("width", Math.max(area.clientWidth, box.w + 2 * ox));
+      sv.setAttribute("height", box.h + 2 * PAD);
       const defs = sv.appendChild(document.createElementNS("http://www.w3.org/2000/svg", "defs"));
       for (const k of new Set(es.map((e) => e.kind))) if (ARROWS.has(k)) defs.insertAdjacentHTML("beforeend",
         `<marker id="fpl-to-${k}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" markerUnits="userSpaceOnUse" orient="auto"><path d="M0 1L9 5L0 9z" fill="${edgeColour(k)}"/></marker>`);
       area.append(sv);
-      frames = g.groups.map((gr) => ({ g: gr, ms: ns.filter((n) => !n.rel && gr.targets.includes(n.id)) })).filter((f) => f.ms.length).map(frameOf);
+      frames = g.groups.map((gr) => ({ g: gr,
+        ms: ns.filter((n) => !n.rel && grp.get(n.id) === gr.id) }))
+        .filter((f) => f.ms.length).map(frameOf);
       for (const e of es) {
         e.path = sv.appendChild(document.createElementNS("http://www.w3.org/2000/svg", "path"));
         e.path.setAttribute("class", "fpl-edge"); e.path.dataset.kind = e.kind;
+        Object.assign(e.path.dataset, { a: e.a.id, b: e.b.id });
         e.path.style.setProperty("--lc", edgeColour(e.kind));
         if (ARROWS.has(e.kind) && (!e.b.rel || e.kind !== e.b.kind)) e.path.setAttribute("marker-end", `url(#fpl-to-${e.kind})`);
       }
       for (const n of ns) {
         const r = all.find((x) => x.id === n.id), text = nodeText(n);
-        n.el = n.rel
-          ? el("button", { type: "button", className: "fpl-node fpl-dia", ariaLabel: `${kindName(r.labels[0])}: ${clip(nodeText({ id: r.targets[0] }), 30)}` })
-          : el("button", { type: "button", className: `fpl-node${r ? (typeof r.text === "string" ? "" : " is-note") : " is-ext"}`, title: text },
-            el("span", { className: "fpl-nkind" }, r && typeof r.text === "string" ? el("span", { className: "fpl-sq", style: `--lc: ${tone(r)}` }) : null,
-              nodeKind(n)), el("span", { className: "fpl-nq" }, clip(text, 120)));
+        n.el = n.rel ? sign(n, r) : el("button", { type: "button",
+          className: `fpl-node${r ? "" : " is-ext"}`, title: text },
+        el("span", { className: "fpl-nkind" }, glyph(n, r), nodeKind(n)),
+        el("span", { className: "fpl-nq" }, clip(text, 120)));
         n.el.dataset.id = n.id;
-        if (n.rel) n.el.style.setProperty("--lc", edgeColour(n.kind));
         area.append(n.el);
         grab(n);
       }
-      place2(chh);
+      place2();
       p.dataset.nodes = ns.map((n) => `${n.id}@${Math.round(n.x)},${Math.round(n.y)}`).join(" ");   // for tests: where each node landed
       p.dataset.groups = frames.map((f) => `${f.g.id}@${f.box.join(",")}`).join(" ");   // and each frame: left, top, right, bottom
       const kinds = [...new Set(g.edges.map((e) => e.kind))].filter((k) => k !== "over" && k !== "parts");
@@ -2684,41 +2870,66 @@
         const c = button("", () => { offKinds.has(k) ? offKinds.delete(k) : offKinds.add(k); build(); foot.querySelector(`[data-kind="${k}"]`)?.focus(); }, "fpl-kchip");
         c.dataset.kind = k; c.ariaPressed = String(!offKinds.has(k));
         c.style.setProperty("--lc", edgeColour(k));
-        c.innerHTML = `<svg width="22" height="10" aria-hidden="true"><path class="fpl-edge" data-kind="${k}" d="M1 5H${ARROWS.has(k) ? 15 : 21}"/>${ARROWS.has(k) ? '<path d="M13 1L21 5L13 9z" fill="currentColor"/>' : ""}</svg>`;
+        c.innerHTML = `<svg width="16" height="10" aria-hidden="true">`
+          + `<path class="fpl-edge" data-kind="${k}" d="M1 5H15"/></svg>`;
+        if (k !== "code") c.append(ico(signOf(k)));
         c.append(kindName(k));
         return c;
       }), el("button", { type: "button", className: "fpl-why", title: how, ariaLabel: how, onclick: () => toast(how) }, ico("why")));
       select(sel, false);
     }
     /**
-     * Put each card and diamond where its node is, the diamonds midway
-     * between their ends, and draw the edges to their borders. Laid out
-     * anew (row, the lattice's row height), a diamond keeps to the gap
-     * between two rows of cards, so it never stands on one; while a card
-     * is dragged its diamonds follow it freely.
+     * A relation's sign (feedback 24): its own shape per kind, so the
+     * kinds part without their colour, in a column of its own between
+     * its ends and what it relates, off the cards; its word under the
+     * mouse, in a pill above it.
      */
-    function place2(row) {
-      for (let i = 0; i < 3; i++) for (const n of nodes.filter((x) => x.rel)) {   // three rounds: a diamond on a diamond (an undercut)
-        const xs = g.edges.filter((e) => e.path && (e.a === n || e.b === n)).map((e) => (e.a === n ? e.b : e.a));
-        if (xs.length) { n.x = xs.reduce((s, x) => s + x.x, 0) / xs.length; n.y = xs.reduce((s, x) => s + x.y, 0) / xs.length; }
-        if (row) n.y = PAD + Math.round((n.y - PAD) / row) * row;   // a cell boundary: the middle of the nearest gap
-      }
+    function sign(n, r) {
+      const word = kindName(r.labels[0]);
+      const b = el("button", { type: "button", className: "fpl-node fpl-dia",
+        ariaLabel: `${word}: ${clip(nodeText({ id: r.targets[0] }), 30)}` },
+      ico(signOf(n.kind)));
+      b.style.setProperty("--lc", edgeColour(n.kind));
+      b.addEventListener("mouseenter", () => {
+        const pill = el("span", { className: "fpl-pill" }, word);
+        pill.style.left = `${n.x}px`;
+        pill.style.top = `${n.y - SIGN / 2 - 12}px`;
+        pill.style.setProperty("--lc", edgeColour(n.kind));
+        area.append(pill);
+      });
+      b.addEventListener("mouseleave", () => {
+        for (const x of area.querySelectorAll(".fpl-pill")) x.remove();
+      });
+      return b;
+    }
+    /**
+     * Put each card and sign where its node is, and draw the edges along
+     * the routes the layout gave them; a dragged card's edges run straight
+     * to it, from border to border, until the next drawing.
+     */
+    function place2() {
       for (const f of frames) {   // round its cards where they stand, also while one is dragged
         const xs = f.ms.map((n) => n.x), ys = f.ms.map((n) => n.y);
         // 13px above the cards, so the tab on the frame's top edge stands clear of them
         f.box = [Math.min(...xs) - CW / 2 - 8, Math.min(...ys) - CH / 2 - 13, Math.max(...xs) + CW / 2 + 8, Math.max(...ys) + CH / 2 + 8].map(Math.round);
         Object.assign(f.el.style, { left: `${f.box[0]}px`, top: `${f.box[1]}px`, width: `${f.box[2] - f.box[0]}px`, height: `${f.box[3] - f.box[1]}px` });
-        const w = f.el.firstChild.offsetWidth;   // a diamond in the gap would sit on the tab: it steps past its end
-        for (const n of nodes.filter((x) => x.rel && Math.abs(x.y - f.box[1]) < 18 && x.x > f.box[0] && x.x < f.box[0] + w + 22)) n.x = f.box[0] + w + 22;
       }
       for (const n of nodes) { n.el.style.left = `${n.x}px`; n.el.style.top = `${n.y}px`; }
       const rim = (n, dx, dy) => {   // where the line from a node's middle, along dx dy, leaves its card
-        const hw = n.rel ? 7 : CW / 2 + 2, hh = n.rel ? 7 : CH / 2 + 2, t = Math.min(hw / (Math.abs(dx) || 1e-9), hh / (Math.abs(dy) || 1e-9), 1);
+        const hw = n.w / 2 + 1, hh = n.h / 2 + 1;
+        const t = Math.min(hw / (Math.abs(dx) || 1e-9),
+          hh / (Math.abs(dy) || 1e-9), 1);
         return [n.x + dx * t, n.y + dy * t];
       };
       for (const e of g.edges.filter((x) => x.path)) {
-        const dx = e.b.x - e.a.x, dy = e.b.y - e.a.y, [x1, y1] = rim(e.a, dx, dy), [x2, y2] = rim(e.b, -dx, -dy);
-        e.path.setAttribute("d", `M${x1.toFixed(1)} ${y1.toFixed(1)}L${x2.toFixed(1)} ${y2.toFixed(1)}`);
+        let pts = e.pts;
+        if (e.a.moved || e.b.moved) {
+          const dx = e.b.x - e.a.x, dy = e.b.y - e.a.y;
+          pts = [rim(e.a, dx, dy), rim(e.b, -dx, -dy)];
+        }
+        const d = pts.map(([x, y], i) =>
+          `${i ? "L" : "M"}${x.toFixed(1)} ${y.toFixed(1)}`);
+        e.path.setAttribute("d", d.join(""));
       }
     }
     /** A card is dragged in this view only; a press without a move is a click. */
@@ -2729,7 +2940,7 @@
         if (!from) return;
         const dx = ev.clientX - from[0], dy = ev.clientY - from[1];
         if (!moved && Math.hypot(dx, dy) < 4) return;
-        moved = true; n.el.classList.add("is-lift");
+        moved = n.moved = true; n.el.classList.add("is-lift");
         n.x = from[2] + dx; n.y = from[3] + dy;
         place2();
       };
@@ -2815,19 +3026,16 @@
       name.focus({ preventScroll: true });
       name.select();
     }
-    /** The edges of a node drawn heavier, each with its kind as a pill at its middle. */
+    /**
+     * The edges of a node drawn heavier, through a relation's sign to its
+     * other ends; the words stay on the signs, under the mouse, never on
+     * a card (feedback 24).
+     */
     function light(nid) {
-      for (const x of area.querySelectorAll(".fpl-pill")) x.remove();
       for (const e of g.edges.filter((x) => x.path)) {
         const on = !!nid && (e.a.id === nid || e.b.id === nid || (e.a.rel && e.b.id !== nid && g.edges.some((f) => f.path && f.b === e.a && f.a.id === nid))
           || (e.b.rel && g.edges.some((f) => f.path && f.a === e.b && f.b.id === nid)));
         e.path.classList.toggle("is-hot", on);
-        if (on && !(e.a.rel && e.b.rel) && (e.a.rel || !e.b.rel)) {   // one pill per relation: on the half that leaves its diamond
-          const pill = el("span", { className: "fpl-pill" }, kindName(e.kind));
-          pill.style.left = `${(e.a.x + e.b.x) / 2}px`; pill.style.top = `${(e.a.y + e.b.y) / 2}px`;
-          pill.style.setProperty("--lc", edgeColour(e.kind));
-          area.append(pill);
-        }
       }
     }
     /** Select a node: it and its neighbours stand out, the rest dims; none, all show alike. */
