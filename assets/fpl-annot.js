@@ -345,11 +345,15 @@
  * with its last sentence. The labels of a group count for each member
  * in the filter, so group and role are scopes there.
  *
- * The tree (boards V3c, V4c): Boom in the menu, or b, turns the plane to
- * the groups as an argument, a block per group (the tray aside) in the
- * order of its order/<n>; with no group yet, one empty block and its
- * one action, Maak groep, which turns to the graph. A group hangs under another by a supports or
- * attacks row from it to the other, which gives the step its kind and
+ * The tree (boards V3c, V4c; feedback 28): Boom in the menu, or b, turns
+ * the plane to the argument the relations make, by itself: a block per
+ * group (the tray aside) in the order of its order/<n>, then one per
+ * row or id a supports, attacks, because or contradicts row touches that
+ * no group holds (its kind's shape and its words); a member stands in
+ * its group's block. Only with no group and no such row, one empty block
+ * and its one action, Maak groep, which turns to the graph. A block
+ * hangs under another by such a row from it to the other (because runs
+ * from each reason to its claim), which gives the step its kind and
  * weight; a bewijs or tegen without one hangs under the last claim before
  * it, a thin grey line without a sign. An attacks row aimed at a step is
  * an undercut, a dashed block under the group whose step it attacks, its
@@ -1301,7 +1305,8 @@
       ["Shift + scroll",
         "Vouwt rond de muis in, terug opent; met een filter tot de spans"],
       ["Esc", "Sluit of breekt af; anders opent de laatste band"], ["Alt + selectie", "Een deel van een span; Enter bundelt"],
-      ["b", "Boom: de groepen als betoog"], ["Alt + ↑ ↓", "Verplaats een groep in de boom, op zijn greep"],
+      ["b", "Boom: het betoog uit de relaties"],
+      ["Alt + ↑ ↓", "Verplaats een groep in de boom, op zijn greep"],
       ["Alt + ←", "Terug na een sprong uit de graph of de boom"], ["Alt-klik", "De tfa-waarde van een bijzin"], ["Alt-Shift-klik", "Deze bijzin neemt een eerdere op"],
       ["l", "Verbind de kaart onder de muis of de focus; Tab kiest het andere eind, Enter het soort"],
       ["Shift + ← →", "Rek je span een woord, met de focus op zijn bolletje; Enter bewaart"], ["?", "Deze lijst"]];
@@ -1878,26 +1883,70 @@
   }
 
   /**
-   * The argument read from the groups, for the tree (boards V3c, V4c):
-   * every group but the tray, in order of its order/<n> (unnumbered last,
-   * as written), each under the group it argues for or against. A group
-   * hangs under another by a supports or attacks row between the two
-   * (its first target the group, a later one the other), which brings its
-   * kind and weight; a bewijs or tegen without one hangs under the last
-   * claim before it, by order alone, a line without a sign. An attacks
-   * row aimed at such a row is an undercut, listed under the group whose
-   * step it attacks, after what hangs from that group. Depth first, so the order a reader drags is
-   * the order written back.
+   * The steps of the argument a row makes, for the tree: each from a
+   * ground to what it grounds, as {from, to, kind, rel}. A supports or
+   * attacks row reads targets[0] -> targets[1:]; contradicts attacks its
+   * later targets; a because row runs the other way, its claim first and
+   * its reasons after (f-tabs because L-I4, L-I6), so each reason is a
+   * step up to the claim, a supporting one. kind is supports or attacks,
+   * which gives the step its sign and colour; word is the row's label.
+   */
+  const STEP = { supports: "supports", because: "supports",
+    attacks: "attacks", contradicts: "attacks" };
+  function steps(r) {
+    const w = r.labels?.[0], t = r.targets ?? [];
+    if (!STEP[w] || t.length < 2 || !shows(r)) return [];
+    const one = (from, to) => ({ from, to, kind: STEP[w], word: w, rel: r });
+    return w === "because" ? t.slice(1).map((g) => one(g, [t[0]]))
+      : [one(t[0], t.slice(1))];
+  }
+  /**
+   * The argument for the tree (boards V3c, V4c; feedback 28): read from
+   * the relations, with the groups folded in. A unit is a group (every
+   * group but the tray), or a row or id a step touches that no group
+   * holds; a member stands in its group's block. A unit hangs under
+   * another by the first step from it to the other, which brings its
+   * kind and weight, and stands once more, unexpanded and "zie boven",
+   * under the end of each later step from it. A bewijs or tegen group
+   * without such a step hangs under the last claim group before it, by
+   * order alone, a line without a sign; only then does a step of a
+   * member count for its group, where nothing hangs the group yet, so
+   * the groups a reader ordered keep their order. An attacks row aimed
+   * at a step's row is an undercut, listed under the unit whose step it
+   * attacks, after what hangs from that unit. Groups first, in order of
+   * their order/<n> (unnumbered last, as written), then the loose units
+   * as their steps are met; depth first, so the order a reader drags is
+   * the order written back. An item is {g} for a group, {id} for a loose
+   * unit, {uc} for an undercut.
    */
   function outline() {
     const gs = all.filter((r) => isGroup(r) && shows(r) && r.labels[0] !== TRAY);
     const num = (g) => Number(g.labels.find((l) => /^order\/\d+$/.test(l))?.slice(6) ?? Infinity);
     gs.sort((a, b) => num(a) - num(b) || all.indexOf(a) - all.indexOf(b));
-    const ids = new Set(gs.map((g) => g.id)), up = new Map();
-    for (const r of all) {
-      const at = kindOf(r) && shows(r) && ids.has(r.targets[0]) && r.targets.slice(1).find((t) => ids.has(t));
-      if (at && !up.has(r.targets[0])) up.set(r.targets[0], { parent: at, rel: r, kind: kindOf(r) });
+    const home = new Map();   // a member's group, the first that holds it
+    for (const g of gs) {
+      for (const t of g.targets) if (!home.has(t)) home.set(t, g.id);
     }
+    const unit = (id) => home.get(id) ?? id;
+    const st = all.flatMap(steps), rels = new Set(st.map((x) => x.rel.id));
+    const units = gs.map((g) => g.id), up = new Map(), also = [];
+    const meet = (u) => units.includes(u) || units.push(u);
+    // a step between its own ends first: a unit hangs under its first
+    // step's end, and a later one shows it there once more, unexpanded
+    // ("zie boven"), as a card's tree does; then the roles; a step of a
+    // member, lifted to its group, last, where nothing hangs it yet
+    const hang = (x, lifted) => {
+      const a = unit(x.from);
+      const to = x.to.find((t) => !rels.has(t) && unit(t) !== a);
+      if (rels.has(x.from) || !to) return;   // an undercut, or in one unit
+      if (lifted !== (a !== x.from || unit(to) !== to)) return;
+      const step = { parent: unit(to), rel: x.rel, kind: x.kind, word: x.word };
+      if (lifted && up.has(a)) return;
+      meet(step.parent); meet(a);
+      if (!up.has(a)) up.set(a, step);
+      else if (up.get(a).parent !== step.parent) also.push({ id: a, ...step });
+    };
+    for (const x of st) hang(x, false);
     let claim = null;
     for (const g of gs) {
       const role = roleOf(g);
@@ -1905,19 +1954,30 @@
       else if (claim && !up.has(g.id) && (role === "bewijs" || role === "tegen"))
         up.set(g.id, { parent: claim.id, rel: null, kind: role === "bewijs" ? "supports" : "attacks" });
     }
-    for (const id of ids) {   // a ring of rows (the graph allows one) is cut where it closes
+    for (const x of st) hang(x, true);
+    // a ring of rows (the graph allows one) is cut where it closes
+    for (const id of units) {
       const seen = new Set([id]);
       for (let p = up.get(id)?.parent; p; p = up.get(p)?.parent) if (seen.has(p)) { up.delete(id); break; } else seen.add(p);
     }
-    const out = [], under = (pid) => gs.filter((g) => (up.get(g.id)?.parent ?? null) === pid);
-    const walk = (g, depth) => {
-      const u = up.get(g.id), item = { g, depth, ...u };
+    const out = [];
+    const under = (pid) =>
+      units.filter((u) => (up.get(u)?.parent ?? null) === pid);
+    const walk = (id, depth) => {
+      const u = up.get(id), g = gs.find((x) => x.id === id);
+      const item = { ...g ? { g } : { id }, depth, ...u };
       out.push(item);
-      for (const c of under(g.id)) walk(c, depth + 1);
-      if (u?.rel) for (const x of all.filter((r) => kindOf(r) === "attacks" && shows(r) && r.targets.slice(1).includes(u.rel.id)))
-        out.push({ uc: x, depth, on: item });   // after the group's own subtree: its line, from the step, passes left of it
+      for (const c of under(id)) walk(c, depth + 1);
+      for (const x of also.filter((y) => y.parent === id)) {
+        out.push({ ...x, depth: depth + 1, again: true });
+      }
+      // after the unit's own subtree: its line, from the step, passes left
+      const cut = (r) => kindOf(r) === "attacks" && shows(r)
+        && r.targets.slice(1).includes(u.rel.id);
+      if (!u?.rel) return;
+      for (const x of all.filter(cut)) out.push({ uc: x, depth, on: item });
     };
-    for (const g of under(null)) walk(g, 0);
+    for (const u of under(null)) walk(u, 0);
     return out;
   }
 
@@ -3170,8 +3230,10 @@
     }
     area.onclick = (ev) => { if (p.view === "graph" && (ev.target === area || ev.target.closest?.(".fpl-edges"))) select(null); };
     /**
-     * The tree (boards V3c, V4c): the groups as an argument, read by
-     * outline(). A block per group: a grip, its role, its name, the
+     * The tree (boards V3c, V4c): the argument read by outline(), from
+     * the relations and the groups. A loose unit's block is one line, its
+     * kind's shape and its words, which jump to it. A block per group:
+     * a grip, its role, its name, the
      * weight of its step as five dots (a dot on a step without a row
      * writes one, supports for bewijs and attacks for tegen), and a line
      * per member whose click jumps to it, as a graph card does. A block
@@ -3208,14 +3270,19 @@
       sv.setAttribute("width", list.scrollWidth); sv.setAttribute("height", list.scrollHeight);
       for (const x of items) if (x.parent || x.uc) wire(x, items, list, sv);
       fillTray();
-      p.dataset.tree = items.map((x) => `${x.g?.id ?? x.uc.id}@${x.depth}${x.parent ? `<${x.parent}` : ""}`).join(" ");   // for tests
+      p.dataset.tree = items.map((x) => {   // for tests
+        const up = x.parent ? `<${x.parent}` : "";
+        return `${x.g?.id ?? x.id ?? x.uc.id}@${x.depth}${up}`;
+      }).join(" ");
     }
-    /** A group's block, or an undercut's. */
+    /** A group's block, a loose unit's or an undercut's. */
     function blockOf(x) {
-      const g = x.g, u = x.uc, rel = g ? x.rel : u;
-      const b = el("section", { className: `fpl-tblock${u ? " is-uc" : ""}` });
+      const g = x.g, u = x.uc, rel = u ?? x.rel;
+      const b = el("section", { className: "fpl-tblock" });
+      b.classList.toggle("is-uc", !!u);
+      b.classList.toggle("is-one", !!x.id);
       b.style.marginLeft = `${x.depth * IND}px`;
-      b.dataset.id = (g ?? u).id;
+      b.dataset.id = x.id ?? (g ?? u).id;
       if (g) b.dataset.group = g.id;
       x.el = b;
       const head = el("div", { className: "fpl-thead" });
@@ -3228,8 +3295,20 @@
           el("span", { className: "fpl-tname" }, groupName(g))].filter(Boolean));
         b.onmouseenter = () => lightGroup(g.id);
         b.onmouseleave = () => lightGroup(null);
+      } else if (x.id) {
+        // a loose unit: its kind as a shape and a word, its words a jump
+        const r = all.find((y) => y.id === x.id);
+        const go = el("button", { type: "button", title: nodeKind(x),
+          className: "fpl-tname fpl-tgo" }, clip(nodeText(x), 90));
+        go.onclick = (ev) => { ev.stopPropagation(); jump({ id: x.id }); };
+        b.onmouseenter = () => hot(x.id);
+        b.onmouseleave = () => hot(null);
+        head.append(glyph(x, r), go);
+        const again = el("span", { className: "fpl-tagain" }, "zie boven");
+        if (x.again) head.append(again);
       } else head.append(el("span", { className: "fpl-tuc" }, "undercut"), el("span", { className: "fpl-tname" }, u.note || ""));
       if (x.kind || u) head.append(weigh(rel, rel ? null : (n) => save({}, { note: "", labels: [x.kind], targets: [g.id, x.parent], weight: n })));
+      if (x.id) { b.append(head); return b; }
       const ids = g ? g.targets : [u.targets[0]];
       b.append(head, el("ul", { className: "fpl-trows" }, ...ids.map((t) => {
         const r = all.find((y) => y.id === t), span = typeof r?.text === "string" || !!bundleOf(t);
@@ -3253,11 +3332,13 @@
      */
     function wire(x, items, list, sv) {
       const box = (e) => ({ l: e.offsetLeft, t: e.offsetTop, b: e.offsetTop + e.offsetHeight });
-      const c = box(x.el), arm = c.t + 21;
+      const hd = x.el.firstElementChild, c = box(x.el);
+      const arm = c.t + hd.offsetTop + hd.offsetHeight / 2;
       let sx, y0;
       if (x.uc) { sx = x.on.dia; y0 = x.on.arm + 6; }
       else {
-        const pa = items.find((y) => y.g?.id === x.parent), sibs = items.filter((y) => y.parent === x.parent && y.g);
+        const pa = items.find((y) => (y.g?.id ?? y.id) === x.parent);
+        const sibs = items.filter((y) => y.parent === x.parent && !y.uc);
         const k = sibs.indexOf(x), pb = box(pa.el);
         sx = pb.l + 8 + 8 * Math.min(sibs.length - 1 - k, 3); y0 = pb.b;
       }
@@ -3266,13 +3347,14 @@
       const line = sv.appendChild(document.createElementNS(ns, "path")), hit = sv.appendChild(document.createElementNS(ns, "path"));
       line.setAttribute("d", d); hit.setAttribute("d", d);
       line.setAttribute("class", "fpl-tline"); hit.setAttribute("class", "fpl-thit");
-      line.dataset.id = (x.g ?? x.uc).id;
+      line.dataset.id = x.id ?? (x.g ?? x.uc).id;
       line.style.setProperty("--lc", rel ? `var(--fpl-${kind})` : "var(--fpl-edge)");
       line.style.strokeWidth = w ? 0.5 + 0.75 * w : 1.25;   // board V4c: 2, 2.75, 3.5 for 2, 3, 4
       x.arm = arm;
       x.dia = c.l - IND + 42;   // where this step's diamond stands, should an undercut aim at it
       if (!rel) return;
-      const sign = el("span", { className: "fpl-tsign", role: "img", ariaLabel: `${kindName(kind)}${w ? `, gewicht ${w}` : ""}` });
+      const sign = el("span", { className: "fpl-tsign", role: "img",
+        ariaLabel: `${kindName(x.word ?? kind)}${w ? `, gewicht ${w}` : ""}` });
       sign.innerHTML = `<svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path d="M1.5 5h7${kind === "supports" ? "M5 1.5v7" : ""}"/></svg>`;
       sign.style.cssText = `--lc: var(--fpl-${kind}); left: ${c.l - 12}px; top: ${arm}px`;
       const tip = el("span", { className: "fpl-wtip", hidden: true }, String(w));
