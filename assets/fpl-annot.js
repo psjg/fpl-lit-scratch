@@ -1980,7 +1980,8 @@
     };
     other.onclick = (ev) => ev.stopPropagation();
     out.push(el("div", { className: "fpl-pick", role: "group",
-      ariaLabel: "Reden" }, ...why, other));
+      ariaLabel: "Reden" }, el("small", {}, "Waarom laat je het staan?"),
+    ...why, other));
     return out;
   }
 
@@ -4103,10 +4104,32 @@
     const more = el("input", { placeholder: "ander label…",
       autocomplete: "off",
       title: "Een label, naam/sub, of naam/{a:0.7,b:0.1}" });
+    // why the field refused, under it (QA, block 6: not a far toast)
+    const why = el("small", { className: "fpl-why", role: "alert" });
+    const refuse = (text) => {
+      why.textContent = text;
+      text ? more.setAttribute("aria-invalid", "true")
+        : more.removeAttribute("aria-invalid");
+      return !text;
+    };
+    // a row's shares hold together at most 1, over every entry
+    const fits = (sh) => [...sh.values()].reduce((a, w) => a + w, 0)
+      <= 1 + 1e-9 || refuse("De delen zijn samen meer dan 1");
     const known = el("datalist", { id: `fpl-labels-${Date.now().toString(36)}` }, ...seen.map((l) => el("option", { value: l })));
     more.setAttribute("list", known.id);
+    // writing/ is typed on: its chip starts the field (board V5d)
+    const start = (p) => {
+      const b = chip(`${p}/…`, "");
+      b.tabIndex = 0;
+      b.onclick = () => { more.value = `${p}/`; more.focus(); };
+      b.onkeydown = (e) => {
+        if (e.key === " " || e.key === "Enter") { e.preventDefault();
+          b.onclick(); }
+      };
+      return b;
+    };
     let render = () => chips.replaceChildren(
-      ...[...new Set([...seen.slice(0, 6), ...on])].map((l) => {
+      ...[...new Set([...seen.slice(0, 6), "good", ...on])].map((l) => {
         const b = chip(l, on.has(l) ? "is-on" : "");
         if (on.has(l) && shares.has(l))
           b.append(el("span", { className: "fpl-wv" }, `${shares.get(l)}`));
@@ -4117,18 +4140,28 @@
         b.tabIndex = 0;
         b.onkeydown = (e) => { if (e.key === " " || e.key === "Enter") { e.preventDefault(); b.onclick(); } };
         return b;
-      }), more);
-    // the note asks why when the row praises (PSJ 11-02: good, omdat …)
-    const praise = () => note.placeholder =
-      [...on].some((l) => under(l, "good")) ? "omdat …" : "Notitie";
+      }), start("writing"), more, why);
+    // the note asks why when the row praises (PSJ 11-02: good, omdat …);
+    // a proposal is for a row about the writing
+    const praise = () => {
+      note.placeholder =
+        [...on].some((l) => under(l, "good")) ? "omdat …" : "Notitie";
+      if (prop) {
+        prop.hidden = !prop.value && ![...on].some((l) =>
+          under(l, "writing") || under(l, "slop"));
+      }
+    };
     render = ((r) => () => { r(); praise(); })(render);
     render();
     const add = () => {
       const got = reasons(more.value.trim());
-      if (!got) {
-        toast("Een label is naam/scope/… of naam/{a:0.7,b:0.1}, samen ≤ 1");
+      if (!refuse(got ? ""
+        : "Een label is naam/scope/… of naam/{a:0.7,b:0.1}, samen ≤ 1")) {
         return;
       }
+      const sh = new Map(shares);
+      for (const [l, w] of got) w === undefined ? sh.delete(l) : sh.set(l, w);
+      if (!fits(sh)) return;
       for (const [l, w] of got) {
         on.add(l);
         w === undefined ? shares.delete(l) : shares.set(l, w);
@@ -4136,7 +4169,10 @@
       more.value = ""; render(); more.focus();
     };
     more.onkeydown = (e) => { if (e.key === "Enter" && more.value.trim()) { e.preventDefault(); add(); } };
-    more.oninput = (e) => { if (!e.inputType || e.inputType === "insertReplacementText") add(); };   // a pick from the list
+    more.oninput = (e) => {
+      refuse("");
+      if (!e.inputType || e.inputType === "insertReplacementText") add();
+    };   // a pick from the list
     const keys = el("div", { className: "fpl-bar fpl-keys" },
       row.id ? button("Verwijder", () => onDone("delete")) : null,
       el("span", { className: "fpl-space" }),
@@ -4161,6 +4197,7 @@
       ev.preventDefault();
       // shares and proposal written out, or gone: undefined is not exported
       const sh = [...on].filter((l) => shares.has(l));
+      if (!fits(new Map(sh.map((l) => [l, shares.get(l)])))) return;
       onDone({ note: note.value.trim(), labels: [...on],
         shares: sh.length
           ? Object.fromEntries(sh.map((l) => [l, shares.get(l)])) : undefined,

@@ -1036,3 +1036,8 @@ mark.fact.fpl-pulled { background: none; box-shadow: none; text-decoration: unde
 .fpl-play-bad { margin-left: auto; padding: 0; border: 0;
   background: none; color: var(--fpl-bad); font: inherit;
   text-decoration: underline; cursor: pointer; }
+.fpl-why { flex-basis: 100%; color: var(--fpl-bad); font-size: 12px;
+  text-align: left; }
+.fpl-why:empty { display: none; }
+.fpl-chips input[aria-invalid] { border-color: var(--fpl-bad); }
+.fpl-pick small { flex-basis: 100%; color: var(--fpl-mute); }
