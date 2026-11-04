@@ -5774,14 +5774,18 @@
     c.dataset.i = i;
     if (i === spinHot) c.classList.add("is-hot");
     spinChips.append(c);
-    // side by side along the edge, never over another chip there
+    // side by side along the edge, never over another chip there; a row
+    // full, the next one in from the edge
     const m = body.getBoundingClientRect(), w = c.offsetWidth;
-    let l = Math.max(m.left, Math.min(x - w / 2, m.right - w));
-    while (taken.some(([a, b]) => l < b + 6 && l + w + 6 > a)) l = Math.max(
-      ...taken.filter(([a, b]) => l < b + 6 && l + w + 6 > a).map(([, b]) => b))
-      + 6;
-    taken.push([l, l + w]);
-    const t = up ? 8 : innerHeight - 30;
+    const hit = (l, row) => taken.filter(([a, b, q]) => q === row
+      && l < b + 6 && l + w + 6 > a);
+    let l = Math.max(m.left, Math.min(x - w / 2, m.right - w)), row = 0;
+    for (let h; (h = hit(l, row)).length;) {
+      l = Math.max(...h.map(([, b]) => b)) + 6;
+      if (l + w > m.right) [l, row] = [m.left, row + 1];
+    }
+    taken.push([l, l + w, row]);
+    const t = up ? 8 + 26 * row : innerHeight - 30 - 26 * row;
     Object.assign(c.style, { left: `${l}px`, top: `${t}px` });
     return [l + w / 2, up ? t + 22 : t];
   }
