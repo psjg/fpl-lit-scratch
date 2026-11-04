@@ -396,6 +396,16 @@
  * A query that does not parse reddens the field, which says why under
  * the mouse; how many it found is read out; a query asked in Lezen turns to Spans, where there is
  * something to find.
+ * The spin (board V5b; after the index of Knuth's WEB and noweb's
+ * identifier cross-references). lit spin writes <stem>.spin.json: each
+ * name the page's code defines, its definition and uses as addresses in
+ * the chunks (n among the chunk heads, body line, column) and its
+ * mentions in the prose's inline code as rows. In every stand such a
+ * name is a link, in a fence and in the prose; under the mouse or on a
+ * click a panel lists definitie, gebruik and vermelding, a row goes to
+ * its place as a step in the history (Alt+Left back) and flashes it.
+ * Wide the panel stands under the bar, a leg from the name to each row,
+ * solid to code and dashed to prose; narrow it hangs under the name.
  */
 (() => {
   "use strict";
@@ -5069,7 +5079,213 @@
   addEventListener("resize", relayout);
   document.fonts?.ready.then(relayout);
 
-  document.body.append(pop, menu, views, panel, cardMenu);
+  /* ---- the spin (board V5b) ---- */
+
+  /**
+   * The spin: each name the page's code defines (lit spin, <stem>.spin.json)
+   * is a link where it stands in a fence or in the prose's inline code.
+   * Under the mouse (after a breath) or on a click a panel opens: the name,
+   * then three lists, definitie, gebruik and vermelding, each row a button
+   * that goes to its place (the browser's history: Alt+Left comes back).
+   * A click keeps the panel; Esc or a click elsewhere shuts it. Wide, it
+   * stands under the bar and draws a leg from the name to every row, solid
+   * to code, dashed to prose; narrow, it hangs under the name. The core
+   * reads addresses only (chunk n, body line, column; a mention as a row),
+   * so any language lit can read gives it its names.
+   */
+  const spinBox = el("div", { className: "fpl-annot-ui fpl-spin",
+    hidden: true, role: "dialog", ariaLabel: "Spin" });
+  let spinOn = null, spinKept = false, spinT = 0;
+  let spun = null;   // the page's names (lit spin), when the site shipped them
+  const heads = () => [...body.querySelectorAll(".fpl-chunk-head")];
+  /** The code line an address names, or null. */
+  const spinLine = (a) => heads()[a.n - 1]?.parentElement
+    .querySelector("code.sourceCode")?.children[a.line - 1] ?? null;
+  /** Wrap [s, e) of an element's text in spans of class c, for name q. */
+  function spinWrap(root, s, e, c, q) {
+    const walk = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    const bare = root.nodeType === Node.TEXT_NODE;
+    const cuts = bare ? [[root, s, e]] : [];
+    for (let n, at = 0; !bare && (n = walk.nextNode()); at += n.data.length) {
+      const a = Math.max(s, at), b = Math.min(e, at + n.data.length);
+      if (a < b) cuts.push([n, a - at, b - at]);
+    }
+    return cuts.map(([n, a, b]) => {
+      const r = document.createRange(), x = el("span", { className: c });
+      r.setStart(n, a);
+      r.setEnd(n, b);
+      x.dataset.spin = q;
+      r.surroundContents(x);
+      return x;
+    });
+  }
+  /** Mark every definition, use and mention of the spin's names. */
+  function spinMark(names) {
+    const ix = shown();
+    // lit's plain() and the page part on a few marks (curly quotes, spacing
+    // accents): a side that does not match is dropped, then the other
+    const at = (m) => [m, { ...m, prefix: "" }, { ...m, suffix: "" }]
+      .map((x) => find(ix, x)).find(Array.isArray);
+    const spots = names.flatMap((nm) => nm.mentions
+      .map((m) => [nm, at(m), m.text.length]).filter(([, a]) => a)
+      .map(([x, a, len]) => [x, ix.from[a[0]], len]));
+    for (const nm of names)
+      for (const a of [nm.def, ...nm.uses]) {
+        const line = spinLine(a);
+        if (line) spinWrap(line, a.col, a.col + nm.name.length,
+          "fpl-spin-n", nm.qualified);
+      }
+    // mentions last and from the end: a wrap splits the nodes found
+    for (const [nm, [n, o], len] of spots.reverse())
+      spinWrap(n, o, o + len, "fpl-spin-n fpl-spin-m", nm.qualified);
+  }
+  const spinOf = (q) => spun?.find((nm) => nm.qualified === q);
+  const spinEls = (q) => body.querySelectorAll(
+    `.fpl-spin-n[data-spin="${CSS.escape(q)}"]`);
+  /** Go to e, as a step in the history; Back returns. */
+  function spinGo(e) {
+    const id = e.closest("[id]")?.id;
+    if (id) history.pushState(history.state, "", `#${id}`);
+    e.scrollIntoView({ block: "center" });
+    e.classList.remove("fpl-spin-here");
+    void e.offsetWidth;
+    e.classList.add("fpl-spin-here");
+    toast("Alt ← terug");
+  }
+  /** The words of a mention's sentence round it, cut at a word. */
+  function around(e) {
+    const s = e.closest(".fpl-s") ?? e.parentElement;
+    const r = document.createRange();
+    r.selectNodeContents(s);
+    r.setEnd(e, 0);
+    const pre = r.toString().replace(/\s+/g, " "), t = pre
+      + s.textContent.replace(/\s+/g, " ").slice(pre.length);
+    const a = pre.length < 22 ? 0 : t.lastIndexOf(" ", pre.length - 22) + 1;
+    const b = t.indexOf(" ", a + 48);
+    return `${a ? "…" : ""}${t.slice(a, b < 0 ? t.length : b).trim()}`
+      + `${b < 0 ? "" : "…"}`;
+  }
+  /** One row: where (a chunk's head, a section) over what stands there. */
+  function spinRow(e, kind) {
+    const fence = e.closest(".fpl-p");
+    const where = kind === "m" ? fence?.dataset.addr ?? ""
+      : `§${(fence?.querySelector(".fpl-chunk-head")?.textContent ?? "")
+        .replace(/^<</, "").split("\n")[0]}`;
+    const what = kind === "m" ? `“${around(e)}”`
+      : e.closest("[id]").textContent.trim();
+    const b = el("button", { type: "button", className: `fpl-spin-row ${kind}`,
+      onclick: () => { shutSpin(); spinGo(e); } },
+    el("b", {}, where), el("span", {}, what));
+    b.spinAt = e;
+    return b;
+  }
+  /** Open the panel on name q, from the element the reader is on. */
+  function openSpin(q, from) {
+    const nm = spinOf(q);
+    if (!nm) return;
+    shutSpin(true);
+    spinOn = q;
+    const els = [...spinEls(q)];
+    els.forEach((e) => e.classList.add("is-lit"));
+    const lead = (e, i) => e.previousSibling?.dataset?.spin !== q
+      || i === 0;   // a name cut over two nodes is one place
+    const own = (m) => els.filter((e, i) => lead(e, i)
+      && e.classList.contains("fpl-spin-m") === m);
+    const line = (e) => e.closest("code.sourceCode > span");
+    const def = own(false).find((e) => line(e) === spinLine(nm.def));
+    const groups = [
+      ["definitie", def ? [def] : [], "d"],
+      ["gebruik", own(false).filter((e) => e !== def), "u"],
+      ["vermelding", own(true), "m"],
+    ].filter(([, es]) => es.length);
+    spinBox.replaceChildren(
+      el("div", { className: "fpl-spin-head" },
+        el("span", { className: "fpl-spin-sq" }),
+        el("code", {}, nm.qualified)),
+      el("div", { className: "fpl-spin-body" },
+        el("span", { className: "fpl-spin-hub" }, nm.name),
+        el("div", { className: "fpl-spin-lists" }, ...groups.map(([h, es, k]) =>
+          el("div", { className: "fpl-spin-group" }, el("h3", {}, h),
+            ...es.map((e) => spinRow(e, k)))))));
+    spinBox.hidden = false;
+    spinPlace(from);
+  }
+  /** Wide under the bar, with legs; narrow under the name. */
+  function spinPlace(from) {
+    const w = wide(), r = bar.getBoundingClientRect();
+    spinBox.classList.toggle("is-wide", w);
+    if (w) Object.assign(spinBox.style, { position: "fixed",
+      left: `${r.left}px`, top: `${r.bottom + 8}px`, width: `${r.width}px` });
+    else {
+      const f = from.getBoundingClientRect();
+      const width = Math.min(344, innerWidth - 32);
+      Object.assign(spinBox.style, { position: "absolute", width: `${width}px`,
+        top: `${f.bottom + scrollY + 6}px`,
+        left: `${Math.max(16, Math.min(f.left, innerWidth - 16 - width))
+          + scrollX}px` });
+    }
+    spinBox.querySelector(".fpl-spin-legs")?.remove();
+    if (!w) return;
+    const box = spinBox.getBoundingClientRect();
+    const hub = spinBox.querySelector(".fpl-spin-hub").getBoundingClientRect();
+    const x0 = hub.right - box.left, y0 = hub.top + hub.height / 2 - box.top;
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("class", "fpl-spin-legs");
+    for (const b of spinBox.querySelectorAll(".fpl-spin-row")) {
+      const q = b.getBoundingClientRect();
+      const x1 = q.left - box.left, y1 = q.top + q.height / 2 - box.top;
+      const m = (x0 + x1) / 2;
+      const p = document.createElementNS(svg.namespaceURI, "path");
+      p.setAttribute("d", `M${x0} ${y0}C${m} ${y0} ${m} ${y1} ${x1} ${y1}`);
+      p.setAttribute("class", b.classList[1]);
+      svg.append(p);
+    }
+    spinBox.prepend(svg);
+  }
+  /** Shut the panel; quick when another opens at once. */
+  function shutSpin(quick) {
+    clearTimeout(spinT);
+    if (!quick) spinKept = false;
+    body.querySelectorAll(".fpl-spin-n.is-lit")
+      .forEach((e) => e.classList.remove("is-lit"));
+    spinOn = null;
+    spinBox.hidden = true;
+  }
+  body.addEventListener("mouseover", (ev) => {
+    const n = ev.target.closest?.(".fpl-spin-n");
+    if (!n || spinKept) return;
+    clearTimeout(spinT);
+    spinT = setTimeout(() => openSpin(n.dataset.spin, n), 250);
+  });
+  body.addEventListener("mouseout", (ev) => {
+    if (!ev.target.closest?.(".fpl-spin-n") || spinKept) return;
+    clearTimeout(spinT);
+    spinT = setTimeout(() => { if (!spinBox.matches(":hover")) shutSpin(); },
+      300);
+  });
+  spinBox.addEventListener("mouseleave", () => {
+    if (!spinKept) spinT = setTimeout(shutSpin, 300);
+  });
+  spinBox.addEventListener("mouseenter", () => clearTimeout(spinT));
+  addEventListener("click", (ev) => {
+    const n = ev.target.closest?.(".fpl-spin-n");
+    if (n) {
+      ev.preventDefault();
+      if (spinOn !== n.dataset.spin) openSpin(n.dataset.spin, n);
+      spinKept = true;
+    } else if (spinOn && !spinBox.contains(ev.target)) shutSpin();
+  }, true);
+  addEventListener("keydown", (ev) => {
+    if (ev.key === "Escape" && spinOn) { shutSpin(); ev.stopPropagation(); }
+  }, true);
+  (snap ? Promise.resolve(snap.spin ?? null)
+    : fetch(`${stem}.spin.json`).then((r) => (r.ok ? r.json() : null)))
+    .catch(() => null).then((s) => {
+      spun = Array.isArray(s?.names) ? s.names : null;
+      if (spun) spinMark(spun);
+    });
+
+  document.body.append(pop, menu, views, panel, cardMenu, spinBox);
   const decisions = (snap ? Promise.resolve(snap.decisions ?? "") : fetch(`${stem}.decisions.tsv`).then((r) => (r.ok ? r.text() : "")))
     .catch(() => "");
   Promise.all([(snap ? Promise.resolve(snap.rows) : fetch(`${stem}.facts.json`).then((r) => (r.ok ? r.json() : []))).catch(() => []), decisions])
