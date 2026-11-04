@@ -886,3 +886,47 @@ mark.fact.fpl-pulled { background: none; box-shadow: none; text-decoration: unde
 .fpl-spin-legs .m { stroke-width: 1.25; stroke-dasharray: 3 3; }
 @media (prefers-reduced-motion: reduce) { .fpl-spin-here { animation: none;
   outline: 2px solid var(--fpl-spin); } }
+
+/* transclusion (board V5c): a fence's chip says where its lines land;
+   the fences of one chunk ring together; a source row stands as a
+   block of another file's lines, with path, commit and its state */
+:root { --fpl-tx: #2f52a8; --fpl-tx-wash: #eef2fb; --fpl-tx-dot: #b08505; }
+[data-bs-theme="dark"], .quarto-dark {
+  --fpl-tx: #8aa6ee; --fpl-tx-wash: rgba(138, 166, 238, .16);
+  --fpl-tx-dot: #cfa85a;
+}
+.fpl-tx-at, .fpl-tx-chip { display: inline-flex; align-items: center;
+  gap: 5px; margin-left: 1em; padding: 4px 8px; border-radius: 999px;
+  background: var(--fpl-tx-wash); color: var(--fpl-tx);
+  font: 600 11px/1 var(--bs-body-font-family, sans-serif);
+  white-space: nowrap; vertical-align: 1px; }
+.fpl-tx-chip { margin: 0; font-size: 12px; }
+.fpl-tx-chip .fpl-ico svg { width: 13px; height: 13px; }
+[data-chunk] { border-radius: 4px; }
+.fpl-tx-same { outline: 2px solid var(--fpl-tx); outline-offset: 3px; }
+.fpl-tx { margin: 0 0 1rem; border: 1px solid var(--fpl-rule);
+  border-radius: 6px; background: var(--fpl-wash); overflow: hidden; }
+.fpl-tx-head { display: flex; flex-wrap: wrap; align-items: center;
+  gap: 4px 10px; min-height: 40px; padding: 6px 12px;
+  box-sizing: border-box; background: var(--fpl-bg);
+  border-bottom: 1px solid var(--fpl-rule); font-size: 14px; }
+.fpl-tx-path, .fpl-tx-hash { font: 13px SFMono-Regular, Menlo, monospace;
+  background: none; padding: 0; }
+.fpl-tx-path { color: var(--fpl-fg); }
+.fpl-tx-hash { color: var(--fpl-mute); }
+.fpl-tx-state { margin-left: auto; display: inline-flex;
+  align-items: center; gap: 7px; font-size: 13px; color: var(--fpl-lost); }
+.fpl-tx-state::before { content: ""; width: 9px; height: 9px;
+  border-radius: 50%; background: var(--fpl-tx-dot); }
+.fpl-tx-code { display: flex; padding: 10px 0;
+  font: 13px/19px SFMono-Regular, Menlo, monospace; }
+.fpl-tx-code pre { margin: 0; padding: 0; border: 0; background: none;
+  font: inherit; color: var(--fpl-fg); overflow-x: auto; }
+.fpl-tx-code pre code { font: inherit; background: none; padding: 0;
+  color: inherit; }
+.fpl-tx-code .fpl-tx-ln { flex: none; width: 44px; padding-right: 14px;
+  box-sizing: border-box; text-align: right; color: var(--fpl-mute);
+  overflow: visible; user-select: none; }
+.fpl-tx-kind { display: inline-flex; align-items: center; gap: 4px;
+  color: var(--fpl-tx); }
+.fpl-tx-kind .fpl-ico svg { width: 11px; height: 11px; }

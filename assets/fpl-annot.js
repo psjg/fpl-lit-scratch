@@ -406,6 +406,17 @@
  * its place as a step in the history (Alt+Left back) and flashes it.
  * Wide the panel stands under the bar, a leg from the name to each row,
  * solid to code and dashed to prose; narrow it hangs under the name.
+ * Transclusion (board V5c; after Nelson, without the two-way sync): a
+ * fence's header carries a chip with where its lines land, the first
+ * file lit tangles it to and its first and last line there (the
+ * graph's tangles edges). The fences of one chunk, a name and its +=,
+ * ring together under the mouse: one chunk, one identity. A sidecar
+ * row whose item is another file of the repo is a source: lit reads
+ * where its text is now (the graph's sources), and the page shows its
+ * lines after its target, numbered as in the file, under a head of
+ * transclusie, path:lines, the row's commit and, when the text is no
+ * longer in the file as written, "bron gewijzigd sinds deze versie".
+ * Its card stands at that block, headed by file:lines.
  */
 (() => {
   "use strict";
@@ -794,7 +805,21 @@
   };
 
   /** Every row, the sidecar's first, each marked mine when it is local. */
-  const rows = () => [...sidecar, ...local().map((r) => ({ ...r, mine: true }))];
+  const rows = () => [...sidecar.flatMap(asDrawn),
+    ...local().map((r) => ({ ...r, mine: true }))];
+  /**
+   * A row as the margin draws it. One quoting another file of the repo
+   * is a transclusion: a fact on its block of lines (transclude below),
+   * its quote kept as src; one lit's graph does not list stays as it is,
+   * so it is lost, a strip, as any row the page cannot place.
+   */
+  function asDrawn(r) {
+    if (typeof r.item !== "string" || r.item === item) return [r];
+    const s = srcs.get(r.id);
+    if (!s) return [r];
+    const { item: _, text: __, ...v } = r;
+    return [{ ...v, src: s, targets: [`tx:${r.id}`] }];
+  }
   let all = [], state = {};
 
   /** A row's layer, read as lit's facts.layer reads it: never written down. */
@@ -1639,11 +1664,14 @@
     if (row.labels?.[0] === "parts") return leavesOf(row).map((t) => { const r = all.find((x) => x.id === t); return typeof r?.text === "string" ? plain(r.text).trim() : ""; })
       .filter(Boolean).join(" … ");
     if (typeof row.text === "string") return plain(row.text).trim();
+    const { path, lines } = row.src ?? {};
+    if (path) return `${path.split("/").pop()}:${span(lines)}`;
     const at = anchorsOf(row.id)[0];
     return at ? at.textContent.replace(/\s+/g, " ").trim() : row.note || "een feit";
   }
   /** A card's kind, its chip: its own first label, else that of the first fact or relation hanging from it. */
-  const kindOfCard = (row) => (row.labels?.[0] !== "parts" && row.labels?.[0]) || facts(row.id).find((r) => r.labels?.length)?.labels[0] || null;
+  const kindOfCard = (row) => (row.labels?.[0] !== "parts" && row.labels?.[0])
+    || facts(row.id).find((r) => r.labels?.length)?.labels[0] || null;
 
   /** A group on a card (board V3b): its square and name; under the mouse its members light, spans and cards. */
   function groupChip(g) {
@@ -1708,7 +1736,10 @@
       const dot = el("span", { className: "fpl-dot" });
       const kind = readings.length ? null : kindOfCard(row);
       card.append(el("div", { className: "fpl-cardhead" }, dot, el("span", { className: "fpl-title", title: clip(head, 300) }, head),
-        kind ? chip(kind, "is-kind") : null, graphBtn, more));
+        // a transclusion's kind is no label: no colour, no place on the wheel
+        row.src ? el("span", { className: "fpl-chip is-kind fpl-tx-kind" },
+          ico("link"), "transclusie") : kind ? chip(kind, "is-kind") : null,
+        graphBtn, more));
     }
     if (row.labels?.[0] === "parts") card.append(piecesOf(row, card));
     if (readings.length) {
@@ -5285,10 +5316,79 @@
       if (spun) spinMark(spun);
     });
 
+  /*
+   * Transclusion (board V5c). A fence's chip says where its lines land:
+   * the first file lit tangles it to, first line to last (lit graph's
+   * tangles edges, chunk n among the heads). The fences of one chunk (a
+   * name and its +=) light together under the mouse. A source of the
+   * graph, a row quoting another file, stands after its target as that
+   * file's lines, with its path, its commit and, when lit found the
+   * text gone from the file, "bron gewijzigd sinds deze versie". Read
+   * only: nothing flows back to the file.
+   */
+  const srcs = new Map();   // a source row's id -> what lit read of it
+  const span = ([a, b]) => (a === b ? `${a}` : `${a}–${b}`);
+  function transclude() {
+    const cs = (code?.nodes ?? []).filter((n) => n.kind === "chunk");
+    const to = new Map((code?.edges ?? [])
+      .filter((e) => e.label === "tangles" && e.lines).map((e) => [e.a, e]));
+    const many = (c) => cs.filter((x) => x.label === c?.label).length > 1;
+    heads().forEach((h, i) => {
+      const c = cs[i], e = to.get(c?.id);
+      if (many(c)) h.parentElement.dataset.chunk = c.label;
+      if (!e) return;
+      // the path as the header writes it, from the root lit tangles under
+      const f = e.b.slice(5).split("/");
+      while (f.length > 1 && !h.textContent.includes(f.join("/"))) f.shift();
+      (h.querySelector("code") ?? h).append(el("span", {
+        className: "fpl-annot-ui fpl-tx-at",
+        title: e.b.slice(5) }, `${f.join("/")}:${span(e.lines)}`));
+    });
+    for (const s of code?.sources ?? []) {
+      const r = sidecar.find((x) => x.id === s.row);
+      const after = document.getElementById(r?.targets?.[0] ?? "");
+      if (!after || !body.contains(after) || typeof r.text !== "string") {
+        continue;
+      }
+      const at = `${s.path}:${span(s.lines)}`;
+      const ln = el("pre", { className: "fpl-tx-ln" }, Array.from(
+        { length: s.lines[1] - s.lines[0] + 1 }, (_, k) => s.lines[0] + k)
+        .join("\n"));
+      ln.ariaHidden = "true";
+      after.after(el("figure", { className: "fpl-annot-ui fpl-tx",
+        id: `tx:${s.row}`, ariaLabel: `Transclusie uit ${at}` },
+      el("figcaption", { className: "fpl-tx-head" },
+        el("span", { className: "fpl-tx-chip" }, ico("link"), "transclusie"),
+        el("span", { className: "fpl-tx-path", title: s.path }, at),
+        s.commit ? el("code", { className: "fpl-tx-hash",
+          title: s.commit }, s.commit.slice(0, 7)) : null,
+        s.changed ? el("span", { className: "fpl-tx-state" },
+          "bron gewijzigd sinds deze versie") : null),
+      el("div", { className: "fpl-tx-code" }, ln,
+        el("pre", {}, el("code", {}, r.text)))));
+      srcs.set(s.row, s);
+    }
+  }
+  let sameChunk = "";
+  body.addEventListener("mouseover", (ev) => {
+    const c = ev.target.closest?.("[data-chunk]")?.dataset.chunk ?? "";
+    if (c === sameChunk) return;
+    sameChunk = c;
+    for (const d of body.querySelectorAll("[data-chunk]")) {
+      d.classList.toggle("fpl-tx-same", d.dataset.chunk === c);
+    }
+  });
+
   document.body.append(pop, menu, views, panel, cardMenu, spinBox);
   const decisions = (snap ? Promise.resolve(snap.decisions ?? "") : fetch(`${stem}.decisions.tsv`).then((r) => (r.ok ? r.text() : "")))
     .catch(() => "");
-  Promise.all([(snap ? Promise.resolve(snap.rows) : fetch(`${stem}.facts.json`).then((r) => (r.ok ? r.json() : []))).catch(() => []), decisions])
-    .then(([got, tsv]) => { ledger = readLedger(tsv); sidecar = Array.isArray(got) ? got : []; draw(); persist();
-      sync(); });
+  const sidecarRows = (snap ? Promise.resolve(snap.rows)
+    : fetch(`${stem}.facts.json`).then((r) => (r.ok ? r.json() : [])))
+    .catch(() => []);
+  // the graph first: a transclusion's block is the place its card stands at
+  Promise.all([sidecarRows, decisions, coded]).then(([got, tsv]) => {
+    ledger = readLedger(tsv);
+    sidecar = Array.isArray(got) ? got : [];
+    transclude(); draw(); persist(); sync();
+  });
 })();
