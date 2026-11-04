@@ -91,7 +91,8 @@
  * A card (board F) is headed by the first words of its quote, never an
  * id, and its kind as a chip; its Graph and ⋯ keep their room while
  * hidden and show on hover. Under the note one meta line: who, when
- * known, the relations by their other end's text, a decision of the
+ * known, the relations by their other end's text, then those that end
+ * here read back, "aangevallen door ← “…”" (board V8b), a decision of the
  * page's ledger (<stem>.decisions.tsv, ids L-<id>) as a chip whose click
  * opens the row in the card, and "n reacties". A card opened (a click,
  * its ⋯, its "n reacties") is laid out open and pushes the rest down: its
@@ -627,6 +628,13 @@
   // stays the label as written and as queried (QA, block 4: the panel said contradicts where the card said spreekt tegen)
   const VERB = { supports: "steunt", attacks: "valt aan", contradicts: "spreekt tegen", because: "omdat", cites: "citeert",
     checkedBy: "getoetst door", resumes: "neemt op", supersedes: "vervangt", coref: "zelfde als", relates: "verbindt" };
+  // the same relations read from their other end (board V8b): what a card
+  // says of a row that points at it, the arrow and the words its direction
+  const VERB_IN = { supports: "gesteund door", attacks: "aangevallen door",
+    contradicts: "tegengesproken door", because: "reden voor",
+    cites: "geciteerd door", checkedBy: "toetst", resumes: "opgenomen door",
+    supersedes: "vervangen door", coref: "zelfde als",
+    relates: "verbonden met" };
   const RELATIONS = new Set(["because", "supports", "attacks", "contradicts", "supersedes", "checkedBy", "cites", "relates", "resumes"]);
   const AROUND = 32;
   // a card is no text of the page: a narrow margin folds its cards in under their blocks, in main, and a redraw that read
@@ -1669,6 +1677,22 @@
     line.dataset.fact = r.id;
     return line;
   }
+  /**
+   * A relation that ends at a card, from that end (board V8b): its verb
+   * read backwards, an arrow back and the row it starts from, so a link
+   * shows on both its cards. data-fact as relLine's.
+   */
+  function inLine(r, owner) {
+    const v = VERB_IN[r.labels?.[0]] ?? verb(r);
+    const line = el("span", { className: "fpl-rel fpl-in" }, el("b", {}, v),
+      " ← ", endOf(r.targets[0], owner));
+    line.dataset.fact = r.id;
+    return line;
+  }
+  /** The relations that end at an id and start elsewhere, in the filter. */
+  const incoming = (id) => all.filter((r) => typeof r.text !== "string"
+    && relates(r) && r.targets[0] !== id && r.targets.slice(1).includes(id)
+    && !isGroup(r) && shows(r));
   /** The ledger rows opened under some relations, in a card. */
   const ledgerRows = (rels, owner) => rels.flatMap((r) => r.targets.slice(1).map(decision))
     .filter((d) => d?.decision && told.has(`${owner} ${d.id}`)).map(ledgerRow);
@@ -1869,7 +1893,9 @@
     const gs = st === "vers" ? groupsOf(row.id) : [];
     if (gs.length) card.append(el("p", { className: "fpl-groups" }, ...gs.map(groupChip)));
     // the meta line: what always shows, then "n reacties" at rest or the block's address open, never both
+    const ins = readings.length || st !== "vers" ? [] : incoming(row.id);
     const base = [author(row) ? el("b", {}, author(row)) : null, ...rels.map((r) => relLine(r, row.id)),
+      ...ins.map((r) => inLine(r, row.id)),
       // a bundle of ours takes more pieces: the next Alt-selects join it
       row.labels?.[0] === "parts" && row.mine ? button("Deel erbij…", (ev) => { ev.stopPropagation(); arm(row.id); }, "fpl-end fpl-arm") : null].filter(Boolean);
     const u = st === "vers" ? place(row.id)?.closest(".fpl-p") : null, sep = base.length ? " · " : "";
