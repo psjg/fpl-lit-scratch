@@ -411,6 +411,12 @@
  * its place as a step in the history (Alt+Left back) and flashes it.
  * Wide the panel stands under the bar, a leg from the name to each row,
  * solid to code and dashed to prose; narrow it hangs under the name.
+ * While it is open the spin is also drawn over the text (board V5e0):
+ * a curve from the name to each place, its end by kind (definitie thick
+ * to a square, the name boxed; gebruik thin to a ring; vermelding dotted
+ * to an arrow), a place outside the window a chip at that edge, §n ↑/↓.
+ * Wide, a chunked page has a minimap in a strip taken from main's right:
+ * the page's lines, its window, the spin's places; a click scrolls.
  * Transclusion (board V5c; after Nelson, without the two-way sync): a
  * fence's header carries a chip with where its lines land, the first
  * file lit tangles it to and its first and last line there (the
@@ -649,6 +655,7 @@
   const NARROW = 220;   // px: the narrowest; below it the cards fold in under their blocks (a card of one word a line, feedback 17)
   const RAIL = 12;   // px: from the text column's edge to the margin (the bar's left edge); a card stands 28px further in
   const RIGHT = 24;  // px: from the margin's right edge to the window's
+  const MM = 64;   // px: the minimap's strip and its gap, taken from main
 
   const snap = window.FPL_SNAPSHOT;
   const root = snap ? "" : new URL("../", document.currentScript.src).href;
@@ -4386,7 +4393,8 @@
   const pop = el("div", { className: "fpl-annot-ui fpl-pop", hidden: true });
 
   /** The margin's left edge, in the window: RAIL past the text column (main), wherever Quarto's own margin column starts. */
-  const rail = () => body.getBoundingClientRect().right + RAIL;
+  const rail = () => body.getBoundingClientRect().right + RAIL
+    + (document.body.classList.contains("fpl-minimap") ? MM : 0);
   /** The margin's width: RIGHT from the window's edge, at most a CARD and the gutter's 28px. */
   const reserve = () => Math.min(document.documentElement.clientWidth - RIGHT - rail(), 28 + CARD);
   /** Cards stand in the margin while Quarto shows its column and a card there is NARROW or more; else they fold in. */
@@ -4396,6 +4404,8 @@
   /** Lay every card out: the head, the lost rows, then one card per span in page order. */
   function layout() {
     closeEditor();
+    // the minimap's strip comes off main; the margin stays where it was
+    document.body.classList.toggle("fpl-minimap", chunky && wide());
     drawBar();
     document.body.classList.toggle("fpl-numbered", mode() !== "lezen");
     // spans off: their marks stay as anchors (a chain's number, a tfa clause), unpainted; a layer alone dims the rest (board V4b)
@@ -5567,6 +5577,12 @@
       ["gebruik", own(false).filter((e) => e !== def), "u"],
       ["vermelding", own(true), "m"],
     ].filter(([, es]) => es.length);
+    spinAt = groups.flatMap(([, es, k]) => es.map((e) => ({ e, k })));
+    spinFrom = from;
+    while (spinFrom.previousSibling?.dataset?.spin === q)
+      spinFrom = spinFrom.previousSibling;
+    spinFrom.classList.add("fpl-spin-from");
+    def?.classList.add("fpl-spin-def");
     spinBox.replaceChildren(
       el("div", { className: "fpl-spin-head" },
         el("span", { className: "fpl-spin-sq" }),
@@ -5579,6 +5595,7 @@
             ...es.map((e) => spinRow(e, k)))))));
     spinBox.hidden = false;
     spinPlace(from);
+    spinFrame();
   }
   /** Wide under the bar, with legs; narrow under the name. */
   function spinPlace(from) {
@@ -5623,18 +5640,27 @@
     clearTimeout(spinT);
     if (!quick) spinKept = false;
     body.querySelectorAll(".fpl-spin-n.is-lit")
-      .forEach((e) => e.classList.remove("is-lit"));
+      .forEach((e) => e.classList.remove("is-lit", "fpl-spin-def",
+        "fpl-spin-from"));
     spinOn = null;
+    spinHot = null;
     spinBox.hidden = true;
+    spinFrame();
   }
   body.addEventListener("mouseover", (ev) => {
     const n = ev.target.closest?.(".fpl-spin-n");
+    if (n && n.dataset.spin === spinOn) {   // a place of the open name
+      clearTimeout(spinT);
+      return spinLight(spinIx(n));
+    }
     if (!n || spinKept) return;
     clearTimeout(spinT);
     spinT = setTimeout(() => openSpin(n.dataset.spin, n), 250);
   });
   body.addEventListener("mouseout", (ev) => {
-    if (!ev.target.closest?.(".fpl-spin-n") || spinKept) return;
+    if (!ev.target.closest?.(".fpl-spin-n")) return;
+    spinLight(null);
+    if (spinKept) return;
     clearTimeout(spinT);
     spinT = setTimeout(() => { if (!spinBox.matches(":hover")) shutSpin(); },
       300);
@@ -5649,7 +5675,8 @@
       ev.preventDefault();
       if (spinOn !== n.dataset.spin) openSpin(n.dataset.spin, n);
       spinKept = true;
-    } else if (spinOn && !spinBox.contains(ev.target)) shutSpin();
+    } else if (spinOn && !spinBox.contains(ev.target)
+      && !spinChips.contains(ev.target) && !mm.contains(ev.target)) shutSpin();
   }, true);
   addEventListener("keydown", (ev) => {
     if (ev.key === "Escape" && spinOn) { shutSpin(); ev.stopPropagation(); }
@@ -5667,6 +5694,218 @@
       spun = Array.isArray(s?.names) ? s.names : null;
       if (spun) spinMark(spun);
     });
+
+  /*
+   * The spin over the text (board V5e0). While the panel is open a layer
+   * over the window draws a curve from the name the reader came by to
+   * each other place of it, its end marked by kind and never by colour
+   * alone: definitie thick to a filled square, the name boxed; gebruik
+   * thin to an open ring; vermelding dotted to an arrowhead. A place
+   * outside the window ends at a chip on that edge, its § and an arrow;
+   * a click there goes to it as its row does, and the spin stays. The
+   * layer takes no clicks (its chips do) and is drawn again in the frame
+   * after a scroll or resize. A row under the mouse lights its line, a
+   * place under the mouse its row and line.
+   *
+   * Wide, a chunked page has a minimap: a strip of MM taken from the
+   * right of main, so the margin stays where it was. It is the whole page
+   * scaled to the window's height, measured from the DOM whenever main
+   * changes size: prose and code by their lines, fences as washed blocks,
+   * headings and chunk heads darkest; the window as a frame, and with the
+   * spin open its places by their marks. A click or drag there scrolls.
+   */
+  const SVG = "http://www.w3.org/2000/svg";
+  const vec = (tag, a = {}) => {
+    const e = document.createElementNS(SVG, tag);
+    for (const [k, v] of Object.entries(a)) e.setAttribute(k, v);
+    return e;
+  };
+  const legs = vec("svg", { class: "fpl-annot-ui fpl-spin-over",
+    "aria-hidden": "true" });
+  const spinChips = el("div", { className: "fpl-annot-ui fpl-spin-chips" });
+  const KIND = { d: "Definitie", u: "Gebruik", m: "Vermelding" };
+  let spinAt = [], spinFrom = null, spinHot = null, raf = 0;
+  /** The place a node of the open name belongs to: a cut name's lead. */
+  function spinIx(n) {
+    while (n.previousSibling?.dataset?.spin === spinOn) n = n.previousSibling;
+    return spinAt.findIndex((p) => p.e === n);
+  }
+  /** Light place i (null: none) in the layer, its chip and its row. */
+  function spinLight(i) {
+    spinHot = i < 0 ? null : i;
+    const e = spinAt[spinHot]?.e;
+    legs.classList.toggle("has-hot", e != null);
+    spinChips.classList.toggle("has-hot", e != null);
+    for (const x of [...legs.children, ...spinChips.children])
+      x.classList.toggle("is-hot", +x.dataset.i === spinHot);
+    for (const b of spinBox.querySelectorAll(".fpl-spin-row"))
+      b.classList.toggle("is-hot", b.spinAt === e);
+  }
+  spinBox.addEventListener("mouseover", (ev) => {
+    const b = ev.target.closest(".fpl-spin-row");
+    spinLight(b ? spinAt.findIndex((p) => p.e === b.spinAt) : null);
+  });
+  spinBox.addEventListener("mouseleave", () => spinLight(null));
+  /** A mark of kind k whose tip is (x, y), the place dy away (+1 below). */
+  function legEnd(k, x, y, dy) {
+    if (k === "d") return vec("rect", { class: "k", x: x - 3.5,
+      y: y - 3.5 * (1 + dy), width: 7, height: 7 });
+    if (k === "u") return vec("circle", { class: "k", cx: x,
+      cy: y - 3.5 * dy, r: 3.5 });
+    return vec("path", { class: "k",
+      d: `M${x - 5} ${y - 8 * dy}L${x + 5} ${y - 8 * dy}L${x} ${y}Z` });
+  }
+  /** The chip of place i, off the window's top (up) or bottom edge. */
+  function edgeChip(i, up, x, taken) {
+    const { e, k } = spinAt[i], f = e.closest(".fpl-p");
+    const n = k === "m" ? f?.dataset.addr
+      : f?.querySelector(".fpl-head-n")?.textContent;
+    const c = el("button", { type: "button",
+      className: `fpl-spin-off ${k}`,
+      ariaLabel: `${KIND[k]} in ${n ?? "?"}, ${up ? "eerder" : "verder"}`
+        + " op de pagina",
+      onclick: () => [...spinBox.querySelectorAll(".fpl-spin-row")]
+        .find((b) => b.spinAt === e)?.click(),
+      onmouseenter: () => { clearTimeout(spinT); spinLight(i); },
+      onmouseleave: () => {
+        spinLight(null);
+        if (!spinKept) spinT = setTimeout(shutSpin, 300);
+      } }, `${n ?? ""} ${up ? "↑" : "↓"}`);
+    c.dataset.i = i;
+    if (i === spinHot) c.classList.add("is-hot");
+    spinChips.append(c);
+    // side by side along the edge, never over another chip there
+    const m = body.getBoundingClientRect(), w = c.offsetWidth;
+    let l = Math.max(m.left, Math.min(x - w / 2, m.right - w));
+    while (taken.some(([a, b]) => l < b + 6 && l + w + 6 > a)) l = Math.max(
+      ...taken.filter(([a, b]) => l < b + 6 && l + w + 6 > a).map(([, b]) => b))
+      + 6;
+    taken.push([l, l + w]);
+    const t = up ? 8 : innerHeight - 30;
+    Object.assign(c.style, { left: `${l}px`, top: `${t}px` });
+    return [l + w / 2, up ? t + 22 : t];
+  }
+  /** Draw the layer and the minimap's marks and window for this frame. */
+  function spinDraw() {
+    raf = 0;
+    legs.replaceChildren();
+    spinChips.replaceChildren();
+    mmDraw();
+    if (!spinOn) return;
+    const W = innerWidth, H = innerHeight, o = spinFrom.getBoundingClientRect();
+    legs.setAttribute("viewBox", `0 0 ${W} ${H}`);
+    const x0 = Math.min(Math.max(o.right, 0), W);
+    const y0 = Math.min(Math.max(o.top + o.height / 2, 0), H);
+    const taken = [[], []];
+    legs.classList.toggle("has-hot", spinHot != null);
+    spinChips.classList.toggle("has-hot", spinHot != null);
+    for (const [i, { e, k }] of spinAt.entries()) {
+      const g = vec("g", { class: `fpl-spin-leg ${k}`, "data-i": i });
+      if (i === spinHot) g.classList.add("is-hot");
+      legs.append(g);
+      if (e === spinFrom) {
+        g.classList.add("is-here");
+        g.append(vec("circle", { class: "k", cx: x0, cy: y0, r: 3 }));
+        continue;
+      }
+      const r = e.getBoundingClientRect();
+      // a place folded away (no box) lies the way the page goes
+      const gone = !r.width && !r.height, up = gone
+        ? !(spinFrom.compareDocumentPosition(e) & 4) : r.bottom < 0;
+      const off = gone || up || r.top > H, dy = r.top > y0 ? 1 : -1;
+      let [x1, y1] = [r.left + r.width / 2, dy > 0 ? r.top - 1 : r.bottom + 1];
+      if (off) {
+        g.classList.add("is-off");
+        [x1, y1] = edgeChip(i, up, x1, taken[+up]);
+      } else g.append(legEnd(k, x1, y1, dy));
+      const ye = off ? y1 : y1 - (k === "m" ? 8 : 7) * dy;
+      g.prepend(vec("path", { class: "l", d: `M${x0} ${y0}C${x0 + 16
+        + (x1 - x0) / 2} ${y0 + (ye - y0) / 8} ${x1} ${ye - (ye - y0) / 3}`
+        + ` ${x1} ${ye}` }));
+    }
+  }
+  const spinFrame = () => { raf ||= requestAnimationFrame(spinDraw); };
+  addEventListener("scroll", spinFrame, { passive: true });
+  addEventListener("resize", spinFrame);
+
+  const mm = el("div", { className: "fpl-annot-ui fpl-mm", hidden: true,
+    ariaHidden: "true" });
+  const mmSvg = mm.appendChild(vec("svg"));
+  const [mmPage, mmMarks] = [vec("g"), vec("g")];
+  const mmWin = vec("rect", { class: "fpl-mm-win", x: 0.5, rx: 2,
+    width: MM - 9 });
+  mmSvg.append(mmPage, mmMarks, mmWin);
+  let mmK = 0;   // page px to strip px, down
+  /** Measure the page into the strip: its lines, fences and heads. */
+  function mmMeasure() {
+    mm.hidden = !document.body.classList.contains("fpl-minimap");
+    if (mm.hidden) return;
+    const m = body.getBoundingClientRect(), H = innerHeight, y = scrollY;
+    const kx = (MM - 20) / m.width;
+    mmK = H / document.documentElement.scrollHeight;
+    mm.style.left = `${m.right + 8}px`;
+    Object.entries({ width: MM - 8, height: H, viewBox: `0 0 ${MM - 8} ${H}` })
+      .forEach(([k, v]) => mmSvg.setAttribute(k, v));
+    const box = (r, c, h) => vec("rect", { class: c,
+      x: (4 + (r.left - m.left) * kx).toFixed(1),
+      y: ((r.top + y) * mmK).toFixed(1),
+      width: Math.max(1, r.width * kx).toFixed(1),
+      height: (h ?? r.height * mmK).toFixed(2) });
+    const out = [], rg = document.createRange();
+    for (const f of body.querySelectorAll("div.sourceCode"))
+      out.push(box(f.getBoundingClientRect(), "f"));
+    for (const b of body.querySelectorAll("p, li:not(:has(p)), dd, h1, h2,"
+      + " h3, h4, .fpl-chunk-head, code.sourceCode > span")) {
+      if (b.closest(".fpl-annot-ui")) continue;
+      const head = b.matches("h1, h2, h3, h4, .fpl-chunk-head");
+      if (head || b.matches("code *")) {
+        const r = b.getBoundingClientRect();
+        if (r.width) out.push(box(r, head ? "h" : "c", head ? 1.6 : 0.75));
+        continue;
+      }
+      // a paragraph by its lines: the line boxes of one bottom, joined
+      rg.selectNodeContents(b);
+      const ls = new Map();
+      for (const r of rg.getClientRects()) {
+        const k = Math.round(r.bottom), l = ls.get(k);
+        ls.set(k, l ? DOMRect.fromRect({ x: Math.min(l.left, r.left),
+          y: l.top, width: Math.max(l.right, r.right)
+            - Math.min(l.left, r.left), height: l.height }) : r);
+      }
+      for (const r of ls.values()) if (r.width) out.push(box(r, "t", 0.75));
+    }
+    mmPage.replaceChildren(...out);
+    spinFrame();
+  }
+  /** The window's frame and, with the spin open, its places as marks. */
+  function mmDraw() {
+    if (mm.hidden) return;
+    mmWin.setAttribute("y", (scrollY * mmK).toFixed(1));
+    mmWin.setAttribute("height", Math.max(4, innerHeight * mmK).toFixed(1));
+    mmMarks.replaceChildren(...!spinOn ? [] : spinAt.map(({ e, k }) => {
+      const r = e.getBoundingClientRect(), y = (r.top + scrollY) * mmK;
+      if (e === spinFrom) return vec("path", { class: "l",
+        d: `M4 ${y.toFixed(1)}H33` });
+      const c = `k ${k}`;
+      return k === "d" ? vec("rect", { class: c, x: 35, y: y - 3,
+        width: 6, height: 6 }) : k === "u" ? vec("circle", { class: c,
+        cx: 45, cy: y, r: 2.6 }) : vec("path", { class: c,
+        d: `M49.5 ${y - 3}L55 ${y}L49.5 ${y + 3}Z` });
+    }));
+  }
+  new ResizeObserver(() => requestAnimationFrame(mmMeasure)).observe(body);
+  /** Scroll so the window centres on the strip's y under the pointer. */
+  const mmGo = (ev) => scrollTo(0, (ev.clientY - mm.getBoundingClientRect()
+    .top) / mmK - innerHeight / 2);
+  mm.addEventListener("pointerdown", (ev) => {
+    if (ev.button > 0) return;
+    ev.preventDefault();
+    mm.setPointerCapture(ev.pointerId);
+    mmGo(ev);
+  });
+  mm.addEventListener("pointermove", (ev) => {
+    if (mm.hasPointerCapture(ev.pointerId)) mmGo(ev);
+  });
 
   /*
    * Transclusion (board V5c). A fence's head is a bar: its number as
@@ -5943,7 +6182,8 @@
     }
   });
 
-  document.body.append(pop, menu, views, panel, cardMenu, spinBox);
+  document.body.append(pop, menu, views, panel, cardMenu, spinBox, legs,
+    spinChips, mm);
   // the decisions are lit facts' too: asked for only beside a sidecar
   const shipped = snap ? null
     : fetch(`${stem}.facts.json`).catch(() => null);

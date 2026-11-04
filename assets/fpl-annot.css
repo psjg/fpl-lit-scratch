@@ -1085,3 +1085,55 @@ a.fpl-tx-at:hover { text-decoration: underline; }
 :is([data-bs-theme="dark"], .quarto-dark) .fpl-p >
   pre.fpl-chunk-head:has(> .fpl-head-bar) {
   border-color: var(--fpl-rule); background: var(--fpl-wash); }
+
+/* the spin over the text (board V5e0): a curve from the name to each
+   place, its end marked by kind; a chip at the window's edge for a place
+   outside it; and the minimap in a strip right of main */
+.fpl-spin-over { position: fixed; left: 0; top: 0; width: 100vw;
+  height: 100vh; z-index: 1000; pointer-events: none; overflow: visible; }
+.fpl-spin-over .l, .fpl-mm .l { fill: none; stroke: var(--fpl-spin);
+  stroke-width: 1.25; }
+.fpl-spin-leg.d .l { stroke-width: 2.5; }
+.fpl-spin-leg.m .l { stroke-width: 1.75; stroke-dasharray: 0 4.5;
+  stroke-linecap: round; }
+.fpl-spin-leg.is-off:not(.m) .l { stroke-width: 1.25; }
+.fpl-spin-over .k, .fpl-mm .k { fill: var(--fpl-spin); }
+.fpl-spin-over .u .k, .fpl-mm .k.u { fill: var(--fpl-bg);
+  stroke: var(--fpl-spin); stroke-width: 1.5; }
+.fpl-spin-leg { transition: opacity .12s; }
+.fpl-spin-over .fpl-spin-leg.is-hot .l { stroke-width: 2.25; }
+.fpl-spin-over .fpl-spin-leg.d.is-hot .l { stroke-width: 3; }
+.has-hot > .fpl-spin-leg:not(.is-hot), .has-hot > .fpl-spin-off:not(.is-hot)
+  { opacity: .35; }
+.fpl-spin-chips { position: fixed; left: 0; top: 0; z-index: 1000;
+  pointer-events: none; }
+.fpl-spin-off { position: absolute; pointer-events: auto; display: flex;
+  align-items: center; gap: 5px; height: 22px; padding: 0 9px; border: 0;
+  border-radius: 11px; background: var(--fpl-spin); color: var(--fpl-bg);
+  font: 600 12.5px/1 var(--bs-font-sans-serif, sans-serif);
+  white-space: nowrap; cursor: pointer; transition: opacity .12s; }
+/* the kind as the line's own mark, before the address */
+.fpl-spin-off::before { content: ""; width: 6px; height: 6px;
+  background: currentColor; }
+.fpl-spin-off.u::before { box-sizing: border-box; border-radius: 50%;
+  border: 1.5px solid; background: none; }
+.fpl-spin-off.m::before { width: 0; height: 0; background: none;
+  border-left: 6px solid; border-block: 3.5px solid transparent; }
+.fpl-spin-off:focus-visible { outline: 2px solid var(--fpl-fg);
+  outline-offset: 2px; }
+.fpl-spin-n.fpl-spin-def { outline: 1.5px solid var(--fpl-spin);
+  outline-offset: 1px; }
+.fpl-spin-n.fpl-spin-from { background: var(--fpl-spin-wash); }
+.fpl-spin-row.is-hot { border-color: var(--fpl-spin);
+  background: var(--fpl-spin-wash); }
+body.fpl-minimap main { max-width: calc(100% - 64px); }
+.fpl-mm { position: fixed; top: 0; width: 56px; height: 100vh; z-index: 2;
+  box-sizing: border-box; border-left: 1px solid var(--fpl-rule);
+  background: var(--fpl-bg); cursor: pointer; touch-action: none; }
+.fpl-mm svg { display: block; }
+.fpl-mm .t { fill: color-mix(in srgb, var(--fpl-fg) 22%, transparent); }
+.fpl-mm .c { fill: color-mix(in srgb, var(--fpl-fg) 34%, transparent); }
+.fpl-mm .h { fill: color-mix(in srgb, var(--fpl-fg) 55%, transparent); }
+.fpl-mm .f { fill: var(--fpl-wash); }
+.fpl-mm-win { fill: color-mix(in srgb, var(--fpl-fg) 7%, transparent);
+  stroke: var(--fpl-edge); }
