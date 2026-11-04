@@ -5653,7 +5653,7 @@
   /** Shut the panel; quick when another opens at once. */
   function shutSpin(quick) {
     clearTimeout(spinT);
-    if (!quick) spinKept = false;
+    if (!quick) [spinKept, spinStill] = [false, ptr];
     if (spinPin) spinUnpin();
     body.querySelectorAll(".fpl-spin-n.is-lit")
       .forEach((e) => e.classList.remove("is-lit", "fpl-spin-def",
@@ -5663,27 +5663,50 @@
     spinBox.hidden = true;
     spinFrame();
   }
+  // the pointer, and where it stood when the spin shut: a name that comes
+  // under a still pointer (the page moved, the panel went) opens nothing
+  let ptr = [-1, -1], spinStill = null;
+  addEventListener("pointermove", (ev) => {
+    ptr = [ev.clientX, ev.clientY];
+    if (spinStill && (ptr[0] !== spinStill[0] || ptr[1] !== spinStill[1]))
+      spinStill = null;
+  }, { passive: true, capture: true });
+  /** How far the pointer is from the panel, 0 over it. */
+  const spinGap = () => {
+    const b = spinBox.getBoundingClientRect();
+    return Math.hypot(Math.max(b.left - ptr[0], 0, ptr[0] - b.right),
+      Math.max(b.top - ptr[1], 0, ptr[1] - b.bottom));
+  };
+  /** Shut in 600 ms unless the pointer is on the panel or on its way. */
+  function spinGrace() {
+    if (spinKept) return;
+    clearTimeout(spinT);
+    let gap = spinGap();
+    const look = () => {
+      if (spinBox.matches(":hover")) return;
+      const g = spinGap();
+      if (g >= gap - 4) return shutSpin();
+      gap = g;
+      spinT = setTimeout(look, 200);   // still coming
+    };
+    spinT = setTimeout(look, 600);
+  }
   body.addEventListener("mouseover", (ev) => {
     const n = ev.target.closest?.(".fpl-spin-n");
     if (n && n.dataset.spin === spinOn) {   // a place of the open name
       clearTimeout(spinT);
       return spinLight(spinIx(n));
     }
-    if (!n || spinKept) return;
+    if (!n || spinKept || spinStill) return;
     clearTimeout(spinT);
     spinT = setTimeout(() => openSpin(n.dataset.spin, n), 250);
   });
   body.addEventListener("mouseout", (ev) => {
     if (!ev.target.closest?.(".fpl-spin-n")) return;
     spinLight(null);
-    if (spinKept) return;
-    clearTimeout(spinT);
-    spinT = setTimeout(() => { if (!spinBox.matches(":hover")) shutSpin(); },
-      300);
+    spinGrace();
   });
-  spinBox.addEventListener("mouseleave", () => {
-    if (!spinKept) spinT = setTimeout(shutSpin, 300);
-  });
+  spinBox.addEventListener("mouseleave", spinGrace);
   spinBox.addEventListener("mouseenter", () => clearTimeout(spinT));
   addEventListener("click", (ev) => {
     const n = ev.target.closest?.(".fpl-spin-n");
@@ -5781,8 +5804,11 @@
   let spinFlight = null;   // {i, y0, y1, t0, ms, p, ys, raf} while flying
   let spinLand = null;     // {i, t}: the place landed on, for its ring
   const calm = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
-  /** Back a little (its least -0.062 at t 1/15), then on to 1, never past. */
-  const ease = (t) => 1 - (1 - t) ** 4 * (1 + 6 * t);
+  /**
+   * Back a little, then on to 1, never past: c 6 dips to -0.062 at t 1/15,
+   * c 4 not at all, and in between about 0.062 ((c - 4) / 2) ** 1.7.
+   */
+  const ease = (t, c) => 1 - (1 - t) ** 4 * (1 + c * t);
   /** Scroll from y0 to y in one flight, its place i (or null) lit. */
   function fly(y, i = null, y0 = scrollY) {
     const top = Math.max(0, Math.min(Math.round(y),
@@ -5796,11 +5822,11 @@
     }
     const f = spinFlight = { i, y0, y1: top, t0: performance.now(),
       ms: Math.min(900, Math.max(350, 300 + 10 * Math.sqrt(d))), p: 0,
-      ys: [] };
+      ys: [], c: 4 + 2 * Math.min(1, 48 / (0.062 * d)) ** 0.6 };   // <= 48px
     const step = (now) => {
       if (spinFlight !== f) return;
       const t = Math.min(1, Math.max(0, (now - f.t0) / f.ms));
-      f.p = ease(t);
+      f.p = ease(t, f.c);
       f.ys.push(scrollY);
       scrollTo({ top: f.y0 + (f.y1 - f.y0) * f.p, behavior: "instant" });
       if (t < 1) f.raf = requestAnimationFrame(step);
@@ -5970,10 +5996,8 @@
         + ` in ${n ?? "?"}, ${up ? "eerder" : "verder"} op de pagina`,
       onclick: () => spinFly(i),
       onmouseenter: () => { clearTimeout(spinT); spinLight(i); },
-      onmouseleave: () => {
-        spinLight(null);
-        if (!spinKept) spinT = setTimeout(shutSpin, 300);
-      } }, `${n ?? ""} ${up ? "↑" : "↓"}`);
+      onmouseleave: () => { spinLight(null); spinGrace(); } },
+    `${n ?? ""} ${up ? "↑" : "↓"}`);
     if (key) c.prepend(keyBox(key, i));
     c.dataset.i = i;
     if (i === (spinFlight?.i ?? spinHot)) c.classList.add("is-hot");
@@ -6106,10 +6130,9 @@
         d: legPath(x0, y0, xe, ye, spinPin ? tw : 0) }), g.firstChild);
       if (i === spinFlight?.i) flight(g, l, spinFlight);
       if (i === spinLand?.i && !off) ring(g, r, (now - spinLand.t) / 700);
-      else if (i === spinFlight?.i && !off) ring(g, r, 0);
       if (!spinPin) continue;
       rays.push([i, aw]);
-      if (off || !spinAt[i].key) continue;
+      if (off || !spinAt[i].key || !fade) continue;
       const kb = spinChips.appendChild(keyBox(spinAt[i].key, i));
       kb.classList.toggle("is-hot", i === spinHot);
       Object.assign(kb.style, { left: `${x1 + 6}px`,
