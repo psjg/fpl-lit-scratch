@@ -175,5 +175,19 @@
    "refusal:dedent%20below%20line%201%2C%20but%20its%20%5B%20is%20still%20open",
    "test:test_prelex_refuses_at_the_place_in_the_source:7"
   ]
+ },
+ {
+  "id": "x-tabs-test",
+  "item": "01-bootstrap/tests/test_lex.py",
+  "start": 3611,
+  "end": 3732,
+  "text": "def test_a_string_counts_the_tabs_of_its_line() -> None:\n    assert prelex(\"\\t“b”\").stash == {1: Stashed(\"str\", 2, 3, 1)}",
+  "labels": [],
+  "note": "The test that holds strings to the tabs of their line.",
+  "targets": [
+   "strict-indentation/b1"
+  ],
+  "commit": "4c07c9af9dcf2942ff1692c5ee64491615adc54b",
+  "by": "claude-opus-5-5"
  }
 ]
