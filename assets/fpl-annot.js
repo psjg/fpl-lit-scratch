@@ -423,6 +423,22 @@
  * in a fresh import of its module with the page's examples after it,
  * as lit-example runs them, and put back by ↺. The runtime (Pyodide,
  * fpl-runtime.js) is fetched on the first ▶ only. See playable.
+ * Writing feedback (board V5d; PSJ 11-02, the review surface's
+ * labels as one model): writing/ (helderheid, bondigheid, structuur,
+ * toon, argument, spelling, filler, isnotxisy) and good/ are scopes
+ * like any other, writing/ pinned to the board's blue-violet and good/
+ * to dit's green (PIN), so placing them moves no colour. The label
+ * field takes a scope with weighted reasons,
+ * slop/writing/{filler:0.7,isnotxisy:0.1}, and keeps them written out:
+ * labels plus shares {label: 0-1}, together at most 1, as lit facts
+ * reads them. A span's editor has a Voorstel, the text it would
+ * become; its card is headed Voorstel, shows the text against it word
+ * by word (struck, underlined), the reasons with their shares, and
+ * Neem over and Laat staan. Each writes a row of its own about it,
+ * by and commit as any: adopts, or keeps and a reason label, picked
+ * from the good/ and then writing/ labels most used, or typed. A card whose
+ * kind is under good/ is washed green beside its chip, its note
+ * asked as "omdat …".
  */
 (() => {
   "use strict";
@@ -430,7 +446,11 @@
     "because", "supports", "attacks", "contradicts", "cites", "relates", "checkedBy",
     "resumes", "coref", "parts", "tfa/t", "tfa/c", "tfa/f",
     "fn/definition", "fn/example", "fn/transition", "fn/claim", "fn/evidence", "fn/aside", "fn/hedge",
-    "code/stijl", "code/bug"];
+    "code/stijl", "code/bug",
+    // board V5d: classic writing feedback, and good/ for what holds
+    ...["helderheid", "bondigheid", "structuur", "toon", "argument",
+      "spelling", "filler", "isnotxisy"].map((x) => `writing/${x}`),
+    "good/structuur", "good/helderheid", "good/toon"];
   /**
    * What a label means, behind its (?) in the filter panel: one short
    * line each, edited freely. A label not here has no (?): its name
@@ -451,6 +471,9 @@
     fn: "Wat een zin doet", "fn/definition": "Definieert", "fn/example": "Een voorbeeld", "fn/transition": "Een overgang",
     "fn/claim": "Beweert", "fn/evidence": "Bewijs", "fn/aside": "Terzijde", "fn/hedge": "Zwakt af",
     group: "Hoort bij een groep", role: "De rol in een groep", order: "De plaats in een groep",
+    writing: "Schrijffeedback", "writing/filler": "Woorden zonder inhoud",
+    "writing/isnotxisy": "Niet X maar Y, zonder dat iemand X zei",
+    adopts: "Voorstel overgenomen", keeps: "Voorstel niet overgenomen",
   };
   // lit's facts.LABEL, whitespace spelt out alike; a brace is only typed
   const LABEL = /^[^/{} \t\n\r\f\v]+(?:\/[^/{} \t\n\r\f\v]+)*$/;
@@ -513,6 +536,11 @@
     coref: [0.42, 336] };
   const RC = 0.2;
   const relation = (p) => Object.hasOwn(RELATION, p);
+  /* roots pinned to a colour, so that placing them moves no other:
+     good is dit renamed (PSJ 11-02) and wears its green; writing the
+     blue-violet of board V5d, #5b63c7 as OKLCH [L, C, h] */
+  const PIN = { good: "dit", writing: [0.544, 0.153, 276.6] };
+  const alias = (p) => typeof PIN[p] === "string";
   const sighted = store("fpl-annot:hues", []);
   /** OKLCH to linear sRGB (Ottosson 2020). */
   const lrgb = (L, C, h) => {
@@ -557,7 +585,15 @@
       const [L, h] = RELATION[p];
       return void (hue.set(p, h), shade.set(p, [L, RC]));
     }
-    const sibs = [...hue].filter(([k]) => !relation(k) && above(k) === up)
+    if (!up && Object.hasOwn(PIN, p)) {
+      const q = PIN[p];
+      if (alias(p)) placeHue(q);
+      const [L, C, h] = alias(p) ? [...shade.get(q), hue.get(q)] : q;
+      return void (hue.set(p, h), shade.set(p, [L, C]));
+    }
+    // an alias shares its original's hue: no gap of nothing between them
+    const sibs = [...hue]
+      .filter(([k]) => !relation(k) && !alias(k) && above(k) === up)
       .map(([, h]) => h);
     const a = up && ARC / 2 ** (p.split("/").length - 2), hs = (up ? [hue.get(up) - a, hue.get(up) + a, ...sibs] : sibs).sort((x, y) => x - y);
     let best = [-1, 0];
@@ -1490,6 +1526,57 @@
     const [head, sub] = VERB[label] ? [VERB[label]] : label.split(/\/(.*)/);
     return el("span", { className: "fpl-chip " + cls, title: VERB[label] ? label : "" }, head, sub ? el("small", {}, "/" + sub) : null);
   };
+  /** A reason as a chip: its square, its path and its share, if any. */
+  const reasonChip = (l, share) => el("span", { className: "fpl-chip fpl-reason" },
+    el("span", { className: "fpl-sq", style: `--lc: ${colourOf(l)}` }), l,
+    share === undefined ? null
+      : el("span", { className: "fpl-wv" }, `${share}`));
+  /**
+   * What the label field takes (PSJ 11-02): a label, or a scope and its
+   * reasons with their shares, slop/writing/{filler:0.7,isnotxisy:0.1},
+   * read as the labels written out, each with its share, as lit keeps
+   * them (shares: above 0, at most 1, together at most 1). Any other
+   * spelling is refused: null.
+   */
+  function reasons(s) {
+    const m = /^((?:[^{}/\s]+\/)*)\{([^{}]+)\}$/.exec(s);
+    if (!m) return LABEL.test(s) ? [[s, undefined]] : null;
+    const got = m[2].split(",").map((x) => {
+      const [, n, w] = /^([^:]+):(\d*\.?\d+)$/.exec(x.trim()) ?? [];
+      return n && [m[1] + n, Number(w)];
+    });
+    const fit = got.every((x) => x && LABEL.test(x[0]) && x[1] > 0 && x[1] <= 1)
+      && got.reduce((a, x) => a + x[1], 0) <= 1 + 1e-9;
+    return fit ? got : null;
+  }
+  /**
+   * A span's text against its proposal, word by word (a longest common
+   * subsequence): runs of [kind, words], kind "" kept, "del" struck,
+   * "ins" new, a run struck before the run that replaces it.
+   */
+  function wordDiff(a, b) {
+    const words = (t) => t.split(/\s+/).filter(Boolean);
+    const x = words(a), y = words(b);
+    const L = Array.from({ length: x.length + 1 },
+      () => new Array(y.length + 1).fill(0));
+    for (let i = x.length - 1; i >= 0; i--)
+      for (let j = y.length - 1; j >= 0; j--)
+        L[i][j] = x[i] === y[j] ? L[i + 1][j + 1] + 1
+          : Math.max(L[i + 1][j], L[i][j + 1]);
+    const out = [];
+    const put = (k, w) => (out.at(-1)?.[0] === k
+      ? out.at(-1)[1].push(w) : out.push([k, [w]]));
+    let i = 0, j = 0;
+    while (i < x.length || j < y.length)
+      if (i < x.length && j < y.length && x[i] === y[j]) {
+        put("", x[i++]);
+        j++;
+      }
+      else if (j === y.length || (i < x.length && L[i + 1][j] >= L[i][j + 1]))
+        put("del", x[i++]);
+      else put("ins", y[j++]);
+    return out;
+  }
   // a parts row names its pieces, it says nothing about the first one
   const facts = (id) => all.filter((r) => typeof r.text !== "string" && r.labels?.[0] !== "parts" && !isGroup(r) && r.targets?.[0] === id && shows(r));
   /** A row that ties its first target to others (supports, cites, coref): a line on the card, not a message. */
@@ -1588,7 +1675,8 @@
    */
   function about(id) {
     const rels = [], msgs = [], seenIds = new Set([id]);
-    for (const r of facts(id)) (relates(r) ? rels : msgs).push(r);
+    for (const r of facts(id)) if (!DECIDE.has(r.labels?.[0]))
+      (relates(r) ? rels : msgs).push(r);
     for (const r of rels) for (const f of facts(r.id)) if (!seenIds.has(f.id)) { seenIds.add(f.id); (relates(f) ? rels : msgs).push(f); }
     return { rels, msgs };
   }
@@ -1747,11 +1835,18 @@
     } else {
       const dot = el("span", { className: "fpl-dot" });
       const kind = readings.length ? null : kindOfCard(row);
-      card.append(el("div", { className: "fpl-cardhead" }, dot, el("span", { className: "fpl-title", title: clip(head, 300) }, head),
+      // a proposal is headed so; its reasons, all of them, stand under it
+      const said = typeof row.proposal === "string";
+      if (kind && under(kind, "good")) card.classList.add("fpl-good");
+      const title = el("span", { className: "fpl-title",
+        title: clip(head, 300) }, said ? "Voorstel" : head);
+      card.append(el("div", { className: "fpl-cardhead" }, dot, title,
         // a transclusion's kind is no label: no colour, no place on the wheel
         row.src ? el("span", { className: "fpl-chip is-kind fpl-tx-kind" },
-          ico("link"), "transclusie") : kind ? chip(kind, "is-kind") : null,
+          ico("link"), "transclusie")
+          : kind && !said ? chip(kind, "is-kind") : null,
         graphBtn, more));
+      if (said) card.append(...proposalOf(row).filter(Boolean));
     }
     if (row.labels?.[0] === "parts") card.append(piecesOf(row, card));
     if (readings.length) {
@@ -1764,7 +1859,8 @@
           v.classList.add("fpl-reading");
           return v;
         })));
-    } else if (row.note && st === "vers") card.append(el("p", { className: "fpl-note" }, row.note));
+    } else if (row.note && st === "vers" && typeof row.proposal !== "string")
+      card.append(el("p", { className: "fpl-note" }, row.note));
     const gs = st === "vers" ? groupsOf(row.id) : [];
     if (gs.length) card.append(el("p", { className: "fpl-groups" }, ...gs.map(groupChip)));
     // the meta line: what always shows, then "n reacties" at rest or the block's address open, never both
@@ -1805,6 +1901,82 @@
       if (openId !== row.id) { openId = row.id; layout(); hot(row.id); }
     };
     return card;
+  }
+
+  const DECIDE = new Set(["adopts", "keeps"]);
+  /** The row that settles a proposal: the last adopts or keeps on it. */
+  const decided = (id) => all.filter((r) => DECIDE.has(r.labels?.[0])
+    && r.targets?.[0] === id).sort((a, b) => (a.createdAt ?? 0)
+    - (b.createdAt ?? 0)).at(-1);
+  const leaving = new Set();   // the proposals whose Laat staan asks why
+  /**
+   * A proposal on its card (board V5d): the span's text against it word
+   * by word, struck and underlined, its reasons with their shares, its
+   * note, then Neem over and Laat staan, or the row that settled it,
+   * who and at which commit. Laat staan asks its reason, a label: the
+   * good/ and writing/ labels most used, or one typed after the +.
+   */
+  function proposalOf(row) {
+    const shares = row.shares ?? {};
+    const runs = wordDiff(plain(row.text).trim(), row.proposal);
+    const out = [
+      el("p", { className: "fpl-diff" }, ...runs.flatMap(([k, ws], i) =>
+        [i ? " " : "", k ? el(k, {}, ws.join(" ")) : ws.join(" ")])),
+      el("p", { className: "fpl-reasons" },
+        ...(row.labels ?? []).map((l) => reasonChip(l, shares[l]))),
+      row.note ? el("p", { className: "fpl-note fpl-reason-note" }, row.note)
+        : null];
+    const d = decided(row.id);
+    if (d) {
+      const kept = d.labels[0] === "keeps", who = author(d);
+      out.push(el("p", { className: "fpl-settled" },
+        kept ? null : ico("check"), kept ? "laat staan" : "overgenomen",
+        who ? ` door ${who}` : "", d.commit ? " · " : "",
+        d.commit ? el("code", {}, d.commit.slice(0, 7)) : null,
+        ...d.labels.slice(1).map((l) => reasonChip(l))));
+      return out;
+    }
+    const decide = (labels) => {
+      leaving.delete(row.id);
+      save({}, { labels, targets: [row.id] });
+      draw();
+    };
+    const asking = leaving.has(row.id);
+    const take = button("Neem over",
+      (ev) => { ev.stopPropagation(); decide(["adopts"]); }, "fpl-take");
+    const keep = button("Laat staan", (ev) => {
+      ev.stopPropagation();
+      asking ? leaving.delete(row.id) : leaving.add(row.id);
+      layout();
+    });
+    keep.ariaPressed = String(asking);
+    out.push(el("div", { className: "fpl-decide" }, take, keep));
+    if (!asking) return out;
+    const own = new Set(row.labels ?? []);
+    const why = ranked().filter((l) => !own.has(l)
+      && (under(l, "good") || under(l, "writing")) && l.includes("/"))
+      // what holds is the likelier reason to leave a text: good/ first
+      .sort((a, b) => under(b, "good") - under(a, "good"))
+      .slice(0, 4).map((l) => {
+        const b = el("button", { type: "button", className: "fpl-pc" },
+          el("span", { className: "fpl-sq", style: `--lc: ${colourOf(l)}` }),
+          l);
+        b.onclick = (ev) => { ev.stopPropagation(); decide(["keeps", l]); };
+        return b;
+      });
+    const other = el("input", { placeholder: "andere reden…",
+      autocomplete: "off", ariaLabel: "Een ander label als reden" });
+    other.onkeydown = (e) => {
+      if (e.key !== "Enter") return;
+      e.preventDefault();
+      const l = other.value.trim();
+      LABEL.test(l) ? decide(["keeps", l])
+        : toast("Een label is naam/scope/…: geen spatie, geen leeg stuk");
+    };
+    other.onclick = (ev) => ev.stopPropagation();
+    out.push(el("div", { className: "fpl-pick", role: "group",
+      ariaLabel: "Reden" }, ...why, other));
+    return out;
   }
 
   /* ---- a card's menu ⋯ (board F): Verbind met…, Graph, Toon beide, Verwijder ---- */
@@ -3904,32 +4076,59 @@
    * one more, which completes from every label known; ⌘↩ saves, esc
    * closes.
    */
-  function editor(row, onDone) {
-    const on = new Set(row.labels ?? []);
+  /** Every label known here: by use, on this page and site-wide, then seed. */
+  function ranked() {
     // Maps, not objects: a label may be any name, __proto__ and constructor too
     const used = new Map(), t = new Map(Object.entries(tally()));
     for (const r of all) for (const l of r.labels ?? []) used.set(l, (used.get(l) ?? 0) + 1);
     const rank = (l) => (used.get(l) ?? 0) + (Number(t.get(l)) || 0);
-    const seen = [...new Set([...LABELS, ...used.keys(), ...t.keys()])]
+    return [...new Set([...LABELS, ...used.keys(), ...t.keys()])]
       .map((l, i) => [l, i]).sort((a, b) => rank(b[0]) - rank(a[0]) || a[1] - b[1]).map(([l]) => l);   // by use, then seed order
+  }
+  function editor(row, onDone) {
+    const on = new Set(row.labels ?? []);
+    const shares = new Map(Object.entries(row.shares ?? {}));
+    const seen = ranked();
     const note = el("textarea", { placeholder: "Notitie", value: row.note ?? "", rows: 2 });
+    // a span's proposal: the text it would become (board V5d)
+    const prop = typeof row.text === "string"
+      ? el("textarea", { placeholder: "Voorstel", rows: 2,
+        value: row.proposal ?? "", className: "fpl-proposal" }) : null;
     const chips = el("div", { className: "fpl-chips" });
-    const more = el("input", { placeholder: "ander label…", autocomplete: "off", title: "Een label, of naam/sub" });
+    const more = el("input", { placeholder: "ander label…",
+      autocomplete: "off",
+      title: "Een label, naam/sub, of naam/{a:0.7,b:0.1}" });
     const known = el("datalist", { id: `fpl-labels-${Date.now().toString(36)}` }, ...seen.map((l) => el("option", { value: l })));
     more.setAttribute("list", known.id);
-    const render = () => chips.replaceChildren(
+    let render = () => chips.replaceChildren(
       ...[...new Set([...seen.slice(0, 6), ...on])].map((l) => {
         const b = chip(l, on.has(l) ? "is-on" : "");
-        b.onclick = () => { on.has(l) ? on.delete(l) : on.add(l); render(); };
+        if (on.has(l) && shares.has(l))
+          b.append(el("span", { className: "fpl-wv" }, `${shares.get(l)}`));
+        b.onclick = () => {
+          on.has(l) ? (on.delete(l), shares.delete(l)) : on.add(l);
+          render();
+        };
         b.tabIndex = 0;
         b.onkeydown = (e) => { if (e.key === " " || e.key === "Enter") { e.preventDefault(); b.onclick(); } };
         return b;
       }), more);
+    // the note asks why when the row praises (PSJ 11-02: good, omdat …)
+    const praise = () => note.placeholder =
+      [...on].some((l) => under(l, "good")) ? "omdat …" : "Notitie";
+    render = ((r) => () => { r(); praise(); })(render);
     render();
     const add = () => {
-      const l = more.value.trim();
-      if (!LABEL.test(l)) { toast("Een label is naam/scope/…: geen spatie, geen leeg stuk"); return; }
-      on.add(l); more.value = ""; render(); more.focus();
+      const got = reasons(more.value.trim());
+      if (!got) {
+        toast("Een label is naam/scope/… of naam/{a:0.7,b:0.1}, samen ≤ 1");
+        return;
+      }
+      for (const [l, w] of got) {
+        on.add(l);
+        w === undefined ? shares.delete(l) : shares.set(l, w);
+      }
+      more.value = ""; render(); more.focus();
     };
     more.onkeydown = (e) => { if (e.key === "Enter" && more.value.trim()) { e.preventDefault(); add(); } };
     more.oninput = (e) => { if (!e.inputType || e.inputType === "insertReplacementText") add(); };   // a pick from the list
@@ -3951,8 +4150,17 @@
       : null;
     // el, not form.append: append writes a null kid (no quick chips yet) as the text "null"
     const head = el("div", { className: "fpl-head" }, el("span", { className: "fpl-dot" }), el("span", { className: "fpl-q", title: about }, about));
-    const form = el("form", { className: "fpl-editor" }, head, fast, note, chips, known, keys);
-    form.onsubmit = (ev) => { ev.preventDefault(); onDone({ note: note.value.trim(), labels: [...on] }); };
+    const form = el("form", { className: "fpl-editor" },
+      head, fast, note, prop, chips, known, keys);
+    form.onsubmit = (ev) => {
+      ev.preventDefault();
+      // shares and proposal written out, or gone: undefined is not exported
+      const sh = [...on].filter((l) => shares.has(l));
+      onDone({ note: note.value.trim(), labels: [...on],
+        shares: sh.length
+          ? Object.fromEntries(sh.map((l) => [l, shares.get(l)])) : undefined,
+        proposal: prop?.value.trim() || undefined });
+    };
     form.onkeydown = (e) => {
       if (e.key === "Escape") { e.stopPropagation(); onDone(null); disarm(); }
       if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) form.requestSubmit();

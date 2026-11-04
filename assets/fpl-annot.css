@@ -986,3 +986,50 @@ mark.fact.fpl-pulled { background: none; box-shadow: none; text-decoration: unde
   white-space: pre-wrap; overflow-wrap: anywhere; }
 .fpl-ex del { color: var(--fpl-bad); text-decoration: underline wavy;
   text-decoration-skip-ink: none; background: var(--fpl-tx-wash); }
+
+/* writing feedback (board V5d): a proposal's diff, its weighted
+   reasons, Neem over and Laat staan, the row that settled it; a card
+   of good/ washed green beside its chip */
+.fpl-card.fpl-good { background: var(--fpl-good-wash);
+  border-color: var(--fpl-good-rule); }
+.fpl-diff { margin: .35rem 0 0; }
+.fpl-diff del { background: var(--fpl-del-wash); color: var(--fpl-del);
+  border-radius: 2px; padding: 0 2px; }
+.fpl-diff ins { background: var(--fpl-good-wash); color: var(--fpl-ins);
+  border-radius: 2px; padding: 0 2px; text-underline-offset: 2px; }
+.fpl-reasons { display: flex; flex-wrap: wrap; gap: 6px; margin: .35rem 0 0; }
+.fpl-reason { display: inline-flex; align-items: center; gap: 4px;
+  font-size: 10.5px; padding: 4px 6px; }
+.fpl-reason .fpl-sq { margin: 0; }
+.fpl-wv { font-size: 10px; font-weight: 400; color: var(--fpl-mute);
+  font-variant-numeric: tabular-nums; margin-left: 3px; }
+.fpl-reason-note { font-size: 12.5px; color: var(--fpl-mute); }
+.fpl-decide, .fpl-pick { display: flex; flex-wrap: wrap; align-items: center;
+  gap: 6px; margin-top: .5rem; }
+.fpl-decide button { font: inherit; font-size: 13px; font-weight: 600;
+  height: 28px; padding: 0 10px; border: 1px solid var(--fpl-rule);
+  border-radius: 5px; background: var(--fpl-bg); color: var(--fpl-fg);
+  cursor: pointer; }
+.fpl-decide button.fpl-take { background: var(--fpl-ins);
+  border-color: var(--fpl-ins); color: #fff; }
+.fpl-decide button[aria-pressed="true"] { background: var(--fpl-mine-wash);
+  border-color: var(--fpl-mine); color: var(--fpl-mine); }
+.fpl-pc { font: inherit; font-size: 12px; font-weight: 600;
+  display: inline-flex; align-items: center; gap: 5px; height: 24px;
+  padding: 0 8px; border: 1px solid var(--fpl-node); border-radius: 999px;
+  background: var(--fpl-bg); color: var(--fpl-fg); cursor: pointer; }
+.fpl-pc .fpl-sq { margin: 0; }
+.fpl-pick input { font: inherit; font-size: 12px; width: 9em; height: 24px;
+  box-sizing: border-box; padding: 0 8px; border: 1px solid var(--fpl-node);
+  border-radius: 999px; background: var(--fpl-bg); color: var(--fpl-fg); }
+.fpl-settled { display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
+  margin: .5rem 0 0; padding: 4px 8px; border-radius: 4px;
+  background: var(--fpl-wash); font-size: 12.5px; }
+.fpl-settled svg { color: var(--fpl-ins); }
+.fpl-settled code { font-size: 12px; color: var(--fpl-mute); }
+:root { --fpl-good-wash: #e4f3ea; --fpl-good-rule: #b5dcc4;
+  --fpl-ins: #1d5a37; --fpl-del: #8a2323; --fpl-del-wash: #fbeaea; }
+[data-bs-theme="dark"], .quarto-dark {
+  --fpl-good-wash: rgba(99, 184, 140, .14); --fpl-good-rule: #2f6b4a;
+  --fpl-ins: #8fd3ad; --fpl-del: #f0a3a3;
+  --fpl-del-wash: rgba(224, 133, 124, .16); }
