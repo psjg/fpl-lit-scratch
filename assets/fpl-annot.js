@@ -5694,7 +5694,12 @@
       spinKept = true;
       spinPinIt();
     } else if (spinOn && ![spinBox, spinChips, spinBack, mm, legs]
-      .some((x) => x.contains(ev.target))) shutSpin();
+      .some((x) => x.contains(ev.target))) {
+      const i = ev.detail === 1 && getSelection().isCollapsed
+        ? wedgeAt(ev) : null;
+      if (i == null) shutSpin();
+      else spinFly(i);
+    }
   }, true);
   addEventListener("keydown", (ev) => {
     if (ev.key === "Escape" && spinOn) { shutSpin(); ev.stopPropagation(); }
@@ -5914,18 +5919,36 @@
     ev.stopPropagation();
   }, true);
   addEventListener("blur", () => spinAte.clear());   // its keyup went elsewhere
-  legs.addEventListener("mouseover", (ev) => {
-    const w = ev.target.closest("[data-i]");
-    if (w) spinLight(+w.dataset.i);
-  });
-  legs.addEventListener("mouseout", (ev) => {
-    if (!legs.contains(ev.relatedTarget)) spinLight(null);
-  });
-  // pinned, a wedge goes to its place (the name is a hole in them)
-  legs.addEventListener("click", (ev) => {
-    const w = ev.target.closest("[data-i]");
-    if (w) spinFly(+w.dataset.i);
-  });
+  /**
+   * The place whose wedge is under the pointer of ev, or null: pinned, in
+   * main's column, off the name, and not on something of the page's own
+   * that takes a click (a link, a button, a field, a name).
+   */
+  function wedgeAt(ev) {
+    const { clientX: x, clientY: y } = ev, m = body.getBoundingClientRect();
+    const o = spinFrom?.getBoundingClientRect();
+    if (!spinPin || x < m.left || x > m.right || !o
+      || (x >= o.left - 2 && x <= o.right + 2 && y >= o.top - 2
+        && y <= o.bottom + 2)
+      || ev.target.closest?.("a, button, input, textarea, select, label,"
+        + " summary, [contenteditable], [role=button], .fpl-annot-ui"))
+      return null;
+    const pt = new DOMPoint(x, y);
+    const w = [...legs.querySelectorAll(".fpl-spin-wedges path")]
+      .find((p) => p.isPointInFill(pt));
+    return w ? +w.dataset.i : null;
+  }
+  // pinned, a wedge under the pointer lights itself, its line and its row
+  let spinAim = null;
+  addEventListener("mousemove", (ev) => {
+    const i = spinPin && !ev.target.closest?.(".fpl-spin-n") ? wedgeAt(ev)
+      : null;
+    body.classList.toggle("fpl-spin-aim", i != null);
+    if (i === spinAim) return;
+    spinAim = i;
+    if (i != null || spinHot != null && !ev.target.closest?.(".fpl-spin-n"))
+      spinLight(i);
+  }, { passive: true });
   /** A mark of kind k whose tip is (x, y), the place dy away (+1 below). */
   function legEnd(k, x, y, dy) {
     if (k === "d") return vec("rect", { class: "k", x: x - 3.5,
@@ -6008,7 +6031,7 @@
     rays.sort((a, b) => a[1] - b[1]).forEach(([i, a], j) => {
       const lo = (a + rays[(j + n - 1) % n][1] - (j ? 0 : 2 * P)) / 2;
       const hi = (a + rays[(j + 1) % n][1] + (j < n - 1 ? 0 : 2 * P)) / 2;
-      const q = Math.ceil((hi - lo) / (P / 2));
+      const q = Math.max(1, Math.ceil((hi - lo) / (P / 2)));
       let d = `M${x0} ${y0}`;
       for (let z = 0; z <= q; z++) {
         const b = lo + (hi - lo) * z / q;
@@ -6046,6 +6069,9 @@
     let [x0, y0] = [Math.min(Math.max(o.right, 0), W),
       Math.min(Math.max(o.top + o.height / 2, 0), H)];
     if (foff) [x0, y0] = edgeChip(fi, fup, o.left + o.width / 2, taken[+fup]);
+    // the wedges' apex: the root, or with the root a chip a little in
+    // from it, so chips on its own edge get rays of their own
+    const ya = !foff ? y0 : y0 + (fup ? 60 : -60);
     legs.classList.toggle("has-hot", hot != null);
     spinChips.classList.toggle("has-hot", hot != null);
     for (const [i, { e, k }] of spinAt.entries()) {
@@ -6070,6 +6096,7 @@
       } else g.append(legEnd(k, x1, y1, dy));
       let [xe, ye] = [x1, off ? y1 : y1 - (k === "m" ? 8 : 7) * dy];
       const a = Math.atan2(y1 - y0, x1 - x0);
+      const aw = Math.atan2(y1 - ya, x1 - x0);   // its wedge's ray
       if (spinPin && k === "m" && !off) {   // the arrow along its ray
         [xe, ye] = [x1 - 8 * Math.cos(a), y1 - 8 * Math.sin(a)];
         g.lastChild.setAttribute("transform",
@@ -6081,7 +6108,7 @@
       if (i === spinLand?.i && !off) ring(g, r, (now - spinLand.t) / 700);
       else if (i === spinFlight?.i && !off) ring(g, r, 0);
       if (!spinPin) continue;
-      rays.push([i, a]);
+      rays.push([i, aw]);
       if (off || !spinAt[i].key) continue;
       const kb = spinChips.appendChild(keyBox(spinAt[i].key, i));
       kb.classList.toggle("is-hot", i === spinHot);
@@ -6091,7 +6118,7 @@
     backChip(taken[0]);
     if (spinLand) spinFrame();
     if (!spinPin) return;
-    legs.prepend(...wedges(x0, y0, rays, o, fade));
+    legs.prepend(...wedges(x0, ya, rays, o, fade));
     if (fade < 1) spinFrame();
   }
   /**

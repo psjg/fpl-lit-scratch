@@ -1141,8 +1141,10 @@ body.fpl-minimap main { max-width: calc(100% - 64px); }
 /* the spin pinned (boards V5e1, V5f): a wedge per place over main's
    column, a key on each place's end, chip and row */
 .fpl-spin-wedges path { fill: var(--fpl-spin); fill-opacity: .07;
-  stroke: var(--fpl-spin); stroke-opacity: .15; pointer-events: auto;
-  cursor: pointer; }
+  stroke: var(--fpl-spin); stroke-opacity: .15; }
+/* the wedges take no clicks: the window's click handler tests them, so a
+   link, button or selection under one still works */
+main.fpl-spin-aim { cursor: pointer; }
 .fpl-spin-wedges path.odd { fill-opacity: .045; }
 .fpl-spin-wedges path.is-hot { fill-opacity: .13; }
 .fpl-spin-key { display: inline-flex; align-items: center;
