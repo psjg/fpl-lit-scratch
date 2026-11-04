@@ -834,8 +834,14 @@ mark.fact.fpl-pulled { background: none; box-shadow: none; text-decoration: unde
 [data-bs-theme="dark"], .quarto-dark {
   --fpl-spin: #f0915c; --fpl-spin-wash: rgba(240, 145, 92, .2);
 }
-.fpl-spin-n { cursor: pointer; border-radius: 2px; }
-.fpl-spin-n:hover { text-decoration: underline; text-underline-offset: 3px; }
+.fpl-spin-n { cursor: pointer; border-radius: 2px;
+  text-decoration: underline 1px
+    color-mix(in srgb, var(--fpl-spin) 45%, transparent);
+  text-underline-offset: 3px; }
+.fpl-spin-n.fpl-spin-m { text-decoration-style: dashed; }
+.fpl-spin-n:hover { text-decoration-color: var(--fpl-spin); }
+.fpl-spin-n:focus-visible { outline: 2px solid var(--fpl-spin);
+  outline-offset: 1px; }
 .fpl-spin-n.is-lit { text-decoration: underline 2px var(--fpl-spin);
   text-underline-offset: 3px; }
 .fpl-spin-n.fpl-spin-m.is-lit { text-decoration-style: dashed; }
@@ -870,6 +876,7 @@ mark.fact.fpl-pulled { background: none; box-shadow: none; text-decoration: unde
   margin: 0 0 5px; padding: 4px 8px; border: 1px solid var(--fpl-rule);
   border-radius: 4px; background: var(--fpl-bg); color: inherit;
   text-align: left; font: inherit; cursor: pointer; }
+.fpl-spin-row[aria-current] { box-shadow: inset 3px 0 var(--fpl-spin); }
 .fpl-spin-row:hover, .fpl-spin-row:focus-visible {
   border-color: var(--fpl-spin); background: var(--fpl-spin-wash); }
 .fpl-spin-row b, .fpl-spin-row span { display: block; overflow: hidden;

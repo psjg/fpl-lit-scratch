@@ -5379,10 +5379,14 @@
    * is a link where it stands in a fence or in the prose's inline code.
    * Under the mouse (after a breath) or on a click a panel opens: the name,
    * then three lists, definitie, gebruik and vermelding, each row a button
-   * that goes to its place (the browser's history: Alt+Left comes back).
+   * that goes to its place (the browser's history: Back, ⌘[ on a Mac and
+   * Alt ← elsewhere, comes back to where the page stood) and marks itself
+   * as here; the panel stays. A name is underlined at rest, solid in code
+   * and dashed in prose, and is a button: Tab reaches it, Enter opens.
    * A click keeps the panel; Esc or a click elsewhere shuts it. Wide, it
    * stands under the bar and draws a leg from the name to every row, solid
-   * to code, dashed to prose; narrow, it hangs under the name. The core
+   * to code, dashed to prose; narrow, it hangs under the name, or over it
+   * when there is no room below. The core
    * reads addresses only (chunk n, body line, column; a mention as a row),
    * so any language lit can read gives it its names.
    */
@@ -5403,8 +5407,9 @@
       const a = Math.max(s, at), b = Math.min(e, at + n.data.length);
       if (a < b) cuts.push([n, a - at, b - at]);
     }
-    return cuts.map(([n, a, b]) => {
+    return cuts.map(([n, a, b], i) => {
       const r = document.createRange(), x = el("span", { className: c });
+      if (!i) Object.assign(x, { tabIndex: 0, role: "button" });
       r.setStart(n, a);
       r.setEnd(n, b);
       x.dataset.spin = q;
@@ -5435,16 +5440,25 @@
   const spinOf = (q) => spun?.find((nm) => nm.qualified === q);
   const spinEls = (q) => body.querySelectorAll(
     `.fpl-spin-n[data-spin="${CSS.escape(q)}"]`);
-  /** Go to e, as a step in the history; Back returns. */
+  // the browser's Back as a key: on a Mac it is ⌘[, not Alt ←
+  const BACK = /Mac|iP(hone|ad)/.test(navigator.platform) ? "⌘[" : "Alt ←";
+  /** Go to e, as a step in the history; Back returns to the very spot. */
   function spinGo(e) {
     const id = e.closest("[id]")?.id;
-    if (id) history.pushState(history.state, "", `#${id}`);
+    if (id) {
+      history.replaceState({ ...history.state, fplY: scrollY }, "");
+      history.pushState({ ...history.state, fplY: undefined }, "", `#${id}`);
+    }
     e.scrollIntoView({ block: "center" });
     e.classList.remove("fpl-spin-here");
     void e.offsetWidth;
     e.classList.add("fpl-spin-here");
-    toast("Alt ← terug");
+    toast(`${BACK} terug`);
   }
+  addEventListener("popstate", (ev) => {
+    const y = ev.state?.fplY;
+    if (typeof y === "number") requestAnimationFrame(() => scrollTo(0, y));
+  });
   /** The words of a mention's sentence round it, cut at a word. */
   function around(e) {
     const s = e.closest(".fpl-s") ?? e.parentElement;
@@ -5461,13 +5475,22 @@
   /** One row: where (a chunk's head, a section) over what stands there. */
   function spinRow(e, kind) {
     const fence = e.closest(".fpl-p");
+    const bar = fence?.querySelector(".fpl-head-bar");
     const where = kind === "m" ? fence?.dataset.addr ?? ""
-      : `§${(fence?.querySelector(".fpl-chunk-head")?.textContent ?? "")
-        .replace(/^<</, "").split("\n")[0]}`;
+      : [bar?.querySelector(".fpl-head-n")?.textContent,
+        bar?.querySelector(".fpl-head-t")?.textContent].filter(Boolean)
+        .join(" ");
     const what = kind === "m" ? `“${around(e)}”`
       : e.closest("[id]").textContent.trim();
     const b = el("button", { type: "button", className: `fpl-spin-row ${kind}`,
-      onclick: () => { shutSpin(); spinGo(e); } },
+      onclick: () => {
+        spinBox.querySelector("[aria-current]")?.removeAttribute(
+          "aria-current");
+        b.ariaCurrent = "true";
+        spinKept = true;
+        spinGo(e);
+        spinPlace(e);
+      } },
     el("b", {}, where), el("span", {}, what));
     b.spinAt = e;
     return b;
@@ -5496,7 +5519,8 @@
         el("span", { className: "fpl-spin-sq" }),
         el("code", {}, nm.qualified)),
       el("div", { className: "fpl-spin-body" },
-        el("span", { className: "fpl-spin-hub" }, nm.name),
+        el("span", { className: "fpl-spin-hub", ariaHidden: "true" },
+          nm.name),
         el("div", { className: "fpl-spin-lists" }, ...groups.map(([h, es, k]) =>
           el("div", { className: "fpl-spin-group" }, el("h3", {}, h),
             ...es.map((e) => spinRow(e, k)))))));
@@ -5516,6 +5540,12 @@
         top: `${f.bottom + scrollY + 6}px`,
         left: `${Math.max(16, Math.min(f.left, innerWidth - 16 - width))
           + scrollX}px` });
+      // no room below: over the name, else as low as the window allows
+      const h = spinBox.offsetHeight;
+      if (f.bottom + 6 + h > innerHeight) {
+        spinBox.style.top = `${scrollY + (f.top - 6 - h >= 8 ? f.top - 6 - h
+          : Math.max(8, innerHeight - 8 - h))}px`;
+      }
     }
     spinBox.querySelector(".fpl-spin-legs")?.remove();
     if (!w) return;
@@ -5570,6 +5600,13 @@
   }, true);
   addEventListener("keydown", (ev) => {
     if (ev.key === "Escape" && spinOn) { shutSpin(); ev.stopPropagation(); }
+    const n = ev.target.closest?.(".fpl-spin-n");
+    if (n && (ev.key === "Enter" || ev.key === " ")) {
+      ev.preventDefault();
+      openSpin(n.dataset.spin, n);
+      spinKept = true;
+      spinBox.querySelector(".fpl-spin-row")?.focus();
+    }
   }, true);
   (snap ? Promise.resolve(snap.spin ?? null)
     : fetch(`${stem}.spin.json`).then((r) => (r.ok ? r.json() : null)))
