@@ -303,7 +303,8 @@
  * centre, showing it and its neighbours (feedback 25): the card it was
  * opened from (Graph on a card), else the card open in the margin;
  * opened from the bar with none, the whole page. Buurt and Hele pagina
- * at its head switch between the two. A click on a card makes it the
+ * at its head switch between the two, and Diepte 1 or 2 how far Buurt
+ * reaches: its neighbours, or theirs too (board V13c). A click on a card makes it the
  * centre (beside the page, the page scrolls to its span too), a click
  * on the centre goes to its span; each step is an entry in the
  * browser's history, so Back and Forward walk the steps, Alt ← as
@@ -3394,7 +3395,7 @@
     let g = null, sel = null, built = "", nodes = [], frames = [], sheet = null;
     // the card the graph stands round, else the whole page (feedback 25):
     // the card it was opened from, or the open card in the margin
-    p.centre = id ?? openId ?? null; p.last = p.centre;
+    p.centre = id ?? openId ?? null; p.last = p.centre; p.depth ??= 1;
     const chosen = new Set();   // the cards Shift-clicked for a group
     const slide = (fn) => {   // the column moves left (or back) in one motion: FLIP on main
       const a = body.getBoundingClientRect().left;
@@ -3445,10 +3446,16 @@
      * it to, and each relation reached with all its ends, since a sign
      * without its ends says nothing.
      */
-    const hood = (id, es) => {
+    const hood = (id, es, d = p.depth) => {
       const near = new Set([id]);
+      for (let i = 0; i < d; i++) outward(near, es);
+      return near;
+    };
+    /** One step out (Diepte, board V13c): every edge from near, then closed. */
+    const outward = (near, es) => {
+      const from = new Set(near);
       for (const e of es)
-        if (e.a.id === id || e.b.id === id) near.add(e.a.id).add(e.b.id);
+        if (from.has(e.a.id) || from.has(e.b.id)) near.add(e.a.id).add(e.b.id);
       for (let more = true; more;) {
         more = false;
         for (const e of es) for (const [x, y] of [[e.a, e.b], [e.b, e.a]])
@@ -3461,7 +3468,7 @@
     /** Lay the graph out and draw it, anew when the rows or kinds change. */
     function build() {
       if (p.view === "boom") { tree(); return; }
-      const key = `${[...offKinds]}|${p.centre}`;
+      const key = `${[...offKinds]}|${p.centre}|${p.depth}`;
       if (g && built === key && g.of === all) return;
       built = key;
       g = graphOf(); g.of = all;
@@ -3583,7 +3590,19 @@
         b.disabled = k === "hood" && !p.last;
         return b;
       }));
-      head.replaceChildren(back, radios);
+      // how far the neighbourhood reaches: one step or two (board V13c)
+      const deep = el("span", { className: "fpl-ways fpl-depth",
+        role: "radiogroup", ariaLabel: "Diepte" },
+        el("span", { ariaHidden: "true" }, "Diepte"),
+        ...[1, 2].map((d) => {
+          const b = button(String(d), () => { p.depth = d; build(); scope(); });
+          b.role = "radio"; b.dataset.depth = d;
+          b.title = d === 1 ? "Buren" : "Buren en hun buren";
+          b.ariaChecked = String(p.depth === d);
+          b.disabled = !p.centre;
+          return b;
+        }));
+      head.replaceChildren(back, radios, deep);
     }
     /**
      * Stand round a node, or round none (the whole page), a step the

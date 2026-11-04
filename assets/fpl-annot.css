@@ -603,8 +603,13 @@ body.fpl-beside #quarto-sidebar, body.fpl-beside #quarto-margin-sidebar { displa
 .fpl-scope button { font: inherit; font-size: 12.5px; font-weight: 500;
   height: 28px; padding: 0 12px; border: 1px solid var(--fpl-rule);
   background: var(--fpl-bg); color: var(--fpl-mute); cursor: pointer; }
-.fpl-ways button:first-child { border-radius: 999px 0 0 999px; }
+.fpl-ways button:first-of-type { border-radius: 999px 0 0 999px; }
 .fpl-ways button:last-child { border-left: 0; border-radius: 0 999px 999px 0; }
+/* Diepte, 1 or 2 steps out (board V13c): its word, then its two radios */
+.fpl-depth { align-items: center; gap: 0; }
+.fpl-depth > span { margin-right: 6px; font-size: 12.5px;
+  color: var(--fpl-mute); }
+.fpl-depth button { padding: 0 10px; }
 .fpl-scope button[aria-checked="true"] { background: var(--fpl-wash);
   color: var(--fpl-fg); font-weight: 600; }
 .fpl-scope button:disabled { opacity: .45; cursor: default; }
