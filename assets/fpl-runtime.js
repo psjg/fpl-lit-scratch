@@ -131,3 +131,38 @@ export async function traceFpl(src) {
   const json = await pyodide.runPythonAsync("import fpl_steprec\nfpl_steprec.trace(_fpl_buf)");
   return JSON.parse(String(json));
 }
+
+/** @type {Promise<void> | null} */
+let codeReady = null;
+
+/**
+ * Run an edited chunk of a literate page in the module it tangles to,
+ * then the page's examples against it (assets/fpl_chunkrun.py, as lit's
+ * lit-example runs them). The page's code is the bootstrap package,
+ * fpl-bootstrap.zip (01-bootstrap/ide/pack_analysis.py), unpacked once.
+ * @param {string} path  the file the chunk tangles to, a repo path
+ * @param {string} src   the chunk as edited, its references expanded
+ * @param {string[]} examples  the text of each pycon fence of the page
+ * @returns {Promise<{ ok: boolean, out: string,
+ *   examples: {src:string, want:string, got:string, ok:boolean}[][] }>}
+ */
+export async function runChunk(path, src, examples) {
+  const py = await ensurePyodide();
+  codeReady ??= (async () => {
+    const [run, zip] = await Promise.all([
+      fetch(new URL("./fpl_chunkrun.py", import.meta.url)),
+      fetch(pypiBase() + "fpl-bootstrap.zip"),
+    ]);
+    for (const r of [run, zip]) {
+      if (!r.ok) throw new Error(`${r.url}: ${r.status}`);
+    }
+    py.FS.writeFile("/home/pyodide/fpl_chunkrun.py", await run.text());
+    py.unpackArchive(await zip.arrayBuffer(), "zip",
+      { extractDir: "/code" });
+  })().catch((e) => { codeReady = null; throw e; });
+  await codeReady;
+  py.globals.set("_chunk_args", py.toPy([path, src, examples]));
+  const json = await py.runPythonAsync(
+    "import fpl_chunkrun\nfpl_chunkrun.run('/code', *_chunk_args)");
+  return JSON.parse(String(json));
+}

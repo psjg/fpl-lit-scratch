@@ -417,6 +417,12 @@
  * transclusie, path:lines, the row's commit and, when the text is no
  * longer in the file as written, "bron gewijzigd sinds deze versie".
  * Its card stands at that block, headed by file:lines.
+ * Play (board V5a; after the Pages site's live fences): a fence lit
+ * tangles to a Python file has ✎ ↺ ▶ in its head. It is edited in a
+ * textarea laid over it, the fence kept beneath for its addresses, run
+ * in a fresh import of its module with the page's examples after it,
+ * as lit-example runs them, and put back by ↺. The runtime (Pyodide,
+ * fpl-runtime.js) is fetched on the first ▶ only. See playable.
  */
 (() => {
   "use strict";
@@ -940,6 +946,11 @@
     group: '<g fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1.5" y="2.5" width="13" height="11" rx="2" stroke-dasharray="2.5 1.5"/>'
       + '<path d="M4.5 6h7M4.5 10h4.5"/></g>',
     check: '<path fill="none" stroke="currentColor" stroke-width="1.8" d="m3 8.5 3 3 7-7.5"/>',
+    play: '<path fill="currentColor" d="M5 3.5v9l7.5-4.5z"/>',
+    reset: '<path fill="none" stroke="currentColor" stroke-width="1.6"'
+      + ' d="M3.5 8a4.5 4.5 0 1 0 1.4-3.3M3.5 2.5v3h3"/>',
+    edit: '<path fill="none" stroke="currentColor" stroke-width="1.5"'
+      + ' d="M3 13l.6-2.6L10.8 3.2l2 2-7.2 7.2zM9.6 4.4l2 2"/>',
     // the other relations' signs, each its own shape (feedback 24)
     contradicts: '<g fill="none" stroke="currentColor" stroke-width="1.5">'
       + '<circle cx="8" cy="8" r="5.5"/><path d="M4.2 11.8 11.8 4.2"/></g>',
@@ -5369,6 +5380,162 @@
       srcs.set(s.row, s);
     }
   }
+
+  /*
+   * Play (board V5a). A fence that lit tangles to a Python file can be
+   * edited and run in the page: its head carries ✎ (also a double click
+   * on the code), ↺ and ▶ (Shift+Enter in the editor). Editing lays a
+   * textarea over the fence's place, the fence kept beneath it so its
+   * addresses and spans stay; ↺ puts the tangled text back. ▶ runs the
+   * chunk, its references to other chunks written out from their
+   * fences, in a fresh import of its module, and then every example of
+   * the page (a pycon fence) against that, as lit's lit-example does
+   * (fpl-runtime.js runChunk, fpl_chunkrun.py). The runtime is fetched
+   * on the first ▶ only; how long it took is the state's title. Under
+   * the fence Uitvoer: the state as a dot and a word, and what the
+   * chunk printed or raised. An example that came out otherwise gets
+   * verwacht and kreeg under it, what differs struck through in kreeg,
+   * and the sign ≠ with wijkt af; one that holds a ✓ and klopt.
+   */
+  let runtime = null, loadMs = 0;
+  const runtimeOf = () => (runtime ??= (async () => {
+    const t = performance.now();
+    return { m: await import(`${root}assets/fpl-runtime.js`), t };
+  })().catch((e) => { runtime = null; throw e; }));
+  /** A chunk's text with each <<Name>> line written out, as tangled. */
+  function expand(text, fences, depth = 0) {
+    return text.split("\n").map((ln) => {
+      const m = /^(\s*)<<(.+?)>>\s*$/.exec(ln);
+      const got = m && depth < 20 ? fences.get(m[2].trim()) : null;
+      if (!got) return ln;
+      return expand(got.map((f) => f.textContent.replace(/\n$/, ""))
+        .join("\n"), fences, depth + 1).split("\n")
+        .map((x) => (x ? m[1] + x : x)).join("\n");
+    }).join("\n");
+  }
+  /** Where kreeg differs from verwacht: the middle past their common ends. */
+  function differ(want, got) {
+    let a = 0, b = 0;
+    while (a < want.length && a < got.length && want[a] === got[a]) a++;
+    while (b < want.length - a && b < got.length - a
+      && want.at(-1 - b) === got.at(-1 - b)) b++;
+    return [got.slice(0, a), got.slice(a, got.length - b),
+      got.slice(got.length - b)];
+  }
+  function playable() {
+    const cs = (code?.nodes ?? []).filter((n) => n.kind === "chunk");
+    const to = new Map((code?.edges ?? [])
+      .filter((e) => e.label === "tangles").map((e) => [e.a, e]));
+    const fences = new Map();   // a chunk's name -> its fences' code
+    const plays = [];
+    heads().forEach((h, i) => {
+      const c = cs[i];
+      const pre = h.nextElementSibling?.querySelector?.("pre.sourceCode");
+      if (!c || !pre) return;
+      const k = fences.get(c.label) ?? [];
+      fences.set(c.label, [...k, pre.querySelector("code") ?? pre]);
+      const file = to.get(c.id)?.b.slice(5) ?? "";
+      if (file.endsWith(".py")) plays.push({ h, pre, file });
+    });
+    const examples = [...body.querySelectorAll("pre.pycon")];
+    for (const { h, pre, file } of plays) {
+      const tangled = (pre.querySelector("code") ?? pre).textContent
+        .replace(/\n$/, "");
+      const box = pre.closest(".code-copy-outer-scaffold") ?? pre;
+      let ed = null;
+      const edit = () => {
+        if (!ed) {
+          ed = el("textarea", { className: "fpl-annot-ui fpl-play-ed",
+            value: tangled, spellcheck: false, ariaLabel: "Code van het blok",
+            onkeydown: (ev) => {
+              if (ev.key === "Enter" && ev.shiftKey) {
+                ev.preventDefault(); go();
+              }
+            },
+            oninput: () => { fit(); reset.disabled = ed.value === tangled; } });
+          ed.setAttribute("wrap", "off");
+          box.before(ed);
+          box.classList.add("fpl-play-under");
+        }
+        fit(); ed.focus();
+      };
+      const fit = () => {
+        ed.style.height = "auto";
+        ed.style.height = `${ed.scrollHeight + 2}px`;
+      };
+      const back = () => {
+        ed?.remove(); ed = null;
+        box.classList.remove("fpl-play-under");
+        reset.disabled = true;
+      };
+      const btn = (name, label, onclick) => {
+        const b = button("", onclick, `fpl-play-btn is-${name}`);
+        b.append(ico(name));
+        return Object.assign(b, { title: label, ariaLabel: label });
+      };
+      const pen = btn("edit", "Bewerk", edit);
+      const reset = btn("reset", "Terug naar de tangle", back);
+      const run = btn("play", "Draai (Shift+Enter)", () => go());
+      reset.disabled = true;
+      h.append(el("span", { className: "fpl-annot-ui fpl-play-bar" },
+        pen, reset, run));
+      box.addEventListener("dblclick", (ev) => {
+        if (!ev.target.closest("a")) edit();
+      });
+      let out = null;
+      const go = async () => {
+        if (!out) {
+          out = el("figure", { className: "fpl-annot-ui fpl-play-out" });
+          out.ariaLive = "polite";
+        }
+        box.after(out);
+        const state = (k, word, text) => {
+          out.dataset.state = k;
+          out.replaceChildren(...[el("figcaption", {}, "Uitvoer",
+            el("span", { className: "fpl-play-state",
+              title: loadMs ? `runtime geladen in ${
+                (loadMs / 1000).toFixed(1).replace(".", ",")} s` : "" },
+            el("span", { className: "fpl-play-dot" }), word)),
+          text ? el("pre", {}, text) : null].filter(Boolean));
+        };
+        state("busy", runtime ? "draait" : "laadt");
+        run.disabled = true;
+        try {
+          const first = !runtime;
+          const { m, t } = await runtimeOf();
+          const src = expand(ed?.value ?? tangled, fences);
+          const r = await m.runChunk(file, src,
+            examples.map((x) => x.textContent));
+          if (first) loadMs = performance.now() - t;
+          state(r.ok ? "ok" : "err", r.ok ? "klaar" : "fout", r.out);
+          examples.forEach((x, i) => judge(x, r.examples[i]));
+        } catch (e) {
+          state("err", "fout", String(e?.message ?? e));
+        } finally {
+          run.disabled = false;
+        }
+      };
+    }
+  }
+  /** An example's verdict under it: ✓ klopt, or ≠ wijkt af and why. */
+  function judge(x, seen) {
+    let v = x.nextElementSibling;
+    if (!v?.classList.contains("fpl-ex")) {
+      v = el("div", { className: "fpl-annot-ui fpl-ex" });
+      x.after(v);
+    }
+    if (!seen) { v.remove(); return; }
+    const bad = seen.filter((e) => !e.ok);
+    v.dataset.ok = bad.length ? "0" : "1";
+    v.replaceChildren(el("span", { className: "fpl-ex-state" },
+      bad.length ? "≠ wijkt af" : "✓ klopt"), ...bad.map((e) => {
+      const [a, d, b] = differ(e.want, e.got);
+      return el("dl", {}, el("dt", {}, ">>>"), el("dd", {}, e.src),
+        el("dt", {}, "verwacht"), el("dd", {}, e.want),
+        el("dt", {}, "kreeg"), el("dd", {}, a,
+          d ? el("del", {}, d) : null, b));
+    }));
+  }
   let sameChunk = "";
   body.addEventListener("mouseover", (ev) => {
     const c = ev.target.closest?.("[data-chunk]")?.dataset.chunk ?? "";
@@ -5389,6 +5556,6 @@
   Promise.all([sidecarRows, decisions, coded]).then(([got, tsv]) => {
     ledger = readLedger(tsv);
     sidecar = Array.isArray(got) ? got : [];
-    transclude(); draw(); persist(); sync();
+    transclude(); playable(); draw(); persist(); sync();
   });
 })();

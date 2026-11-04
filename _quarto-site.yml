@@ -25,6 +25,7 @@ project:
     - assets/fpl-flame.js
     - assets/fpl-stepper.js
     - assets/fpl_steprec.py
+    - assets/fpl_chunkrun.py
   render:
     - index.qmd
     - 01-bootstrap/README.md
