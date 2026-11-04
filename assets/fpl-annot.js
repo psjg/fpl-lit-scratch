@@ -5381,6 +5381,12 @@
       if (stepped && (!j || j.step)) history.back();
       return;
     }
+    // a flight of the spin's goes back as Back does, on a Mac too
+    if (altLeft && spinOn && history.state?.fplD > 0) {
+      ev.preventDefault();
+      history.back();
+      return;
+    }
     if (ev.key === "Escape" && reading && !typing) { read(null); return; }
     if (ev.key === "?" && !typing && !ev.metaKey && !ev.ctrlKey && !ev.altKey) { ev.preventDefault(); menu.hidden || !menu.classList.contains("fpl-keysheet") ? keysheet() : shut(); return; }
     const plainish = !typing && !ev.metaKey && !ev.ctrlKey && !ev.altKey;
@@ -5505,14 +5511,20 @@
     `.fpl-spin-n[data-spin="${CSS.escape(q)}"]`);
   // the browser's Back as a key: on a Mac it is ⌘[, not Alt ←
   const BACK = /Mac|iP(hone|ad)/.test(navigator.platform) ? "⌘[" : "Alt ←";
-  /** Go to e, as a step in the history; Back returns to the very spot. */
+  /** Fly to e, as a step in the history; Back flies to the very spot. */
   function spinGo(e) {
-    const id = e.closest("[id]")?.id;
+    const id = e.closest("[id]")?.id, st = history.state;
     if (id) {
-      history.replaceState({ ...history.state, fplY: scrollY }, "");
-      history.pushState({ ...history.state, fplY: undefined }, "", `#${id}`);
+      // the browser would put the page back itself: these steps fly there
+      history.scrollRestoration = "manual";
+      history.replaceState({ ...st, fplY: scrollY }, "");
+      history.pushState({ ...st, fplY: undefined, fplD: (st?.fplD ?? 0) + 1 },
+        "", `#${id}`);
     }
-    e.scrollIntoView({ block: "center" });
+    const r = e.getBoundingClientRect();
+    if (r.height) fly(scrollY + r.top + r.height / 2 - innerHeight / 2,
+      spinAt.findIndex((p) => p.e === e));
+    else e.scrollIntoView({ block: "center" });
     e.classList.remove("fpl-spin-here");
     void e.offsetWidth;
     e.classList.add("fpl-spin-here");
@@ -5520,7 +5532,10 @@
   }
   addEventListener("popstate", (ev) => {
     const y = ev.state?.fplY;
-    if (typeof y === "number") requestAnimationFrame(() => scrollTo(0, y));
+    // from here: Quarto's hashchange moves the page by its header first
+    const from = scrollY;
+    if (typeof y === "number") requestAnimationFrame(() => fly(y, null, from));
+    spinFrame();   // the terug chip
   });
   /** The words of a mention's sentence round it, cut at a word. */
   function around(e) {
@@ -5678,7 +5693,7 @@
       if (spinOn !== n.dataset.spin) openSpin(n.dataset.spin, n);
       spinKept = true;
       spinPinIt();
-    } else if (spinOn && ![spinBox, spinChips, mm, legs]
+    } else if (spinOn && ![spinBox, spinChips, spinBack, mm, legs]
       .some((x) => x.contains(ev.target))) shutSpin();
   }, true);
   addEventListener("keydown", (ev) => {
@@ -5724,6 +5739,18 @@
    * and / are the page's otherwise. A click on the name lets go of it,
    * the panel kept; Esc shuts the spin. Reduced motion: no swing, no fade.
    *
+   * A row, chip, wedge or key goes to its place in one flight (board
+   * V5e3): the page first draws back about 6% of the way, then is shot
+   * on and slows to land on the place, never past it (ease), in 350 to
+   * 900 ms by distance. Flying, that line is drawn as far as the flight
+   * has come with a fading trail behind it, the minimap's window moves
+   * along, and the place has rings that widen and go once it is landed
+   * on. The name the reader came by stays the lines' root, a chip at the
+   * window's edge while it is out of it. Each flight is a step in the
+   * browser's history: ← terug under the panel (Alt ←, ⌘[ on a Mac)
+   * flies back to where the page stood. A wheel or touch stops a flight
+   * where it is; reduced motion jumps.
+   *
    * Wide, a chunked page has a minimap: a strip of MM taken from the
    * right of main, so the margin stays where it was. It is the whole page
    * scaled to the window's height, measured from the DOM whenever main
@@ -5745,7 +5772,50 @@
   let spinPin = 0, spinTyped = "";   // when it was pinned (ms), keys typed
   const spinAte = new Set();   // keys taken down here, so up as well
   const spinFly = (i) => [...spinBox.querySelectorAll(".fpl-spin-row")]
-    .find((b) => b.spinAt === spinAt[i]?.e)?.click();   // unit 20: flight
+    .find((b) => b.spinAt === spinAt[i]?.e)?.click();   // as its row does
+  let spinFlight = null;   // {i, y0, y1, t0, ms, p, ys, raf} while flying
+  let spinLand = null;     // {i, t}: the place landed on, for its ring
+  const calm = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
+  /** Back a little (its least -0.062 at t 1/15), then on to 1, never past. */
+  const ease = (t) => 1 - (1 - t) ** 4 * (1 + 6 * t);
+  /** Scroll from y0 to y in one flight, its place i (or null) lit. */
+  function fly(y, i = null, y0 = scrollY) {
+    const top = Math.max(0, Math.min(Math.round(y),
+      document.documentElement.scrollHeight - innerHeight));
+    const d = Math.abs(top - y0);
+    cancelAnimationFrame(spinFlight?.raf);
+    spinFlight = null;
+    if (calm() || d < 2) {
+      scrollTo({ top, behavior: "instant" });
+      return spinFrame();
+    }
+    const f = spinFlight = { i, y0, y1: top, t0: performance.now(),
+      ms: Math.min(900, Math.max(350, 300 + 10 * Math.sqrt(d))), p: 0,
+      ys: [] };
+    const step = (now) => {
+      if (spinFlight !== f) return;
+      const t = Math.min(1, Math.max(0, (now - f.t0) / f.ms));
+      f.p = ease(t);
+      f.ys.push(scrollY);
+      scrollTo({ top: f.y0 + (f.y1 - f.y0) * f.p, behavior: "instant" });
+      if (t < 1) f.raf = requestAnimationFrame(step);
+      else {
+        spinFlight = null;
+        spinLand = i == null || i < 0 ? null : { i, t: now };
+        if (spinLand && spinOn) spinPlace(spinAt[i].e);   // narrow, by it
+        spinFrame();
+      }
+    };
+    step(f.t0);   // at y0 now, whatever moved the page since
+  }
+  // the reader's own scroll wins over a flight
+  for (const t of ["wheel", "touchstart", "pointerdown"])
+    addEventListener(t, () => {
+      if (!spinFlight) return;
+      cancelAnimationFrame(spinFlight.raf);
+      spinFlight = null;
+      spinFrame();
+    }, { passive: true, capture: true });
   /** Keys for n places from the home row, none a prefix of another. */
   function spinKeys(n) {
     const L = [..."sdfghjkl"];
@@ -5870,11 +5940,11 @@
     const { e, k } = spinAt[i], f = e.closest(".fpl-p");
     const n = k === "m" ? f?.dataset.addr
       : f?.querySelector(".fpl-head-n")?.textContent;
-    const key = spinAt[i].key;
+    const key = spinAt[i].key, here = e === spinFrom;
     const c = el("button", { type: "button",
-      className: `fpl-spin-off ${k}`,
-      ariaLabel: `${key ? `${key}, ` : ""}${KIND[k]} in ${n ?? "?"}, `
-        + `${up ? "eerder" : "verder"} op de pagina`,
+      className: `fpl-spin-off ${k}${here ? " is-here" : ""}`,
+      ariaLabel: `${key ? `${key}, ` : here ? "Oorsprong, " : ""}${KIND[k]}`
+        + ` in ${n ?? "?"}, ${up ? "eerder" : "verder"} op de pagina`,
       onclick: () => spinFly(i),
       onmouseenter: () => { clearTimeout(spinT); spinLight(i); },
       onmouseleave: () => {
@@ -5883,7 +5953,7 @@
       } }, `${n ?? ""} ${up ? "↑" : "↓"}`);
     if (key) c.prepend(keyBox(key, i));
     c.dataset.i = i;
-    if (i === spinHot) c.classList.add("is-hot");
+    if (i === (spinFlight?.i ?? spinHot)) c.classList.add("is-hot");
     spinChips.append(c);
     // side by side along the edge, never over another chip there; a row
     // full, the next one in from the edge
@@ -5956,26 +6026,36 @@
     legs.replaceChildren();
     spinChips.replaceChildren();
     mmDraw();
+    spinBack.hidden = !spinOn || !(history.state?.fplD > 0);
     if (!spinOn) return;
     const W = innerWidth, H = innerHeight, o = spinFrom.getBoundingClientRect();
     legs.setAttribute("viewBox", `0 0 ${W} ${H}`);
+    const now = performance.now(), hot = spinFlight?.i ?? spinHot;
+    if (spinLand && (now - spinLand.t > 700 || !spinAt[spinLand.i]))
+      spinLand = null;
     // pinned: the twang's 400 ms, then the wedges' 200; calm, at once
     const age = !spinPin ? 0 : matchMedia("(prefers-reduced-motion: reduce)")
       .matches ? 1e9 : performance.now() - spinPin;
     const tw = Math.min(1, age / 400), rays = [];
     const fade = Math.min(1, Math.max(0, (age - 300) / 200));
-    const x0 = Math.min(Math.max(o.right, 0), W);
-    const y0 = Math.min(Math.max(o.top + o.height / 2, 0), H);
     const taken = [[], []];
-    legs.classList.toggle("has-hot", spinHot != null);
-    spinChips.classList.toggle("has-hot", spinHot != null);
+    // the origin stays: out of the window, a chip at its edge, the lines
+    // from there
+    const fi = spinAt.findIndex((p) => p.e === spinFrom);
+    const fup = o.bottom < 0, foff = fi >= 0 && (fup || o.top > H);
+    let [x0, y0] = [Math.min(Math.max(o.right, 0), W),
+      Math.min(Math.max(o.top + o.height / 2, 0), H)];
+    if (foff) [x0, y0] = edgeChip(fi, fup, o.left + o.width / 2, taken[+fup]);
+    legs.classList.toggle("has-hot", hot != null);
+    spinChips.classList.toggle("has-hot", hot != null);
     for (const [i, { e, k }] of spinAt.entries()) {
       const g = vec("g", { class: `fpl-spin-leg ${k}`, "data-i": i });
-      if (i === spinHot) g.classList.add("is-hot");
+      if (i === hot) g.classList.add("is-hot");
       legs.append(g);
       if (e === spinFrom) {
         g.classList.add("is-here");
-        g.append(vec("circle", { class: "k", cx: x0, cy: y0, r: 3 }));
+        if (foff) g.classList.add("is-off");
+        else g.append(vec("circle", { class: "k", cx: x0, cy: y0, r: 3 }));
         continue;
       }
       const r = e.getBoundingClientRect();
@@ -5995,8 +6075,11 @@
         g.lastChild.setAttribute("transform",
           `rotate(${a * 180 / Math.PI - 90 * dy} ${x1} ${y1})`);
       }
-      g.prepend(vec("path", { class: "l",
-        d: legPath(x0, y0, xe, ye, spinPin ? tw : 0) }));
+      const l = g.insertBefore(vec("path", { class: "l",
+        d: legPath(x0, y0, xe, ye, spinPin ? tw : 0) }), g.firstChild);
+      if (i === spinFlight?.i) flight(g, l, spinFlight);
+      if (i === spinLand?.i && !off) ring(g, r, (now - spinLand.t) / 700);
+      else if (i === spinFlight?.i && !off) ring(g, r, 0);
       if (!spinPin) continue;
       rays.push([i, a]);
       if (off || !spinAt[i].key) continue;
@@ -6005,9 +6088,58 @@
       Object.assign(kb.style, { left: `${x1 + 6}px`,
         top: `${y1 - 3.5 * dy - 8.5}px` });
     }
+    backChip(taken[0]);
+    if (spinLand) spinFrame();
     if (!spinPin) return;
     legs.prepend(...wedges(x0, y0, rays, o, fade));
     if (fade < 1) spinFrame();
+  }
+  /**
+   * The flying leg l (board V5e3): drawn from the name as far as the
+   * flight has come, a dot at its head, the rest of it a faint track, and
+   * behind it the line where it stood a few frames back, fading.
+   */
+  function flight(g, l, f) {
+    const L = l.getTotalLength(), p = Math.max(0, f.p);
+    const d = l.getAttribute("d"), dash = `${(p * L).toFixed(1)} ${L + 1}`;
+    g.classList.add("is-fly");
+    [0.2, 0.11, 0.05].forEach((a, j) => {
+      const y = f.ys[f.ys.length - 3 * (j + 1)];
+      if (y != null) g.append(vec("path", { class: "fpl-spin-trail", d,
+        style: `stroke-dasharray: ${dash}`, opacity: a,
+        transform: `translate(0 ${(scrollY - y).toFixed(1)})` }));
+    });
+    g.append(vec("path", { class: "fpl-spin-trail", d,
+      style: `stroke-dasharray: ${dash}`, "stroke-width": 2.25 }));
+    const h = l.getPointAtLength(p * L);
+    g.append(vec("circle", { class: "fpl-spin-dot", cx: h.x, cy: h.y,
+      r: 3.5 }));
+  }
+  /** Two rings round the place r, u of the way to gone after landing. */
+  function ring(g, r, u) {
+    for (const [pad, grow, a, rx] of [[4, 4, 0.55, 7], [11, 8, 0.22, 11]]) {
+      const q = pad + grow * u;
+      g.append(vec("rect", { class: "fpl-spin-ring", x: r.left - q,
+        y: r.top - q, width: r.width + 2 * q, height: r.height + 2 * q,
+        rx: rx + grow * u / 2, opacity: (a * (1 - u)).toFixed(3) }));
+    }
+  }
+  /**
+   * ← terug, after a flight while the spin is open: the browser's Back
+   * (Alt ←, or ⌘[ on a Mac), which flies to where the page stood. Wide
+   * under the panel; narrow at the window's foot, over its edge chips.
+   */
+  const spinBack = el("button", { type: "button", hidden: true,
+    className: "fpl-annot-ui fpl-spin-back", ariaKeyShortcuts: "Alt+ArrowLeft",
+    onclick: () => history.back() },
+  el("span", { ariaHidden: "true" }, "←"), "terug", el("kbd", {}, "Alt ←"));
+  function backChip(bottom) {
+    if (spinBack.hidden) return;
+    const b = spinBox.getBoundingClientRect(), m = body.getBoundingClientRect();
+    const rows = Math.max(-1, ...bottom.map(([, , q]) => q)) + 1;
+    const [left, top] = wide() ? [b.left, Math.min(b.bottom + 8,
+      innerHeight - 38)] : [m.left, innerHeight - 38 - 26 * rows];
+    Object.assign(spinBack.style, { left: `${left}px`, top: `${top}px` });
   }
   const spinFrame = () => { raf ||= requestAnimationFrame(spinDraw); };
   addEventListener("scroll", spinFrame, { passive: true });
@@ -6370,7 +6502,7 @@
   });
 
   document.body.append(pop, menu, views, panel, cardMenu, spinBox, legs,
-    spinChips, mm);
+    spinChips, spinBack, mm);
   // the decisions are lit facts' too: asked for only beside a sidecar
   const shipped = snap ? null
     : fetch(`${stem}.facts.json`).catch(() => null);
