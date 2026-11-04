@@ -452,7 +452,8 @@
     "fn/claim": "Beweert", "fn/evidence": "Bewijs", "fn/aside": "Terzijde", "fn/hedge": "Zwakt af",
     group: "Hoort bij een groep", role: "De rol in een groep", order: "De plaats in een groep",
   };
-  const LABEL =/^[^/ \t\n\r\f\v]+(?:\/[^/ \t\n\r\f\v]+)*$/;   // lit's facts.LABEL, whitespace spelt out alike
+  // lit's facts.LABEL, whitespace spelt out alike; a brace is only typed
+  const LABEL = /^[^/{} \t\n\r\f\v]+(?:\/[^/{} \t\n\r\f\v]+)*$/;
   /** A label and every scope above it: fn/claim/strong gives fn, fn/claim, fn/claim/strong. */
   const scopes = (l) => l.split("/").map((_, i, a) => a.slice(0, i + 1).join("/"));
   /** Whether a label lies at or under a scope. */

@@ -538,6 +538,8 @@ FIELDS: dict[str, type] = {
     "commit": str,
     "by": str,
     "weight": int,
+    "shares": dict,
+    "proposal": str,
     "createdAt": int,
     "updatedAt": int,
 }
@@ -555,6 +557,16 @@ ARGUING = frozenset({"supports", "attacks"})
 # How much an arguing row bears, 1 to 5 (Kialo's impact): a reader's
 # judgement of the inference, kept on the row that stands for it.
 WEIGHTS = range(1, 6)
+# A reason's share (PSJ 2026-11-02: ``slop/writing/{filler:0.7,
+# isnotxisy:0.1}``): ``shares`` maps some of a row's own labels to a
+# number above 0 and at most 1, all of them together at most 1, a soft
+# label as a distribution over its reasons. The brace form is only
+# typed; a row holds the labels written out and the map beside them.
+# A ``proposal`` is the text a span's ``text`` would become (board
+# V5d); a row whose first label is a DECISION settles one, its only
+# target that row: ``adopts`` takes it over, ``keeps`` leaves the text
+# as it stands and says why in a label after it.
+DECISIONS = frozenset({"adopts", "keeps"})
 # A clause that takes up an earlier one (Danes 1974, thematic
 # progression): ``targets[0]``, the bound clause, -> ``targets[1]``.
 RESUMES = "resumes"
@@ -602,7 +614,8 @@ TFA = frozenset({"tfa/t", "tfa/c", "tfa/f"})
 # the reserved kinds (a relation or set as the first label, the
 # ``tfa/`` scope), which the gates below read. Whitespace is spelt
 # out, so that the overlay's pattern accepts exactly the same labels.
-LABEL = re.compile(r"[^/ \t\n\r\f\v]+(?:/[^/ \t\n\r\f\v]+)*")
+# A brace is no part of a label: ``a/{b:0.7}`` is typed, never kept.
+LABEL = re.compile(r"[^/{} \t\n\r\f\v]+(?:/[^/{} \t\n\r\f\v]+)*")
 # An address essay.lua gives a block, sentence or clause, under the
 # path of its heading: ``[<heading>/.../]b<n>[s<n>[c<n>]]``, each number
 # from 1. lit does not number the page, so a target of this shape is
@@ -969,6 +982,35 @@ def field_faults(row: Row) -> Iterator[str]:
             yield f"commit {value!r} is not a full 40-hex commit"
 
 
+def reason_shape(row: Row) -> Iterator[str]:
+    """A row's shares or proposal out of shape."""
+    if "shares" in row:
+        yield from share_faults(row)
+    if "proposal" in row and (
+        not isinstance(row["proposal"], str) or "text" not in row
+    ):
+        yield "a proposal is a string on a span"
+
+
+def share_faults(row: Row) -> Iterator[str]:
+    """A share off the row's labels, out of (0, 1], or a sum over 1."""
+    shares, labels = row["shares"], row.get("labels")
+    if not isinstance(shares, dict):
+        yield "shares must be a map of label to number"
+        return
+    own = set(cast("list[str]", labels)) if strings(labels) else set()
+    vs = cast("dict[str, object]", shares)
+    for k, v in vs.items():
+        if k not in own:
+            yield f"share {k!r} is no label of the row"
+        elif type(v) not in (int, float) or not 0 < cast("float", v) <= 1:
+            yield f"share {k!r} is {v!r}, not above 0 and at most 1"
+    if all(type(v) in (int, float) for v in vs.values()) and (
+        sum(cast("list[float]", list(vs.values()))) > 1 + 1e-9
+    ):
+        yield "the shares add up to more than 1"
+
+
 def span_shape(row: Row) -> str:
     """What makes a row's span no span, or ``""``.
 
@@ -1060,6 +1102,24 @@ def argument_faults(row: Row) -> Iterator[str]:
         yield f"{kind} row {row.get('id')!r} names itself"
     elif ts[0] in ts[1:]:
         yield f"{kind} runs from {ts[0]!r} to itself"
+
+
+def reason_faults(row: Row, proposed: set[object]) -> Iterator[str]:
+    """Shares or proposal out of shape, or a decision off its proposal.
+
+    An ``adopts`` or ``keeps`` row names one proposal, and ``keeps``
+    says why in a second label.
+    """
+    yield from reason_shape(row)
+    kind, targets = first(row), row.get("targets")
+    if kind not in DECISIONS:
+        return
+    if not strings(targets) or len(cast("list[str]", targets)) != 1:
+        yield f"{kind} settles one proposal, its only target"
+    elif cast("list[str]", targets)[0] not in proposed:
+        yield f"{kind} names {cast('list[str]', targets)[0]!r}, no proposal"
+    if kind == "keeps" and len(cast("list[str]", row["labels"])) < 2:
+        yield "keeps says why in a label after it"
 
 
 def weight_faults(row: Row, kind: str) -> Iterator[str]:
@@ -1620,8 +1680,9 @@ def validate(
 
     Returns:
         ``lit-facts-id``, ``lit-facts-field``, ``lit-facts-span``,
-        ``lit-facts-target``, ``lit-facts-argument``, ``lit-facts-set``
-        and ``lit-facts-tfa`` findings, row by row.
+        ``lit-facts-target``, ``lit-facts-argument``, ``lit-facts-set``,
+        ``lit-facts-tfa`` and ``lit-facts-reason`` findings, row by
+        row.
     """
     ids: Counter[object] = Counter(r.get("id") for r in rows)
     names = {i for i in ids if isinstance(i, str)} | set(known)
@@ -1631,6 +1692,7 @@ def validate(
         if ("item" in r or first(r) == "parts")
         and isinstance(i := r.get("id"), str)
     } | set(known)
+    proposed = {r.get("id") for r in rows if "proposal" in r}
     out: list[web.Finding] = []
     for n, row in enumerate(rows, 1):
         for rule, faults in (
@@ -1641,6 +1703,7 @@ def validate(
             ("lit-facts-argument", argument_faults(row)),
             ("lit-facts-set", set_faults(row, spans)),
             ("lit-facts-tfa", tfa_faults(row)),
+            ("lit-facts-reason", reason_faults(row, proposed)),
         ):
             out += [web.Finding(where, n, rule, m) for m in faults]
     out += twice_marked(rows, where)
@@ -2137,7 +2200,16 @@ def ground(
 # The keys a row of the annotation program may carry over, besides
 # its id and its span, in the order a sidecar row writes them: ``by``
 # is who wrote it, a person's name or an agent's model id.
-TOOL_KEYS = ("labels", "note", "targets", "by", "weight", *STAMPS)
+TOOL_KEYS = (
+    "labels",
+    "note",
+    "targets",
+    "by",
+    "weight",
+    "shares",
+    "proposal",
+    *STAMPS,
+)
 
 
 @dataclass(frozen=True)
@@ -2220,6 +2292,7 @@ def import_faults(row: Row, seen: set[str]) -> Iterator[str]:
         type(row["weight"]) is not int or row["weight"] not in WEIGHTS
     ):
         yield "weight must be an integer 1 to 5"
+    yield from reason_shape(row)
     for key in STAMPS:
         if key in row and type(row[key]) is not int:
             yield f"{key} must be an integer"

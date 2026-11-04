@@ -258,6 +258,13 @@ arguing row as an argument `<row>` described by its source and carrying `{weight
 for a support, `<-` for an attack, and `<_` for an attack on an inference, since Argdown's
 undercut holds between arguments only. A row met again is named without its description.
 
+A reason may have a share (PSJ's `slop/writing/{filler:0.7,isnotxisy:0.1}`): the brace form is
+typed in the overlay's label field only, and a row keeps its labels written out with `shares`
+beside them, a map from some of those labels to a number above 0 and at most 1, together at most
+1 (`lit-facts-reason`; a brace in a label is refused, `lit-facts-field`). A span may carry a `proposal`, the text it
+would become; a row whose first label is `adopts` (Neem over) or `keeps` (Laat staan, a reason
+label after it) settles it, its one target the proposal's row (`lit-facts-reason`).
+
 ### Layers
 
 The rows stack in layers after the Prague Dependency Treebank (Pajas & Štěpánek 2008, PML,

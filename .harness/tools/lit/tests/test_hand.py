@@ -706,3 +706,49 @@ def test_argdown_keeps_undercuts_shared_premises_and_text() -> None:
     assert facts.argdown(rows, "s1") == (
         "<s1>: premise\n  <_ <u>: objection\n  <- <t>: objection\n"
     )
+
+
+SHARED: list[facts.Row] = [
+    {
+        "id": "c",
+        "item": "p.md",
+        "start": 2,
+        "end": 6,
+        "text": "Demo",
+        "labels": ["slop/writing/filler", "slop/writing/isnotxisy"],
+        "shares": {"slop/writing/filler": 0.7, "slop/writing/isnotxisy": 0.1},
+        "proposal": "Toon",
+    },
+    {"id": "a", "labels": ["adopts"], "targets": ["c"]},
+    {"id": "k", "labels": ["keeps", "good/toon"], "targets": ["c"]},
+    {"id": "b", "labels": ["slop/writing/{filler:0.7}"], "targets": ["c"]},
+    {"id": "o", "labels": ["x"], "shares": {"y": 0.5}, "targets": ["c"]},
+    {"id": "z", "labels": ["x"], "shares": {"x": 0}, "targets": ["c"]},
+    {
+        "id": "s",
+        "labels": ["x", "y"],
+        "shares": {"x": 0.7, "y": 0.4},
+        "targets": ["c"],
+    },
+    {"id": "t", "labels": ["x"], "shares": {"x": True}, "targets": ["c"]},
+    {"id": "p", "labels": ["x"], "proposal": "Toon", "targets": ["c"]},
+    {"id": "k1", "labels": ["keeps"], "targets": ["c"]},
+    {"id": "a2", "labels": ["adopts"], "targets": ["o"]},
+    {"id": "a3", "labels": ["adopts"], "targets": ["c", "o"]},
+]
+
+
+def test_a_reason_is_kept_written_out_with_its_share() -> None:
+    """Labels written out with shares; one decision per proposal."""
+    got = facts.validate(SHARED, "p.facts.json", {"p.md": "# Demo"}, set())
+    assert {(f.line, f.rule) for f in got} == {
+        (4, "lit-facts-field"),
+        (5, "lit-facts-reason"),
+        (6, "lit-facts-reason"),
+        (7, "lit-facts-reason"),
+        (8, "lit-facts-reason"),
+        (9, "lit-facts-reason"),
+        (10, "lit-facts-reason"),
+        (11, "lit-facts-reason"),
+        (12, "lit-facts-reason"),
+    }
