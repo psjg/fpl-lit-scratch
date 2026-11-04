@@ -136,17 +136,20 @@ export async function traceFpl(src) {
 let codeReady = null;
 
 /**
- * Run an edited chunk of a literate page in the module it tangles to,
+ * Run a literate page's module with one chunk as edited in its place,
  * then the page's examples against it (assets/fpl_chunkrun.py, as lit's
  * lit-example runs them). The page's code is the bootstrap package,
  * fpl-bootstrap.zip (01-bootstrap/ide/pack_analysis.py), unpacked once.
  * @param {string} path  the file the chunk tangles to, a repo path
  * @param {string} src   the chunk as edited, its references expanded
  * @param {string[]} examples  the text of each pycon fence of the page
+ * @param {string} orig  the chunk as tangled, its references expanded:
+ *   the lines of the file that src takes the place of
+ * @param {number} first  the file line orig starts near (lit graph)
  * @returns {Promise<{ ok: boolean, out: string,
  *   examples: {src:string, want:string, got:string, ok:boolean}[][] }>}
  */
-export async function runChunk(path, src, examples) {
+export async function runChunk(path, src, examples, orig, first) {
   const py = await ensurePyodide();
   codeReady ??= (async () => {
     const [run, zip] = await Promise.all([
@@ -161,7 +164,8 @@ export async function runChunk(path, src, examples) {
       { extractDir: "/code" });
   })().catch((e) => { codeReady = null; throw e; });
   await codeReady;
-  py.globals.set("_chunk_args", py.toPy([path, src, examples]));
+  py.globals.set("_chunk_args",
+    py.toPy([path, src, examples, orig, first]));
   const json = await py.runPythonAsync(
     "import fpl_chunkrun\nfpl_chunkrun.run('/code', *_chunk_args)");
   return JSON.parse(String(json));

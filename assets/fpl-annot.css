@@ -950,8 +950,8 @@ mark.fact.fpl-pulled { background: none; box-shadow: none; text-decoration: unde
 .fpl-play-btn:disabled { opacity: .4; cursor: default; }
 .fpl-play-btn.is-play { border-color: var(--fpl-play);
   background: var(--fpl-play); color: var(--fpl-bg); }
-.fpl-play-under { position: absolute; visibility: hidden;
-  pointer-events: none; }
+.fpl-play-under { position: absolute; height: 0; overflow: hidden;
+  visibility: hidden; pointer-events: none; }
 .fpl-play-ed { display: block; width: 100%; margin: 0 0 1rem;
   padding: .25rem .75rem .6rem; border: 1px solid var(--fpl-rule);
   border-top: 0; border-radius: 0 0 .25rem .25rem;
@@ -1033,3 +1033,6 @@ mark.fact.fpl-pulled { background: none; box-shadow: none; text-decoration: unde
   --fpl-good-wash: rgba(99, 184, 140, .14); --fpl-good-rule: #2f6b4a;
   --fpl-ins: #8fd3ad; --fpl-del: #f0a3a3;
   --fpl-del-wash: rgba(224, 133, 124, .16); }
+.fpl-play-bad { margin-left: auto; padding: 0; border: 0;
+  background: none; color: var(--fpl-bad); font: inherit;
+  text-decoration: underline; cursor: pointer; }

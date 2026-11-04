@@ -5601,16 +5601,20 @@
    * (Shift+Enter in the editor), a double click being the annotator's
    * to select a word with. Editing lays a
    * textarea over the fence's place, the fence kept beneath it so its
-   * addresses and spans stay; ↺ puts the tangled text back. ▶ runs the
-   * chunk, its references to other chunks written out from their
-   * fences, in a fresh import of its module, and then every example of
-   * the page (a pycon fence) against that, as lit's lit-example does
-   * (fpl-runtime.js runChunk, fpl_chunkrun.py). The runtime is fetched
-   * on the first ▶ only; how long it took is the state's title. Under
-   * the fence Uitvoer: the state as a dot and a word, and what the
-   * chunk printed or raised. An example that came out otherwise gets
+   * addresses and spans stay; ↺ puts the tangled text back and clears
+   * what a run showed. ▶ puts the chunk, its references to other
+   * chunks written out from their fences, in the place of its tangled
+   * lines in its file (lit graph's lines), imports that module fresh,
+   * and runs every example of the page (a pycon fence) against it, as
+   * lit's lit-example does (fpl-runtime.js runChunk, fpl_chunkrun.py):
+   * a chunk inside a function runs as that function. The runtime is
+   * fetched on the first ▶ only; how long it took is the state's
+   * title. Under the fence Uitvoer: the state as a dot and a word, how
+   * many examples now differ (a jump to the first), and what the
+   * module printed or raised. An example that came out otherwise gets
    * verwacht and kreeg under it, what differs struck through in kreeg,
-   * and the sign ≠ with wijkt af; one that holds a ✓ and klopt.
+   * and the sign ≠ with wijkt af; one that holds a ✓ and klopt. A
+   * fence lit names no lines of a Python file for has ▶ off.
    */
   let runtime = null, loadMs = 0;
   const runtimeOf = () => (runtime ??= (async () => {
@@ -5650,11 +5654,19 @@
       if (!c || !pre) return;
       const k = fences.get(c.label) ?? [];
       fences.set(c.label, [...k, pre.querySelector("code") ?? pre]);
-      const file = to.get(c.id)?.b.slice(5) ?? "";
-      if (file.endsWith(".py")) plays.push({ h, pre, file });
+      const e = to.get(c.id), file = e?.b.slice(5) ?? "";
+      if (file.endsWith(".py") && e.lines) {
+        plays.push({ h, pre, file, first: e.lines[0] });
+      } else {
+        const off = button("", null, "fpl-play-btn is-play");
+        off.append(ico("play"));
+        h.append(el("span", { className: "fpl-annot-ui fpl-play-bar" },
+          Object.assign(off, { disabled: true, ariaLabel: "Draai",
+            title: "Niet los te draaien: lit kent zijn regels niet" })));
+      }
     });
     const examples = [...body.querySelectorAll("pre.pycon")];
-    for (const { h, pre, file } of plays) {
+    for (const { h, pre, file, first } of plays) {
       const tangled = (pre.querySelector("code") ?? pre).textContent
         .replace(/\n$/, "");
       const box = pre.closest(".code-copy-outer-scaffold") ?? pre;
@@ -5683,6 +5695,11 @@
         ed?.remove(); ed = null;
         box.classList.remove("fpl-play-under");
         reset.disabled = true;
+        if (out) {   // what ran was the edit: its output and verdicts go
+          out.remove(); out = null;
+          examples.forEach((x) => judge(x, null));
+          draw();
+        }
       };
       const btn = (name, label, onclick) => {
         const b = button("", onclick, `fpl-play-btn is-${name}`);
@@ -5702,9 +5719,13 @@
           out.ariaLive = "polite";
         }
         box.after(out);
-        const state = (k, word, text) => {
+        const state = (k, word, text, off = 0) => {
           out.dataset.state = k;
+          const bad = () => body.querySelector('.fpl-ex[data-ok="0"]')
+            ?.scrollIntoView({ block: "center", behavior: "smooth" });
           out.replaceChildren(...[el("figcaption", {}, "Uitvoer",
+            off ? button(`${off} ${off > 1 ? "voorbeelden wijken"
+              : "voorbeeld wijkt"} af ↓`, bad, "fpl-play-bad") : null,
             el("span", { className: "fpl-play-state",
               title: loadMs ? `runtime geladen in ${
                 (loadMs / 1000).toFixed(1).replace(".", ",")} s` : "" },
@@ -5714,13 +5735,16 @@
         state("busy", runtime ? "draait" : "laadt");
         run.disabled = true;
         try {
-          const first = !runtime;
+          const cold = !runtime;
           const { m, t } = await runtimeOf();
           const src = expand(ed?.value ?? tangled, fences);
           const r = await m.runChunk(file, src,
-            examples.map((x) => x.textContent));
-          if (first) loadMs = performance.now() - t;
-          state(r.ok ? "ok" : "err", r.ok ? "klaar" : "fout", r.out);
+            examples.map((x) => x.textContent), expand(tangled, fences),
+            first);
+          if (cold) loadMs = performance.now() - t;
+          const off = r.examples.filter((x) => x.some((e) => !e.ok));
+          state(r.ok ? "ok" : "err", !r.ok ? "fout"
+            : r.out ? "klaar" : "klaar · geen uitvoer", r.out, off.length);
           examples.forEach((x, i) => judge(x, r.examples[i]));
           draw();   // the blocks below moved: their cards follow
         } catch (e) {
