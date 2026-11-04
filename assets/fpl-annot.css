@@ -896,11 +896,25 @@ mark.fact.fpl-pulled { background: none; box-shadow: none; text-decoration: unde
   --fpl-tx-dot: #cfa85a;
 }
 .fpl-tx-at, .fpl-tx-chip { display: inline-flex; align-items: center;
-  gap: 5px; margin-left: 1em; padding: 4px 8px; border-radius: 999px;
+  gap: 5px; padding: 4px 8px; border-radius: 999px;
   background: var(--fpl-tx-wash); color: var(--fpl-tx);
   font: 600 11px/1 var(--bs-body-font-family, sans-serif);
   white-space: nowrap; vertical-align: 1px; }
-.fpl-tx-chip { margin: 0; font-size: 12px; }
+.fpl-tx-chip, .fpl-tx-at { font-size: 12px; }
+a.fpl-tx-at { text-decoration: none; }
+a.fpl-tx-at:hover { text-decoration: underline; }
+/* a chunk's head: §n, its name, → where it lands (board V5a) */
+.fpl-head-raw { position: absolute; width: 1px; height: 1px;
+  padding: 0; border: 0; overflow: hidden; clip-path: inset(50%); }
+.fpl-head-bar { display: flex; flex-wrap: wrap; align-items: center;
+  gap: 4px 10px; min-height: 28px; white-space: normal;
+  font: 600 14px/1.4 var(--bs-body-font-family, sans-serif);
+  color: var(--fpl-fg); }
+.fpl-head-n { color: var(--fpl-mute); font-variant-numeric: tabular-nums; }
+.fpl-head-plus { color: var(--fpl-mute); font-weight: 400; }
+.fpl-head-also { color: var(--fpl-mute); font-size: 12px;
+  font-weight: 400; }
+.fpl-head-also a { color: var(--fpl-tx); }
 .fpl-tx-chip .fpl-ico svg { width: 13px; height: 13px; }
 [data-chunk] { border-radius: 4px; }
 .fpl-tx-same { outline: 2px solid var(--fpl-tx); outline-offset: 3px; }
@@ -1041,3 +1055,15 @@ mark.fact.fpl-pulled { background: none; box-shadow: none; text-decoration: unde
 .fpl-why:empty { display: none; }
 .fpl-chips input[aria-invalid] { border-color: var(--fpl-bad); }
 .fpl-pick small { flex-basis: 100%; color: var(--fpl-mute); }
+/* the head bar and its code read as one frame */
+.fpl-p > pre.fpl-chunk-head:has(> .fpl-head-bar) { padding: 6px 7.5rem 6px
+  12px; border: 1px solid rgba(233, 236, 239, .9); border-bottom: 0;
+  background: rgba(233, 236, 239, .65); }
+.fpl-p > pre.fpl-chunk-head:has(> .fpl-head-bar) + * div.sourceCode,
+.fpl-p > pre.fpl-chunk-head:has(> .fpl-head-bar) + div.sourceCode {
+  margin-top: 0; border-top: 1px solid var(--fpl-rule); }
+.fpl-p > pre.fpl-chunk-head:has(> .fpl-head-bar) .fpl-play-bar {
+  right: 8px; }
+:is([data-bs-theme="dark"], .quarto-dark) .fpl-p >
+  pre.fpl-chunk-head:has(> .fpl-head-bar) {
+  border-color: var(--fpl-rule); background: var(--fpl-wash); }

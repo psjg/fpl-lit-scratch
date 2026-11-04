@@ -5579,32 +5579,61 @@
     });
 
   /*
-   * Transclusion (board V5c). A fence's chip says where its lines land:
-   * the first file lit tangles it to, first line to last (lit graph's
-   * tangles edges, chunk n among the heads). The fences of one chunk (a
-   * name and its +=) light together under the mouse. A source of the
+   * Transclusion (board V5c). A fence's head is a bar: its number as
+   * §n and its name, then a chip → where its lines land, the first file
+   * lit tangles it to, first line to last (lit graph's tangles edges,
+   * chunk n among the heads), or the files its header names when lit
+   * names no lines; the chip leads to the page's Files. The raw header
+   * stays beneath for the addresses. A chunk written in more fences (a
+   * name and its +=) says ook in § with a link to each other one, and
+   * its fences light together under the mouse. A source of the
    * graph, a row quoting another file, stands after its target as that
    * file's lines, with its path, its commit and, when lit found the
    * text gone from the file, "bron gewijzigd sinds deze versie". Read
    * only: nothing flows back to the file.
    */
   const srcs = new Map();   // a source row's id -> what lit read of it
+  // <<n name\nfiles>>= as the page writes a chunk's header: n, name, files
+  const HEADER = /^<<(?:(\d[\d.]*)\s+)?([^\n]*?)(?:\n([^]*?))?>>(\+?=)\s*$/;
   const span = ([a, b]) => (a === b ? `${a}` : `${a}–${b}`);
   function transclude() {
     const cs = (code?.nodes ?? []).filter((n) => n.kind === "chunk");
     const to = new Map((code?.edges ?? [])
       .filter((e) => e.label === "tangles" && e.lines).map((e) => [e.a, e]));
-    const many = (c) => cs.filter((x) => x.label === c?.label).length > 1;
-    heads().forEach((h, i) => {
-      const c = cs[i], e = to.get(c?.id);
-      if (many(c)) h.parentElement.dataset.chunk = c.label;
-      if (!e) return;
-      // the path as the header writes it, from the root lit tangles under
-      const f = e.b.slice(5).split("/");
-      while (f.length > 1 && !h.textContent.includes(f.join("/"))) f.shift();
-      (h.querySelector("code") ?? h).append(el("span", {
-        className: "fpl-annot-ui fpl-tx-at",
-        title: e.b.slice(5) }, `${f.join("/")}:${span(e.lines)}`));
+    const hs = heads(), raw = hs.map((h) => h.textContent);
+    // the root lit tangles under, from a header that writes its path out
+    let base = "";
+    for (const [i, h] of raw.entries()) {
+      const path = to.get(cs[i]?.id)?.b.slice(5) ?? "", f = path.split("/");
+      while (f.length > 1 && !h.includes(f.join("/"))) f.shift();
+      if (path && h.includes(f.join("/"))) {
+        base = path.slice(0, path.length - f.join("/").length); break;
+      }
+    }
+    hs.forEach((h, i) => {
+      const c = cs[i], e = to.get(c?.id), m = HEADER.exec(raw[i]);
+      if (!m) return;
+      const files = (m[3] ?? "").split(/\s+/).filter(Boolean);
+      const at = e ? `${e.b.slice(5).replace(base, "")}:${span(e.lines)}`
+        : files.join(" ");
+      const twins = c ? hs.filter((x, k) => k !== i
+        && cs[k]?.label === c.label) : [];
+      if (twins.length) h.parentElement.dataset.chunk = c.label;
+      const code = h.querySelector("code") ?? h;
+      code.classList.add("fpl-head-raw");
+      code.ariaHidden = "true";
+      code.before(el("span", { className: "fpl-annot-ui fpl-head-bar" },
+        m[1] ? el("span", { className: "fpl-head-n" }, `§${m[1]}`) : null,
+        el("span", { className: "fpl-head-t" }, m[2], m[4] === "+="
+          ? el("span", { className: "fpl-head-plus",
+            title: "vult het blok aan" }, " +=") : null),
+        at ? el("a", { className: "fpl-tx-at", href: "#files",
+          title: files.length > 1 ? `ook in ${files.slice(1).join(", ")}`
+            : "" }, `→ ${at}`) : null,
+        twins.length ? el("span", { className: "fpl-head-also" }, "ook in ",
+          ...twins.flatMap((x, k) => [k ? ", " : "", el("a", {
+            href: `#${x.parentElement.id}` },
+          `§${x.parentElement.dataset.addr ?? "?"}`)])) : null));
     });
     for (const s of code?.sources ?? []) {
       const r = sidecar.find((x) => x.id === s.row);
