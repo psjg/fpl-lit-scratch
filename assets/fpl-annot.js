@@ -5994,10 +5994,9 @@
     const n = k === "m" ? f?.dataset.addr
       : f?.querySelector(".fpl-head-n")?.textContent;
     const key = spinAt[i].key, here = e === spinFrom;
-    // a second chip of one section is told apart by its ordinal
-    const j = !n ? 0
-      : [...spinChips.children].filter((x) => x.dataset.n === n).length;
-    const nj = j ? `${n}·${j + 1}` : n;
+    // a place of a section with others of its kind: its ordinal there
+    const sib = spinAt.filter((p) => p.k === k && p.e.closest(".fpl-p") === f);
+    const nj = sib.length > 1 ? `${n}·${sib.indexOf(spinAt[i]) + 1}` : n;
     const c = el("button", { type: "button",
       className: `fpl-spin-off ${k}${here ? " is-here" : ""}`,
       ariaLabel: `${key ? `${key}, ` : here ? "Oorsprong, " : ""}${KIND[k]}`
@@ -6008,7 +6007,6 @@
     `${nj ?? ""} ${up ? "↑" : "↓"}`);
     if (key) c.prepend(keyBox(key, i));
     c.dataset.i = i;
-    if (n) c.dataset.n = n;
     if (i === (spinFlight?.i ?? spinHot)) c.classList.add("is-hot");
     spinChips.append(c);
     // side by side along the edge, never over another chip there; a row
