@@ -5843,6 +5843,7 @@
     ev.preventDefault();
     ev.stopPropagation();
   }, true);
+  addEventListener("blur", () => spinAte.clear());   // its keyup went elsewhere
   legs.addEventListener("mouseover", (ev) => {
     const w = ev.target.closest("[data-i]");
     if (w) spinLight(+w.dataset.i);
