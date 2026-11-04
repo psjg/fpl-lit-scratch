@@ -5383,8 +5383,9 @@
 
   /*
    * Play (board V5a). A fence that lit tangles to a Python file can be
-   * edited and run in the page: its head carries ✎ (also a double click
-   * on the code), ↺ and ▶ (Shift+Enter in the editor). Editing lays a
+   * edited and run in the page: its head carries ✎, ↺ and ▶
+   * (Shift+Enter in the editor), a double click being the annotator's
+   * to select a word with. Editing lays a
    * textarea over the fence's place, the fence kept beneath it so its
    * addresses and spans stay; ↺ puts the tangled text back. ▶ runs the
    * chunk, its references to other chunks written out from their
@@ -5423,6 +5424,7 @@
       got.slice(got.length - b)];
   }
   function playable() {
+    if (snap) return;   // a saved copy has no runtime beside it
     const cs = (code?.nodes ?? []).filter((n) => n.kind === "chunk");
     const to = new Map((code?.edges ?? [])
       .filter((e) => e.label === "tangles").map((e) => [e.a, e]));
@@ -5479,9 +5481,6 @@
       reset.disabled = true;
       h.append(el("span", { className: "fpl-annot-ui fpl-play-bar" },
         pen, reset, run));
-      box.addEventListener("dblclick", (ev) => {
-        if (!ev.target.closest("a")) edit();
-      });
       let out = null;
       const go = async () => {
         if (!out) {
@@ -5509,6 +5508,7 @@
           if (first) loadMs = performance.now() - t;
           state(r.ok ? "ok" : "err", r.ok ? "klaar" : "fout", r.out);
           examples.forEach((x, i) => judge(x, r.examples[i]));
+          draw();   // the blocks below moved: their cards follow
         } catch (e) {
           state("err", "fout", String(e?.message ?? e));
         } finally {
