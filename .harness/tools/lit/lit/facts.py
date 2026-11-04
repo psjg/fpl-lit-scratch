@@ -1786,8 +1786,11 @@ def graph(
     section) and each file it tangles to (``file:<path>``). Edges: a
     chunk ``uses`` the chunks its body names (``<<name>>``, every chunk
     of that name), and ``tangles`` to a file with the number of lines it
-    gives it, read from the tangle rows. Generated, never committed:
-    `lit graph' writes it beside the page and the site ships it.
+    gives it, read from the tangle rows, and its first and last line
+    there (`spread'). Sources: each hand row that quotes another file
+    of the repo, a transclusion the page shows at its target
+    (`source'). Generated, never committed: `lit graph' writes it
+    beside the page and the site ships it.
     """
     rows, bad = generate(path, root)
     page = web.read(path.as_posix(), path.read_text(encoding="utf-8"))
@@ -1823,9 +1826,55 @@ def graph(
             lines[key] = lines.get(key, 0) + 1
     for f in dict.fromkeys(item for _, item in lines):
         nodes.append({"id": f"file:{f}", "kind": "file", "label": f})
+    at = spread(page)
     for (cid, f), n in lines.items():
-        edges.append({"a": cid, "b": f"file:{f}", "label": "tangles", "n": n})
-    return {"nodes": nodes, "edges": edges}, bad
+        edge: dict[str, object] = {"a": cid, "b": f"file:{f}", "n": n}
+        edges.append(edge | {"label": "tangles", "lines": at[cid]})
+    repo = top(root)
+    here = path.resolve().relative_to(repo).as_posix()
+    sources = [
+        source(r, (repo / cast("str", r["item"])).read_text(encoding="utf-8"))
+        for r in rows
+        if "state" in r and r.get("item") not in (None, here)
+    ]
+    return {"nodes": nodes, "edges": edges, "sources": sources}, bad
+
+
+def spread(page: web.Page) -> dict[str, list[int]]:
+    """Each chunk's first and last line in the page's first file.
+
+    The lines of its own body, so a chunk it uses in between is inside
+    the range; the first file is the one the tangle rows hold.
+    """
+    owner = {
+        c.line + 1 + k: cid
+        for _, c, cid in chunk_ids(page)
+        for k in range(len(c.body))
+    }
+    seen: dict[str, list[int]] = {}
+    for t in web.tangle(page)[0][:1]:
+        for n, o in enumerate(t.origin, 1):
+            seen.setdefault(owner.get(o, ""), []).append(n)
+    return {cid: [ns[0], ns[-1]] for cid, ns in seen.items() if cid}
+
+
+def source(row: Row, text: str) -> dict[str, object]:
+    """A hand row quoting another file of the repo, as a page shows it.
+
+    Its lines are counted where `locate' found its text, else where it
+    was written; ``changed`` when its text is not in the file as it
+    was, moved or not: the source changed since the row's commit.
+    """
+    at = cast("int", row.get("currentStart", row["start"]))
+    first = text.count("\n", 0, at) + 1
+    last = first + cast("str", row["text"]).count("\n")
+    return {
+        "row": row["id"],
+        "path": row["item"],
+        "lines": [first, last],
+        "commit": row.get("commit", ""),
+        "changed": row["state"] not in (VERS, MOVED),
+    }
 
 
 # A name in inline code: `name' (lit's alias) or `name`.

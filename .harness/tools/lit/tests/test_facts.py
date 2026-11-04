@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import json
 import re
 from collections import Counter
 from pathlib import Path
+from typing import cast
 
 import pytest
 from support import md, page
@@ -312,6 +314,38 @@ def test_graph_joins_chunks_by_use_and_to_their_file(tmp_path: Path) -> None:
     assert sum(e["n"] for e in tangled) == 7  # one per tangle row
     files = {n["id"] for n in nodes if n["kind"] == "file"}
     assert {e["b"] for e in tangled} == files
+
+
+def test_graph_gives_each_chunk_its_lines_in_the_file(tmp_path: Path) -> None:
+    """m.py: the docstring, then add (2 lines), then Box (4 lines)."""
+    (tmp_path / ".git").mkdir()
+    g, _ = facts.graph(page(tmp_path, "p.md", DEMO), tmp_path)
+    edges = cast("list[dict[str, object]]", g["edges"])
+    lines = [e["lines"] for e in edges if e["label"] == "tangles"]
+    assert lines == [[1, 1], [2, 3], [4, 7]]
+
+
+def test_graph_shows_a_source_and_whether_it_changed(tmp_path: Path) -> None:
+    """A row quoting another file is a source; an edit there shows."""
+    (tmp_path / ".git").mkdir()
+    path = page(tmp_path, "p.md", DEMO)
+    page(tmp_path, "tests/test_m.py", TESTS)
+    row = {
+        "id": "x-src",
+        "item": "tests/test_m.py",
+        "start": 0,
+        "end": 23,
+        "text": "import pytest\n\n\n@pytest",
+        "commit": "0" * 40,
+    }
+    path.with_suffix(".facts.json").write_text(json.dumps([row]))
+    g, bad = facts.graph(path, tmp_path)
+    assert bad == []
+    want = {"row": "x-src", "path": "tests/test_m.py", "lines": [1, 4]}
+    assert g["sources"] == [want | {"commit": "0" * 40, "changed": False}]
+    page(tmp_path, "tests/test_m.py", TESTS.replace("pytest", "os", 1))
+    g, _ = facts.graph(path, tmp_path)
+    assert cast("list[dict[str, object]]", g["sources"])[0]["changed"]
 
 
 def test_graph_reports_a_use_that_names_no_chunk(tmp_path: Path) -> None:

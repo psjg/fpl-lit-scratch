@@ -413,11 +413,11 @@ def test_anchor_verify_catches_a_wrong_commit(
 def test_the_lex_page_with_its_sidecar(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """The real page, its sidecar and ledger: 676 rows, no finding."""
+    """The real page, its sidecar and ledger: 677 rows, no finding."""
     monkeypatch.chdir(REPO)
     rows, bad = facts.generate(Path(LEX), Path("01-bootstrap"))
     assert bad == []
-    assert len(rows) == 676
+    assert len(rows) == 677
     assert rows[0]["item"] == LEX
 
 

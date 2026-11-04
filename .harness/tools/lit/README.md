@@ -439,6 +439,14 @@ They are the next work on this layer, not ideas:
    inline code in the prose, as `text` with `prefix` and `suffix` the way the overlay finds a
    row. Generated at publish, shipped, ignored by git as the graph is. The overlay makes each
    name in a fence a link to the three (board V5b).
+6. **Transclusion: built 2026-11-04.** The graph's `tangles` edges carry each chunk's first
+   and last line in the file (its own body's, so a chunk it uses in between is inside), and
+   `sources` lists each hand row whose `item` is another file of the repo: its path, its lines
+   where `locate` found it (else where it was written), its commit, and `changed` when its
+   text is no longer in the file as written (stale or dubbel; moved is not a change). Such a
+   row is written as any span row, by offsets or quote, with the page address it stands at as
+   its target. The overlay shows each fence's target as a chip and each source as a block of
+   lines at its target (board V5c). No two-way sync.
 
 ## Layout
 
