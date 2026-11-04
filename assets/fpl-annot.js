@@ -4105,7 +4105,7 @@
       autocomplete: "off",
       title: "Een label, naam/sub, of naam/{a:0.7,b:0.1}" });
     // why the field refused, under it (QA, block 6: not a far toast)
-    const why = el("small", { className: "fpl-why", role: "alert" });
+    const why = el("small", { className: "fpl-refused", role: "alert" });
     const refuse = (text) => {
       why.textContent = text;
       text ? more.setAttribute("aria-invalid", "true")

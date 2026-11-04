@@ -1057,9 +1057,9 @@ a.fpl-tx-at:hover { text-decoration: underline; }
 .fpl-play-bad { margin-left: auto; padding: 0; border: 0;
   background: none; color: var(--fpl-bad); font: inherit;
   text-decoration: underline; cursor: pointer; }
-.fpl-why { flex-basis: 100%; color: var(--fpl-bad); font-size: 12px;
+.fpl-refused { flex-basis: 100%; color: var(--fpl-bad); font-size: 12px;
   text-align: left; }
-.fpl-why:empty { display: none; }
+.fpl-refused:empty { display: none; }
 .fpl-chips input[aria-invalid] { border-color: var(--fpl-bad); }
 .fpl-pick small { flex-basis: 100%; color: var(--fpl-mute); }
 /* the head bar and its code read as one frame */
