@@ -5653,6 +5653,7 @@
   /** Shut the panel; quick when another opens at once. */
   function shutSpin(quick) {
     clearTimeout(spinT);
+    clearTimeout(spinDbl);   // a wedge's flight still waiting
     if (!quick) [spinKept, spinStill] = [false, ptr];
     if (spinPin) spinUnpin();
     body.querySelectorAll(".fpl-spin-n.is-lit")
@@ -5890,6 +5891,7 @@
   }
   /** Let go: the rays curve again, the wedges and keys go; the panel stays. */
   function spinUnpin() {
+    clearTimeout(spinDbl);
     spinPin = 0;
     spinTyped = "";
     spinAt.forEach((p) => { p.key = null; });
