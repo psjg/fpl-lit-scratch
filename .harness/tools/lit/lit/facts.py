@@ -998,7 +998,9 @@ def share_faults(row: Row) -> Iterator[str]:
     if not isinstance(shares, dict):
         yield "shares must be a map of label to number"
         return
-    own = set(cast("list[str]", labels)) if strings(labels) else set()
+    own: set[str] = (
+        set(cast("list[str]", labels)) if strings(labels) else set()
+    )
     vs = cast("dict[str, object]", shares)
     for k, v in vs.items():
         if k not in own:
