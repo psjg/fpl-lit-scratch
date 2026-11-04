@@ -322,3 +322,72 @@ def test_graph_reports_a_use_that_names_no_chunk(tmp_path: Path) -> None:
     )
     _, bad = facts.graph(path, tmp_path)
     assert [f.message for f in bad] == ["<<Gone>> undefined"]
+
+
+SPUN = """
+    # Spun
+
+    `twice' doubles, `Box.size' is a size, and “run” is no mention.
+
+    ```python
+    <<1 Twice
+    s.py>>=
+    def twice(x: int) -> int:
+        return x + x
+
+
+    class Box:
+        size = 1
+
+
+    def run() -> int:
+        <<Body>>
+    ```
+
+    ```python
+    <<1.1 Body>>=
+    s = "“”"; return twice(len(s)) + Box().size
+    ```
+    """
+
+
+def test_spin_finds_each_name_at_its_page_column(tmp_path: Path) -> None:
+    """A use in an included, indented line past non-ASCII is placed."""
+    (tmp_path / ".git").mkdir()
+    s, bad = facts.spin(page(tmp_path, "p.md", SPUN))
+    assert bad == []
+    names = {n["qualified"]: n for n in s["names"]}  # type: ignore[attr-defined]
+    assert sorted(names) == ["Box", "Box.size", "run", "twice"]
+    assert names["twice"]["def"] == {
+        "chunk": "chunk:Twice:1",
+        "n": 1,
+        "line": 1,
+        "col": 4,
+    }
+    use = {"chunk": "chunk:Body:1", "n": 2, "line": 1, "col": 17}
+    assert names["twice"]["uses"] == [use]
+    assert names["Box.size"]["uses"][0]["col"] == 39
+    assert [m["text"] for m in names["twice"]["mentions"]] == ["twice"]
+    assert names["twice"]["mentions"][0]["suffix"].startswith(" doubles")
+    assert names["Box.size"]["mentions"][0]["prefix"].endswith("doubles, ")
+    assert names["run"]["mentions"] == []  # a word, not inline code
+
+
+# Names on lex that no code uses and no prose mentions, with the reason
+# they may stay so: the spin would show them alone.
+LONELY: dict[str, str] = {}
+
+
+def test_spin_leaves_no_name_on_lex_alone(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Every name lex defines is used, mentioned or listed with why."""
+    monkeypatch.chdir(REPO)
+    s, bad = facts.spin(Path(LEX))
+    assert bad == []
+    alone = {
+        n["qualified"]
+        for n in s["names"]  # type: ignore[attr-defined]
+        if not n["uses"] and not n["mentions"]
+    }
+    assert alone == set(LONELY)

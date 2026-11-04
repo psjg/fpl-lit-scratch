@@ -30,6 +30,9 @@
     lit graph [PAGE ...]         each page's chunks, their uses and the
                                  files they tangle to, as
                                  <page stem>.graph.json beside it
+    lit spin [PAGE ...]          each name the code defines, its uses
+                                 and its mentions in the prose, as
+                                 <page stem>.spin.json beside it
     lit anchor --verify [PAGE ...]
                                  each hand row with a commit has its
                                  text at its place there (asks git)
@@ -429,6 +432,18 @@ def cmd_graph(args: argparse.Namespace) -> int:
     return report(findings, "graph", 1)
 
 
+def cmd_spin(args: argparse.Namespace) -> int:
+    """Write each page's names, their uses and mentions (facts.spin)."""
+    findings: list[web.Finding] = []
+    named = paths(args.root, args.pages)
+    for path in named:
+        s, bad = facts.spin(path)
+        findings += bad
+        text = json.dumps(s, ensure_ascii=False, indent=1) + "\n"
+        path.with_suffix(".spin.json").write_text(text, encoding="utf-8")
+    return report(findings, "spin", len(named))
+
+
 def cmd_anchor(args: argparse.Namespace) -> int:
     """Each valid hand row with a commit, against git."""
     named = paths(args.root, args.pages)
@@ -576,6 +591,9 @@ def parser() -> argparse.ArgumentParser:
     p = sub.add_parser("graph")
     p.add_argument("pages", nargs="*")
     p.set_defaults(fn=cmd_graph)
+    p = sub.add_parser("spin")
+    p.add_argument("pages", nargs="*")
+    p.set_defaults(fn=cmd_spin)
     p = sub.add_parser("anchor")
     p.add_argument("--verify", action="store_true", required=True)
     p.add_argument("pages", nargs="*")

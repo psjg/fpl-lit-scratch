@@ -432,6 +432,13 @@ They are the next work on this layer, not ideas:
    `_quarto-site.yml`, ignored by git. The overlay adds them to its graph: a chunk as a square,
    a tangle edge as wide as log2 of its lines, a click on a chunk goes to its code block; a row
    that names a chunk joins the two.
+5. **The spin: built 2026-11-04.** `lit spin [PAGE ...]` writes `<page stem>.spin.json`
+   beside each page: every name its Python defines (read with `ast`; no tree-sitter in the
+   environment), its definition and its uses as chunk addresses (the chunk's id, its place
+   among the page's chunks, the line of its body, the column), and its mentions, each name in
+   inline code in the prose, as `text` with `prefix` and `suffix` the way the overlay finds a
+   row. Generated at publish, shipped, ignored by git as the graph is. The overlay makes each
+   name in a fence a link to the three (board V5b).
 
 ## Layout
 

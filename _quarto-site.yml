@@ -10,6 +10,7 @@ project:
     - assets/fpl-nav.css
     - "01-bootstrap/**/*.facts.json"
     - "01-bootstrap/**/*.graph.json"
+    - "01-bootstrap/**/*.spin.json"
     - "01-bootstrap/**/*.decisions.tsv"
     - assets/fpl-runtime.js
     - assets/fpl-playground.js

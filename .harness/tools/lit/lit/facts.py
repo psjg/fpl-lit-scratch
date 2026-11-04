@@ -72,6 +72,7 @@ import io
 import json
 import re
 import tokenize
+from bisect import bisect_left
 from collections import Counter
 from collections.abc import (
     Callable,
@@ -1825,6 +1826,178 @@ def graph(
     for (cid, f), n in lines.items():
         edges.append({"a": cid, "b": f"file:{f}", "label": "tangles", "n": n})
     return {"nodes": nodes, "edges": edges}, bad
+
+
+# A name in inline code: `name' (lit's alias) or `name`.
+INLINE = re.compile(r"`(?P<name>[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*)['`]")
+
+# The shown text kept either side of a mention, as the overlay's rows
+# keep it (fpl-annot.js: prefix and suffix).
+SIDE = 32
+
+type Address = dict[str, object]
+type Name = dict[str, object]
+
+
+@dataclass
+class Spun:
+    """A page's names while `spin' reads them, and its findings.
+
+    Attributes:
+        w: The page, tangled.
+        order: Each chunk's id to its place among the page's chunks
+            (from 1) and the page line its header ends on.
+        names: Each qualified name to what `spin' writes for it.
+        member: Each member's plain name to the qualified names that
+            define it.
+        bad: What could not be placed.
+    """
+
+    w: Web
+    order: dict[str, tuple[int, int]]
+    names: dict[str, Name]
+    member: dict[str, list[str]]
+    bad: list[web.Finding]
+
+    def address(
+        self, t: web.Tangled, line: int, col: int, name: str
+    ) -> Address | None:
+        """Where ``name``, at byte ``col`` of file line ``line``, shows.
+
+        ``ast`` counts UTF-8 bytes, the page characters; a line the
+        tangle took from an included chunk carries that chunk's indent,
+        which the page does not show. None, and a finding, when the
+        page does not hold ``name`` there.
+        """
+        src = t.lines[line - 1]
+        at = t.origin[line - 1]
+        shown = self.w.text.lines[at - 1]
+        col = len(src.encode()[:col].decode()) - (len(src) - len(shown))
+        cid = self.w.chunk_at.get(at)
+        if cid is None or shown[col : col + len(name)] != name:
+            message = f"`{name}' is not at its column on the page"
+            self.bad.append(
+                web.Finding(self.w.page.path, at, "lit-spin", message)
+            )
+            return None
+        k, head = self.order[cid]
+        return {"chunk": cid, "n": k, "line": at - head, "col": col}
+
+    def define(self, t: web.Tangled) -> None:
+        """Each name a file defines, at its definition, once."""
+        for d in definitions(ast.parse(t.text)):
+            src = t.lines[d.line - 1]
+            m = re.search(rf"\b{re.escape(d.name)}\b", src)
+            if d.qualified in self.names or m is None:
+                continue
+            col = len(src[: m.start()].encode())
+            where = self.address(t, d.line, col, d.name)
+            if where is None:
+                continue
+            self.names[d.qualified] = {
+                "name": d.name,
+                "qualified": d.qualified,
+                "id": ident("def", d.qualified),
+                "def": where,
+                "uses": [],
+                "mentions": [],
+            }
+            if d.qualified != d.name:
+                self.member.setdefault(d.name, []).append(d.qualified)
+
+    def use(self, t: web.Tangled) -> None:
+        """Each load of a defined name, and each read of a member."""
+        for node in ast.walk(ast.parse(t.text)):
+            match node:
+                case ast.Name(id=n, ctx=ast.Load()) if n in self.names:
+                    hits = [(n, node.lineno, node.col_offset, n)]
+                case ast.Attribute(
+                    attr=a, end_lineno=int(line), end_col_offset=int(end)
+                ) if a in self.member:
+                    col = end - len(a.encode())
+                    hits = [(q, line, col, a) for q in self.member[a]]
+                case _:
+                    continue
+            for q, line, col, shown in hits:
+                where = self.address(t, line, col, shown)
+                uses = cast("list[Address]", self.names[q]["uses"])
+                if where is not None and where not in uses:
+                    uses.append(where)
+
+    def named(self, n: str) -> Name | None:
+        """What inline code ``n`` names: a name, a member, or nothing.
+
+        ``mod.Class.member`` is read from its last two parts, and a
+        member's plain name when one class alone defines it.
+        """
+        one = self.member.get(n, [])
+        tail = ".".join(n.split(".")[-2:])
+        lone = self.names[one[0]] if len(one) == 1 else None
+        return self.names.get(n) or self.names.get(tail) or lone
+
+    def mention(self, text: str) -> None:
+        """Each name in inline code in the prose, as a row finds it."""
+        shown, at = plain(text)
+        lines = self.w.text
+        for line in (x for s in self.w.page.sections for x in s.prose):
+            for m in INLINE.finditer("" if line.fenced else line.text):
+                hit = self.named(m["name"])
+                if hit is None:
+                    continue
+                i = bisect_left(at, lines.starts[line.number - 1] + m.start(1))
+                lo, hi = (bisect_left(at, o) for o in paragraph(lines, line))
+                end = i + len(m["name"])
+                cast("list[Address]", hit["mentions"]).append(
+                    {
+                        "text": m["name"],
+                        "prefix": shown[max(lo, i - SIDE) : i].lstrip(),
+                        "suffix": shown[end : min(hi, end + SIDE)].rstrip(),
+                    }
+                )
+
+
+def spin(path: Path) -> tuple[dict[str, object], list[web.Finding]]:
+    """Each name a page's code defines, where it is used and mentioned.
+
+    The spin of the overlay (board V5b): a name in a fence opens its
+    definition, its uses in code and its mentions in prose. Python is
+    read with `ast' (no tree-sitter in the environment); a fence of any
+    other language adds no name. A name's ``def`` and each of its
+    ``uses`` is an address in a chunk: its id as in the fact layer,
+    ``n`` its place among the page's chunks (from 1), ``line`` the line
+    of its body (from 1, the number Pandoc gives its code line) and
+    ``col`` the character the name starts at. A plain name is used
+    where it is loaded; ``Class.member`` wherever ``.member`` is read,
+    whatever the object. A mention is the name in inline code in the
+    prose, as a row of the overlay finds it: ``text`` with ``prefix``
+    and ``suffix``, read by `plain' and cut at the paragraph; a bare
+    word is no mention. A name the page does not show at its column is
+    a finding, never a wrong address. Generated, never committed: `lit
+    spin' writes it beside the page.
+    """
+    text = path.read_text(encoding="utf-8")
+    page = web.read(path.as_posix(), text)
+    order = {
+        cid: (k, c.line) for k, (_, c, cid) in enumerate(chunk_ids(page), 1)
+    }
+    s = Spun(Web.of(page, text), order, {}, {}, [])
+    for t in s.w.files:
+        s.define(t)
+    for t in s.w.files:
+        s.use(t)
+    s.mention(text)
+    return {"names": list(s.names.values())}, s.bad
+
+
+def paragraph(text: Text, line: web.Line) -> tuple[int, int]:
+    """The code points of the run of non-blank lines round ``line``."""
+    first = last = line.number
+    while first > 1 and text.lines[first - 2].strip():
+        first -= 1
+    while last < len(text.lines) and text.lines[last].strip():
+        last += 1
+    start, end, _ = text.place(first, last)
+    return start, end
 
 
 def generate(path: Path, root: Path) -> tuple[list[Row], list[web.Finding]]:

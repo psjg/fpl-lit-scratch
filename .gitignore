@@ -51,3 +51,5 @@ mutants/
 
 # lit graph writes each page's code graph beside it; generated at publish
 01-bootstrap/**/*.graph.json
+# and lit spin its names, their uses and mentions
+01-bootstrap/**/*.spin.json
