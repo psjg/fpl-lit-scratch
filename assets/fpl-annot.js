@@ -5897,7 +5897,9 @@
         d: `M49.5 ${y - 3}L55 ${y}L49.5 ${y + 3}Z` });
     }));
   }
+  // main's size moves the page; the window's height alone, the scale
   new ResizeObserver(() => requestAnimationFrame(mmMeasure)).observe(body);
+  addEventListener("resize", () => requestAnimationFrame(mmMeasure));
   /** Scroll so the window centres on the strip's y under the pointer. */
   const mmGo = (ev) => scrollTo(0, (ev.clientY - mm.getBoundingClientRect()
     .top) / mmK - innerHeight / 2);
