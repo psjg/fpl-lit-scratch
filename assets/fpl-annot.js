@@ -3045,8 +3045,9 @@
   let code = null;   // the page's code graph (lit graph), when the site shipped one
   // a page with no chunk has no graph nor spin: not asked for (no 404s)
   const chunky = !!body.querySelector(".fpl-chunk-head");
-  const coded = (snap ? Promise.resolve(snap.graph ?? null) : !chunky ? Promise.resolve(null)
-    : fetch(`${stem}.graph.json`).then((r) => (r.ok ? r.json() : null)))
+  const coded = (snap ? Promise.resolve(snap.graph ?? null)
+    : !chunky ? Promise.resolve(null)
+      : fetch(`${stem}.graph.json`).then((r) => (r.ok ? r.json() : null)))
     .catch(() => null).then((g) => { code = g && Array.isArray(g.nodes) && Array.isArray(g.edges) ? g : null; });
   function graphOf() {
     const nodes = new Map(), edges = [];
