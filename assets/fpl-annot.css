@@ -1105,7 +1105,8 @@ a.fpl-tx-at:hover { text-decoration: underline; }
 .fpl-spin-over .fpl-spin-leg.d.is-hot .l { stroke-width: 3; }
 .has-hot > .fpl-spin-leg:not(.is-hot) { opacity: .35; }
 /* a chip not lit stays legible: washed, its label solid */
-.has-hot > .fpl-spin-off:not(.is-hot) { background: var(--fpl-spin-wash);
+.has-hot > .fpl-spin-off:not(.is-hot) {
+  background: color-mix(in srgb, var(--fpl-spin) 12%, var(--fpl-bg));
   color: var(--fpl-spin); box-shadow: inset 0 0 0 1px var(--fpl-spin); }
 .fpl-spin-chips { position: fixed; left: 0; top: 0; z-index: 1000;
   pointer-events: none; }
