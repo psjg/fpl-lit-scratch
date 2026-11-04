@@ -5461,7 +5461,7 @@
    */
   const spinBox = el("div", { className: "fpl-annot-ui fpl-spin",
     hidden: true, role: "dialog", ariaLabel: "Spin" });
-  let spinOn = null, spinKept = false, spinT = 0;
+  let spinOn = null, spinKept = false, spinT = 0, spinDbl = 0;
   let spun = null;   // the page's names (lit spin), when the site shipped them
   const heads = () => [...body.querySelectorAll(".fpl-chunk-head")];
   /** The code line an address names, or null. */
@@ -5718,10 +5718,12 @@
       spinPinIt();
     } else if (spinOn && ![spinBox, spinChips, spinBack, mm, legs]
       .some((x) => x.contains(ev.target))) {
-      const i = ev.detail === 1 && getSelection().isCollapsed
-        ? wedgeAt(ev) : null;
+      // a wedge's flight waits out a double-click, which selects instead
+      clearTimeout(spinDbl);
+      const i = !spinPin ? null
+        : ev.detail > 1 || !getSelection().isCollapsed ? -1 : wedgeAt(ev);
       if (i == null) shutSpin();
-      else spinFly(i);
+      else if (i >= 0) spinDbl = setTimeout(() => spinFly(i), 220);
     }
   }, true);
   addEventListener("keydown", (ev) => {
@@ -5882,8 +5884,8 @@
       "aria-hidden": "true" });
     pin.append(vec("path", { d: "M4 1.5h4M5 1.5v3.5L3 7h6L7 5V1.5M6 7v3.5" }));
     spinBox.querySelector(".fpl-spin-head")
-      .append(el("span", { className: "fpl-spin-pin" }, pin, "vastgezet"));
-    toast("Esc los");
+      .append(el("span", { className: "fpl-spin-pin" }, pin, "vastgezet"),
+        el("span", { className: "fpl-spin-esc" }, el("kbd", {}, "Esc"), "los"));
     spinFrame();
   }
   /** Let go: the rays curve again, the wedges and keys go; the panel stays. */
@@ -5892,7 +5894,7 @@
     spinTyped = "";
     spinAt.forEach((p) => { p.key = null; });
     spinBox.classList.remove("is-pin");
-    spinBox.querySelectorAll(".fpl-spin-key, .fpl-spin-pin")
+    spinBox.querySelectorAll(".fpl-spin-key, .fpl-spin-pin, .fpl-spin-esc")
       .forEach((x) => x.remove());
     spinBox.querySelectorAll("[aria-keyshortcuts]")
       .forEach((b) => b.removeAttribute("aria-keyshortcuts"));
@@ -5967,13 +5969,13 @@
   // pinned, a wedge under the pointer lights itself, its line and its row
   let spinAim = null;
   addEventListener("mousemove", (ev) => {
-    const i = spinPin && !ev.target.closest?.(".fpl-spin-n") ? wedgeAt(ev)
-      : null;
+    // a name, the panel or a chip lights its own place
+    const own = ev.target.closest?.(".fpl-spin-n, .fpl-annot-ui");
+    const i = spinPin && !own ? wedgeAt(ev) : null;
     body.classList.toggle("fpl-spin-aim", i != null);
     if (i === spinAim) return;
     spinAim = i;
-    if (i != null || spinHot != null && !ev.target.closest?.(".fpl-spin-n"))
-      spinLight(i);
+    if (!own) spinLight(i);
   }, { passive: true });
   /** A mark of kind k whose tip is (x, y), the place dy away (+1 below). */
   function legEnd(k, x, y, dy) {
@@ -5990,16 +5992,21 @@
     const n = k === "m" ? f?.dataset.addr
       : f?.querySelector(".fpl-head-n")?.textContent;
     const key = spinAt[i].key, here = e === spinFrom;
+    // a second chip of one section is told apart by its ordinal
+    const j = !n ? 0
+      : [...spinChips.children].filter((x) => x.dataset.n === n).length;
+    const nj = j ? `${n}·${j + 1}` : n;
     const c = el("button", { type: "button",
       className: `fpl-spin-off ${k}${here ? " is-here" : ""}`,
       ariaLabel: `${key ? `${key}, ` : here ? "Oorsprong, " : ""}${KIND[k]}`
-        + ` in ${n ?? "?"}, ${up ? "eerder" : "verder"} op de pagina`,
+        + ` in ${nj ?? "?"}, ${up ? "eerder" : "verder"} op de pagina`,
       onclick: () => spinFly(i),
       onmouseenter: () => { clearTimeout(spinT); spinLight(i); },
       onmouseleave: () => { spinLight(null); spinGrace(); } },
-    `${n ?? ""} ${up ? "↑" : "↓"}`);
+    `${nj ?? ""} ${up ? "↑" : "↓"}`);
     if (key) c.prepend(keyBox(key, i));
     c.dataset.i = i;
+    if (n) c.dataset.n = n;
     if (i === (spinFlight?.i ?? spinHot)) c.classList.add("is-hot");
     spinChips.append(c);
     // side by side along the edge, never over another chip there; a row
@@ -6074,7 +6081,7 @@
     spinChips.replaceChildren();
     mmDraw();
     spinBack.hidden = !spinOn || !(history.state?.fplD > 0);
-    if (!spinOn) return;
+    if (!spinOn) return backChip([]);
     const W = innerWidth, H = innerHeight, o = spinFrom.getBoundingClientRect();
     legs.setAttribute("viewBox", `0 0 ${W} ${H}`);
     const now = performance.now(), hot = spinFlight?.i ?? spinHot;
@@ -6086,6 +6093,7 @@
     const tw = Math.min(1, age / 400), rays = [];
     const fade = Math.min(1, Math.max(0, (age - 300) / 200));
     const taken = [[], []];
+    spinBlock(taken);
     // the origin stays: out of the window, a chip at its edge, the lines
     // from there
     const fi = spinAt.findIndex((p) => p.e === spinFrom);
@@ -6180,16 +6188,30 @@
    * under the panel; narrow at the window's foot, over its edge chips.
    */
   const spinBack = el("button", { type: "button", hidden: true,
-    className: "fpl-annot-ui fpl-spin-back", ariaKeyShortcuts: "Alt+ArrowLeft",
+    className: "fpl-annot-ui fpl-spin-back", ariaLabel: `Terug (${BACK})`,
+    ariaKeyShortcuts: BACK === "⌘[" ? "Meta+BracketLeft" : "Alt+ArrowLeft",
     onclick: () => history.back() },
-  el("span", { ariaHidden: "true" }, "←"), "terug", el("kbd", {}, "Alt ←"));
+  el("span", { ariaHidden: "true" }, "←"), "terug", el("kbd", {}, BACK));
   function backChip(bottom) {
-    if (spinBack.hidden) return;
     const b = spinBox.getBoundingClientRect(), m = body.getBoundingClientRect();
-    const rows = Math.max(-1, ...bottom.map(([, , q]) => q)) + 1;
+    const rows = Math.max(-1, ...bottom.filter((t) => !t[3])
+      .map(([, , q]) => q)) + 1;
+    const foot = (rows ? 4 + 26 * rows : 0)
+      + (spinBack.hidden || wide() ? 0 : 38);
+    document.documentElement.style.setProperty("--fpl-lift", `${foot}px`);
+    if (spinBack.hidden) return;
     const [left, top] = wide() ? [b.left, Math.min(b.bottom + 8,
       innerHeight - 38)] : [m.left, innerHeight - 38 - 26 * rows];
     Object.assign(spinBack.style, { left: `${left}px`, top: `${top}px` });
+  }
+  /** Narrow, the panel's span on each chip row it covers, kept free. */
+  function spinBlock(taken) {
+    const b = spinBox.getBoundingClientRect(), H = innerHeight;
+    if (wide() || spinBox.hidden) return;
+    for (let row = 0; row < 40; row++)
+      for (const [up, t] of [[1, 8 + 26 * row], [0, H - 30 - 26 * row]])
+        if (t < b.bottom && t + 22 > b.top)
+          taken[up].push([b.left, b.right, row, true]);
   }
   const spinFrame = () => { raf ||= requestAnimationFrame(spinDraw); };
   addEventListener("scroll", spinFrame, { passive: true });
