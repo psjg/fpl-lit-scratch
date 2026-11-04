@@ -22,6 +22,9 @@
  *     prefix, suffix,  32 characters of shown text either side of it
  *     labels: [], note, targets: [], createdAt, updatedAt }  (times in ms)
  *
+ * and, on writing feedback (board V5d, below), shares {label: 0-1} and
+ * a span's proposal.
+ *
  * by is who wrote the row: the name this browser was given under Naam
  * in the bar's menu (localStorage["fpl-annot:by"]), or, for a row an agent
  * imported with lit, that agent's model id; a row without one shows no
@@ -1540,7 +1543,9 @@
    */
   function reasons(s) {
     const m = /^((?:[^{}/\s]+\/)*)\{([^{}]+)\}$/.exec(s);
-    if (!m) return LABEL.test(s) ? [[s, undefined]] : null;
+    // a share is typed in braces only: a/b:0.7 is no label, nor a/{b}
+    const bare = LABEL.test(s) && !/:\d*\.?\d+$/.test(s);
+    if (!m) return bare ? [[s, undefined]] : null;
     const got = m[2].split(",").map((x) => {
       const [, n, w] = /^([^:]+):(\d*\.?\d+)$/.exec(x.trim()) ?? [];
       return n && [m[1] + n, Number(w)];
