@@ -425,3 +425,35 @@ def test_spin_leaves_no_name_on_lex_alone(
         if not n["uses"] and not n["mentions"]
     }
     assert alone == set(LONELY)
+
+
+REFS = """
+    # Refs
+
+    ```python
+    <<1 A
+    m.py>>=
+    x = 1
+    ```
+
+    ```python
+    <<2 B
+    m.py>>=
+    <<C>>
+    ```
+
+    ```python
+    <<3 C>>=
+    y = 2
+    ```
+"""
+
+
+def test_graph_spans_a_chunk_of_uses_only(tmp_path: Path) -> None:
+    """B's body is a use: its lines are the ones C expands to."""
+    (tmp_path / ".git").mkdir()
+    g, bad = facts.graph(page(tmp_path, "p.md", REFS), tmp_path)
+    assert bad == []
+    edges = cast("list[dict[str, object]]", g["edges"])
+    got = {e["a"]: e["lines"] for e in edges if e["label"] == "tangles"}
+    assert list(got.values()) == [[1, 1], [3, 3], [3, 3]]  # A, B, C

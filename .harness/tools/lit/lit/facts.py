@@ -1894,7 +1894,9 @@ def graph(
     at = spread(page)
     for (cid, f), n in lines.items():
         edge: dict[str, object] = {"a": cid, "b": f"file:{f}", "n": n}
-        edges.append(edge | {"label": "tangles", "lines": at[cid]})
+        if cid in at:  # a chunk naming no lines of the first file
+            edge["lines"] = at[cid]
+        edges.append(edge | {"label": "tangles"})
     repo = top(root)
     here = path.resolve().relative_to(repo).as_posix()
     sources = [
@@ -1909,18 +1911,36 @@ def spread(page: web.Page) -> dict[str, list[int]]:
     """Each chunk's first and last line in the page's first file.
 
     The lines of its own body, so a chunk it uses in between is inside
-    the range; the first file is the one the tangle rows hold.
+    the range; the first file is the one the tangle rows hold. A chunk
+    whose body is only uses spans the lines those chunks expand to.
     """
+    ids = list(chunk_ids(page))
     owner = {
-        c.line + 1 + k: cid
-        for _, c, cid in chunk_ids(page)
-        for k in range(len(c.body))
+        c.line + 1 + k: cid for _, c, cid in ids for k in range(len(c.body))
     }
     seen: dict[str, list[int]] = {}
     for t in web.tangle(page)[0][:1]:
         for n, o in enumerate(t.origin, 1):
             seen.setdefault(owner.get(o, ""), []).append(n)
-    return {cid: [ns[0], ns[-1]] for cid, ns in seen.items() if cid}
+    got = {cid: [ns[0], ns[-1]] for cid, ns in seen.items() if cid}
+    named: dict[str, list[str]] = {}
+    for _, c, cid in ids:
+        named.setdefault(web.norm(c.name), []).append(cid)
+    grew = True
+    while grew:  # a use of a use: until no chunk gains a range
+        grew = False
+        for _, c, cid in ids:
+            ns = [
+                n
+                for b in c.body
+                if cid not in got and (m := web.USE.fullmatch(b))
+                for d in named.get(web.norm(m["name"]), [])
+                for n in got.get(d, [])
+            ]
+            if ns:
+                got[cid] = [min(ns), max(ns)]
+                grew = True
+    return got
 
 
 def source(row: Row, text: str) -> dict[str, object]:
