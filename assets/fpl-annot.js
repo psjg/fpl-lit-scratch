@@ -3043,7 +3043,10 @@
    * which is about the edge's other end (none on a code edge).
    */
   let code = null;   // the page's code graph (lit graph), when the site shipped one
-  const coded = (snap ? Promise.resolve(snap.graph ?? null) : fetch(`${stem}.graph.json`).then((r) => (r.ok ? r.json() : null)))
+  // a page with no chunk has no graph nor spin: not asked for (no 404s)
+  const chunky = !!body.querySelector(".fpl-chunk-head");
+  const coded = (snap ? Promise.resolve(snap.graph ?? null) : !chunky ? Promise.resolve(null)
+    : fetch(`${stem}.graph.json`).then((r) => (r.ok ? r.json() : null)))
     .catch(() => null).then((g) => { code = g && Array.isArray(g.nodes) && Array.isArray(g.edges) ? g : null; });
   function graphOf() {
     const nodes = new Map(), edges = [];
@@ -4416,7 +4419,11 @@
       drawLines();
     } else {
       for (const r of lost) margin.append(cardOf(r));
-      for (const { r, at: { m } } of found) {
+      // by where each span starts, from the last up: each goes right under
+      // its block, so a block's cards read in text order (QA, block 6)
+      const first = [...found].sort((a, b) => a.at.top - b.at.top
+        || (a.at.m.compareDocumentPosition(b.at.m) & 2) - 1);
+      for (const { r, at: { m } } of first.reverse()) {
         const c = cardOf(r);
         c.classList.add("fpl-inline");
         (m.closest("p, li, pre, h1, h2, h3, h4, td, th, blockquote") ?? m).after(c);
@@ -5608,7 +5615,7 @@
       spinBox.querySelector(".fpl-spin-row")?.focus();
     }
   }, true);
-  (snap ? Promise.resolve(snap.spin ?? null)
+  (snap ? Promise.resolve(snap.spin ?? null) : !chunky ? Promise.resolve(null)
     : fetch(`${stem}.spin.json`).then((r) => (r.ok ? r.json() : null)))
     .catch(() => null).then((s) => {
       spun = Array.isArray(s?.names) ? s.names : null;
@@ -5625,7 +5632,8 @@
    * name and its +=) says ook in § with a link to each other one, and
    * its fences light together under the mouse. A source of the
    * graph, a row quoting another file, stands after its target as that
-   * file's lines, with its path, its commit and, when lit found the
+   * file's lines, in a fence's frame, with its path, its commit (@hash),
+   * its note and, when lit found the
    * text gone from the file, "bron gewijzigd sinds deze versie". Read
    * only: nothing flows back to the file.
    */
@@ -5689,9 +5697,11 @@
         el("span", { className: "fpl-tx-chip" }, ico("link"), "transclusie"),
         el("span", { className: "fpl-tx-path", title: s.path }, at),
         s.commit ? el("code", { className: "fpl-tx-hash",
-          title: s.commit }, s.commit.slice(0, 7)) : null,
+          title: `versie ${s.commit}` }, `@${s.commit.slice(0, 7)}`) : null,
         s.changed ? el("span", { className: "fpl-tx-state" },
-          "bron gewijzigd sinds deze versie") : null),
+          "bron gewijzigd sinds deze versie") : null,
+        // why it stands here, in every mode (QA, block 6)
+        r.note ? el("p", { className: "fpl-tx-note" }, r.note) : null),
       el("div", { className: "fpl-tx-code" }, ln,
         el("pre", {}, el("code", {}, r.text)))));
       srcs.set(s.row, s);
@@ -5888,10 +5898,15 @@
   });
 
   document.body.append(pop, menu, views, panel, cardMenu, spinBox);
-  const decisions = (snap ? Promise.resolve(snap.decisions ?? "") : fetch(`${stem}.decisions.tsv`).then((r) => (r.ok ? r.text() : "")))
+  // the decisions are lit facts' too: asked for only beside a sidecar
+  const shipped = snap ? null
+    : fetch(`${stem}.facts.json`).catch(() => null);
+  const decisions = (snap ? Promise.resolve(snap.decisions ?? "")
+    : shipped.then((r) => (r?.ok ? fetch(`${stem}.decisions.tsv`) : null))
+      .then((r) => (r?.ok ? r.text() : "")))
     .catch(() => "");
   const sidecarRows = (snap ? Promise.resolve(snap.rows)
-    : fetch(`${stem}.facts.json`).then((r) => (r.ok ? r.json() : [])))
+    : shipped.then((r) => (r?.ok ? r.json() : [])))
     .catch(() => []);
   // the graph first: a transclusion's block is the place its card stands at
   Promise.all([sidecarRows, decisions, coded]).then(([got, tsv]) => {

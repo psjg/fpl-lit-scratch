@@ -925,12 +925,18 @@ a.fpl-tx-at:hover { text-decoration: underline; }
 .fpl-tx-chip .fpl-ico svg { width: 13px; height: 13px; }
 [data-chunk] { border-radius: 4px; }
 .fpl-tx-same { outline: 2px solid var(--fpl-tx); outline-offset: 3px; }
-.fpl-tx { margin: 0 0 1rem; border: 1px solid var(--fpl-rule);
-  border-radius: 6px; background: var(--fpl-wash); overflow: hidden; }
+/* a transclusion wears a lit fence's frame: one wash, the head a bar */
+.fpl-tx { margin: 0 0 1rem; border: 1px solid rgba(233, 236, 239, .9);
+  border-radius: 4px; background: rgba(233, 236, 239, .65);
+  overflow: hidden; }
+:is([data-bs-theme="dark"], .quarto-dark) .fpl-tx {
+  border-color: var(--fpl-rule); background: var(--fpl-wash); }
 .fpl-tx-head { display: flex; flex-wrap: wrap; align-items: center;
   gap: 4px 10px; min-height: 40px; padding: 6px 12px;
-  box-sizing: border-box; background: var(--fpl-bg);
-  border-bottom: 1px solid var(--fpl-rule); font-size: 14px; }
+  box-sizing: border-box; border-bottom: 1px solid var(--fpl-rule);
+  font-size: 14px; }
+.fpl-tx-note { flex-basis: 100%; margin: 0; color: var(--fpl-fg);
+  font-size: 14px; }
 .fpl-tx-path, .fpl-tx-hash { font: 13px SFMono-Regular, Menlo, monospace;
   background: none; padding: 0; }
 .fpl-tx-path { color: var(--fpl-fg); }
@@ -939,8 +945,8 @@ a.fpl-tx-at:hover { text-decoration: underline; }
   align-items: center; gap: 7px; font-size: 13px; color: var(--fpl-lost); }
 .fpl-tx-state::before { content: ""; width: 9px; height: 9px;
   border-radius: 50%; background: var(--fpl-tx-dot); }
-.fpl-tx-code { display: flex; padding: 10px 0;
-  font: 13px/19px SFMono-Regular, Menlo, monospace; }
+.fpl-tx-code { display: flex; padding: 6px 0;
+  font: .875em/1.5 var(--bs-font-monospace, monospace); }
 .fpl-tx-code pre { margin: 0; padding: 0; border: 0; background: none;
   font: inherit; color: var(--fpl-fg); overflow-x: auto; }
 .fpl-tx-code pre code { font: inherit; background: none; padding: 0;
