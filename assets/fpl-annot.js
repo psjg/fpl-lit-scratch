@@ -5639,6 +5639,7 @@
   function shutSpin(quick) {
     clearTimeout(spinT);
     if (!quick) spinKept = false;
+    if (spinPin) spinUnpin();
     body.querySelectorAll(".fpl-spin-n.is-lit")
       .forEach((e) => e.classList.remove("is-lit", "fpl-spin-def",
         "fpl-spin-from"));
@@ -5673,18 +5674,22 @@
     const n = ev.target.closest?.(".fpl-spin-n");
     if (n) {
       ev.preventDefault();
+      if (spinPin && spinOn === n.dataset.spin) return spinUnpin();
       if (spinOn !== n.dataset.spin) openSpin(n.dataset.spin, n);
       spinKept = true;
-    } else if (spinOn && !spinBox.contains(ev.target)
-      && !spinChips.contains(ev.target) && !mm.contains(ev.target)) shutSpin();
+      spinPinIt();
+    } else if (spinOn && ![spinBox, spinChips, mm, legs]
+      .some((x) => x.contains(ev.target))) shutSpin();
   }, true);
   addEventListener("keydown", (ev) => {
     if (ev.key === "Escape" && spinOn) { shutSpin(); ev.stopPropagation(); }
+    if (spinPin && spinKey(ev)) return;
     const n = ev.target.closest?.(".fpl-spin-n");
     if (n && (ev.key === "Enter" || ev.key === " ")) {
       ev.preventDefault();
       openSpin(n.dataset.spin, n);
       spinKept = true;
+      spinPinIt();
       spinBox.querySelector(".fpl-spin-row")?.focus();
     }
   }, true);
@@ -5707,6 +5712,18 @@
    * after a scroll or resize. A row under the mouse lights its line, a
    * place under the mouse its row and line.
    *
+   * A click on the name pins the spin (boards V5e1, V5f). In about 400 ms
+   * each line is pulled taut to a straight ray, its bow swinging across
+   * the ray and dying out (a damped cosine, drawn per frame), and then
+   * main's column fades into wedges, one per place round the name, each
+   * side halfway to the next ray: a click in a wedge goes to its place,
+   * so pinned the layer takes clicks. Each place has a home-row key, on
+   * its line's end, its chip and its row: a for the definitie, then
+   * s d f g h j k l, then pairs, none a prefix of another (Vimium's
+   * hints); the key goes there. The keys hold only while pinned, so j, k
+   * and / are the page's otherwise. A click on the name lets go of it,
+   * the panel kept; Esc shuts the spin. Reduced motion: no swing, no fade.
+   *
    * Wide, a chunked page has a minimap: a strip of MM taken from the
    * right of main, so the margin stays where it was. It is the whole page
    * scaled to the window's height, measured from the DOM whenever main
@@ -5725,6 +5742,78 @@
   const spinChips = el("div", { className: "fpl-annot-ui fpl-spin-chips" });
   const KIND = { d: "Definitie", u: "Gebruik", m: "Vermelding" };
   let spinAt = [], spinFrom = null, spinHot = null, raf = 0;
+  let spinPin = 0, spinTyped = "";   // when it was pinned (ms), keys typed
+  const spinAte = new Set();   // keys taken down here, so up as well
+  const spinFly = (i) => [...spinBox.querySelectorAll(".fpl-spin-row")]
+    .find((b) => b.spinAt === spinAt[i]?.e)?.click();   // unit 20: flight
+  /** Keys for n places from the home row, none a prefix of another. */
+  function spinKeys(n) {
+    const L = [..."sdfghjkl"];
+    let p = 0;
+    while (p < L.length && L.length - p + p * L.length < n) p++;
+    return [...L.slice(0, L.length - p),
+      ...L.slice(L.length - p).flatMap((c) => L.map((d) => c + d))];
+  }
+  /** Place i's key as a box: on its line's end, in its chip and row. */
+  function keyBox(key, i) {
+    const k = el("kbd", { className: "fpl-spin-key", ariaHidden: "true" }, key);
+    k.dataset.i = i;
+    return k;
+  }
+  /** Pin the open spin: taut rays, wedges, a key per place. */
+  function spinPinIt() {
+    if (spinPin || !spinOn) return;
+    spinPin = performance.now();
+    spinTyped = "";
+    const rest = spinAt.filter((p) => p.k !== "d" && p.e !== spinFrom);
+    const ks = spinKeys(rest.length);
+    rest.forEach((p, j) => { p.key = ks[j]; });
+    const d = spinAt.find((p) => p.k === "d" && p.e !== spinFrom);
+    if (d) d.key = "a";   // the definitie's, always
+    spinBox.classList.add("is-pin");
+    for (const b of spinBox.querySelectorAll(".fpl-spin-row")) {
+      const p = spinAt.find((x) => x.e === b.spinAt);
+      if (!p?.key) continue;
+      b.prepend(keyBox(p.key, spinAt.indexOf(p)));
+      b.ariaKeyShortcuts = p.key;
+    }
+    const pin = vec("svg", { width: 11, height: 11, viewBox: "0 0 12 12",
+      "aria-hidden": "true" });
+    pin.append(vec("path", { d: "M4 1.5h4M5 1.5v3.5L3 7h6L7 5V1.5M6 7v3.5" }));
+    spinBox.querySelector(".fpl-spin-head")
+      .append(el("span", { className: "fpl-spin-pin" }, pin, "vastgezet"));
+    toast("Esc los");
+    spinFrame();
+  }
+  /** Let go: the rays curve again, the wedges and keys go; the panel stays. */
+  function spinUnpin() {
+    spinPin = 0;
+    spinTyped = "";
+    spinAt.forEach((p) => { p.key = null; });
+    spinBox.classList.remove("is-pin");
+    spinBox.querySelectorAll(".fpl-spin-key, .fpl-spin-pin")
+      .forEach((x) => x.remove());
+    spinBox.querySelectorAll("[aria-keyshortcuts]")
+      .forEach((b) => b.removeAttribute("aria-keyshortcuts"));
+    spinFrame();
+  }
+  /** A key while pinned: a place's key goes there, a prefix waits. */
+  function spinKey(ev) {
+    if (ev.metaKey || ev.ctrlKey || ev.altKey || !/^[a-z]$/.test(ev.key)
+      || ev.target.closest?.("input, textarea, select, [contenteditable]"))
+      return false;
+    const s = spinTyped + ev.key, i = spinAt.findIndex((p) => p.key === s);
+    if (i < 0 && !spinAt.some((p) => p.key?.startsWith(s))) {
+      spinTyped = "";
+      return false;
+    }
+    ev.preventDefault();
+    ev.stopPropagation();
+    spinAte.add(ev.key);
+    spinTyped = i < 0 ? s : "";
+    if (i >= 0) spinFly(i);
+    return true;
+  }
   /** The place a node of the open name belongs to: a cut name's lead. */
   function spinIx(n) {
     while (n.previousSibling?.dataset?.spin === spinOn) n = n.previousSibling;
@@ -5736,7 +5825,8 @@
     const e = spinAt[spinHot]?.e;
     legs.classList.toggle("has-hot", e != null);
     spinChips.classList.toggle("has-hot", e != null);
-    for (const x of [...legs.children, ...spinChips.children])
+    for (const x of [...legs.querySelectorAll("[data-i]"),
+      ...spinChips.children])
       x.classList.toggle("is-hot", +x.dataset.i === spinHot);
     for (const b of spinBox.querySelectorAll(".fpl-spin-row"))
       b.classList.toggle("is-hot", b.spinAt === e);
@@ -5746,6 +5836,25 @@
     spinLight(b ? spinAt.findIndex((p) => p.e === b.spinAt) : null);
   });
   spinBox.addEventListener("mouseleave", () => spinLight(null));
+  // Quarto's search opens on a key's keyup (f, s): not on one of ours
+  for (const t of ["keypress", "keyup"]) addEventListener(t, (ev) => {
+    if (!spinAte.has(ev.key)) return;
+    if (t === "keyup") spinAte.delete(ev.key);
+    ev.preventDefault();
+    ev.stopPropagation();
+  }, true);
+  legs.addEventListener("mouseover", (ev) => {
+    const w = ev.target.closest("[data-i]");
+    if (w) spinLight(+w.dataset.i);
+  });
+  legs.addEventListener("mouseout", (ev) => {
+    if (!legs.contains(ev.relatedTarget)) spinLight(null);
+  });
+  // pinned, a wedge goes to its place (the name is a hole in them)
+  legs.addEventListener("click", (ev) => {
+    const w = ev.target.closest("[data-i]");
+    if (w) spinFly(+w.dataset.i);
+  });
   /** A mark of kind k whose tip is (x, y), the place dy away (+1 below). */
   function legEnd(k, x, y, dy) {
     if (k === "d") return vec("rect", { class: "k", x: x - 3.5,
@@ -5760,17 +5869,18 @@
     const { e, k } = spinAt[i], f = e.closest(".fpl-p");
     const n = k === "m" ? f?.dataset.addr
       : f?.querySelector(".fpl-head-n")?.textContent;
+    const key = spinAt[i].key;
     const c = el("button", { type: "button",
       className: `fpl-spin-off ${k}`,
-      ariaLabel: `${KIND[k]} in ${n ?? "?"}, ${up ? "eerder" : "verder"}`
-        + " op de pagina",
-      onclick: () => [...spinBox.querySelectorAll(".fpl-spin-row")]
-        .find((b) => b.spinAt === e)?.click(),
+      ariaLabel: `${key ? `${key}, ` : ""}${KIND[k]} in ${n ?? "?"}, `
+        + `${up ? "eerder" : "verder"} op de pagina`,
+      onclick: () => spinFly(i),
       onmouseenter: () => { clearTimeout(spinT); spinLight(i); },
       onmouseleave: () => {
         spinLight(null);
         if (!spinKept) spinT = setTimeout(shutSpin, 300);
       } }, `${n ?? ""} ${up ? "↑" : "↓"}`);
+    if (key) c.prepend(keyBox(key, i));
     c.dataset.i = i;
     if (i === spinHot) c.classList.add("is-hot");
     spinChips.append(c);
@@ -5789,6 +5899,56 @@
     Object.assign(c.style, { left: `${l}px`, top: `${t}px` });
     return [l + w / 2, up ? t + 22 : t];
   }
+  /**
+   * The leg from (x0, y0) to (x1, y1). At rest (t 0) a curve that leaves
+   * the name sideways and comes in upright; pinned, t of the way to a
+   * straight ray: the curve's bow across the ray swings to the other side
+   * and back, smaller each time, and what lies along the ray goes.
+   */
+  function legPath(x0, y0, x1, y1, t) {
+    if (t >= 1) return `M${x0} ${y0}L${x1} ${y1}`;
+    const c = [x0 + 16 + (x1 - x0) / 2, y0 + (y1 - y0) / 8,
+      x1, y1 - (y1 - y0) / 3];
+    const dx = x1 - x0, dy = y1 - y0, L = Math.hypot(dx, dy) || 1;
+    const [ux, uy] = [dx / L, dy / L];
+    const g = Math.exp(-2.5 * t) * Math.cos(3 * Math.PI * t) * (1 - t);
+    for (const j of t > 0 ? [0, 2] : []) {
+      const sx = x0 + dx * (j + 2) / 6, sy = y0 + dy * (j + 2) / 6;
+      const n = (c[j + 1] - sy) * ux - (c[j] - sx) * uy;   // across
+      const a = (c[j] - sx) * ux + (c[j + 1] - sy) * uy;   // along
+      c[j] = sx - uy * n * g + ux * a * (1 - t) ** 3;
+      c[j + 1] = sy + ux * n * g + uy * a * (1 - t) ** 3;
+    }
+    return `M${x0} ${y0}C${c.join(" ")} ${x1} ${y1}`;
+  }
+  /**
+   * The wedges round (x0, y0), one per ray [i, angle], each side halfway
+   * to the next ray, cut to main's column in the window, less the name.
+   */
+  function wedges(x0, y0, rays, o, fade) {
+    const m = body.getBoundingClientRect(), H = innerHeight, R = 1e4;
+    const P = Math.PI, n = rays.length;
+    const cut = vec("clipPath", { id: "fpl-spin-cut" });
+    cut.append(vec("path", { "clip-rule": "evenodd", d: `M${m.left} 0`
+      + `H${m.right}V${H}H${m.left}ZM${o.left - 2} ${o.top - 2}`
+      + `H${o.right + 2}V${o.bottom + 2}H${o.left - 2}Z` }));
+    const g = vec("g", { class: "fpl-spin-wedges",
+      "clip-path": "url(#fpl-spin-cut)", opacity: fade });
+    rays.sort((a, b) => a[1] - b[1]).forEach(([i, a], j) => {
+      const lo = (a + rays[(j + n - 1) % n][1] - (j ? 0 : 2 * P)) / 2;
+      const hi = (a + rays[(j + 1) % n][1] + (j < n - 1 ? 0 : 2 * P)) / 2;
+      const q = Math.ceil((hi - lo) / (P / 2));
+      let d = `M${x0} ${y0}`;
+      for (let z = 0; z <= q; z++) {
+        const b = lo + (hi - lo) * z / q;
+        d += `L${x0 + R * Math.cos(b)} ${y0 + R * Math.sin(b)}`;
+      }
+      const w = g.appendChild(vec("path", { d: `${d}Z`, "data-i": i }));
+      w.classList.toggle("odd", j % 2 === 1);
+      w.classList.toggle("is-hot", i === spinHot);
+    });
+    return [cut, g];
+  }
   /** Draw the layer and the minimap's marks and window for this frame. */
   function spinDraw() {
     raf = 0;
@@ -5798,6 +5958,11 @@
     if (!spinOn) return;
     const W = innerWidth, H = innerHeight, o = spinFrom.getBoundingClientRect();
     legs.setAttribute("viewBox", `0 0 ${W} ${H}`);
+    // pinned: the twang's 400 ms, then the wedges' 200; calm, at once
+    const age = !spinPin ? 0 : matchMedia("(prefers-reduced-motion: reduce)")
+      .matches ? 1e9 : performance.now() - spinPin;
+    const tw = Math.min(1, age / 400), rays = [];
+    const fade = Math.min(1, Math.max(0, (age - 300) / 200));
     const x0 = Math.min(Math.max(o.right, 0), W);
     const y0 = Math.min(Math.max(o.top + o.height / 2, 0), H);
     const taken = [[], []];
@@ -5822,11 +5987,26 @@
         g.classList.add("is-off");
         [x1, y1] = edgeChip(i, up, x1, taken[+up]);
       } else g.append(legEnd(k, x1, y1, dy));
-      const ye = off ? y1 : y1 - (k === "m" ? 8 : 7) * dy;
-      g.prepend(vec("path", { class: "l", d: `M${x0} ${y0}C${x0 + 16
-        + (x1 - x0) / 2} ${y0 + (ye - y0) / 8} ${x1} ${ye - (ye - y0) / 3}`
-        + ` ${x1} ${ye}` }));
+      let [xe, ye] = [x1, off ? y1 : y1 - (k === "m" ? 8 : 7) * dy];
+      const a = Math.atan2(y1 - y0, x1 - x0);
+      if (spinPin && k === "m" && !off) {   // the arrow along its ray
+        [xe, ye] = [x1 - 8 * Math.cos(a), y1 - 8 * Math.sin(a)];
+        g.lastChild.setAttribute("transform",
+          `rotate(${a * 180 / Math.PI - 90 * dy} ${x1} ${y1})`);
+      }
+      g.prepend(vec("path", { class: "l",
+        d: legPath(x0, y0, xe, ye, spinPin ? tw : 0) }));
+      if (!spinPin) continue;
+      rays.push([i, a]);
+      if (off || !spinAt[i].key) continue;
+      const kb = spinChips.appendChild(keyBox(spinAt[i].key, i));
+      kb.classList.toggle("is-hot", i === spinHot);
+      Object.assign(kb.style, { left: `${x1 + 6}px`,
+        top: `${y1 - 3.5 * dy - 8.5}px` });
     }
+    if (!spinPin) return;
+    legs.prepend(...wedges(x0, y0, rays, o, fade));
+    if (fade < 1) spinFrame();
   }
   const spinFrame = () => { raf ||= requestAnimationFrame(spinDraw); };
   addEventListener("scroll", spinFrame, { passive: true });

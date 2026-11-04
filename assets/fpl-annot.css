@@ -1137,3 +1137,33 @@ body.fpl-minimap main { max-width: calc(100% - 64px); }
 .fpl-mm .f { fill: var(--fpl-wash); }
 .fpl-mm-win { fill: color-mix(in srgb, var(--fpl-fg) 7%, transparent);
   stroke: var(--fpl-edge); }
+
+/* the spin pinned (boards V5e1, V5f): a wedge per place over main's
+   column, a key on each place's end, chip and row */
+.fpl-spin-wedges path { fill: var(--fpl-spin); fill-opacity: .07;
+  stroke: var(--fpl-spin); stroke-opacity: .15; pointer-events: auto;
+  cursor: pointer; }
+.fpl-spin-wedges path.odd { fill-opacity: .045; }
+.fpl-spin-wedges path.is-hot { fill-opacity: .13; }
+.fpl-spin-key { display: inline-flex; align-items: center;
+  justify-content: center; width: 17px; height: 17px; padding: 0;
+  box-sizing: border-box; border: 1px solid var(--fpl-spin);
+  border-radius: 3px; background: var(--fpl-bg); color: var(--fpl-spin);
+  font: 700 11.5px/1 SFMono-Regular, Menlo, monospace;
+  box-shadow: 0 1px 2px rgba(20, 30, 50, .15); }
+.fpl-spin-chips > .fpl-spin-key { position: absolute; }
+.fpl-spin-key.is-hot, .fpl-spin-off.is-hot .fpl-spin-key,
+.fpl-spin-row.is-hot .fpl-spin-key { border-color: var(--fpl-spin);
+  background: var(--fpl-spin); color: var(--fpl-bg); }
+.fpl-spin-off .fpl-spin-key { width: 15px; height: 15px; font-size: 10.5px;
+  border-color: var(--fpl-bg); box-shadow: none; }
+.fpl-spin-off.is-hot .fpl-spin-key { border-color: var(--fpl-bg); }
+.fpl-spin.is-pin .fpl-spin-row { position: relative; padding-left: 30px; }
+.fpl-spin-row .fpl-spin-key { position: absolute; left: 7px; top: 50%;
+  width: 16px; height: 16px; margin-top: -8px; font-size: 11px;
+  box-shadow: none; }
+.fpl-spin-pin { display: inline-flex; align-items: center; gap: 4px;
+  margin-left: auto; padding: 1px 7px; border-radius: 999px;
+  background: var(--fpl-spin-wash); color: var(--fpl-spin);
+  font-size: .72rem; font-weight: 600; }
+.fpl-spin-pin path { fill: none; stroke: currentColor; stroke-width: 1.5; }
