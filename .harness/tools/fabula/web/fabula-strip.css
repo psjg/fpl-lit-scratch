@@ -1,0 +1,40 @@
+/* De gedraaide speedscope met de fabula-strook (fabula-strip.js).
+   --p: het syuzhet (de bron), --s: de strook naast de flamegraph (beside);
+   het iframe krijgt de rest van de breedte. Rechtsom staat het syuzhet
+   links, linksom (?ccw) rechts. */
+:root{--s:420px;--p:380px;--bg:#fff;--fg:#000;--dim:#999;--sel:#2f80ed;
+--tik:#ffac02;--cur:#fff3c4;--bar:#bdbdbd}
+@media (prefers-color-scheme:dark){:root{--bg:#060606;--fg:#d0d0d0;
+--dim:#666;--sel:#00769b;--tik:#d6ae24;--cur:#2a2410;--bar:#444}}
+html[data-mode=replace]{--s:0px}
+body.dicht{--s:0px}
+html,body{margin:0;height:100%;overflow:hidden;background:#000}
+iframe{position:fixed;top:0;left:100vw;width:100vh;
+height:calc(100vw - var(--s) - var(--p));border:0;
+transform-origin:0 0;transform:rotate(90deg)}
+body.ccw iframe{left:0;top:100vh;transform:rotate(-90deg)}
+#tab{position:fixed;inset:0;pointer-events:none}
+#tab>*{position:absolute;grid-template-columns:1fr 1fr;
+grid-template-rows:1fr 1fr 1fr 2.8fr}
+#strip,#syu{position:fixed;top:0;height:100vh;background:var(--bg)}
+#strip{left:var(--p);width:var(--s);cursor:pointer;touch-action:none}
+#strip.drag{cursor:grabbing}
+body.ccw #strip{left:calc(100vw - var(--s) - var(--p))}
+/* replace: fabula-strip.js legt de strook over het vlak van de flamegraph */
+html[data-mode=replace] #strip{width:0;height:0}
+body.dicht #strip{display:none}
+#syu{left:0;width:var(--p);overflow:auto;color:var(--fg);
+font:12px/16px ui-monospace,Menlo,monospace;box-sizing:border-box;
+border:solid var(--bar);border-width:0 1px}
+body.ccw #syu{left:auto;right:0}
+#syu div{white-space:pre;display:flex;cursor:pointer}
+#syu .z{color:var(--dim)}
+#syu .cur{background:var(--cur)}
+#syu .tik{box-shadow:inset 4px 0 var(--tik)}
+#syu i{flex:none;width:12px;font-style:normal;color:var(--dim)}
+#syu b{flex:none;width:40px;position:relative;font-weight:normal;
+text-align:right;padding-right:4px;color:var(--dim)}
+#syu b>s{position:absolute;left:0;top:5px;height:6px;background:var(--bar)}
+#syu u{flex:none;width:32px;text-decoration:none;color:var(--dim);
+text-align:right;padding-right:8px}
+#syu .d{color:var(--dim);padding-left:96px;font-size:11px}
