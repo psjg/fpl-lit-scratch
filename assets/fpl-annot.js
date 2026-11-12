@@ -4655,10 +4655,16 @@
     return { nodes: nodes.filter((n) => keep.has(n.id)),
       edges: edges.filter((e) => keep.has(e.a.id) && keep.has(e.b.id)) };
   }
-  /** Hele pagina from a card's popover: the plane, round no card. */
+  /**
+   * Hele pagina from a card's popover: the plane, round no card. A new
+   * plane stands round the open card, so it is opened without a step in
+   * the history and turned to the page with one: Back from a later step
+   * comes to the page, not to the card.
+   */
   async function wholePage() {
-    await graph(null);
-    if (plane?.centre) plane.go(null, false);
+    const fresh = !plane;
+    await graph(null, "graph", false);
+    if (plane && (fresh || plane.centre)) plane.go(null);
   }
   /**
    * What a node is, the line over its quote (board V2b): a row's kind, a
