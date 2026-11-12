@@ -107,10 +107,14 @@ body.fpl-numbered .fpl-p::after { opacity: .8; }
   display: none; user-select: none; }
 body.fpl-numbered .fpl-p::before { opacity: .8; }
 body.fpl-numbered .fpl-s::before { display: inline-block; }
-/* the clause number takes no room and shows on the sentence under the mouse only, small, above its first word;
-   top and left, never bottom: a clause over two lines would hang it under the last line, far from its start */
-.fpl-c { position: relative; }
-.fpl-c::before { content: attr(data-n); position: absolute; left: 0; top: -.8em; font-size: .55em; line-height: 1;
+/* the clause number takes no room and shows on the sentence under the
+   mouse only, small, above its first word. A box of no width at the
+   clause's start, raised: not absolute in the clause, whose containing
+   block, once the clause runs over two lines, spans its fragments and
+   dropped the number into the middle of a word (feedback 1) */
+.fpl-c::before { content: attr(data-n); display: inline-block; width: 0;
+  position: relative; top: -1.6em;
+  font-size: .55em; line-height: 1; white-space: nowrap;
   color: var(--fpl-mute); opacity: 0; transition: opacity 80ms; user-select: none; pointer-events: none; }
 body.fpl-numbered .fpl-s:hover .fpl-c::before { opacity: 1; }
 .fpl-p[data-kind="C"]::before { top: .5rem; }
@@ -145,6 +149,9 @@ body.fpl-gut-narrow .fpl-heat { top: 1.4rem; }
 .fpl-card.fpl-editing, .fpl-card.mine.fpl-editing.is-hot { cursor: auto; z-index: 4; background: var(--fpl-bg); border-color: color-mix(in srgb, var(--fpl-mine) 28%, var(--fpl-bg));
   box-shadow: 0 6px 20px rgba(20, 30, 50, .14), 0 1px 3px rgba(20, 30, 50, .08); }
 .fpl-inline { margin: -.5rem 0 1rem; padding: .45rem .7rem; background: var(--fpl-wash); }
+/* narrow, a lost row is a pale strip under the title block (board K) */
+.fpl-margin.is-narrow > .fpl-card { margin: 0 0 1rem; padding: .45rem .7rem;
+  background: var(--fpl-wash); border-radius: 6px; }
 .fpl-head { display: flex; gap: 7px; min-width: 0; }
 .fpl-q { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-style: italic; color: var(--fpl-mute); }
 .fpl-editor .fpl-dot { background: var(--fpl-mine); }
@@ -152,12 +159,16 @@ body.fpl-gut-narrow .fpl-heat { top: 1.4rem; }
 .mine .fpl-dot { background: var(--lc, var(--fpl-mine)); }
 .fpl-lost { color: var(--fpl-lost); }
 .fpl-mine { color: var(--fpl-mine); }
-/* a quote is one line and a note two, until the card is hot or holds the focus */
+/* a quote is one line and a note two, until the card is hot or holds the
+   focus; a card folded in under its block stands in the text's flow, so
+   there only the focus opens them: a hover must not push the text down */
 .fpl-excerpt { font-size: .8rem; font-style: italic; color: var(--fpl-mute); margin: .15rem 0;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .fpl-card .fpl-note { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.fpl-card.is-hot .fpl-excerpt, .fpl-card:focus-within .fpl-excerpt { white-space: normal; }
-.fpl-card.is-hot .fpl-note, .fpl-card:focus-within .fpl-note { display: block; }
+.fpl-card:not(.fpl-inline).is-hot .fpl-excerpt,
+.fpl-card:focus-within .fpl-excerpt { white-space: normal; }
+.fpl-card:not(.fpl-inline).is-hot .fpl-note,
+.fpl-card:focus-within .fpl-note { display: block; }
 .fpl-chips { display: flex; flex-wrap: wrap; gap: .3rem; align-items: center; margin-top: .3rem; }
 .fpl-chip { font-size: 11px; font-weight: 600; line-height: 1; padding: 4px 7px; border-radius: 999px;
   border: 1px solid var(--fpl-rule); background: var(--fpl-wash); color: var(--fpl-fg); white-space: nowrap; }
@@ -342,6 +353,9 @@ button.fpl-end:hover, button.fpl-end:focus-visible { color: var(--fpl-fg); text-
   border: 1px solid var(--fpl-rule); border-radius: 6px; }
 .fpl-topbar:not(.is-full):not(.is-docked) .fpl-stand { border-color: transparent; }   /* no bordered box inside the bordered bar */
 .fpl-topbar.is-docked { display: flex; align-items: center; margin-left: 4px; }
+/* docked, the bar stays where it is: Quarto's top bar no longer slides
+   away on a scroll down (headroom), so the controls keep one place */
+#quarto-header:has(.fpl-topbar.is-docked) { transform: none !important; }
 .fpl-topbar.is-docked::after { content: ""; width: 1px; height: 24px; margin: 0 2px 0 4px; background: var(--fpl-rule); }
 .quarto-secondary-nav:has(.fpl-topbar) .quarto-page-breadcrumbs { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .quarto-secondary-nav:has(.fpl-topbar) .breadcrumb { flex-wrap: nowrap; }
@@ -679,7 +693,6 @@ mark.fact.fpl-faded { background: none; box-shadow: none; }
 .fpl-why .fpl-ico svg { width: 13px; height: 13px; }
 .fpl-why:hover, .fpl-deeper:hover { background: var(--fpl-bg); color: var(--fpl-fg); }
 /* / is Quarto's in Lezen (feedback 31) */
-.fpl-topbar[data-stand="lezen"] .fpl-search > kbd { visibility: hidden; }
 /* spans off: the marks stay as anchors, unpainted and without their lines */
 body.fpl-nospans mark.fact { background: none; box-shadow: none; outline-color: transparent; }
 /* one layer alone (board V4b): the text dimmed, only that layer in colour */
