@@ -54,7 +54,9 @@ f.onload=()=>{
       const c=t.cloneNode(true),p=pagina(t.getBoundingClientRect())
       Object.assign(c.style,{visibility:'visible',display:'grid'})
       for(const k in p)c.style[k]=p[k]+'px'
-      return c}))})}
+      return c}))
+    // het paneel verschuift de strook in replace: opnieuw tekenen
+    if(window.fab&&fab.plan)fab.plan()})}
   new MutationObserver(sync).observe(d.body,{subtree:true,childList:true,
     characterData:true,attributes:true})
   addEventListener('resize',sync)
@@ -130,10 +132,15 @@ function fab(F,w,A){
   const plan=()=>{if(!rq++)requestAnimationFrame(()=>{rq=0;teken()})}
   A.subscribe(plan);V.subscribe(plan);addEventListener('resize',plan)
 
-  // replace: de strook over het lichaam van het vlak, onder de liniaal
+  // replace: de strook over het lichaam van het vlak, onder de liniaal en
+  // boven het detailpaneel (de tabellen die een selectie opent; het vlak
+  // krimpt daar niet voor, het paneel ligt eroverheen)
   function leg_over(r,vp){
-    const lin=r.height/vp.size.y,p=pagina({top:r.top+lin,bottom:r.bottom,
-      left:r.left,right:r.right,height:r.height-lin,width:r.width})
+    const lin=r.height/vp.size.y,eind=Math.min(r.bottom,...[...f
+      .contentDocument.querySelectorAll('._1gat8lj')]
+      .map(t=>t.getBoundingClientRect().top))
+    const p=pagina({top:r.top+lin,bottom:eind,left:r.left,right:r.right,
+      height:eind-r.top-lin,width:r.width})
     for(const k in p)strip.style[k]=p[k]+'px'
     return lin}
 
@@ -313,5 +320,5 @@ function fab(F,w,A){
       cur=x;A.setSelectedNode('CHRONO',x.n);plan()}}
   strip.onpointercancel=()=>{sleep=null;strip.classList.remove('drag')}
   strip.onmouseleave=()=>{hov=null;plan()}
-  T.kijk=kijk
+  T.kijk=kijk;T.plan=plan
   plan()}

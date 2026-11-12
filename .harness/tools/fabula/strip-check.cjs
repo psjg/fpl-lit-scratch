@@ -141,22 +141,39 @@ const rust = p => p.evaluate(() => new Promise(r =>
   await p.evaluate(() => fab.kijk(20, 50))
   await rust(p)
 
-  // 3. ligging (replace): de strook over het vlak, de liniaal vrij
-  if (REPLACE) {
+  // 3. ligging: in replace ligt de strook over het vlak, tussen de liniaal
+  // en het detailpaneel (als een selectie dat opent); in beide modi ligt
+  // geen kopie van de detailtabellen onder de strook
+  const ligging = async wanneer => {
     const l = await p.evaluate(() => {
-      const c = [...f.contentDocument.querySelectorAll('canvas[class]')]
+      const d = f.contentDocument
+      const c = [...d.querySelectorAll('canvas[class]')]
         .map(x => x.getBoundingClientRect())
         .sort((a, b) => b.height - a.height)[0]
+      const tabs = [...d.querySelectorAll('._1gat8lj')]
+      const eind = Math.min(c.bottom,
+        ...tabs.map(t => t.getBoundingClientRect().top))
       const s = strip.getBoundingClientRect(), lin = fab.liniaal
+      const onder = [...tab.children].filter(x => {
+        const r = x.getBoundingClientRect()
+        return r.left < s.right - .5 && r.right > s.left + .5 &&
+          r.top < s.bottom - .5 && r.bottom > s.top + .5 })
       // rechtsom: iframe-y -> pagina-x = innerWidth - y
       return {s: [s.left, s.right, s.top, s.bottom],
-        wil: [innerWidth - c.bottom, innerWidth - c.top - lin, c.left,
-          c.right], lin}
+        wil: [innerWidth - eind, innerWidth - c.top - lin, c.left, c.right],
+        lin, tabellen: tabs.length, onder: onder.length}
     })
-    const d = Math.max(...l.s.map((v, i) => Math.abs(v - l.wil[i])))
-    ok('replace: strook == vlak onder de liniaal', d < 0.5 && l.lin > 0,
-      {strook: l.s, wil: l.wil, liniaal: l.lin})
+    if (REPLACE) {
+      const d = Math.max(...l.s.map((v, i) => Math.abs(v - l.wil[i])))
+      ok(`replace (${wanneer}): strook == vlak tussen liniaal en paneel`,
+        d < 0.5 && l.lin > 0, {strook: l.s, wil: l.wil, liniaal: l.lin,
+          tabellen: l.tabellen})
+    }
+    ok(`${wanneer}: geen detailtabel onder de strook`, !l.onder,
+      {tabellen: l.tabellen, onder: l.onder})
+    return l.tabellen
   }
+  await ligging('voor de klik')
 
   // 4. klik -> selectie, en terug
   const doel = await p.evaluate(() => {
@@ -171,6 +188,11 @@ const rust = p => p.evaluate(() => new Promise(r =>
       .selectedNode, gekozen: fab.gekozen}), doel.i)
   ok('klik op een rij zet de selectie in speedscope', k1.zelfde &&
     k1.gekozen > 0, {rij: doel.i, ...k1})
+  // het paneel komt na speedscope's render: wacht tot de kopieën er zijn
+  await p.waitForFunction(() => tab.children.length > 0)
+  await rust(p)
+  const tabellen = await ligging('na de klik')
+  ok('de klik opent het detailpaneel', tabellen > 0, {tabellen})
   if (SHOTS) await p.screenshot({path: `${SHOTS}/${PAGE.replace('.html',
     '')}-${RUN}-klik.png`})
   const k2 = await p.evaluate(() => {

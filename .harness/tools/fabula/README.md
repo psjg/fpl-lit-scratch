@@ -47,8 +47,9 @@ Then open <http://127.0.0.1:8792/rot-beside.html> or `rot-replace.html`; `?run=s
 picks the other run, `?ccw` turns it the other way (time then runs upward). In both, a
 click on a strip row sets the selection in speedscope, the wheel over the strip scrolls
 time, ctrl+wheel (pinch) zooms about the cursor, dragging pans. `rot-replace` lays the
-strip over the flame graph's body and draws the call stack as narrow named columns at the
-root side; the ruler (click: next measure), the minimap and the detail tables stay, and in
+strip over the flame graph's body, between the ruler and the detail panel a selection
+opens, and draws the call stack as narrow named columns at the root side; the ruler
+(click: next measure), the minimap and the detail tables stay visible, and in
 the sandwich view or the μ/t measures the strip steps aside. `rot-a.html` is variant A
 turned, `zui-a.html` unturned.
 
@@ -90,6 +91,7 @@ and of stash-only (176) the frame chain from speedscope equals the `frame.parent
 the fabula, a sweep at 18 px per step draws every step with its line as text, and in
 replace the stack columns equal the calls in view (depth, start, end), 261 and 47 column
 blocks; a click on a row sets speedscope's selection and a selection made in speedscope
-marks its rows. gap-check has no referent in the strip (no held gaps); strip-check's
+marks its rows; after the click the detail panel opens and no table lies under the strip
+(in replace the strip ends at the panel). gap-check has no referent in the strip (no held gaps); strip-check's
 column invariant is its counterpart. Not checked: the υ measure (strip-check sweeps
 "· stappen" only) and `?ccw`.

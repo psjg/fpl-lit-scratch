@@ -14,7 +14,8 @@ height:calc(100vw - var(--s) - var(--p));border:0;
 transform-origin:0 0;transform:rotate(90deg)}
 body.ccw iframe{left:0;top:100vh;transform:rotate(-90deg)}
 #tab{position:fixed;inset:0;pointer-events:none}
-#tab>*{position:absolute;grid-template-columns:1fr 1fr;
+/* de kopie krijgt de rand-tot-rand-maat van het origineel */
+#tab>*{position:absolute;box-sizing:border-box;grid-template-columns:1fr 1fr;
 grid-template-rows:1fr 1fr 1fr 2.8fr}
 #strip,#syu{position:fixed;top:0;height:100vh;background:var(--bg)}
 #strip{left:var(--p);width:var(--s);cursor:pointer;touch-action:none}
