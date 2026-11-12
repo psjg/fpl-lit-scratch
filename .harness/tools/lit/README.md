@@ -179,8 +179,8 @@ headings' anchors (`#strings-and-comments/counted`), so a URL reads `page#scope/
 One bar, fixed above the margin, holds three stands as tabs, also cycled with the key `a`:
 *Lezen* shows nothing; *Spans* underlines the spans whose labels pass the filter and a click
 on a span opens its card alone; *Kantlijn* shows every card, the lines and the editor. Beside
-the tabs stand `Graph` and a menu `⋯`; under them the search field (key `/` in Kantlijn;
-elsewhere `/`, `f` and `s` stay Quarto's site search) and a quiet line of counts. The layers
+the tabs stand `Graph` and a menu `⋯`; under them the search field (key `/` outside Lezen,
+where `/`, `f` and `s` stay Quarto's site search, and `q` in every stand) and a quiet line of counts. The layers
 and the label filter are a panel that opens on a click into the empty search field or on `/`
 with no query, never on hover; an active filter reads `filter aan` in the count line. The
 layers are six buttons, Argument, Coref, Topic-focus, Progressie (keys `1`-`4`), Spans and
@@ -361,9 +361,22 @@ layers shown, on a canvas laid out by force (Fruchterman & Reingold 1991,
 https://doi.org/10.1002/spe.4380211102), the same layout each time for the same rows. A
 relation row is a node of its own, a small diamond between its ends, so an undercut has a node
 to aim at; a fact hangs from what it is about (`over`); a group is a frame round its members,
-laid out as one block, its tab naming it and its role. `Graph` on a card draws that row and
-what lies within two steps. A click on a node closes the graph and goes to the node's place on
+laid out as one block, its tab naming it and its role. `Graph` on a card opens not the plane but a small
+popover left of the card, as large as what it holds: that row and what lies within two steps,
+read as the card's meta line reads it, so a relation between two ends is an edge with its verb
+(an undercut keeps its diamond) and the card's thread stays in the card. Each node is named by
+its first words, never an id; with one edge or none it says how to connect more, and `Hele
+pagina` opens the plane for the whole page. A click on a node closes the graph and goes to the node's place on
 the page; Esc closes it. Plain JavaScript, no outside assets.
+
+### The log
+
+`window.fplAnnotLog` holds the last 200 acts on the page, oldest first, as
+`{t, action, target, ok, reason}`: what the reader did (a stand, a query, a fold, a save, a
+connect, a stretch) and what the margin refused, with the reason its toast gave (`ok: false`).
+A selection outside Kantlijn and a quote not found are refusals too, logged without a toast.
+The log lives in the page only, nothing is stored or sent; `Exporteer logboek` in the menu
+downloads it as `<page stem>.log.json`, so a session can be read back afterwards.
 
 ### The tree
 
