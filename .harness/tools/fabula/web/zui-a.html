@@ -1,0 +1,353 @@
+<!doctype html><meta charset=utf-8><title>fabula zui A</title>
+<meta name=viewport content="width=device-width,initial-scale=1">
+<style>
+:root{--bg:#060606;--fg:#d0d0d0;--dim:#777;--line:#1c1c1c}
+html,body{margin:0;height:100%;overflow:hidden;background:var(--bg)}
+#c{position:fixed;inset:0;width:100vw;height:100vh;touch-action:none;
+cursor:grab}
+#c.drag{cursor:grabbing}
+</style>
+<canvas id=c></canvas>
+<script>
+// Variant A, semantische zoom in de blokken: een icicle-flamegraph van de
+// fabula (x = tijd, y = aanroepdiepte). Ver weg is een blok zijn functie-
+// naam; dichterbij krijgt het één cel per eigen stap met de bronregel; nog
+// dichterbij springt de as van stappen naar υ (cumulatieve u), met het punt
+// onder de cursor vast, en splitst elke stapcel in zijn ops. Een stap zonder
+// ops (gesynthetiseerde __init__, code zonder disassembly) telt u lege cellen.
+// Terwijl een aanroep loopt, houdt de aanroeper zijn regel vast: zijn rij
+// loopt gedimd door met "↳ naam" van wat er loopt (held()).
+//
+// ?run=trace-lex (standaard) | stash-only. window.zui is de toegang voor de
+// headless toets: zoomAt, set, at en de tellingen van de laatste tekening.
+'use strict'
+const RUN=new URLSearchParams(location.search).get('run')||'trace-lex'
+const cv=document.getElementById('c'),cx=cv.getContext('2d')
+const HEAD=20,RULER=18,TOP=HEAD+RULER+6
+// rijhoogte: in υ krijgt de opsband twee regels (op, arg)
+// één rijhoogte voor beide maten: de rijen springen niet bij de wissel
+// ?rot=ccw|cw: de pagina staat gedraaid in rot-a.html; tekst in de cellen
+// wordt dan rechtop gezet en de rijen (op het scherm kolommen) zijn breed
+// genoeg voor een bronregel
+const ROT=new URLSearchParams(location.search).get('rot')
+const ROW_S=ROT?460:62,ROW_U=ROW_S
+// linksom gespiegeld: de tijd loopt dan van boven naar onder, zoals regels
+// in een bestand; LINE is de begin-zoom, één stap = één regelhoogte
+const FLIP=ROT=='ccw',LINE=18
+if(FLIP)cv.style.transform='scaleX(-1)'
+// schermpositie langs de tijd, ook gespiegeld
+const ex=e=>FLIP?innerWidth-e.clientX:e.clientX,sg=FLIP?-1:1
+let ROW=ROW_S
+// drempels in px: cellen per stap, de sprong naar υ (heen en terug, in px
+// per stap via de gemiddelde u), tekst
+const CELL_MIN=4,K_UP=200,K_DOWN=150,TEXT_MIN=11,KU_MAX=400
+const FONT='11px ui-monospace,Menlo,monospace'
+const FG='#d0d0d0',ARG='#a8a8a8',DIM='#808080',BG='#060606'
+
+// Speedscope's kleur per frame (overgenomen uit rot.html, donker thema):
+// frames op (file||'')+name gesorteerd, emmer b = floor(255·i/n), byte-
+// afronding round(255·(b+1)/256)/255, dan het HCL-recept.
+function kleur(t,licht=0){
+  const tri=x=>2*Math.abs(x-Math.floor(x)-.5)-1,x=tri(30*t)
+  const [C0,Cd,L0,Ld]=[.2,.1,.2+licht,.1]
+  const C=C0+Cd*x,L=L0-Ld*x,h=360*.9*t/60,X=C*(1-Math.abs(h%2-1))
+  const [r,g,b]=h<1?[C,X,0]:h<2?[X,C,0]:h<3?[0,C,X]:h<4?[0,X,C]
+    :h<5?[X,0,C]:[C,0,X]
+  const m=L-(.3*r+.59*g+.11*b),c=v=>Math.round(255*Math.min(1,
+    Math.max(0,v+m)))
+  return `rgb(${c(r)},${c(g)},${c(b)})`}
+
+// --- model -----------------------------------------------------------------
+// steps[i] = {i, ln, src, ops, u, synth, blk}; U[i] = υ aan het begin van
+// stap i, U[N] = totaal. blocks per diepte, op begin gesorteerd: diepte 0 is
+// één blok per run, diepte d ≥ 1 een frame-aanroep {d, s, e, name, c, up,
+// call, last}: up is het blok van de aanroeper (frame.parent), call de stap
+// van de aanroeper die de aanroep deed, last de laatste eigen stap.
+let steps=[],U=[0],rows=[],N=0,UT=0,MEAN=1,runs=0
+function build(F){
+  const keys=new Set()
+  for(const st of Object.values(F.runs))
+    for(const s of st)keys.add((s.frame.file||'')+s.frame.name)
+  const ks=[...keys].sort(),col=new Map(ks.map((k,i)=>{
+    const b=Math.floor(255*i/ks.length),t=Math.round(255*(b+1)/256)/255
+    return [k,[kleur(t),kleur(t,.07),kleur(t,-.06)]]}))
+  const blk=(d,s,name,c)=>{const b={d,s,e:s+1,name,c};
+    (rows[d]||(rows[d]=[])).push(b);return b}
+  for(const [call,st] of Object.entries(F.runs)){
+    // diepte uit de trace: elk frame kent zijn aanroeper (frame.parent);
+    // een blok per frame, op diepte(ouder)+1, en het loopt door tot de
+    // laatste stap van het frame of van een afstammeling
+    const rb=blk(0,steps.length,call,['#2a2a2a','#333','#222']),fb=new Map()
+    runs++
+    for(const s of st){
+      const i=steps.length
+      if(!fb.has(s.f)){const p=fb.get(s.frame.parent),key=(s.frame.file||'')+s.frame.name
+        const b=blk(p?p.d+1:1,i,s.frame.name,col.get(key));b.up=p;fb.set(s.f,b)
+        // de aanroepende stap: de laatste eigen stap van de aanroeper
+        if(p)b.call=p.last}
+      for(let b=fb.get(s.f);b;b=b.up)b.e=i+1
+      rb.e=i+1;fb.get(s.f).last=i
+      steps.push({i,ln:s.ln,src:(s.src||'').trim(),ops:s.ops,u:s.u,
+        synth:s.synth,blk:fb.get(s.f)})
+      U.push(U[i]+s.u)}}
+  N=steps.length;UT=U[N];MEAN=UT/N}
+
+// stap-ruimte <-> υ-ruimte, stuksgewijs lineair en monotoon
+const toU=ts=>{const i=Math.min(N-1,Math.max(0,Math.floor(ts)))
+  return U[i]+(ts-i)*steps[i].u}
+function toS(tu){let lo=0,hi=N-1
+  while(lo<hi){const m=(lo+hi+1)>>1;if(U[m]<=tu)lo=m;else hi=m-1}
+  return lo+(tu-U[lo])/steps[lo].u}
+// eerste index met arr-waarde f(j) > t (f stijgend)
+function first(n,f,t){let lo=0,hi=n
+  while(lo<hi){const m=(lo+hi)>>1;if(f(m)>t)hi=m;else lo=m+1}
+  return lo}
+
+// --- view ------------------------------------------------------------------
+// mode 'S': x-eenheid is een stap; 'U': een υ. scherm-x = (t - x0)·k.
+let mode='S',x0=0,k=1,y0=0,W=0,H=0,rq=0
+const total=()=>mode=='S'?N:UT
+const pos=i=>mode=='S'?i:U[i]
+function clamp(){
+  ROW=mode=='U'?ROW_U:ROW_S
+  const kmin=W/(mode=='S'?N:UT)
+  if(mode=='S'&&k<kmin)k=kmin
+  if(mode=='U'&&k>KU_MAX)k=KU_MAX
+  const span=W/k,T=total()
+  x0=span>=T?(T-span)/2:Math.min(Math.max(x0,0),T-span)
+  const hc=TOP+rows.length*ROW+8
+  y0=Math.min(Math.max(y0,0),Math.max(0,hc-H))}
+// zoom met factor f om scherm-x c; het stap-punt onder c blijft staan,
+// ook over de sprong S <-> U heen
+function zoomAt(c,f){
+  const t=x0+c/k,ts=mode=='S'?t:toS(t)
+  k*=f
+  if(mode=='S'&&k>=K_UP){mode='U';k=k/MEAN}
+  else if(mode=='U'&&k*MEAN<K_DOWN){mode='S';k=k*MEAN}
+  x0=(mode=='S'?ts:toU(ts))-c/k
+  clamp();plan()}
+// het stap-punt onder scherm-x c
+const at=c=>{const t=x0+c/k;return mode=='S'?t:toS(t)}
+const plan=()=>{if(!rq++)requestAnimationFrame(()=>{rq=0;draw()})}
+
+// --- tekenen ----------------------------------------------------------------
+let cw=7
+const last={}
+// tekst in een doos, op tekens afgekapt (nooit over de rand); alleen als de
+// doos ≥ TEXT_MIN breed en hoog is en er ≥ 3 tekens (of de hele tekst) in
+// passen
+// up: rechtop op het scherm als de pagina gedraaid is (de doos ligt dan
+// dwars: zijn hoogte h is de schermbreedte)
+function label(s,x,y,w,h,kl,up=true){
+  if(w<TEXT_MIN||h<TEXT_MIN||!s)return false
+  const r=ROT&&up,tw=r?h:w,th=r?w:h
+  if(th<TEXT_MIN)return false
+  const n=Math.floor((tw-4)/cw);if(n<Math.min(3,s.length))return false
+  if(s.length>n)s=n>2?s.slice(0,n-1)+'…':s.slice(0,n)
+  cx.fillStyle=kl
+  if(!r)tx(s,x,y+h/2+.5,w)
+  else{cx.save();cx.translate(x+w/2,y+h/2)
+    if(FLIP)cx.scale(-1,1)
+    cx.rotate(ROT=='ccw'?Math.PI/2:-Math.PI/2)
+    // rechtop is een regel hooguit één regelhoogte boven het midden
+    cx.fillText(s,-tw/2+2,0);cx.restore()}
+  last.minText=Math.min(last.minText,w,h);return true}
+
+// liggende tekst vanaf de linkerrand van de doos; gespiegeld wordt die rand
+// op het scherm x+w en de tekst zelf terug gespiegeld
+function tx(s,x,y,w){
+  if(!FLIP){cx.fillText(s,x+2,y);return}
+  cx.save();cx.translate(x+w-2,y);cx.scale(-1,1);cx.fillText(s,0,0)
+  cx.restore()}
+
+function draw(){
+  const dpr=devicePixelRatio||1
+  W=innerWidth;H=innerHeight
+  if(cv.width!==W*dpr||cv.height!==H*dpr){cv.width=W*dpr;cv.height=H*dpr}
+  cx.setTransform(dpr,0,0,dpr,0,0)
+  cx.fillStyle=BG;cx.fillRect(0,0,W,H)
+  cx.font=FONT;cx.textBaseline='middle';cw=cx.measureText('M').width
+  if(!N)return
+  clamp()
+  const a=x0,b=x0+W/k,X=t=>(t-x0)*k
+  const pxStep=mode=='S'?k:k*MEAN
+  const level=mode=='U'?'ops':k>=CELL_MIN?'cellen':'namen'
+  Object.assign(last,{mode,level,k,x0,a,b,blocks:0,runBlocks:0,
+    cells:[],ops:{},opq:{},held:[],minText:Infinity,texts:0})
+  // stappen in beeld: [i0, i1)
+  const i0=Math.max(0,first(N+1,j=>pos(j),a)-1)
+  const i1=Math.min(N,first(N+1,j=>pos(j),b-1e-9))
+  // blokken, per diepte binair gezocht
+  for(let d=0;d<rows.length;d++){
+    const R=rows[d],y=TOP+d*ROW-y0
+    if(y+ROW<TOP||y>H)continue
+    for(let j=first(R.length,m=>pos(R[m].e),a);j<R.length;j++){
+      const B=R[j];if(pos(B.s)>=b)break
+      const bx=X(pos(B.s)),bw=X(pos(B.e))-bx
+      last.blocks++;if(d==0)last.runBlocks++
+      const vx=Math.max(bx,0),vw=Math.min(bx+bw,W)-vx
+      if(level=='namen'||d==0){
+        cx.fillStyle=B.c[0];cx.fillRect(bx,y,Math.max(bw-(bw>3),.5),ROW-2)
+        if(label(B.name,vx,y,vw,ROW-2,FG,d>0))last.texts++
+      }else{
+        // naamband, de naam plakt aan de linkerrand van het beeld
+        cx.fillStyle=B.c[2];cx.fillRect(bx,y,Math.max(bw-1,.5),13)
+        if(label(B.name,vx,y,vw,13,DIM,false))last.texts++}}}
+  // in 'namen' draagt het blok de stappen; er zijn geen stapcellen
+  if(level!='namen'){for(let i=i0;i<i1;i++)cell(steps[i],X);held(X,a,b)}
+  Object.assign(last,{i0,i1})
+  head(a,b,pxStep,i0,i1)}
+
+// De aanroeper wacht terwijl zijn aanroep loopt; dat stuk van zijn rij was
+// leeg. Het krijgt zijn kleur, gedimd en zonder stapstrepen, en hooguit twee
+// regels tekst: de regel die de aanroep deed en "↳ naam" van wat er loopt.
+// Gedraaid begint de tekst waar het gat begint, direct onder de aanroepende
+// regel, en dan staat er alleen de into-regel: dezelfde regel twee keer zou
+// lezen als twee keer uitgevoerd. Is van die regel minder dan één regelhoogte
+// in beeld, dan plakt hij gedimd bovenaan, met de into-regel eronder: elke
+// wachtende kolom zegt zo op elke hoogte waar hij staat en waarop hij wacht.
+// Aanname (gemeten op beide fabula's): binnen [s, e) van een aanroep heeft
+// de aanroeper geen eigen stap. Vult last.held, de cellen blijven ongemoeid.
+function held(X,a,b){
+  for(let d=2;d<rows.length;d++){
+    const R=rows[d],y=TOP+(d-1)*ROW-y0+14,h=ROW-2-14
+    if(y+h<TOP||y>H)continue
+    for(let j=first(R.length,m=>pos(R[m].e),a);j<R.length;j++){
+      const C=R[j],P=C.up;if(pos(C.s)>=b)break
+      if(!P)continue
+      const sx=X(pos(C.s)),gx=Math.min(X(pos(C.e)),W)
+      const stuck=ROT&&sx<LINE,fx=stuck?Math.min(sx,0):sx
+      // de laatste strook van de aanroepende regel wijkt voor de plakregel
+      if(stuck&&sx>0){cx.fillStyle=BG;cx.fillRect(0,y,sx,h)}
+      cx.globalAlpha=.5;cx.fillStyle=P.c[2];cx.fillRect(fx,y,gx-fx-1,h)
+      cx.globalAlpha=1
+      const c=steps[C.call],line=c?c.ln+'  '+c.src:'',into='↳ '+C.name
+      const t=[]
+      if(ROT){
+        const L=stuck&&line&&gx>=2*LINE?[[line,DIM],[into,ARG]]:[[into,ARG]]
+        let tx0=Math.max(fx,0)
+        for(const [s,kl] of L){if(tx0+LINE>gx+.5)break
+          if(label(s,tx0,y,LINE,h,kl))t.push(s);tx0+=LINE}
+      }else{const vx=Math.max(sx,0),vw=gx-vx,h2=h/2
+        if(label(line,vx,y,vw,h2,DIM))t.push(line)
+        if(label(into,vx,y+h2,vw,h2,ARG))t.push(into)}
+      last.texts+=t.length
+      last.held.push({s:C.s,e:C.e,d:P.d,call:C.call,t})}}}
+
+// één stapcel in de rij van zijn frame
+function cell(s,X){
+  const B=s.blk,y=TOP+B.d*ROW-y0+14
+  if(y+ROW<TOP||y>H)return
+  const sx=X(pos(s.i)),sw=X(pos(s.i+1))-sx,gap=sw>=CELL_MIN?1:0
+  last.cells.push(s.i)
+  if(mode=='S'){
+    const h=ROW-2-14
+    cx.fillStyle=s.i%2?B.c[0]:B.c[1];cx.fillRect(sx,y,sw-gap,h)
+    const t=(ROT?h:sw)>=160?s.ln+'  '+s.src:s.src
+    const vx=Math.max(sx,0),vw=Math.min(sx+sw-gap,W)-vx
+    if(label(t,vx,y,vw,h,s.ops?FG:DIM))last.texts++
+    return}
+  // υ: bronregel boven, ops eronder, één cel per υ
+  const lh=14,oy=y+lh+1,oh=ROW-2-14-lh-1
+  cx.fillStyle=s.i%2?B.c[0]:B.c[1];cx.fillRect(sx,y,sw-gap,lh)
+  const vx=Math.max(sx,0),vw=Math.min(sx+sw-gap,W)-vx
+  const tag=s.ops?'':s.synth?'  [synth '+s.synth+']':'  [geen disassembly]'
+  if(label(s.ln+'  '+s.src+tag,vx,y,vw,lh,s.ops?FG:DIM))last.texts++
+  const qs=[]
+  for(let q=0;q<s.u;q++){
+    const ox=X(U[s.i]+q),ow=k
+    if(ox+ow<=0||ox>=W)continue
+    qs.push(q)
+    const og=ow>=CELL_MIN?1:0,o=s.ops&&s.ops[q]
+    if(o){
+      cx.fillStyle=q%2?B.c[1]:B.c[2];cx.fillRect(ox,oy,ow-og,oh)
+      const vx=Math.max(ox,0),vw=Math.min(ox+ow-og,W)-vx,h2=oh/2
+      if(label(o.op,vx,oy,vw,h2,FG))last.texts++
+      if(label(o.arg,vx,oy+h2,vw,h2,ARG))last.texts++
+    }else{
+      cx.strokeStyle='#5a5a5a';cx.setLineDash([3,3])
+      cx.strokeRect(ox+.5,oy+.5,Math.max(ow-og-1,0),oh-1)
+      cx.setLineDash([])}}
+  last.ops[s.i]=qs.length;last.opq[s.i]=qs}
+
+// kopregel en liniaal in de huidige maat
+function head(a,b,pxStep,i0,i1){
+  cx.fillStyle='#111';cx.fillRect(0,0,W,HEAD+RULER)
+  const maat=mode=='S'?'stap':'υ'
+  let s=`${RUN} · as: ${maat} · ${k.toFixed(k<10?2:1)} px/${maat}`+
+    ` · ${pxStep.toFixed(1)} px/stap · niveau: ${last.level}`+
+    ` · stappen ${i0}–${i1} van ${N}`
+  if(hover)s+='   │ '+hover
+  cx.fillStyle=FG;tx(s.slice(0,Math.floor((W-8)/cw)),2,HEAD/2+1,W-4)
+  // tikken op 1, 2, 5 × 10^n, ≥ 90 px uit elkaar
+  let st=1;for(const m of [1,2,5,10,20,50,100,200,500,1000,2000,5000])
+    if(m*k>=90){st=m;break}
+  cx.fillStyle=DIM
+  for(let t=Math.ceil(a/st)*st;t<=b;t+=st){
+    const x=(t-x0)*k;cx.fillRect(x,HEAD,1,RULER)
+    tx(String(t),x+1,HEAD+RULER/2,FLIP?-2:0)}}
+
+// --- invoer -----------------------------------------------------------------
+let hover=''
+function whatAt(px,py){
+  const ts=at(px),i=Math.floor(ts);if(i<0||i>=N)return ''
+  const s=steps[i],d=Math.floor((py+y0-TOP)/ROW)
+  if(d<0)return ''
+  let r=`stap ${i} · ${s.blk.name} · r${s.ln}`
+  if(mode=='U'){const q=Math.floor(x0+px/k-U[i]),o=s.ops&&s.ops[q]
+    r+=` · υ ${U[i]+q}`+(o?` · ${o.off} ${o.op} ${o.arg}`:'')}
+  return r}
+cv.addEventListener('wheel',e=>{
+  e.preventDefault()
+  // gedraaid: wielafstanden draaien niet mee. Verticaal scrollen loopt door
+  // de tijd, horizontaal over de diepte, ctrl/knijpen zoomt
+  if(ROT&&!e.ctrlKey){const m=e.deltaMode==1?16:1
+    x0+=e.deltaY*m/k;y0+=(ROT=='ccw'?1:-1)*e.deltaX*m;clamp();plan();return}
+  if(ROT){zoomAt(ex(e),Math.exp(-e.deltaY*.01));return}
+  if(Math.abs(e.deltaX)>Math.abs(e.deltaY)){x0+=sg*e.deltaX/k;clamp();plan()
+    return}
+  const dy=e.deltaMode==1?e.deltaY*16:e.deltaY
+  zoomAt(ex(e),Math.exp(-dy*(e.ctrlKey?.01:.0025)))},{passive:false})
+// Safari's trackpad-pinch
+let gs=1
+addEventListener('gesturestart',e=>{e.preventDefault();gs=1})
+addEventListener('gesturechange',e=>{e.preventDefault()
+  zoomAt(ex(e),e.scale/gs);gs=e.scale})
+// slepen pant; twee wijzers knijpen
+const ptr=new Map()
+cv.addEventListener('pointerdown',e=>{cv.setPointerCapture(e.pointerId)
+  ptr.set(e.pointerId,{x:e.clientX,y:e.clientY});cv.classList.add('drag')})
+cv.addEventListener('pointermove',e=>{
+  const p=ptr.get(e.pointerId)
+  if(!p){hover=whatAt(ex(e),e.clientY);plan();return}
+  if(ptr.size==2){
+    const [o]=[...ptr].filter(([id])=>id!==e.pointerId).map(x=>x[1])
+    const d0=Math.abs(p.x-o.x),d1=Math.abs(e.clientX-o.x)
+    if(d0>10&&d1>10)zoomAt(FLIP?W-(e.clientX+o.x)/2:(e.clientX+o.x)/2,d1/d0)
+  }else{x0-=sg*(e.clientX-p.x)/k;y0-=e.clientY-p.y;clamp();plan()}
+  p.x=e.clientX;p.y=e.clientY})
+const up=e=>{ptr.delete(e.pointerId);if(!ptr.size)cv.classList.remove('drag')}
+cv.addEventListener('pointerup',up);cv.addEventListener('pointercancel',up)
+addEventListener('resize',plan)
+// pijltjes en PageUp/Down: op en neer door de tijd, links en rechts over de
+// diepte; + en - zoomen
+addEventListener('keydown',e=>{
+  const L=ROT?LINE:40,c=W/2
+  const m={ArrowUp:[-3,0],ArrowDown:[3,0],PageUp:[-30,0],PageDown:[30,0],
+    ArrowLeft:[0,-1],ArrowRight:[0,1]}[e.key]
+  if(m){e.preventDefault();x0+=m[0]*L/k*(ROT?1:0)+(ROT?0:m[1]*L/k)
+    if(ROT)y0+=m[1]*ROW/2;else x0+=m[0]*0;clamp();plan();return}
+  if(e.key=='+'||e.key=='=')zoomAt(c,1.25)
+  if(e.key=='-')zoomAt(c,.8)})
+
+window.zui={zoomAt,at,last,toU,toS,
+  get rows(){return rows.map(R=>(R||[]).map(b=>({d:b.d,s:b.s,e:b.e,name:b.name})))},
+  get ROW(){return ROW},
+  get state(){return {mode,k,x0,y0,N,UT,MEAN,runs,W,H}},
+  // zet het beeld direct (voor de toets) en tekent synchroon
+  set(o){if(o.mode)mode=o.mode;if(o.k)k=o.k;if(o.x0!=null)x0=o.x0
+    if(o.y0!=null)y0=o.y0;clamp();draw();return {...last}},
+  draw(){draw();return {...last}}}
+fetch(RUN+'.fabula.json').then(r=>r.json()).then(F=>{
+  build(F);W=innerWidth;k=ROT?LINE:W/N;draw();window.zui.ready=true})
+</script>

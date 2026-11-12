@@ -1,0 +1,26 @@
+<!doctype html><meta charset=utf-8><title>fabula zui A gedraaid</title>
+<meta name=viewport content="width=device-width,initial-scale=1">
+<style>
+html,body{margin:0;height:100%;overflow:hidden;background:#060606}
+/* zoals rot.html: het iframe krijgt de hoogte van het venster als breedte
+   en draait 90° linksom (standaard) of rechtsom (?cw), zodat de tijd van
+   boven naar onder loopt en de aanroepdiepte dwars ligt */
+iframe{position:fixed;top:0;left:100vw;width:100vh;height:100vw;border:0;
+transform-origin:0 0;transform:rotate(90deg)}
+body.ccw iframe{left:0;top:100vh;transform:rotate(-90deg)}
+</style>
+<body><iframe id=f></iframe>
+<script>
+// Variant A (zui-a.html) op zijn kant. Linksom; ?cw = rechtsom; ?run= gaat
+// door. zui-a krijgt ?rot= mee en zet de celtekst dan rechtop.
+'use strict'
+const q=new URLSearchParams(location.search)
+if(!q.has('cw'))document.body.className='ccw'
+const run=q.get('run')
+document.getElementById('f').src='zui-a.html?rot='+(q.has('cw')?'cw':'ccw')+
+  (run?'&run='+run:'')
+// toetsen gaan naar het gedraaide beeld
+const F=document.getElementById('f')
+F.onload=()=>F.contentWindow.focus()
+addEventListener('keydown',e=>F.contentWindow.dispatchEvent(new KeyboardEvent('keydown',{key:e.key})))
+</script>

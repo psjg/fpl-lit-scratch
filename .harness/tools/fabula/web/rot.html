@@ -1,0 +1,258 @@
+<!doctype html><meta charset=utf-8><title>speedscope 90°</title>
+<style>
+:root{--s:420px;--p:380px;--bg:#fff;--fg:#000;--dim:#999;--sel:#2f80ed;
+--tik:#ffac02;--cur:#fff3c4;--bar:#bdbdbd}
+@media (prefers-color-scheme:dark){:root{--bg:#060606;--fg:#d0d0d0;
+--dim:#666;--sel:#00769b;--tik:#d6ae24;--cur:#2a2410;--bar:#444}}
+body.dicht{--s:0px}
+html,body{margin:0;height:100%;overflow:hidden;background:#000}
+iframe{position:fixed;top:0;left:100vw;width:100vh;
+height:calc(100vw - var(--s) - var(--p));border:0;
+transform-origin:0 0;transform:rotate(90deg)}
+body.ccw iframe{left:0;top:100vh;transform:rotate(-90deg)}
+#tab{position:fixed;inset:0;pointer-events:none}
+#tab>*{position:absolute;grid-template-columns:1fr 1fr;
+grid-template-rows:1fr 1fr 1fr 2.8fr}
+#strip,#syu{position:fixed;top:0;height:100vh;background:var(--bg)}
+#strip{left:var(--p);width:var(--s);cursor:pointer}
+body.ccw #strip{left:calc(100vw - var(--s) - var(--p))}
+#syu{left:0;width:var(--p);overflow:auto;color:var(--fg);
+font:12px/16px ui-monospace,Menlo,monospace;box-sizing:border-box;
+border:solid var(--bar);border-width:0 1px}
+body.ccw #syu{left:auto;right:0}
+#syu div{white-space:pre;display:flex;cursor:pointer}
+#syu .z{color:var(--dim)}
+#syu .cur{background:var(--cur)}
+#syu .tik{box-shadow:inset 4px 0 var(--tik)}
+#syu i{flex:none;width:12px;font-style:normal;color:var(--dim)}
+#syu b{flex:none;width:40px;position:relative;font-weight:normal;
+text-align:right;padding-right:4px;color:var(--dim)}
+#syu b>s{position:absolute;left:0;top:5px;height:6px;background:var(--bar)}
+#syu u{flex:none;width:32px;text-decoration:none;color:var(--dim);
+text-align:right;padding-right:8px}
+#syu .d{color:var(--dim);padding-left:96px;font-size:11px}
+</style>
+<body><iframe id=f></iframe><div id=tab></div>
+<canvas id=strip></canvas><div id=syu></div><script>
+// Speedscope draait gedraaid in het iframe. De blokkentabellen
+// (._1gat8lj, This/All Instances) zijn daar onzichtbaar en staan als
+// kopie rechtop in deze pagina, op de plek van het origineel: twee
+// DOM-bomen, zodat er niets gedraaid hoeft te passen.
+// ?ccw = linksom; de hash gaat ongewijzigd door naar speedscope.
+// Naast de flamegraph: de fabula-strook (de run als tekst, op de as) en
+// rechts het syuzhet (de bron). Rechtsom staan ze gespiegeld links.
+const ccw=location.search.includes('ccw')
+if(ccw)document.body.className='ccw'
+const url=new URLSearchParams(location.hash.slice(1)).get('profileURL')
+const fabula=url?fetch(url.replace(/\.speedscope\.json$/,'.fabula.json'))
+  .then(r=>r.ok?r.json():null).catch(()=>null):Promise.resolve(null)
+f.onload=()=>{
+  const d=f.contentDocument,st=d.createElement('style')
+  st.textContent='._1gat8lj{visibility:hidden}'
+  d.head.append(st)
+  let busy=0;const css=document.createElement('style')
+  document.head.prepend(css)
+  const sync=()=>{if(busy++)return;requestAnimationFrame(()=>{busy=0
+    // speedscope zet zijn css via insertRule: kopieer de regels zelf.
+    css.textContent=[...d.styleSheets].flatMap(x=>[...x.cssRules])
+      .map(x=>x.cssText).join('\n')
+    tab.style.font=getComputedStyle(d.body).font
+    const W=innerWidth,H=innerHeight
+    tab.replaceChildren(...[...d.querySelectorAll('._1gat8lj')].map(t=>{
+      const r=t.getBoundingClientRect(),c=t.cloneNode(true)
+      // iframe (x,y) -> pagina: linksom (y, H-x), rechtsom (W-y, x)
+      Object.assign(c.style,{visibility:'visible',display:'grid',
+        width:r.height+'px',
+        height:r.width+'px',left:(ccw?r.top:W-r.bottom)+'px',
+        top:(ccw?H-r.right:r.left)+'px'})
+      return c}))})}
+  new MutationObserver(sync).observe(d.body,{subtree:true,childList:true,
+    characterData:true,attributes:true})
+  addEventListener('resize',sync)
+  fabula.then(F=>F&&wacht(F))}
+f.src='index.html'+location.hash
+
+// Wacht tot speedscope zijn atoms op window zet (patch 070c593).
+function wacht(F){
+  const w=f.contentWindow
+  if(!w.profileGroupAtom||!w.profileGroupAtom.getActiveProfile())
+    return setTimeout(wacht,100,F)
+  fab(F,w,w.profileGroupAtom)}
+
+// Speedscope's kleur per frame: frames op (file||'')+name gesorteerd,
+// emmer b = floor(255·i/n), dan het HCL-recept van het thema. De
+// flamegraph (GL) leest b als byte round(255·(b+1)/256)/255, niet b/255.
+const donker=matchMedia('(prefers-color-scheme:dark)').matches
+function kleur(t){
+  const tri=x=>2*Math.abs(x-Math.floor(x)-.5)-1,x=tri(30*t)
+  // licht .25,.2,.8,.15: de GLSL-tekst rondt af met toFixed(1)
+  const [C0,Cd,L0,Ld]=donker?[.2,.1,.2,.1]:[.3,.2,.8,.1]
+  const C=C0+Cd*x,L=L0-Ld*x,h=360*.9*t/60,X=C*(1-Math.abs(h%2-1))
+  const [r,g,b]=h<1?[C,X,0]:h<2?[X,C,0]:h<3?[0,C,X]:h<4?[0,X,C]
+    :h<5?[X,0,C]:[C,0,X]
+  const m=L-(.3*r+.59*g+.11*b),c=v=>Math.round(255*Math.min(1,
+    Math.max(0,v+m)))
+  return `rgb(${c(r)},${c(g)},${c(b)})`}
+
+// Per profiel: elke stap als [s, e) op de as, met zijn diepste knoop
+// (zoals de chrono-flamechart hem uit forEachCall bouwt) en kleur.
+function leg(p,steps,maat){
+  const iv=[],open=[]
+  p.forEachCall((n,v)=>open.push({n,s:v,d:open.length}),
+    (n,v)=>{const o=open.pop();o.e=v;iv.push(o)})
+  const fr=[];p.forEachFrame(x=>fr.push(x))
+  const k=x=>(x.file||'')+x.name
+  fr.sort((a,b)=>k(a)>k(b)?1:-1)
+  const emmer=new Map(fr.map((x,i)=>[x.key,Math.floor(255*i/fr.length)]))
+  let at=0
+  const rows=steps.map((st,i)=>{
+    const w=maat=='υ'?st.u:1,r={i,st,s:at,e:at+w},t=at+w/2;at+=w
+    for(const o of iv)if(o.s<=t&&t<o.e&&(!r.o||o.d>r.o.d))r.o=o
+    r.n=r.o.n;const b=emmer.get(r.n.frame.key)||0
+    r.c=kleur(Math.round(255*(b+1)/256)/255);return r})
+  return {rows,iv,eind:at}}
+
+// De strook en het syuzhet, gevoed door één abonnement op het atom.
+function fab(F,w,A){
+  const V=w.viewModeAtom,cx=strip.getContext('2d'),T=window.fab={}
+  const vars=getComputedStyle(document.documentElement)
+  const kl=n=>vars.getPropertyValue('--'+n).trim()
+  let memo=null,hov=null,tik=null,cur=null,fold=new Set(),bron=null
+  const stap=()=>{
+    const st=A.getActiveProfile(),p=st.profile,naam=p.getName()
+    const j=naam.lastIndexOf(' · '),steps=F.runs[naam.slice(0,j)]
+    if(!steps)return null
+    if(!memo||memo.p!==p)memo={p,...leg(p,steps,naam.slice(j+3)),
+      maat:naam.slice(j+3),steps}
+    return {st,...memo}}
+  // De overlay-canvas van de pan-zoom-view: de hoogste met een klasse.
+  const vlak=()=>[...f.contentDocument.querySelectorAll('canvas[class]')]
+    .map(c=>c.getBoundingClientRect()).sort((a,b)=>b.height-a.height)[0]
+  // Tijd op de as -> pagina-y, en terug.
+  const as=(vp,r)=>{const k=r.width/vp.size.x,H=innerHeight
+    return {k,y:t=>{const x=r.x+(t-vp.origin.x)*k;return ccw?H-x:x},
+      t:y=>vp.origin.x+((ccw?H-y:y)-r.x)/k}}
+  const bij=(rows,t)=>rows.find(r=>r.s<=t&&t<r.e)||null
+  let rq=0
+  const plan=()=>{if(!rq++)requestAnimationFrame(()=>{rq=0;teken()})}
+  A.subscribe(plan);V.subscribe(plan);addEventListener('resize',plan)
+
+  function teken(){
+    const S=stap(),ok=S&&V.get()===0&&(S.maat=='stappen'||S.maat=='υ')
+    document.body.classList.toggle('dicht',!ok)
+    if(!S)return
+    const c=S.st.chronoViewState,vp=c.configSpaceViewportRect,r=vlak()
+    // hover in de flamegraph: de stap onder de muis
+    let h=hov
+    if(h==null&&ok&&c.hover&&r&&vp.size.x){
+      const t=vp.origin.x+(c.hover.event.clientX-r.x)/(r.width/vp.size.x)
+      h=bij(S.rows,t)}
+    const sel=c.selectedNode,eigen=S.rows.filter(x=>x.n===sel)
+    zet(S,h||(cur&&cur.n===sel?cur:eigen[0])||null)
+    // nog niet opgemeten: later opnieuw
+    if(!ok||!r||!vp.size.x)return ok&&setTimeout(plan,100)
+    const dpr=devicePixelRatio,Wd=strip.clientWidth,Hd=strip.clientHeight
+    strip.width=Wd*dpr;strip.height=Hd*dpr;cx.setTransform(dpr,0,0,dpr,0,0)
+    cx.fillStyle=kl('bg');cx.fillRect(0,0,Wd,Hd)
+    const M=as(vp,r),k=M.k,tekst=k>=12,a=vp.origin.x,b=a+vp.size.x
+    const fs=Math.min(13,Math.floor(k*.8))
+    cx.font=`${fs}px ui-monospace,Menlo,monospace`;cx.textBaseline='middle'
+    const cw=tekst?cx.measureText('M').width:7,rij=(t0,t1)=>{
+      const y0=M.y(t0),y1=M.y(t1);return [Math.min(y0,y1),Math.abs(y1-y0)]}
+    // tekst of, onder 12 px per rij, een streep van zijn vorm
+    const regel=(s,x,y,hh,kleur,max=Wd)=>{
+      s=s.slice(0,Math.max(0,Math.floor((max-x)/cw)))
+      if(tekst){cx.fillStyle=kleur;cx.fillText(s,x,y+hh/2);return}
+      const lead=s.length-s.trimStart().length
+      cx.fillStyle=donker?'rgba(255,255,255,.3)':'rgba(0,0,0,.3)'
+      cx.fillRect(x+lead*cw,y+hh*.2,(s.length-lead)*cw,Math.max(hh*.6,.5))}
+    const src=x=>(x.st.src||'').replace(/\t/g,'    ')
+    const ops=Wd*.5;let n=0,tikken=0,gekozen=0
+    for(const x of S.rows){
+      if(x.e<=a||x.s>=b)continue
+      const [y,hh]=rij(x.s,x.e)
+      cx.fillStyle=x.c;cx.fillRect(0,y,Wd,hh)
+      if(S.maat=='stappen'){
+        n++
+        regel(String(x.st.ln).padStart(4)+' '+src(x),2,y,hh,kl('fg'))
+      }else{
+        // υ: de bronregel op de eerste zichtbare rij, de ops eronder,
+        // één per rij
+        const v0=Math.max(x.s,Math.min(Math.ceil(a),x.e-1))
+        const [y0,h0]=rij(v0,v0+1)
+        regel(String(x.st.ln).padStart(4)+' '+src(x),2,y0,h0,kl('fg'),
+          ops-cw)
+        for(let q=0;q<x.st.u;q++){
+          if(x.s+q+1<=a||x.s+q>=b)continue
+          n++
+          const o=x.st.ops&&x.st.ops[q]
+          if(!o)continue
+          const [yq,hq]=rij(x.s+q,x.s+q+1)
+          regel(o.op+(o.arg?' '+o.arg:''),ops,yq,hq,kl('fg'))}}
+      if(x===h){cx.fillStyle=donker?'rgba(255,255,255,.15)':'rgba(0,0,0,.12)'
+        cx.fillRect(0,y,Wd,hh)}
+      if(x.n===sel){gekozen++;cx.strokeStyle=kl('sel');cx.lineWidth=2
+        cx.strokeRect(1,y+1,Wd-2,Math.max(hh-2,0))}
+      if(tik&&x.st.file===tik[0]&&x.st.ln===tik[1]){tikken++
+        cx.fillStyle=kl('tik');cx.fillRect(0,y,6,Math.max(hh,2))}}
+    // de hele spanne van de geselecteerde knoop, aan de rand
+    for(const o of S.iv)if(o.n===sel){const [y,hh]=rij(o.s,o.e)
+      cx.fillStyle=kl('sel');cx.fillRect(Wd-4,y,4,hh)}
+    Object.assign(T,{rijen:n,tikken,gekozen,eind:S.eind,y:M.y,k,rows:S.rows,
+      totaal:S.st.profile.getTotalWeight(),tekst,maat:S.maat})}
+
+  // Syuzhet: de bron van het bestand van de huidige stap.
+  function zet(S,x){
+    const fi=x?x.st.file:S.steps[0].file
+    if(bron!==fi+'|'+S.p.getName()){bron=fi+'|'+S.p.getName();bouw(S,fi)}
+    syu.querySelector('.cur')?.classList.remove('cur')
+    if(!x)return
+    const el=syu.children[x.st.ln-1+voor(x.st.ln)]
+    el.classList.add('cur')
+    // alleen meescrollen als de regel wisselt, niet bij elke tekenbeurt
+    if(T.cur!==bron+x.st.ln)el.scrollIntoView({block:'nearest'})
+    T.cur=bron+x.st.ln}
+  // aantal open dis-rijen boven regel ln
+  const voor=ln=>[...syu.querySelectorAll('.d')]
+    .filter(e=>+e.dataset.ln<ln).length
+  function bouw(S,fi){
+    const tel={},lines=F.files[fi].lines,dis=F.dis[fi]
+    for(const s of S.steps)if(s.file===fi)tel[s.ln]=(tel[s.ln]||0)+1
+    const max=Math.max(1,...Object.values(tel))
+    syu.replaceChildren(...lines.map((l,i)=>{
+      const ln=i+1,n=tel[ln]||0,e=document.createElement('div')
+      e.dataset.ln=ln
+      e.innerHTML=`<i>${dis[ln]?'▸':''}</i><b>${n?`<s style="width:${
+        Math.max(2,30*n/max)}px"></s>${n}`:''}</b><u>${ln}</u>`
+      e.append(l||' ');if(!n)e.classList.add('z')
+      if(tik&&tik[0]===fi&&tik[1]===ln)e.classList.add('tik')
+      e.onclick=ev=>{
+        if(ev.target.tagName=='I'&&dis[ln])return vouw(e,fi,ln)
+        syu.querySelector('.tik')?.classList.remove('tik')
+        tik=tik&&tik[0]===fi&&tik[1]===ln?null:[fi,ln]
+        if(tik)e.classList.add('tik');plan()}
+      return e}))
+    for(const k of fold){const [g,ln]=k.split('|').map(Number)
+      if(g===fi)vouw(syu.children[ln-1+voor(ln)],fi,ln,1)}}
+  // de statische disassembly als vouw onder een bronregel
+  function vouw(e,fi,ln,her){
+    const open=e.nextSibling&&e.nextSibling.dataset.ln==ln+.5
+    if(open&&!her){fold.delete(fi+'|'+ln);e.firstChild.textContent='▸'
+      while(e.nextSibling&&e.nextSibling.dataset.ln==ln+.5)
+        e.nextSibling.remove();return}
+    fold.add(fi+'|'+ln);e.firstChild.textContent='▾'
+    e.after(...F.dis[fi][ln].map(([off,op,arg])=>{
+      const d=document.createElement('div');d.className='d'
+      d.dataset.ln=ln+.5;d.textContent=`${off} ${op} ${arg}`;return d}))}
+
+  // strook: hover markeert de bron, klik zet de selectie in speedscope
+  const onder=ev=>{const S=stap(),r=vlak()
+    if(!S||!r)return null
+    const vp=S.st.chronoViewState.configSpaceViewportRect
+    return bij(S.rows,as(vp,r).t(ev.clientY))}
+  strip.onmousemove=ev=>{hov=onder(ev);plan()}
+  strip.onmouseleave=()=>{hov=null;plan()}
+  strip.onclick=ev=>{const x=onder(ev);if(!x)return
+    cur=x;A.setSelectedNode('CHRONO',x.n);plan()}
+  plan()}
+</script>

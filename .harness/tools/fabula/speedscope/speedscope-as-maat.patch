@@ -1,0 +1,339 @@
+diff --git a/src/app-state/profile-group.ts b/src/app-state/profile-group.ts
+index d294a4f..0243c75 100644
+--- a/src/app-state/profile-group.ts
++++ b/src/app-state/profile-group.ts
+@@ -53,6 +53,21 @@ let initialFlameChartViewState: FlamechartViewState = {
+   logicalSpaceViewportSize: Vec2.zero,
+ }
+ 
++// Profiles named "<name> · <measure>" are measures of one recording
++export function measureOfProfileName(name: string): string | null {
++  const i = name.lastIndexOf(' · ')
++  return i < 0 ? null : name.slice(i + 3)
++}
++
++// The node at the same place in a call tree of the same shape: measures of one
++// recording share their frames and call order, so their trees differ only in
++// weight
++function sameNodeIn(node: CallTreeNode | null, root: CallTreeNode): CallTreeNode | null {
++  if (node == null || node.parent == null) return node && root
++  const parent = sameNodeIn(node.parent, root)
++  return (parent && parent.children[node.parent.children.indexOf(node)]) || null
++}
++
+ export class ProfileGroupAtom extends Atom<ProfileGroupState> {
+   set(newState: ProfileGroupState) {
+     const oldState = this.state
+@@ -91,6 +106,44 @@ export class ProfileGroupAtom extends Atom<ProfileGroupState> {
+     })
+   }
+ 
++  // Show the next measure of the active recording (see measureOfProfileName),
++  // keeping the zoom in proportion and the selected node. False if there is none.
++  setNextMeasureToView = (): boolean => {
++    if (this.state == null) return false
++    const {indexToView, profiles} = this.state
++    const recording = (p: ProfileState) => {
++      const name = p.profile.getName()
++      const measure = measureOfProfileName(name)
++      return measure == null ? null : name.slice(0, name.length - measure.length)
++    }
++    const from = profiles[indexToView]
++    if (recording(from) == null) return false
++    for (let k = 1; k < profiles.length; k++) {
++      const i = (indexToView + k) % profiles.length
++      const to = profiles[i]
++      if (recording(to) !== recording(from)) continue
++      const scale = new Vec2(to.profile.getTotalWeight() / from.profile.getTotalWeight(), 1)
++      const carry = (state: FlamechartViewState, root: CallTreeNode): FlamechartViewState => ({
++        ...state,
++        hover: null,
++        selectedNode: sameNodeIn(state.selectedNode, root),
++        configSpaceViewportRect: new Rect(
++          state.configSpaceViewportRect.origin.timesPointwise(scale),
++          state.configSpaceViewportRect.size.timesPointwise(scale),
++        ),
++      })
++      const chronoViewState = carry(from.chronoViewState, to.profile.getAppendOrderCalltreeRoot())
++      const leftHeavyViewState = carry(from.leftHeavyViewState, to.profile.getGroupedCalltreeRoot())
++      this.set({
++        ...this.state,
++        indexToView: i,
++        profiles: profiles.map(p => (p !== to ? p : {...p, chronoViewState, leftHeavyViewState})),
++      })
++      return true
++    }
++    return false
++  }
++
+   private updateActiveProfileState(fn: (profileState: ProfileState) => ProfileState) {
+     if (this.state == null) return
+     const {indexToView, profiles} = this.state
+diff --git a/src/lib/flamechart.ts b/src/lib/flamechart.ts
+index eeacdfb..5d9f9cc 100644
+--- a/src/lib/flamechart.ts
++++ b/src/lib/flamechart.ts
+@@ -24,6 +24,9 @@ interface FlamechartDataSource {
+   ): void
+ 
+   getColorBucketForFrame(f: Frame): number
++
++  // What the time rulers show: each value as labelled, and a hint on hover
++  ruler?: {label?: (value: string) => string; hint: string} | null
+ }
+ 
+ export class Flamechart {
+@@ -47,6 +50,13 @@ export class Flamechart {
+   formatValue(v: number) {
+     return this.source.formatValue(v)
+   }
++  formatAxisValue(v: number) {
++    const label = this.source.ruler?.label
++    return label ? label(this.formatValue(v)) : this.formatValue(v)
++  }
++  getRulerHint() {
++    return this.source.ruler?.hint || null
++  }
+ 
+   getClampedViewportWidth(viewportWidth: number) {
+     const maxWidth = this.getTotalWeight()
+diff --git a/src/views/flamechart-minimap-view.tsx b/src/views/flamechart-minimap-view.tsx
+index 5545361..7c7d553 100644
+--- a/src/views/flamechart-minimap-view.tsx
++++ b/src/views/flamechart-minimap-view.tsx
+@@ -22,6 +22,8 @@ interface FlamechartMinimapViewProps {
+ 
+   transformViewport: (transform: AffineTransform) => void
+   setConfigSpaceViewportRect: (rect: Rect) => void
++  onRulerClick?: () => boolean
++  onRulerHover?: (ev: MouseEvent | null) => void
+ }
+ 
+ enum DraggingMode {
+@@ -151,7 +153,7 @@ export class FlamechartMinimapView extends Component<FlamechartMinimapViewProps,
+       for (let x = Math.ceil(left / interval) * interval; x < right; x += interval) {
+         // TODO(jlfwong): Ensure that labels do not overlap
+         const pos = Math.round(configToPhysical.transformPosition(new Vec2(x, 0)).x)
+-        const labelText = this.props.flamechart.formatValue(x)
++        const labelText = this.props.flamechart.formatAxisValue(x)
+         const textWidth = Math.ceil(cachedMeasureTextWidth(ctx, labelText))
+ 
+         ctx.fillStyle = theme.fgPrimaryColor
+@@ -317,8 +319,11 @@ export class FlamechartMinimapView extends Component<FlamechartMinimapViewProps,
+   private dragStartConfigSpaceMouse: Vec2 | null = null
+   private dragConfigSpaceViewportOffset: Vec2 | null = null
+   private draggingMode: DraggingMode | null = null
++  private rulerMouseDown: Vec2 | null = null
+   private onMouseDown = (ev: MouseEvent) => {
+     const configSpaceMouse = this.configSpaceMouse(ev)
++    const onRuler = ev.offsetY < Sizes.FRAME_HEIGHT
++    this.rulerMouseDown = onRuler ? new Vec2(ev.clientX, ev.clientY) : null
+ 
+     if (configSpaceMouse) {
+       if (this.props.configSpaceViewportRect.contains(configSpaceMouse)) {
+@@ -397,9 +402,12 @@ export class FlamechartMinimapView extends Component<FlamechartMinimapViewProps,
+     }
+     // Clear the minimap mouse position when leaving the minimap
+     minimapMousePositionAtom.set(null)
++    if (this.props.onRulerHover) this.props.onRulerHover(null)
+   }
+ 
+   private onMouseMove = (ev: MouseEvent) => {
++    const onRuler = this.draggingMode == null && ev.offsetY < Sizes.FRAME_HEIGHT
++    if (this.props.onRulerHover) this.props.onRulerHover(onRuler ? ev : null)
+     const configSpaceMouse = this.configSpaceMouse(ev)
+     if (!configSpaceMouse) return
+     this.updateCursor(configSpaceMouse)
+@@ -412,6 +420,13 @@ export class FlamechartMinimapView extends Component<FlamechartMinimapViewProps,
+     window.removeEventListener('mousemove', this.onWindowMouseMove)
+     window.removeEventListener('mouseup', this.onWindowMouseUp)
+ 
++    // A click without a drag on the time ruler, the top row
++    const down = this.rulerMouseDown
++    this.rulerMouseDown = null
++    if (down && down.equals(new Vec2(ev.clientX, ev.clientY)) && this.props.onRulerClick) {
++      this.props.onRulerClick()
++    }
++
+     const configSpaceMouse = this.configSpaceMouse(ev)
+     if (!configSpaceMouse) return
+     this.updateCursor(configSpaceMouse)
+diff --git a/src/views/flamechart-pan-zoom-view.tsx b/src/views/flamechart-pan-zoom-view.tsx
+index 78e7cf1..5962b22 100644
+--- a/src/views/flamechart-pan-zoom-view.tsx
++++ b/src/views/flamechart-pan-zoom-view.tsx
+@@ -52,6 +52,8 @@ export interface FlamechartPanZoomViewProps {
+ 
+   onNodeHover: (hover: {node: CallTreeNode; event: MouseEvent} | null) => void
+   onNodeSelect: (node: CallTreeNode | null) => void
++  onRulerClick?: () => boolean
++  onRulerHover?: (ev: MouseEvent | null) => void
+ 
+   configSpaceViewportRect: Rect
+   transformViewport: (transform: AffineTransform) => void
+@@ -415,7 +417,7 @@ export class FlamechartPanZoomView extends Component<FlamechartPanZoomViewProps,
+       for (let x = Math.ceil(left / interval) * interval; x < right; x += interval) {
+         // TODO(jlfwong): Ensure that labels do not overlap
+         const pos = Math.round(configToPhysical.transformPosition(new Vec2(x, 0)).x)
+-        const labelText = this.props.flamechart.formatValue(x)
++        const labelText = this.props.flamechart.formatAxisValue(x)
+         const textWidth = cachedMeasureTextWidth(ctx, labelText)
+         ctx.fillStyle = theme.fgPrimaryColor
+         ctx.fillText(labelText, pos - textWidth - labelPaddingPx, y + labelPaddingPx)
+@@ -601,6 +603,10 @@ export class FlamechartPanZoomView extends Component<FlamechartPanZoomViewProps,
+       return
+     }
+ 
++    // The time ruler is the top row; only non-inverted views pass onRulerClick
++    const onRuler = logicalMousePos.y < this.LOGICAL_VIEW_SPACE_FRAME_HEIGHT
++    if (onRuler && this.props.onRulerClick && this.props.onRulerClick()) return
++
+     if (this.hoveredLabel) {
+       this.props.onNodeSelect(this.hoveredLabel.node)
+       this.renderCanvas()
+@@ -627,6 +633,8 @@ export class FlamechartPanZoomView extends Component<FlamechartPanZoomViewProps,
+   private onMouseMove = (ev: MouseEvent) => {
+     this.currentMousePos = new Vec2(ev.offsetX, ev.offsetY)
+     this.updateCursor()
++    const onRuler = !this.lastDragPos && ev.offsetY < this.LOGICAL_VIEW_SPACE_FRAME_HEIGHT
++    if (this.props.onRulerHover) this.props.onRulerHover(onRuler ? ev : null)
+     if (this.lastDragPos) {
+       ev.preventDefault()
+       this.onMouseDrag(ev)
+@@ -692,6 +700,7 @@ export class FlamechartPanZoomView extends Component<FlamechartPanZoomViewProps,
+     this.currentMousePos = null
+     this.hoveredLabel = null
+     this.props.onNodeHover(null)
++    if (this.props.onRulerHover) this.props.onRulerHover(null)
+     this.renderCanvas()
+   }
+ 
+diff --git a/src/views/flamechart-view-container.tsx b/src/views/flamechart-view-container.tsx
+index dd7a739..268d0fc 100644
+--- a/src/views/flamechart-view-container.tsx
++++ b/src/views/flamechart-view-container.tsx
+@@ -17,7 +17,7 @@ import {memo, useCallback} from 'preact/compat'
+ import {ActiveProfileState} from '../app-state/active-profile-state'
+ import {FlamechartSearchContextProvider} from './flamechart-search-view'
+ import {Theme, useTheme} from './themes/theme'
+-import {FlamechartID, FlamechartViewState} from '../app-state/profile-group'
++import {FlamechartID, FlamechartViewState, measureOfProfileName} from '../app-state/profile-group'
+ import {profileGroupAtom} from '../app-state'
+ 
+ interface FlamechartSetters {
+@@ -25,6 +25,7 @@ interface FlamechartSetters {
+   setConfigSpaceViewportRect: (configSpaceViewportRect: Rect) => void
+   setNodeHover: (hover: {node: CallTreeNode; event: MouseEvent} | null) => void
+   setSelectedNode: (node: CallTreeNode | null) => void
++  onRulerClick: () => boolean
+ }
+ 
+ export function useFlamechartSetters(id: FlamechartID): FlamechartSetters {
+@@ -53,6 +54,7 @@ export function useFlamechartSetters(id: FlamechartID): FlamechartSetters {
+       },
+       [id],
+     ),
++    onRulerClick: profileGroupAtom.setNextMeasureToView,
+   }
+ }
+ 
+@@ -66,6 +68,25 @@ export type FlamechartViewProps = {
+ } & FlamechartSetters &
+   FlamechartViewState
+ 
++// The measures of the stepdemo tracer, by the name after " · "
++const measures: {[measure: string]: {name: string; label?: (value: string) => string}} = {
++  stappen: {name: 'stappen', label: v => `${v} #`},
++  υ: {name: 'υ instructies', label: v => `${v} υ`},
++  μ: {name: 'μ geheugentoegangen', label: v => `${v} μ`},
++  t: {name: 't tijd'},
++}
++
++// A measure's ruler labels its values and says that a click shows the next one
++const ruler = (profile: Profile) => {
++  const measure = measureOfProfileName(profile.getName())
++  if (measure == null) return null
++  const {name, label} = measures[measure] || {name: measure}
++  return {
++    label: profile.getWeightUnit() === 'none' ? label : undefined,
++    hint: `${name} · klik: volgende maat`,
++  }
++}
++
+ export const getChronoViewFlamechart = memoizeByShallowEquality(
+   ({
+     profile,
+@@ -78,6 +99,7 @@ export const getChronoViewFlamechart = memoizeByShallowEquality(
+       getTotalWeight: profile.getTotalWeight.bind(profile),
+       forEachCall: profile.forEachCall.bind(profile),
+       formatValue: profile.formatValue.bind(profile),
++      ruler: ruler(profile),
+       getColorBucketForFrame,
+     })
+   },
+@@ -163,6 +185,7 @@ export const getLeftHeavyFlamechart = memoizeByShallowEquality(
+       getTotalWeight: profile.getTotalNonIdleWeight.bind(profile),
+       forEachCall: profile.forEachCallGrouped.bind(profile),
+       formatValue: profile.formatValue.bind(profile),
++      ruler: ruler(profile),
+       getColorBucketForFrame,
+     })
+   },
+diff --git a/src/views/flamechart-view.tsx b/src/views/flamechart-view.tsx
+index 0ae7854..78572ed 100644
+--- a/src/views/flamechart-view.tsx
++++ b/src/views/flamechart-view.tsx
+@@ -73,6 +73,26 @@ export class FlamechartView extends StatelessComponent<FlamechartViewProps> {
+     return `${this.props.flamechart.formatValue(weight)} (${formattedPercent})`
+   }
+ 
++  // The mouse on a time ruler, for its hint
++  private rulerHover: MouseEvent | null = null
++  private onRulerHover = (ev: MouseEvent | null) => {
++    if (!this.props.flamechart.getRulerHint() || (ev == null && this.rulerHover == null)) return
++    this.rulerHover = ev
++    this.forceUpdate()
++  }
++
++  renderRulerHint() {
++    const hint = this.props.flamechart.getRulerHint()
++    if (!this.container || !this.rulerHover || !hint) return null
++    const {width, height, left, top} = this.container.getBoundingClientRect()
++    const offset = new Vec2(this.rulerHover.clientX - left, this.rulerHover.clientY - top)
++    return (
++      <Hovertip containerSize={new Vec2(width, height)} offset={offset}>
++        {hint}
++      </Hovertip>
++    )
++  }
++
+   renderTooltip() {
+     if (!this.container) return null
+ 
+@@ -117,6 +137,8 @@ export class FlamechartView extends StatelessComponent<FlamechartViewProps> {
+           flamechartRenderer={this.props.flamechartRenderer}
+           canvasContext={this.props.canvasContext}
+           setConfigSpaceViewportRect={this.setConfigSpaceViewportRect}
++          onRulerClick={this.props.onRulerClick}
++          onRulerHover={this.onRulerHover}
+         />
+         <ProfileSearchContext.Consumer>
+           {searchResults => (
+@@ -129,6 +151,8 @@ export class FlamechartView extends StatelessComponent<FlamechartViewProps> {
+                 renderInverted={false}
+                 onNodeHover={this.onNodeHover}
+                 onNodeSelect={this.onNodeClick}
++                onRulerClick={this.props.onRulerClick}
++                onRulerHover={this.onRulerHover}
+                 selectedNode={this.props.selectedNode}
+                 transformViewport={this.transformViewport}
+                 configSpaceViewportRect={this.props.configSpaceViewportRect}
+@@ -141,7 +165,7 @@ export class FlamechartView extends StatelessComponent<FlamechartViewProps> {
+             </Fragment>
+           )}
+         </ProfileSearchContext.Consumer>
+-        {this.renderTooltip()}
++        {this.renderRulerHint() || this.renderTooltip()}
+         {this.props.selectedNode && (
+           <FlamechartDetailView
+             flamechart={this.props.flamechart}
