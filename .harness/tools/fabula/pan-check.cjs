@@ -37,16 +37,36 @@ console.log(JSON.stringify({start:a,horiz:h,vert:v,keys:k}))
 if(!zui){
   ok('wiel op de strook loopt door de tijd',v.x0>h.x0&&v.w==h.w,
     {voor:h.x0,na:v.x0})
-  await p.keyboard.down('Control');await p.mouse.wheel(0,-100)
-  await p.keyboard.up('Control');await p.waitForTimeout(200)
-  const z=await st()
-  ok('ctrl+wiel zoomt in om de cursor',z.w<k.w,{voor:k.w,na:z.w})
+  // het tijdstip onder de cursor, uit het laatst getekende beeld (rechtsom)
+  const onder=()=>p.evaluate(y=>(y-fab.y(0))/fab.k,my)
+  const zoom=async()=>{await p.keyboard.down('Control')
+    await p.mouse.wheel(0,-100);await p.keyboard.up('Control')
+    await p.waitForTimeout(200)}
+  const t0=await onder()
+  await zoom()
+  const z=await st(),t1=await onder()
+  ok('ctrl+wiel zoomt in om de cursor',z.w<k.w&&Math.abs(t1-t0)<1e-6,
+    {voor:k.w,na:z.w,t:[t0,t1]})
+  // op de smalste breedte mag verder inzoomen het beeld niet meer schuiven
+  await p.evaluate(()=>fab.kijk(20,0));await p.waitForTimeout(200)
+  const m=await st();await zoom();const m1=await st()
+  ok('ctrl+wiel op de smalste breedte laat het beeld staan',
+    m1.w==m.w&&Math.abs(m1.x0-m.x0)<1e-9,{voor:m,na:m1})
+  await p.evaluate(([a,b])=>fab.kijk(a,b),[z.x0,z.w])
+  await p.waitForTimeout(200)
   await p.mouse.move(mx,my);await p.mouse.down()
   await p.mouse.move(mx,my-60);await p.mouse.move(mx,my-120)
   await p.mouse.up();await p.waitForTimeout(200)
   const s=await st()
   ok('slepen op de strook pant de tijd, zonder te zoomen',s.x0>z.x0&&
-    Math.abs(s.w-z.w)<1e-9,{voor:z.x0,na:s.x0})}
+    Math.abs(s.w-z.w)<1e-9,{voor:z.x0,na:s.x0})
+  // een zijwaartse sleep is ook een sleep: hij kiest geen rij
+  const g=await p.evaluate(()=>fab.gekozen)
+  await p.mouse.move(mx,my);await p.mouse.down()
+  await p.mouse.move(mx+50,my);await p.mouse.move(mx+100,my)
+  await p.mouse.up();await p.waitForTimeout(300)
+  const g1=await p.evaluate(()=>fab.gekozen)
+  ok('zijwaarts slepen is geen klik',g1==g,{voor:g,na:g1})}
 ok('geen paginafouten',!err.length,{err})
 // rot-beside.html?run=stash-only -> rot-beside-stash-only-pan.png
 await p.screenshot({path:`${SHOTS}/${PAGE.replace('.html','')

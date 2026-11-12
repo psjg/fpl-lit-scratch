@@ -92,7 +92,7 @@ function kleur(t){
 function leg(p,steps,maat){
   const iv=[],open=[]
   p.forEachCall((n,v)=>open.push({n,s:v,d:open.length}),
-    (n,v)=>{const o=open.pop();o.e=v;iv.push(o)})
+    (_,v)=>{const o=open.pop();o.e=v;iv.push(o)})
   const fr=[];p.forEachFrame(x=>fr.push(x))
   const k=x=>(x.file||'')+x.name
   fr.sort((a,b)=>k(a)>k(b)?1:-1)
@@ -282,10 +282,13 @@ function fab(F,w,A){
 
   // Het beeld langs de tijd zetten, met speedscope's eigen Rect en Vec2;
   // de diepte (y) blijft. Hooguit 60 px per eenheid, hooguit de hele run
-  // in beeld, en het begin binnen [0, totaal - breedte].
-  function kijk(x,wd){const S=stap(),vp=S.st.chronoViewState
+  // in beeld, en het begin binnen [0, totaal - breedte]. Met t blijft dat
+  // tijdstip op zijn plek in beeld, ook als de breedte hier wordt begrensd
+  // (x telt dan niet).
+  function kijk(x,wd,t){const S=stap(),vp=S.st.chronoViewState
     .configSpaceViewportRect,r=vlak(),tot=S.st.profile.getTotalWeight()
     wd=Math.min(tot,Math.max(r.width/60,wd))
+    if(t!=null)x=t-(t-vp.origin.x)*wd/vp.size.x
     x=Math.min(Math.max(0,x),tot-wd)
     const R=vp.constructor,V2=vp.origin.constructor
     A.setConfigSpaceViewportRect('CHRONO',
@@ -302,16 +305,16 @@ function fab(F,w,A){
   strip.addEventListener('wheel',e=>{e.preventDefault()
     const {vp,M}=nu(),dy=e.deltaY*(e.deltaMode==1?16:1)
     if(e.ctrlKey||e.metaKey){const t=M.t(e.clientY),z=Math.exp(dy*.01)
-      const wd=vp.size.x*z;kijk(t-(t-vp.origin.x)*wd/vp.size.x,wd);return}
+      kijk(0,vp.size.x*z,t);return}
     kijk(vp.origin.x+(ccw?-1:1)*dy/M.k,vp.size.x)},{passive:false})
   // slepen pant; een sleep van meer dan 3 px is geen klik
   let sleep=null
   strip.onpointerdown=e=>{strip.setPointerCapture(e.pointerId)
-    sleep={y:e.clientY,y0:e.clientY,x:nu().vp.origin.x,ver:0}}
+    sleep={x0:e.clientX,y0:e.clientY,x:nu().vp.origin.x,ver:0}}
   strip.onpointermove=e=>{
     if(!sleep){hov=onder(e);plan();return}
     const {vp,M}=nu(),dy=e.clientY-sleep.y0
-    sleep.ver=Math.max(sleep.ver,Math.abs(dy))
+    sleep.ver=Math.max(sleep.ver,Math.hypot(e.clientX-sleep.x0,dy))
     if(sleep.ver>3){strip.classList.add('drag')
       kijk(sleep.x-(ccw?-1:1)*dy/M.k,vp.size.x)}}
   strip.onpointerup=e=>{const s=sleep;sleep=null

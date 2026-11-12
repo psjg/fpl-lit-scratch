@@ -23,7 +23,7 @@
 const fs = require('fs')
 const [PW, PAGE, RUN, SHOTS] = process.argv.slice(2)
 const {chromium} = require(PW)
-const BASE = 'http://127.0.0.1:8792/', W = 1200, H = 900, K = 18
+const BASE = 'http://127.0.0.1:8792/', W = 1200, H = 900
 const F = JSON.parse(fs.readFileSync(
   `${process.env.DATA || 'web'}/${RUN}.fabula.json`, 'utf8'))
 const REPLACE = PAGE.includes('replace')
