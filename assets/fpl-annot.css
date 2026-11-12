@@ -8,24 +8,23 @@
  * site's theme; the weave's colours switch when the site marks itself
  * dark (cosmo alone does not, so a dark OS setting changes nothing here).
  */
-:root {
-  --fpl-vers: #2f7d6b; --fpl-vers-wash: rgba(47, 125, 107, .12);
+:root { --fpl-vers: #2f7d6b; --fpl-vers-wash: rgba(47, 125, 107, .12);
   --fpl-mine: #3b63c4; --fpl-mine-wash: rgba(59, 99, 196, .12);
-  --fpl-lost: #7f6526;   /* 5.6:1 on white: it is small text in the count line and on cards */
-  --fpl-con: #b4443c;
+  /* 5.6:1 on white: it is small text in the count line and on cards */
+  --fpl-lost: #7f6526; --fpl-con: #b4443c;
   --fpl-rule: var(--bs-border-color, #dee2e6);
   --fpl-edge: var(--bs-gray-500, #adb5bd);
   --fpl-mute: var(--bs-secondary-color, #6c757d);
-  --fpl-bg: var(--bs-body-bg, #fff);
-  --fpl-fg: var(--bs-body-color, #212529);
+  --fpl-bg: var(--bs-body-bg, #fff); --fpl-fg: var(--bs-body-color, #212529);
   --fpl-wash: var(--bs-tertiary-bg, #f8f9fa);
-  --fpl-node: var(--bs-gray-400, #ced4da);   /* a graph card's border */
-  /* the heat bar's three steps: the accent's hue, darker per step, the lightest 3:1 on white */
-  /* warm, not the accent's blue (QA, block 5: the pale step read as a
-     quote's rule) */
+  /* a graph card's border */
+  --fpl-node: var(--bs-gray-400, #ced4da);
+  /* the heat bar's three steps: the accent's hue, darker per step, the lightest
+     3:1 on white */
+  /* warm, not the accent's blue (QA, block 5: the pale step read as a quote's
+     rule) */
   --fpl-heat-1: oklch(.64 .13 75); --fpl-heat-2: oklch(.55 .16 48);
-  --fpl-heat-3: oklch(.45 .17 28);
-}
+  --fpl-heat-3: oklch(.45 .17 28); }
 [data-bs-theme="dark"], .quarto-dark {
   --fpl-vers: #63b89f; --fpl-vers-wash: rgba(99, 184, 159, .16);
   --fpl-mine: #8aa6ee; --fpl-mine-wash: rgba(138, 166, 238, .18);
@@ -35,76 +34,114 @@
   --fpl-heat-3: oklch(.80 .12 40);
 }
 
-/* spans (boards V3, V4): washed in their label's colour, a 2px line per layer under them, the outermost lowest;
-   --lc, --wash and --u are set per mark by paint() in fpl-annot.js, which keeps the text at 4.5:1 or more on the wash.
-   A mark not painted yet (the editor's draft) falls back to the weave's colours. */
+/* spans (boards V3, V4): washed in their label's colour, a 2px line per layer
+   under them, the outermost lowest; --lc, --wash and --u are set per mark by
+   paint() in fpl-annot.js, which keeps the text at 4.5:1 or more on the wash. A
+   mark not painted yet (the editor's draft) falls back to the weave's colours.
+   */
 mark.fact { color: inherit; padding: 0; cursor: pointer; border-radius: 2px;
-  background: var(--wash, var(--fpl-vers-wash)); box-shadow: var(--u, inset 0 -2px 0 var(--lc, var(--fpl-vers)));
-  transition: outline-color .12s; outline: 2px solid transparent; outline-offset: 1px; }
+  background: var(--wash, var(--fpl-vers-wash));
+  box-shadow: var(--u, inset 0 -2px 0 var(--lc, var(--fpl-vers)));
+  transition: outline-color .12s; outline: 2px solid transparent;
+  outline-offset: 1px; }
 mark.fact code { background: transparent; }
-mark.fact.fpl-long { box-shadow: none; }   /* three lines or more: the bar in the gutter marks it */
+/* three lines or more: the bar in the gutter marks it */
+mark.fact.fpl-long { box-shadow: none; }
 mark.fact:hover, mark.fact.is-hot { outline-color: var(--lc, var(--fpl-vers)); }
 
-/* room for the margin (boards A-J at 1440): Quarto centres the 740px column, which leaves 350px right of it at
-   1440 and no room for the bar (344px) and a card (316px) behind a 40px gutter. Where 380px fits, the outer right
-   track takes at least 79px from the shared 5fr (Quarto's 301px of fixed tracks + 79 = 380) and the left track
-   gives it up: at 1440 the column starts at x320 instead of 350, the nav moves with it, and nothing narrows.
-   Below 1380 the folded bar stands at the top right and Quarto's grid is left alone. */
+/* room for the margin (boards A-J at 1440): Quarto centres the 740px column,
+   which leaves 350px right of it at 1440 and no room for the bar (344px) and a
+   card (316px) behind a 40px gutter. Where 380px fits, the outer right track
+   takes at least 79px from the shared 5fr (Quarto's 301px of fixed tracks + 79
+   = 380) and the left track gives it up: at 1440 the column starts at x320
+   instead of 350, the nav moves with it, and nothing narrows. Below 1380 the
+   folded bar stands at the top right and Quarto's grid is left alone. */
 @media (min-width: 1380px) {
-  html:has(meta[name="fpl-commit"]) body.floating .page-columns { grid-template-columns: [screen-start] 1.5em [screen-start-inset] 5fr
-    [page-start] minmax(25px, 50px) [page-start-inset] minmax(50px, 150px) [body-start-outset] minmax(25px, 50px) [body-start] 1.5em
-    [body-content-start] minmax(740px, calc(780px - 3em)) [body-content-end] 1.5em [body-end] minmax(25px, 50px) [body-end-outset]
-    minmax(50px, 150px) [page-end-inset] minmax(25px, 50px) [page-end] minmax(79px, 5fr) [screen-end-inset] 1.5em [screen-end]; }
+  html:has(meta[name="fpl-commit"]) body.floating .page-columns {
+    grid-template-columns: [screen-start] 1.5em [screen-start-inset] 5fr
+      [page-start] minmax(25px, 50px) [page-start-inset] minmax(50px, 150px)
+      [body-start-outset] minmax(25px, 50px) [body-start] 1.5em
+      [body-content-start] minmax(740px, calc(780px - 3em)) [body-content-end]
+      1.5em [body-end] minmax(25px, 50px) [body-end-outset] minmax(50px, 150px)
+      [page-end-inset] minmax(25px, 50px) [page-end] minmax(79px, 5fr)
+      [screen-end-inset] 1.5em [screen-end]; }
 }
 
 /* the column: no longer sticky, as tall as its cards */
-#quarto-margin-sidebar.fpl-column { position: relative; top: auto; height: auto; max-height: none;
-  overflow: visible; align-self: stretch; }
-/* Quarto sinks an empty margin column (zindex-bottom, z-index -1) under the text; ours holds cards and an editor */
+#quarto-margin-sidebar.fpl-column { position: relative; top: auto; height: auto;
+  max-height: none; overflow: visible; align-self: stretch; }
+/* Quarto sinks an empty margin column (zindex-bottom, z-index -1) under the
+   text; ours holds cards and an editor */
 #quarto-margin-sidebar.fpl-column.zindex-bottom { z-index: 1 !important; }
-.fpl-margin { position: relative; font-size: .86rem; line-height: 1.4; color: var(--fpl-fg); }
-.fpl-lines { position: absolute; top: 0; left: 0; pointer-events: none; z-index: 1; }
-.fpl-line { fill: none; stroke: var(--lc, var(--fpl-vers)); stroke-width: 1.25; stroke-linecap: round; opacity: .5; transition: opacity .12s; }
+.fpl-margin { position: relative; font-size: .86rem; line-height: 1.4;
+  color: var(--fpl-fg); }
+.fpl-lines { position: absolute; top: 0; left: 0; pointer-events: none;
+  z-index: 1; }
+.fpl-line { fill: none; stroke: var(--lc, var(--fpl-vers)); stroke-width: 1.25;
+  stroke-linecap: round; opacity: .5; transition: opacity .12s; }
 .fpl-line.mine { stroke: var(--lc, var(--fpl-mine)); }
 .fpl-line.is-hot { opacity: 1; stroke-width: 1.75; }
-.fpl-stretch { fill: var(--lc, var(--fpl-vers)); opacity: .7; transition: opacity .12s; }
+.fpl-stretch { fill: var(--lc, var(--fpl-vers)); opacity: .7;
+  transition: opacity .12s; }
 .fpl-stretch.mine { fill: var(--lc, var(--fpl-mine)); }
 .fpl-stretch.is-hot { opacity: 1; }
-/* the knob is a handle (board C): a transparent stroke widens its hit; it grows in place, a plain dot, no ring */
-.fpl-knob { fill: var(--lc, var(--fpl-vers)); stroke: transparent; stroke-width: 8; pointer-events: all; cursor: grab; touch-action: none;
+/* the knob is a handle (board C): a transparent stroke widens its hit; it grows
+   in place, a plain dot, no ring */
+.fpl-knob { fill: var(--lc, var(--fpl-vers)); stroke: transparent;
+  stroke-width: 8; pointer-events: all; cursor: grab; touch-action: none;
   outline: none; transition: opacity .12s, r .12s; }
 .fpl-knob.mine { fill: var(--lc, var(--fpl-mine)); }
-.fpl-knob:hover, .fpl-knob:focus-visible, .fpl-knob.is-hot, .fpl-knob.is-drag { opacity: 1; r: 6; }
-/* a connect in flight: a dashed line from the span's stub, a dot under the pointer, the end lit */
-.fpl-aim-line { fill: none; stroke: var(--fpl-mine); stroke-width: 1.75; stroke-dasharray: 5 4; }
+.fpl-knob:hover, .fpl-knob:focus-visible, .fpl-knob.is-hot, .fpl-knob.is-drag {
+  opacity: 1; r: 6; }
+/* a connect in flight: a dashed line from the span's stub, a dot under the
+   pointer, the end lit */
+.fpl-aim-line { fill: none; stroke: var(--fpl-mine); stroke-width: 1.75;
+  stroke-dasharray: 5 4; }
 .fpl-aim-dot { fill: var(--fpl-mine); }
-body.fpl-dragging, body.fpl-dragging * { cursor: grabbing !important; user-select: none; }
-/* the carried knob lets the pointer through, so the text under it decides between a stretch and a connect */
+body.fpl-dragging, body.fpl-dragging * { cursor: grabbing !important;
+  user-select: none; }
+/* the carried knob lets the pointer through, so the text under it decides
+   between a stretch and a connect */
 body.fpl-dragging .fpl-knob.is-drag { pointer-events: none; }
-/* a stretch in flight (board D): the words gained washed and underlined dashed, the words lost washed grey */
+/* a stretch in flight (board D): the words gained washed and underlined dashed,
+   the words lost washed grey */
 .fpl-grow-wash { fill: var(--fpl-mine); opacity: .07; }
-.fpl-grow-line { fill: none; stroke: var(--fpl-mine); stroke-width: 2; stroke-dasharray: 5 3; }
+.fpl-grow-line { fill: none; stroke: var(--fpl-mine); stroke-width: 2;
+  stroke-dasharray: 5 3; }
 .fpl-grow-wash.is-cut { fill: var(--fpl-mute); opacity: .14; }
 .fpl-grow-line.is-cut { stroke: var(--fpl-mute); }
-.fpl-tip { position: absolute; z-index: 1002; margin: 0; padding: 4px 8px; border-radius: 4px; font-size: 12.5px; line-height: 1.4;
-  white-space: nowrap; pointer-events: none; background: var(--fpl-fg); color: var(--fpl-bg); }
-.fpl-tip kbd { font: 600 11px/1 SFMono-Regular, Menlo, monospace; padding: 2px 4px; border: 0; border-radius: 3px; box-shadow: none;
-  background: color-mix(in srgb, var(--fpl-bg) 18%, transparent); color: inherit; }
-mark.fact.fpl-target, .fpl-target:is(.fpl-c, .fpl-s, .fpl-p, li, [data-fact]) { background: color-mix(in srgb, var(--fpl-vers) 12%, transparent);
-  outline: 1.5px solid var(--fpl-vers); outline-offset: 1px; border-radius: 2px; }
-.fpl-card.fpl-target, .fpl-card.mine.fpl-target { z-index: 3; background: color-mix(in srgb, var(--fpl-vers) 6%, var(--fpl-bg)); border-color: var(--fpl-vers); }
-mark.fact[data-id="draft"] { box-shadow: none; background: color-mix(in srgb, var(--fpl-mine) 22%, transparent); }   /* board B: a selection, washed, no line yet */
+.fpl-tip { position: absolute; z-index: 1002; margin: 0; padding: 4px 8px;
+  border-radius: 4px; font-size: 12.5px; line-height: 1.4; white-space: nowrap;
+  pointer-events: none; background: var(--fpl-fg); color: var(--fpl-bg); }
+.fpl-tip kbd { font: 600 11px/1 SFMono-Regular, Menlo, monospace;
+  padding: 2px 4px; border: 0; border-radius: 3px; box-shadow: none;
+  background: color-mix(in srgb, var(--fpl-bg) 18%, transparent);
+  color: inherit; }
+mark.fact.fpl-target, .fpl-target:is(.fpl-c, .fpl-s, .fpl-p, li, [data-fact]) {
+  background: color-mix(in srgb, var(--fpl-vers) 12%, transparent);
+  outline: 1.5px solid var(--fpl-vers); outline-offset: 1px; border-radius: 2px;
+}
+.fpl-card.fpl-target, .fpl-card.mine.fpl-target { z-index: 3;
+  background: color-mix(in srgb, var(--fpl-vers) 6%, var(--fpl-bg));
+  border-color: var(--fpl-vers); }
+/* board B: a selection, washed, no line yet */
+mark.fact[data-id="draft"] { box-shadow: none;
+  background: color-mix(in srgb, var(--fpl-mine) 22%, transparent); }
 
 /* paragraph and sentence numbers, outside the reading stand */
 .fpl-p { position: relative; }
-.fpl-p::before { content: "\00A7" attr(data-n); position: absolute; right: 100%; margin-right: 1.5rem; top: .35em;
-  width: 2.4rem; text-align: right; font-variant-numeric: tabular-nums;
-  font-size: .68rem; color: var(--fpl-mute); opacity: 0; transition: opacity .12s; user-select: none; cursor: pointer; }
-.fpl-p[data-kind="C"]::after { content: ":C"; position: absolute; right: 100%; margin-right: .5rem; top: .5rem; width: 1rem;
-  font-size: .68rem; color: var(--fpl-mute); opacity: 0; transition: opacity .12s; user-select: none; pointer-events: none; }
+.fpl-p::before { content: "\00A7" attr(data-n); position: absolute; right: 100%;
+  margin-right: 1.5rem; top: .35em; width: 2.4rem; text-align: right;
+  font-variant-numeric: tabular-nums; font-size: .68rem; color: var(--fpl-mute);
+  opacity: 0; transition: opacity .12s; user-select: none; cursor: pointer; }
+.fpl-p[data-kind="C"]::after { content: ":C"; position: absolute; right: 100%;
+  margin-right: .5rem; top: .5rem; width: 1rem; font-size: .68rem;
+  color: var(--fpl-mute); opacity: 0; transition: opacity .12s;
+  user-select: none; pointer-events: none; }
 body.fpl-numbered .fpl-p::after { opacity: .8; }
-.fpl-s::before { content: attr(data-n); font-size: .6em; color: var(--fpl-mute); vertical-align: super; margin-right: .15em; cursor: pointer;
-  display: none; user-select: none; }
+.fpl-s::before { content: attr(data-n); font-size: .6em; color: var(--fpl-mute);
+  vertical-align: super; margin-right: .15em; cursor: pointer; display: none;
+  user-select: none; }
 body.fpl-numbered .fpl-p::before { opacity: .8; }
 body.fpl-numbered .fpl-s::before { display: inline-block; }
 /* the clause number takes no room and shows on the sentence under the
@@ -113,9 +150,9 @@ body.fpl-numbered .fpl-s::before { display: inline-block; }
    block, once the clause runs over two lines, spans its fragments and
    dropped the number into the middle of a word (feedback 1) */
 .fpl-c::before { content: attr(data-n); display: inline-block; width: 0;
-  position: relative; top: -1.6em;
-  font-size: .55em; line-height: 1; white-space: nowrap;
-  color: var(--fpl-mute); opacity: 0; transition: opacity 80ms; user-select: none; pointer-events: none; }
+  position: relative; top: -1.6em; font-size: .55em; line-height: 1;
+  white-space: nowrap; color: var(--fpl-mute); opacity: 0;
+  transition: opacity 80ms; user-select: none; pointer-events: none; }
 body.fpl-numbered .fpl-s:hover .fpl-c::before { opacity: 1; }
 .fpl-p[data-kind="C"]::before { top: .5rem; }
 /* a gutter too narrow for "§9" left of the heat bar's lane (feedback 26):
@@ -128,83 +165,132 @@ body.fpl-gut-narrow .fpl-heat { top: 1.4rem; }
 .fpl-gutw { position: absolute; visibility: hidden; font-size: .68rem;
   font-variant-numeric: tabular-nums; white-space: nowrap; }
 .fpl-tip[hidden] { display: none; }
-.fpl-s:target, .fpl-p:target > p, .fpl-p.is-hot > p, .fpl-s.is-hot { background: var(--fpl-vers-wash); }
-.fpl-p pre code > span:target, .fpl-p pre code > span.is-hot { background: var(--fpl-vers-wash); display: inline-block; width: 100%; }
+.fpl-s:target, .fpl-p:target > p, .fpl-p.is-hot > p, .fpl-s.is-hot {
+  background: var(--fpl-vers-wash); }
+.fpl-p pre code > span:target, .fpl-p pre code > span.is-hot {
+  background: var(--fpl-vers-wash); display: inline-block; width: 100%; }
 
-/* cards (boards B, E): the colour is the dot's, no border of its own; hot, a tint and a hairline, raised over the card
-   below, since the one-line quote and the clamped note open in place and nothing else may move */
-.fpl-card { box-sizing: border-box; padding: 8px 10px 9px; border: 1px solid transparent; border-radius: 6px; background: var(--fpl-bg);
-  cursor: pointer; transition: opacity .12s, background-color .12s, border-color .12s; }
-.fpl-column .fpl-card { position: absolute; left: 28px; right: 0; }   /* 28px of the gutter's curve inside the column */
+/* cards (boards B, E): the colour is the dot's, no border of its own; hot, a
+   tint and a hairline, raised over the card below, since the one-line quote and
+   the clamped note open in place and nothing else may move */
+.fpl-card { box-sizing: border-box; padding: 8px 10px 9px;
+  border: 1px solid transparent; border-radius: 6px; background: var(--fpl-bg);
+  cursor: pointer;
+  transition: opacity .12s, background-color .12s, border-color .12s; }
+/* 28px of the gutter's curve inside the column */
+.fpl-column .fpl-card { position: absolute; left: 28px; right: 0; }
 .fpl-column .fpl-card { min-width: 220px; }
-.fpl-card { font-size: 14px; line-height: 1.4; }   /* board F: 14px cards, 12.5px meta, 11px chips, whatever the site's rem */   /* NARROW in fpl-annot.js: never a card of one word a line */
-.fpl-head, .fpl-cardhead { min-height: 20px; align-items: center; }   /* HEAD in fpl-annot.js: the line meets this row */
+/* board F: 14px cards, 12.5px meta, 11px chips, whatever the site's rem */
+/* NARROW in fpl-annot.js: never a card of one word a line */
+.fpl-card { font-size: 14px; line-height: 1.4; }
+/* HEAD in fpl-annot.js: the line meets this row */
+.fpl-head, .fpl-cardhead { min-height: 20px; align-items: center; }
 .fpl-cardhead { display: flex; gap: 7px; min-width: 0; }
 .fpl-card:focus-within, .fpl-card.is-open { z-index: 3; }
-.fpl-card.is-open { border-color: color-mix(in srgb, var(--fpl-vers) 30%, var(--fpl-bg)); }
-.fpl-card.mine.is-open { border-color: color-mix(in srgb, var(--fpl-mine) 30%, var(--fpl-bg)); }
-.fpl-card.is-hot { z-index: 3; background: color-mix(in srgb, var(--fpl-vers) 6%, var(--fpl-bg));
+.fpl-card.is-open {
   border-color: color-mix(in srgb, var(--fpl-vers) 30%, var(--fpl-bg)); }
-.fpl-card.mine.is-hot { background: color-mix(in srgb, var(--fpl-mine) 6%, var(--fpl-bg)); border-color: color-mix(in srgb, var(--fpl-mine) 30%, var(--fpl-bg)); }
-.fpl-card.fpl-editing, .fpl-card.mine.fpl-editing.is-hot { cursor: auto; z-index: 4; background: var(--fpl-bg); border-color: color-mix(in srgb, var(--fpl-mine) 28%, var(--fpl-bg));
-  box-shadow: 0 6px 20px rgba(20, 30, 50, .14), 0 1px 3px rgba(20, 30, 50, .08); }
-.fpl-inline { margin: -.5rem 0 1rem; padding: .45rem .7rem; background: var(--fpl-wash); }
+.fpl-card.mine.is-open {
+  border-color: color-mix(in srgb, var(--fpl-mine) 30%, var(--fpl-bg)); }
+.fpl-card.is-hot { z-index: 3;
+  background: color-mix(in srgb, var(--fpl-vers) 6%, var(--fpl-bg));
+  border-color: color-mix(in srgb, var(--fpl-vers) 30%, var(--fpl-bg)); }
+.fpl-card.mine.is-hot {
+  background: color-mix(in srgb, var(--fpl-mine) 6%, var(--fpl-bg));
+  border-color: color-mix(in srgb, var(--fpl-mine) 30%, var(--fpl-bg)); }
+.fpl-card.fpl-editing, .fpl-card.mine.fpl-editing.is-hot { cursor: auto;
+  z-index: 4; background: var(--fpl-bg);
+  border-color: color-mix(in srgb, var(--fpl-mine) 28%, var(--fpl-bg));
+  box-shadow: 0 6px 20px rgba(20, 30, 50, .14), 0 1px 3px rgba(20, 30, 50, .08);
+}
+.fpl-inline { margin: -.5rem 0 1rem; padding: .45rem .7rem;
+  background: var(--fpl-wash); }
 /* narrow, a lost row is a pale strip under the title block (board K) */
 .fpl-margin.is-narrow > .fpl-card { margin: 0 0 1rem; padding: .45rem .7rem;
   background: var(--fpl-wash); border-radius: 6px; }
 .fpl-head { display: flex; gap: 7px; min-width: 0; }
-.fpl-q { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-style: italic; color: var(--fpl-mute); }
+.fpl-q { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden;
+  text-overflow: ellipsis; font-style: italic; color: var(--fpl-mute); }
 .fpl-editor .fpl-dot { background: var(--fpl-mine); }
-.fpl-dot { width: .5rem; height: .5rem; border-radius: 50%; background: var(--lc, var(--fpl-vers)); align-self: center; flex: none; }
+.fpl-dot { width: .5rem; height: .5rem; border-radius: 50%;
+  background: var(--lc, var(--fpl-vers)); align-self: center; flex: none; }
 .mine .fpl-dot { background: var(--lc, var(--fpl-mine)); }
 .fpl-lost { color: var(--fpl-lost); }
 .fpl-mine { color: var(--fpl-mine); }
 /* a quote is one line and a note two, until the card is hot or holds the
    focus; a card folded in under its block stands in the text's flow, so
    there only the focus opens them: a hover must not push the text down */
-.fpl-excerpt { font-size: .8rem; font-style: italic; color: var(--fpl-mute); margin: .15rem 0;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.fpl-card .fpl-note { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.fpl-excerpt { font-size: .8rem; font-style: italic; color: var(--fpl-mute);
+  margin: .15rem 0; white-space: nowrap; overflow: hidden;
+  text-overflow: ellipsis; }
+.fpl-card .fpl-note { display: -webkit-box; -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical; overflow: hidden; }
 .fpl-card:not(.fpl-inline).is-hot .fpl-excerpt,
 .fpl-card:focus-within .fpl-excerpt { white-space: normal; }
 .fpl-card:not(.fpl-inline).is-hot .fpl-note,
 .fpl-card:focus-within .fpl-note { display: block; }
-.fpl-chips { display: flex; flex-wrap: wrap; gap: .3rem; align-items: center; margin-top: .3rem; }
-.fpl-chip { font-size: 11px; font-weight: 600; line-height: 1; padding: 4px 7px; border-radius: 999px;
-  border: 1px solid var(--fpl-rule); background: var(--fpl-wash); color: var(--fpl-fg); white-space: nowrap; }
+.fpl-chips { display: flex; flex-wrap: wrap; gap: .3rem; align-items: center;
+  margin-top: .3rem; }
+.fpl-chip { font-size: 11px; font-weight: 600; line-height: 1; padding: 4px 7px;
+  border-radius: 999px; border: 1px solid var(--fpl-rule);
+  background: var(--fpl-wash); color: var(--fpl-fg); white-space: nowrap; }
 .fpl-chip small { font-weight: 400; color: var(--fpl-mute); }
-.fpl-chip.is-vers { background: var(--fpl-vers-wash); border-color: transparent; color: var(--fpl-vers); }
-.fpl-chip.is-mine { background: var(--fpl-mine-wash); border-color: transparent; color: var(--fpl-mine); }
-.fpl-chip.is-on { background: var(--fpl-mine-wash); border-color: var(--fpl-mine); color: var(--fpl-mine); }
+.fpl-chip.is-vers { background: var(--fpl-vers-wash); border-color: transparent;
+  color: var(--fpl-vers); }
+.fpl-chip.is-mine { background: var(--fpl-mine-wash); border-color: transparent;
+  color: var(--fpl-mine); }
+.fpl-chip.is-on { background: var(--fpl-mine-wash);
+  border-color: var(--fpl-mine); color: var(--fpl-mine); }
 .fpl-editor .fpl-chip { cursor: pointer; }
 /* the pieces of a discontinuous span, in order; × lets one go */
 .fpl-pieces { display: flex; flex-wrap: wrap; gap: .3rem; margin: .2rem 0; }
-.fpl-piece { display: inline-flex; align-items: center; min-width: 0; max-width: 100%; font-weight: 400; font-style: italic; color: var(--fpl-mute); }
+.fpl-piece { display: inline-flex; align-items: center; min-width: 0;
+  max-width: 100%; font-weight: 400; font-style: italic; color: var(--fpl-mute);
+}
 .fpl-gist { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
-.fpl-inner { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; white-space: nowrap; }
+.fpl-inner { font: inherit; color: inherit; background: none; border: 0;
+  padding: 0; cursor: pointer; white-space: nowrap; }
 .fpl-inner:hover { text-decoration: underline; }
-.fpl-piece.is-lost { text-decoration: line-through; text-decoration-color: var(--fpl-lost); }
-.fpl-unpiece { font: inherit; font-style: normal; flex-shrink: 0; margin-left: .3rem; padding: 0; border: 0; background: none; color: var(--fpl-mute); cursor: pointer; }
+.fpl-piece.is-lost { text-decoration: line-through;
+  text-decoration-color: var(--fpl-lost); }
+.fpl-unpiece { font: inherit; font-style: normal; flex-shrink: 0;
+  margin-left: .3rem; padding: 0; border: 0; background: none;
+  color: var(--fpl-mute); cursor: pointer; }
 .fpl-unpiece:hover, .fpl-unpiece:focus-visible { color: var(--fpl-lost); }
 .fpl-note { margin: .3rem 0 0; }
 
-/* a card's head (board F): the first words of its quote, its kind, and Graph and ⋯, which keep their place while
-   hidden, so nothing moves when they show on hover (board E); under it one meta line. The thread, the answer field
-   and the block's address show when the card is open (a click, its menu) or holds the focus, never on hover alone */
-.fpl-title { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 600; color: var(--fpl-fg); }
+/* a card's head (board F): the first words of its quote, its kind, and Graph
+   and ⋯, which keep their place while hidden, so nothing moves when they show
+   on hover (board E); under it one meta line. The thread, the answer field and
+   the block's address show when the card is open (a click, its menu) or holds
+   the focus, never on hover alone */
+.fpl-title { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden;
+  text-overflow: ellipsis; font-weight: 600; color: var(--fpl-fg); }
 .fpl-cardhead > .fpl-chip { flex: none; }
-.fpl-chip.is-kind { border-color: transparent; }   /* the kind in a card's head: plain, the colour is the dot's */
-.fpl-ib { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; margin: -2px 0;
-  padding: 0; border: 0; border-radius: 4px; background: none; color: var(--fpl-mute); cursor: pointer; opacity: 0;
+/* the kind in a card's head: plain, the colour is the dot's */
+.fpl-chip.is-kind { border-color: transparent; }
+.fpl-ib { flex: none; display: inline-flex; align-items: center;
+  justify-content: center; width: 24px; height: 24px; margin: -2px 0;
+  padding: 0; border: 0; border-radius: 4px; background: none;
+  color: var(--fpl-mute); cursor: pointer; opacity: 0;
   transition: opacity .12s, background-color .12s; }
 .fpl-cardhead > .fpl-ib:last-child { margin-right: -4px; }
-.fpl-card.is-hot .fpl-cardhead > .fpl-ib, .fpl-card.is-open .fpl-cardhead > .fpl-ib, .fpl-card:focus-within .fpl-cardhead > .fpl-ib,
-.fpl-inline .fpl-cardhead > .fpl-ib, .fpl-ib:focus-visible { opacity: 1; }
-body.fpl-linking .fpl-card .fpl-cardhead > .fpl-ib { opacity: 0; }   /* board C: while a connect is in flight its lit cards show no tools */
-.fpl-ib:hover, .fpl-ib[aria-expanded="true"] { background: var(--fpl-vers-wash); color: var(--fpl-vers); }
-.mine .fpl-ib:hover, .mine .fpl-ib[aria-expanded="true"] { background: var(--fpl-mine-wash); color: var(--fpl-mine); }
+.fpl-card.is-hot .fpl-cardhead > .fpl-ib,
+.fpl-card.is-open .fpl-cardhead > .fpl-ib,
+.fpl-card:focus-within .fpl-cardhead > .fpl-ib,
+.fpl-inline .fpl-cardhead > .fpl-ib,
+.fpl-ib:focus-visible { opacity: 1; }
+/* board C: while a connect is in flight its lit cards show no tools */
+body.fpl-linking .fpl-card .fpl-cardhead > .fpl-ib { opacity: 0; }
+.fpl-ib:hover, .fpl-ib[aria-expanded="true"] { background: var(--fpl-vers-wash);
+  color: var(--fpl-vers); }
+.mine .fpl-ib:hover, .mine .fpl-ib[aria-expanded="true"] {
+  background: var(--fpl-mine-wash); color: var(--fpl-mine); }
 .fpl-ib:focus-visible { outline: 2px solid var(--fpl-mine); outline-offset: 0; }
-.fpl-card > .fpl-note, .fpl-card > .fpl-meta, .fpl-card > .fpl-pieces, .fpl-card > .fpl-ledger, .fpl-card > .fpl-args { margin-left: 15px; }
+.fpl-card > .fpl-note,
+.fpl-card > .fpl-meta,
+.fpl-card > .fpl-pieces,
+.fpl-card > .fpl-ledger,
+.fpl-card > .fpl-args { margin-left: 15px; }
 .fpl-card > .fpl-args { margin-top: 3px; font-size: 12.5px; }
 .fpl-card > .fpl-args > summary { font-weight: 400; }
 .fpl-where { white-space: nowrap; }
@@ -213,37 +299,55 @@ body.fpl-linking .fpl-card .fpl-cardhead > .fpl-ib { opacity: 0; }   /* board C:
 .fpl-meta b { font-weight: 600; color: var(--fpl-fg); }
 .fpl-meta .fpl-arm { color: var(--bs-link-color, #2b6cb0); font-weight: 600; }
 .fpl-where, .fpl-thread { display: none; }
-/* open only, not on focus: a press on "n reacties" focuses it, and the press must stay on it until the click */
+/* open only, not on focus: a press on "n reacties" focuses it, and the press
+   must stay on it until the click */
 .fpl-card.is-open .fpl-where { display: inline; }
 .fpl-card.is-open .fpl-count-r { display: none; }
-.fpl-card.is-open .fpl-thread, .fpl-card:focus-within .fpl-thread { display: block; }
-/* a relation by its other end: a quote (a click folds what lies between), or a decision of the ledger as a chip */
-.fpl-end { font: inherit; color: inherit; background: none; border: 0; padding: 0; }
+.fpl-card.is-open .fpl-thread, .fpl-card:focus-within .fpl-thread {
+  display: block; }
+/* a relation by its other end: a quote (a click folds what lies between), or a
+   decision of the ledger as a chip */
+.fpl-end { font: inherit; color: inherit; background: none; border: 0;
+  padding: 0; }
 button.fpl-end { cursor: pointer; }
-button.fpl-end:hover, button.fpl-end:focus-visible { color: var(--fpl-fg); text-decoration: underline; text-underline-offset: 2px; }
-.fpl-decision { display: inline-block; max-width: min(100%, 150px); box-sizing: border-box; vertical-align: bottom; overflow: hidden; white-space: nowrap;
-  text-overflow: ellipsis; font: inherit; font-size: 12px; line-height: 1.35; padding: 0 6px; border: 1px solid var(--fpl-rule); border-radius: 4px;
-  background: var(--fpl-wash); color: var(--fpl-fg); cursor: pointer; }
+button.fpl-end:hover, button.fpl-end:focus-visible { color: var(--fpl-fg);
+  text-decoration: underline; text-underline-offset: 2px; }
+.fpl-decision { display: inline-block; max-width: min(100%, 150px);
+  box-sizing: border-box; vertical-align: bottom; overflow: hidden;
+  white-space: nowrap; text-overflow: ellipsis; font: inherit; font-size: 12px;
+  line-height: 1.35; padding: 0 6px; border: 1px solid var(--fpl-rule);
+  border-radius: 4px; background: var(--fpl-wash); color: var(--fpl-fg);
+  cursor: pointer; }
 .fpl-decision b { font-weight: 600; }
-.fpl-decision:hover, .fpl-decision[aria-expanded="true"] { border-color: var(--fpl-edge); }
-.fpl-ledger { margin-top: 6px; padding: 6px 8px; border-radius: 4px; background: var(--fpl-wash); font-size: 12.5px; line-height: 1.4; cursor: auto; }
+.fpl-decision:hover, .fpl-decision[aria-expanded="true"] {
+  border-color: var(--fpl-edge); }
+.fpl-ledger { margin-top: 6px; padding: 6px 8px; border-radius: 4px;
+  background: var(--fpl-wash); font-size: 12.5px; line-height: 1.4;
+  cursor: auto; }
 .fpl-ledger p { margin: 0; }
-.fpl-ledger .fpl-why, .fpl-ledger .fpl-when { margin-top: 4px; color: var(--fpl-mute); }
+.fpl-ledger .fpl-why, .fpl-ledger .fpl-when { margin-top: 4px;
+  color: var(--fpl-mute); }
 /* a lost row (board B): one amber line */
 .fpl-card.lost { padding-top: 6px; padding-bottom: 6px; }
-.fpl-lostline { flex: 1; min-width: 0; margin: 0; font-size: 12.5px; line-height: 1.4; color: var(--fpl-lost); }
+.fpl-lostline { flex: 1; min-width: 0; margin: 0; font-size: 12.5px;
+  line-height: 1.4; color: var(--fpl-lost); }
 .fpl-lostline b { font-weight: 600; }
-.fpl-lostline .fpl-excerpt { font: inherit; color: inherit; white-space: normal; margin: 0; }
-/* the thread: messages, nested ones one step in and no further, no rule beside them; one answer field */
-.fpl-msgs { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.fpl-lostline .fpl-excerpt { font: inherit; color: inherit; white-space: normal;
+  margin: 0; }
+/* the thread: messages, nested ones one step in and no further, no rule beside
+   them; one answer field */
+.fpl-msgs { list-style: none; margin: 8px 0 0; padding: 0; display: flex;
+  flex-direction: column; gap: 6px; }
 .fpl-msg { position: relative; padding: 6px 30px 7px 15px; border-radius: 5px; }
 .fpl-msg:hover, .fpl-msg.is-aimed { background: var(--fpl-bg); }
 .fpl-msg.mine { cursor: pointer; }
 .fpl-msg .fpl-text { margin: 2px 0 0; color: var(--fpl-fg); }
 .fpl-msg > .fpl-meta { margin-top: 2px; }
-.fpl-mhead { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-height: 18px; font-size: 12.5px; color: var(--fpl-mute); }
+.fpl-mhead { display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
+  min-height: 18px; font-size: 12.5px; color: var(--fpl-mute); }
 .fpl-mhead b { font-weight: 600; color: var(--fpl-fg); }
-.fpl-mhead code { font-size: 12px; background: none; padding: 0; color: inherit; }
+.fpl-mhead code { font-size: 12px; background: none; padding: 0; color: inherit;
+}
 .fpl-rep { position: absolute; right: 4px; top: 4px; margin: 0; }
 .fpl-msg:hover > .fpl-rep, .fpl-msg.is-aimed > .fpl-rep { opacity: 1; }
 .fpl-msgs.sub { margin-top: 6px; padding-left: 14px; }
@@ -251,38 +355,59 @@ button.fpl-end:hover, button.fpl-end:focus-visible { color: var(--fpl-fg); text-
 .fpl-msgs.sub .fpl-msg { padding: 4px 26px 2px 0; }
 .fpl-card > .fpl-readings { margin-top: 4px; }
 .fpl-thread-fold { display: block; margin: 8px 0 0 15px; font-size: 12.5px; }
-.fpl-answer { display: flex; align-items: center; margin: 10px 0 0 15px; height: 32px; box-sizing: border-box; padding: 0 10px;
-  border: 1px solid var(--fpl-rule); border-radius: 5px; background: var(--fpl-bg); cursor: text; }
+.fpl-answer { display: flex; align-items: center; margin: 10px 0 0 15px;
+  height: 32px; box-sizing: border-box; padding: 0 10px;
+  border: 1px solid var(--fpl-rule); border-radius: 5px;
+  background: var(--fpl-bg); cursor: text; }
 .fpl-answer:focus-within { border-color: var(--fpl-mine); }
-.fpl-answer input { flex: 1; min-width: 0; border: 0; outline: 0; padding: 0; font: inherit; font-size: 14px; color: var(--fpl-fg); background: transparent; }
+.fpl-answer input { flex: 1; min-width: 0; border: 0; outline: 0; padding: 0;
+  font: inherit; font-size: 14px; color: var(--fpl-fg); background: transparent;
+}
 .fpl-answer input::placeholder { color: var(--fpl-mute); }
-.fpl-vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.fpl-vh { position: absolute; width: 1px; height: 1px; overflow: hidden;
+  clip: rect(0 0 0 0); white-space: nowrap; }
 /* a card's menu: the bar's menu shell, standing left of its card */
-.fpl-menu.fpl-cardmenu { position: absolute; max-height: none; }   /* beside its card, scrolling with the page */
-.fpl-menu footer { margin-top: 5px; padding: 7px 13px 3px; border-top: 1px solid var(--fpl-rule); font-size: 12.5px; color: var(--fpl-mute); }
-.fpl-item[aria-disabled="true"], .fpl-item.fpl-danger[aria-disabled="true"], .fpl-item.fpl-danger[aria-disabled="true"] .fpl-ico { color: var(--fpl-mute); cursor: default; }
+/* beside its card, scrolling with the page */
+.fpl-menu.fpl-cardmenu { position: absolute; max-height: none; }
+.fpl-menu footer { margin-top: 5px; padding: 7px 13px 3px;
+  border-top: 1px solid var(--fpl-rule); font-size: 12.5px;
+  color: var(--fpl-mute); }
+.fpl-item[aria-disabled="true"],
+.fpl-item.fpl-danger[aria-disabled="true"],
+.fpl-item.fpl-danger[aria-disabled="true"] .fpl-ico { color: var(--fpl-mute);
+  cursor: default; }
 .fpl-cardmenu .fpl-panel-head { margin: 4px 13px 2px; }
-.fpl-cardmenu header { padding: 4px 13px 6px; font-size: 12.5px; color: var(--fpl-mute); }   /* the chooser: Verbind met “…” als */
+/* the chooser: Verbind met “…” als */
+.fpl-cardmenu header { padding: 4px 13px 6px; font-size: 12.5px;
+  color: var(--fpl-mute); }
 .fpl-cardmenu header b { font-weight: 600; color: var(--fpl-fg); }
 
-/* the bar (fpl-annot.js dock): the stands, the search, Weergave and ⋯, fixed above the margin.
-   Nothing in it changes size or place on hover or state: hover and state change colour only. */
-.fpl-topbar { z-index: 1000; box-sizing: border-box; font: 14px/1.4 var(--bs-font-sans-serif, sans-serif); color: var(--fpl-fg); }
-.fpl-topbar.is-full { position: fixed; top: 0; height: 118px; padding-top: 14px; background: var(--fpl-bg);
-  border-bottom: 1px solid var(--fpl-rule); }
+/* the bar (fpl-annot.js dock): the stands, the search, Weergave and ⋯, fixed
+   above the margin. Nothing in it changes size or place on hover or state:
+   hover and state change colour only. */
+.fpl-topbar { z-index: 1000; box-sizing: border-box;
+  font: 14px/1.4 var(--bs-font-sans-serif, sans-serif); color: var(--fpl-fg); }
+.fpl-topbar.is-full { position: fixed; top: 0; height: 118px; padding-top: 14px;
+  background: var(--fpl-bg); border-bottom: 1px solid var(--fpl-rule); }
 .fpl-row { display: flex; align-items: center; gap: 6px; }
 .fpl-ico { display: inline-flex; flex: none; }
 .fpl-ico svg { display: block; }
 .fpl-tabs { display: flex; gap: 2px; margin-right: auto; }
-.fpl-tab { font: inherit; font-weight: 600; height: 32px; padding: 0 8px; border: 0; border-radius: 0; background: none;
-  color: var(--fpl-mute); cursor: pointer; }
+.fpl-tab { font: inherit; font-weight: 600; height: 32px; padding: 0 8px;
+  border: 0; border-radius: 0; background: none; color: var(--fpl-mute);
+  cursor: pointer; }
 .fpl-tab:hover { color: var(--fpl-fg); }
-.fpl-tab.is-on { color: var(--fpl-fg); box-shadow: inset 0 -2px 0 var(--fpl-mine); }
-.fpl-tool { font: inherit; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 32px;
-  padding: 0 10px; box-sizing: border-box; border: 1px solid var(--fpl-rule); border-radius: 5px; background: var(--fpl-bg);
-  color: var(--fpl-fg); cursor: pointer; }
+.fpl-tab.is-on { color: var(--fpl-fg);
+  box-shadow: inset 0 -2px 0 var(--fpl-mine); }
+.fpl-tool { font: inherit; font-weight: 600; display: inline-flex;
+  align-items: center; justify-content: center; gap: 6px; height: 32px;
+  padding: 0 10px; box-sizing: border-box; border: 1px solid var(--fpl-rule);
+  border-radius: 5px; background: var(--fpl-bg); color: var(--fpl-fg);
+  cursor: pointer; }
 .fpl-tool.fpl-icon { width: 32px; padding: 0; }
-.fpl-icon .fpl-name, .fpl-topbar:not(.is-full) .fpl-name { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.fpl-icon .fpl-name, .fpl-topbar:not(.is-full) .fpl-name { position: absolute;
+  width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0);
+  white-space: nowrap; }
 .fpl-tool:hover, .fpl-tool.is-open { background: var(--fpl-wash); }
 .fpl-tool.is-open { border-color: var(--fpl-edge); }
 .fpl-tool.is-on { color: var(--fpl-mine); }
@@ -303,12 +428,16 @@ button.fpl-end:hover, button.fpl-end:focus-visible { color: var(--fpl-fg); text-
 .fpl-view .fpl-vl { font-weight: 400; color: var(--fpl-mute); }
 @container (max-width: 419px) { .fpl-view .fpl-vl { display: none; } }
 .fpl-menu.fpl-views { width: 220px; }
-.fpl-views .fpl-item[aria-checked="true"], .fpl-views .fpl-item[aria-checked="true"] .fpl-ico { color: var(--fpl-mine); }
+.fpl-views .fpl-item[aria-checked="true"],
+.fpl-views .fpl-item[aria-checked="true"] .fpl-ico { color: var(--fpl-mine); }
 .fpl-views .fpl-item[aria-checked="true"] { font-weight: 600; }
 .fpl-views .fpl-ico { width: 16px; }
-.fpl-topbar :focus-visible, .fpl-menu :focus-visible { outline: 2px solid var(--fpl-mine); outline-offset: 1px; }
-.fpl-search { margin-top: 8px; display: flex; align-items: center; gap: 8px; height: 32px; box-sizing: border-box; padding: 0 3px 0 8px;
-  border: 1px solid var(--fpl-rule); border-radius: 5px; color: var(--fpl-mute); background: var(--fpl-bg); }
+.fpl-topbar :focus-visible, .fpl-menu :focus-visible {
+  outline: 2px solid var(--fpl-mine); outline-offset: 1px; }
+.fpl-search { margin-top: 8px; display: flex; align-items: center; gap: 8px;
+  height: 32px; box-sizing: border-box; padding: 0 3px 0 8px;
+  border: 1px solid var(--fpl-rule); border-radius: 5px; color: var(--fpl-mute);
+  background: var(--fpl-bg); }
 .fpl-search:focus-within { border-color: var(--fpl-mine); }
 .fpl-search:has(.is-bad) { border-color: var(--fpl-con); }
 .fpl-search.is-on { border-color: var(--fpl-mine); }
@@ -320,140 +449,219 @@ button.fpl-end:hover, button.fpl-end:focus-visible { color: var(--fpl-fg); text-
   color: var(--fpl-mute); cursor: pointer; }
 .fpl-x:hover { background: var(--fpl-wash); color: var(--fpl-fg); }
 .fpl-x .fpl-ico svg { width: 12px; height: 12px; }
-.fpl-query { flex: 1; min-width: 0; border: 0; outline: 0; padding: 0; font: inherit; color: var(--fpl-fg); background: transparent; }
+.fpl-query { flex: 1; min-width: 0; border: 0; outline: 0; padding: 0;
+  font: inherit; color: var(--fpl-fg); background: transparent; }
 .fpl-query::placeholder { color: var(--fpl-mute); }
 .fpl-search .fpl-query:focus-visible { outline: 0; }
-.fpl-topbar kbd, .fpl-menu kbd, .fpl-hint kbd { font: 600 11px/1 SFMono-Regular, Menlo, monospace; padding: 3px 5px; border-radius: 3px;
-  background: var(--fpl-wash); color: var(--fpl-fg); box-shadow: none; }
-.fpl-search .fpl-tool { width: 24px; height: 24px; border: 0; border-radius: 4px; color: var(--fpl-mute); background: none; }
-.fpl-search .fpl-tool:hover, .fpl-search .fpl-tool.is-open { background: var(--fpl-wash); color: var(--fpl-fg); }
+.fpl-topbar kbd, .fpl-menu kbd, .fpl-hint kbd {
+  font: 600 11px/1 SFMono-Regular, Menlo, monospace; padding: 3px 5px;
+  border-radius: 3px; background: var(--fpl-wash); color: var(--fpl-fg);
+  box-shadow: none; }
+.fpl-search .fpl-tool { width: 24px; height: 24px; border: 0;
+  border-radius: 4px; color: var(--fpl-mute); background: none; }
+.fpl-search .fpl-tool:hover, .fpl-search .fpl-tool.is-open {
+  background: var(--fpl-wash); color: var(--fpl-fg); }
 .fpl-search .fpl-tool.is-on { color: var(--fpl-mine); }
-.fpl-count { margin: 7px 0 0; font-size: 12.5px; color: var(--fpl-mute); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fpl-count { margin: 7px 0 0; font-size: 12.5px; color: var(--fpl-mute);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* read out, never shown */
-.fpl-sr { position: absolute !important; width: 1px; height: 1px; margin: 0 !important; overflow: hidden; clip-path: inset(50%); }
-.fpl-search .fpl-filter-btn { flex: none; display: inline-flex; align-items: center; justify-content: center; }
-.fpl-search .fpl-filter-btn .fpl-name { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+.fpl-sr { position: absolute !important; width: 1px; height: 1px;
+  margin: 0 !important; overflow: hidden; clip-path: inset(50%); }
+.fpl-search .fpl-filter-btn { flex: none; display: inline-flex;
+  align-items: center; justify-content: center; }
+.fpl-search .fpl-filter-btn .fpl-name { position: absolute; width: 1px;
+  height: 1px; overflow: hidden; clip-path: inset(50%); }
 .fpl-search .fpl-filter-btn.is-on { background: var(--fpl-mine-wash); }
 .fpl-count .fpl-bad { color: var(--fpl-con); }
 .fpl-count b { font-weight: 600; color: var(--fpl-fg); }
 .fpl-picker { position: relative; display: none; }
-.fpl-picker .fpl-ico { position: absolute; right: 10px; top: 50%; margin-top: -8px; pointer-events: none; }
-.fpl-stand { appearance: none; font: inherit; font-size: 15px; font-weight: 600; height: 40px; padding: 0 30px 0 10px; border: 1px solid var(--fpl-rule);
-  border-radius: 6px; background: var(--fpl-bg); color: var(--fpl-fg); cursor: pointer; }
+.fpl-picker .fpl-ico { position: absolute; right: 10px; top: 50%;
+  margin-top: -8px; pointer-events: none; }
+.fpl-stand { appearance: none; font: inherit; font-size: 15px; font-weight: 600;
+  height: 40px; padding: 0 30px 0 10px; border: 1px solid var(--fpl-rule);
+  border-radius: 6px; background: var(--fpl-bg); color: var(--fpl-fg);
+  cursor: pointer; }
 .fpl-stand:hover { background-color: var(--fpl-wash); }
-/* folded (board K): a stand picker and three icons, 40px targets, in Quarto's top bar or at the top right */
-.fpl-topbar:not(.is-full) .fpl-tabs, .fpl-topbar:not(.is-full) > .fpl-search, .fpl-topbar:not(.is-full) > .fpl-count { display: none; }
+/* folded (board K): a stand picker and three icons, 40px targets, in Quarto's
+   top bar or at the top right */
+.fpl-topbar:not(.is-full) .fpl-tabs,
+.fpl-topbar:not(.is-full) > .fpl-search,
+.fpl-topbar:not(.is-full) > .fpl-count { display: none; }
 .fpl-topbar:not(.is-full) .fpl-picker { display: inline-flex; }
 .fpl-topbar:not(.is-full) .fpl-row { gap: 4px; }
-.fpl-topbar:not(.is-full) .fpl-tool { width: 40px; height: 40px; padding: 0; border: 0; border-radius: 6px; background: none; }
-.fpl-topbar:not(.is-full) .fpl-tool:hover, .fpl-topbar:not(.is-full) .fpl-tool.is-open { background: var(--fpl-wash); }
+.fpl-topbar:not(.is-full) .fpl-tool { width: 40px; height: 40px; padding: 0;
+  border: 0; border-radius: 6px; background: none; }
+.fpl-topbar:not(.is-full) .fpl-tool:hover,
+.fpl-topbar:not(.is-full) .fpl-tool.is-open { background: var(--fpl-wash); }
 .fpl-topbar:not(.is-full) .fpl-ico svg { width: 18px; height: 18px; }
-.fpl-topbar:not(.is-full) .fpl-picker .fpl-ico svg { width: 14px; height: 14px; }
-.fpl-topbar:not(.is-full):not(.is-docked) { position: fixed; top: 8px; right: 16px; padding: 2px 4px; background: var(--fpl-bg);
+.fpl-topbar:not(.is-full) .fpl-picker .fpl-ico svg { width: 14px; height: 14px;
+}
+.fpl-topbar:not(.is-full):not(.is-docked) { position: fixed; top: 8px;
+  right: 16px; padding: 2px 4px; background: var(--fpl-bg);
   border: 1px solid var(--fpl-rule); border-radius: 6px; }
-.fpl-topbar:not(.is-full):not(.is-docked) .fpl-stand { border-color: transparent; }   /* no bordered box inside the bordered bar */
+/* no bordered box inside the bordered bar */
+.fpl-topbar:not(.is-full):not(.is-docked) .fpl-stand {
+  border-color: transparent; }
 .fpl-topbar.is-docked { display: flex; align-items: center; margin-left: 4px; }
 /* docked, the bar stays where it is: Quarto's top bar no longer slides
    away on a scroll down (headroom), so the controls keep one place */
 #quarto-header:has(.fpl-topbar.is-docked) { transform: none !important; }
-.fpl-topbar.is-docked::after { content: ""; width: 1px; height: 24px; margin: 0 2px 0 4px; background: var(--fpl-rule); }
-.quarto-secondary-nav:has(.fpl-topbar) .quarto-page-breadcrumbs { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.fpl-topbar.is-docked::after { content: ""; width: 1px; height: 24px;
+  margin: 0 2px 0 4px; background: var(--fpl-rule); }
+.quarto-secondary-nav:has(.fpl-topbar) .quarto-page-breadcrumbs { min-width: 0;
+  overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .quarto-secondary-nav:has(.fpl-topbar) .breadcrumb { flex-wrap: nowrap; }
 /* the menu under ⋯ and the filter panel: one shell (board I) */
-.fpl-menu { position: fixed; z-index: 1001; width: 284px; max-width: calc(100vw - 16px); max-height: calc(100vh - 80px); overflow: auto;
-  box-sizing: border-box; padding: 5px 0; background: var(--fpl-bg); border: 1px solid var(--fpl-rule); border-radius: 7px;
-  box-shadow: 0 6px 20px rgba(20, 30, 50, .14), 0 1px 3px rgba(20, 30, 50, .08); font: 14px/1.4 var(--bs-font-sans-serif, sans-serif); color: var(--fpl-fg); }
+.fpl-menu { position: fixed; z-index: 1001; width: 284px;
+  max-width: calc(100vw - 16px); max-height: calc(100vh - 80px); overflow: auto;
+  box-sizing: border-box; padding: 5px 0; background: var(--fpl-bg);
+  border: 1px solid var(--fpl-rule); border-radius: 7px;
+  box-shadow: 0 6px 20px rgba(20, 30, 50, .14), 0 1px 3px rgba(20, 30, 50, .08);
+  font: 14px/1.4 var(--bs-font-sans-serif, sans-serif); color: var(--fpl-fg); }
 .fpl-menu[hidden] { display: none; }
-.fpl-menu hr { margin: 5px 0; border: 0; border-top: 1px solid var(--fpl-rule); opacity: 1; }
-.fpl-item { display: flex; align-items: center; gap: 9px; width: 100%; box-sizing: border-box; margin: 0; padding: 6px 13px; border: 0; background: none;
-  font: inherit; color: var(--fpl-fg); text-align: left; cursor: pointer; }
-button.fpl-item:hover, button.fpl-item:focus-visible { background: var(--fpl-mine-wash); outline: 0; }
+.fpl-menu hr { margin: 5px 0; border: 0; border-top: 1px solid var(--fpl-rule);
+  opacity: 1; }
+.fpl-item { display: flex; align-items: center; gap: 9px; width: 100%;
+  box-sizing: border-box; margin: 0; padding: 6px 13px; border: 0;
+  background: none; font: inherit; color: var(--fpl-fg); text-align: left;
+  cursor: pointer; }
+button.fpl-item:hover, button.fpl-item:focus-visible {
+  background: var(--fpl-mine-wash); outline: 0; }
 .fpl-item .fpl-ico { color: var(--fpl-mute); }
 .fpl-item small, .fpl-item kbd { margin-left: auto; }
 .fpl-item small { font-size: 12.5px; color: var(--fpl-mute); }
 .fpl-item:disabled { color: var(--fpl-mute); cursor: default; }
 .fpl-item.fpl-danger, .fpl-item.fpl-danger .fpl-ico { color: var(--fpl-con); }
-.fpl-item.fpl-danger:disabled, .fpl-item.fpl-danger:disabled .fpl-ico { color: var(--fpl-mute); }
-.fpl-item input { margin-left: auto; width: 104px; box-sizing: border-box; padding: 2px 7px; font: inherit; font-size: 13px;
-  border: 1px solid var(--fpl-rule); border-radius: 4px; background: var(--fpl-bg); color: var(--fpl-fg); }
+.fpl-item.fpl-danger:disabled, .fpl-item.fpl-danger:disabled .fpl-ico {
+  color: var(--fpl-mute); }
+.fpl-item input { margin-left: auto; width: 104px; box-sizing: border-box;
+  padding: 2px 7px; font: inherit; font-size: 13px;
+  border: 1px solid var(--fpl-rule); border-radius: 4px;
+  background: var(--fpl-bg); color: var(--fpl-fg); }
 label.fpl-item { cursor: text; }
-.fpl-ctx { margin-left: auto; display: inline-flex; border: 1px solid var(--fpl-rule); border-radius: 4px; overflow: hidden; }
-.fpl-ctx button { min-width: 26px; height: 24px; padding: 0 6px; border: 0; border-left: 1px solid var(--fpl-rule); background: var(--fpl-bg);
-  font: 600 12.5px/1 var(--bs-font-sans-serif, sans-serif); color: var(--fpl-mute); cursor: pointer; }
+.fpl-ctx { margin-left: auto; display: inline-flex;
+  border: 1px solid var(--fpl-rule); border-radius: 4px; overflow: hidden; }
+.fpl-ctx button { min-width: 26px; height: 24px; padding: 0 6px; border: 0;
+  border-left: 1px solid var(--fpl-rule); background: var(--fpl-bg);
+  font: 600 12.5px/1 var(--bs-font-sans-serif, sans-serif);
+  color: var(--fpl-mute); cursor: pointer; }
 .fpl-ctx button:first-child { border-left: 0; }
 .fpl-ctx button:hover { color: var(--fpl-fg); }
-.fpl-ctx button[aria-pressed="true"] { background: var(--bs-secondary-bg, #e9ecef); color: var(--fpl-fg); }
-.fpl-cmd { margin: 0; padding: 0 13px 6px 38px; font-size: 12px; color: var(--fpl-mute); }
+.fpl-ctx button[aria-pressed="true"] {
+  background: var(--bs-secondary-bg, #e9ecef); color: var(--fpl-fg); }
+.fpl-cmd { margin: 0; padding: 0 13px 6px 38px; font-size: 12px;
+  color: var(--fpl-mute); }
 .fpl-cmd code { word-break: break-all; font-size: 11.5px; user-select: all; }
 .fpl-confirm { cursor: default; }
-.fpl-confirm button { font: inherit; font-weight: 600; height: 26px; padding: 0 9px; border: 1px solid var(--fpl-rule); border-radius: 4px;
+.fpl-confirm button { font: inherit; font-weight: 600; height: 26px;
+  padding: 0 9px; border: 1px solid var(--fpl-rule); border-radius: 4px;
   background: var(--fpl-bg); color: var(--fpl-fg); cursor: pointer; }
-.fpl-confirm button.fpl-danger { margin-left: auto; border-color: var(--fpl-con); background: var(--fpl-con); color: var(--fpl-bg); }
+.fpl-confirm button.fpl-danger { margin-left: auto;
+  border-color: var(--fpl-con); background: var(--fpl-con);
+  color: var(--fpl-bg); }
 .fpl-panel { width: 320px; padding: 10px 12px 12px; }
 .fpl-panel > .fpl-search { margin: 0 0 6px; }
 .fpl-panel > .fpl-count { margin: 0 0 4px; }
-.fpl-panel-head { display: flex; align-items: baseline; gap: 8px; margin: 6px 0 0; font-size: 12.5px; font-weight: 600; color: var(--fpl-mute); }
+.fpl-panel-head { display: flex; align-items: baseline; gap: 8px;
+  margin: 6px 0 0; font-size: 12.5px; font-weight: 600; color: var(--fpl-mute);
+}
 .fpl-panel-head .fpl-link { margin-left: auto; }
 .fpl-panel-none { margin: 4px 0 0; font-size: 13px; color: var(--fpl-mute); }
 .fpl-keysheet { width: 340px; padding: 10px 14px 12px; }
 .fpl-keysheet .fpl-panel-head { margin: 0 0 6px; }
-.fpl-keysheet:focus { outline: 0; }   /* focused only so that Esc and Tab start there */
-.fpl-keysheet dl { display: grid; grid-template-columns: max-content 1fr; gap: 6px 12px; margin: 0; font-size: 13px; }
+/* focused only so that Esc and Tab start there */
+.fpl-keysheet:focus { outline: 0; }
+.fpl-keysheet dl { display: grid; grid-template-columns: max-content 1fr;
+  gap: 6px 12px; margin: 0; font-size: 13px; }
 .fpl-keysheet dt { display: flex; gap: 3px; align-items: center; margin: 0; }
 .fpl-keysheet dd { margin: 0; color: var(--fpl-mute); }
 /* the empty margin in Kantlijn: three lines on how (board A) */
-.fpl-hint { margin: 1rem 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 12px; font-size: 14px; line-height: 1.4;
+.fpl-hint { margin: 1rem 0; padding: 0; list-style: none; display: flex;
+  flex-direction: column; gap: 12px; font-size: 14px; line-height: 1.4;
   color: var(--fpl-mute); }
-.fpl-column .fpl-hint { position: absolute; left: 28px; right: 0; margin: 0; }   /* at the cards' edge */
+/* at the cards' edge */
+.fpl-column .fpl-hint { position: absolute; left: 28px; right: 0; margin: 0; }
 .fpl-hint li { display: flex; gap: 10px; align-items: flex-start; }
 .fpl-hint b { color: var(--fpl-fg); font-weight: 600; }
 .fpl-hint .fpl-ico { margin-top: 2px; color: var(--fpl-fg); }
 .fpl-filter { margin: 4px 0 0; }
 .fpl-filter .fpl-chip { cursor: pointer; }
-.fpl-filter .fpl-chip.is-on { background: var(--fpl-vers-wash); border-color: transparent; color: var(--fpl-vers); }
-.fpl-filter .fpl-chip.is-off { background: none; color: var(--fpl-mute); text-decoration: line-through; }
-/* a label's colour, as a square before it (board 4a): the colour never carries text, so a light band may stay light */
-.fpl-sq { display: inline-block; width: 9px; height: 9px; margin-right: 5px; border-radius: 2px; background: var(--lc); vertical-align: -.5px; }
+.fpl-filter .fpl-chip.is-on { background: var(--fpl-vers-wash);
+  border-color: transparent; color: var(--fpl-vers); }
+.fpl-filter .fpl-chip.is-off { background: none; color: var(--fpl-mute);
+  text-decoration: line-through; }
+/* a label's colour, as a square before it (board 4a): the colour never carries
+   text, so a light band may stay light */
+.fpl-sq { display: inline-block; width: 9px; height: 9px; margin-right: 5px;
+  border-radius: 2px; background: var(--lc); vertical-align: -.5px; }
 .fpl-filter .fpl-chip.is-off .fpl-sq { opacity: .4; }
-.fpl-link { font: inherit; font-size: .74rem; font-weight: 600; border: 0; background: none; color: var(--bs-link-color, #2b6cb0); cursor: pointer; padding: 0; }
+.fpl-link { font: inherit; font-size: .74rem; font-weight: 600; border: 0;
+  background: none; color: var(--bs-link-color, #2b6cb0); cursor: pointer;
+  padding: 0; }
 .fpl-card, .fpl-line { animation: fpl-in .12s ease-out; }
 @keyframes fpl-in { from { opacity: 0; } }
 
-.fpl-bar { display: flex; flex-wrap: wrap; gap: .4rem .8rem; align-items: center; margin-top: .3rem; font-size: .8rem; }
-.fpl-bar button { font: inherit; font-weight: 600; padding: 0; border: 0; background: none; color: var(--bs-link-color, #2b6cb0); cursor: pointer; }
-.fpl-bar button.fpl-go { padding: .3rem .7rem; border-radius: 4px; background: var(--fpl-mine); color: #fff; }
-.fpl-bar button:focus-visible, .fpl-editor :focus-visible { outline: 2px solid var(--fpl-mine); outline-offset: 1px; }
+.fpl-bar { display: flex; flex-wrap: wrap; gap: .4rem .8rem;
+  align-items: center; margin-top: .3rem; font-size: .8rem; }
+.fpl-bar button { font: inherit; font-weight: 600; padding: 0; border: 0;
+  background: none; color: var(--bs-link-color, #2b6cb0); cursor: pointer; }
+.fpl-bar button.fpl-go { padding: .3rem .7rem; border-radius: 4px;
+  background: var(--fpl-mine); color: #fff; }
+.fpl-bar button:focus-visible, .fpl-editor :focus-visible {
+  outline: 2px solid var(--fpl-mine); outline-offset: 1px; }
 .fpl-space { flex: 1; }
 
 /* the editor, in a card or in the popover */
 .fpl-editor { display: grid; gap: .45rem; }
-.fpl-editor textarea { font: inherit; font-size: .88rem; width: 100%; box-sizing: border-box; resize: none; field-sizing: content;
-  min-height: 3.4em; max-height: 12em; border: 1px solid var(--fpl-rule); border-radius: 5px; padding: 6px 8px; background: var(--fpl-bg); color: var(--fpl-fg); }
-.fpl-editor textarea:focus { outline: 0; border-color: var(--fpl-mine); }   /* board B: the field's own border is the focus, one line */
-.fpl-editor input { font: inherit; font-size: .7rem; font-weight: 600; padding: .28rem .5rem; border-radius: 999px; width: 7rem;
+.fpl-editor textarea { font: inherit; font-size: .88rem; width: 100%;
+  box-sizing: border-box; resize: none; field-sizing: content;
+  min-height: 3.4em; max-height: 12em; border: 1px solid var(--fpl-rule);
+  border-radius: 5px; padding: 6px 8px; background: var(--fpl-bg);
+  color: var(--fpl-fg); }
+/* board B: the field's own border is the focus, one line */
+.fpl-editor textarea:focus { outline: 0; border-color: var(--fpl-mine); }
+.fpl-editor input { font: inherit; font-size: .7rem; font-weight: 600;
+  padding: .28rem .5rem; border-radius: 999px; width: 7rem;
   border: 1px dashed var(--fpl-rule); background: none; color: var(--fpl-fg); }
 .fpl-editor input::placeholder { font-weight: 400; color: var(--fpl-mute); }
-.fpl-keys kbd { font-size: .7rem; padding: 0; background: none; box-shadow: none; color: inherit; opacity: .8; }   /* no box inside the button */
-.fpl-pop { position: absolute; z-index: 1001; width: min(22rem, calc(100vw - 16px)); padding: .7rem .8rem; font-size: .86rem;
-  background: var(--fpl-bg); color: var(--fpl-fg); border: 1px solid var(--fpl-rule); border-radius: 6px;
+/* no box inside the button */
+.fpl-keys kbd { font-size: .7rem; padding: 0; background: none;
+  box-shadow: none; color: inherit; opacity: .8; }
+.fpl-pop { position: absolute; z-index: 1001;
+  width: min(22rem, calc(100vw - 16px)); padding: .7rem .8rem;
+  font-size: .86rem; background: var(--fpl-bg); color: var(--fpl-fg);
+  border: 1px solid var(--fpl-rule); border-radius: 6px;
   box-shadow: 0 6px 24px rgba(0, 0, 0, .18); }
 .fpl-pop[hidden] { display: none; }
-.fpl-toast { position: fixed; bottom: 1rem; left: 50%; transform: translateX(-50%); z-index: 1002;
-  padding: .4rem .8rem; border-radius: 999px; background: var(--fpl-fg); color: var(--fpl-bg); font-size: .8rem;
-  pointer-events: none; }   /* a status, never in the way: it may stand over the tree's tray */
-@media (prefers-reduced-motion: reduce) { mark.fact, .fpl-card, .fpl-line { transition: none; animation: none; } }
+/* a status, never in the way: it may stand over the tree's tray */
+.fpl-toast { position: fixed; bottom: 1rem; left: 50%;
+  transform: translateX(-50%); z-index: 1002; padding: .4rem .8rem;
+  border-radius: 999px; background: var(--fpl-fg); color: var(--fpl-bg);
+  font-size: .8rem; pointer-events: none; }
+@media (prefers-reduced-motion: reduce) {
+  mark.fact, .fpl-card, .fpl-line { transition: none; animation: none; }
+}
 
 /* a chunk's header, split off its code (essay.lua) and joined to it again */
-.fpl-p > pre.fpl-chunk-head { margin-bottom: 0; padding-bottom: 0; border-bottom: 0; border-radius: .25rem .25rem 0 0; }
-.fpl-p > pre.fpl-chunk-head + div.code-copy-outer-scaffold > div > pre, .fpl-p > pre.fpl-chunk-head + div.sourceCode > pre,
-.fpl-p > pre.fpl-chunk-head + pre { margin-top: 0; padding-top: .25rem; border-top: 0; border-radius: 0 0 .25rem .25rem; }
+.fpl-p > pre.fpl-chunk-head { margin-bottom: 0; padding-bottom: 0;
+  border-bottom: 0; border-radius: .25rem .25rem 0 0; }
+.fpl-p > pre.fpl-chunk-head + div.code-copy-outer-scaffold > div > pre,
+.fpl-p > pre.fpl-chunk-head + div.sourceCode > pre,
+.fpl-p > pre.fpl-chunk-head + pre { margin-top: 0; padding-top: .25rem;
+  border-top: 0; border-radius: 0 0 .25rem .25rem; }
 .fpl-p > pre.fpl-chunk-head code { color: var(--fpl-mute); }
 
 /* the files of a page, an outline at its end (essay.lua files()) */
-.fpl-files .fpl-part { margin: .15rem 0 .15rem calc(1rem + var(--depth, 0) * 1.2rem); }
-.fpl-files .fpl-part[data-depth="1"] { --depth: 1; } .fpl-files .fpl-part[data-depth="2"] { --depth: 2; } .fpl-files .fpl-part[data-depth="3"] { --depth: 3; }
-.fpl-files .fpl-place { display: inline-block; min-width: 2.6rem; font-variant-numeric: tabular-nums; color: var(--fpl-mute); font-size: .85rem; }
-.fpl-files .fpl-addr { font-size: .78rem; font-weight: 600; color: var(--fpl-vers); text-decoration: none; margin-right: .2rem; }
+.fpl-files .fpl-part {
+  margin: .15rem 0 .15rem calc(1rem + var(--depth, 0) * 1.2rem); }
+.fpl-files .fpl-part[data-depth="1"] { --depth: 1; }
+.fpl-files .fpl-part[data-depth="2"] { --depth: 2; }
+.fpl-files .fpl-part[data-depth="3"] { --depth: 3; }
+.fpl-files .fpl-place { display: inline-block; min-width: 2.6rem;
+  font-variant-numeric: tabular-nums; color: var(--fpl-mute); font-size: .85rem;
+}
+.fpl-files .fpl-addr { font-size: .78rem; font-weight: 600;
+  color: var(--fpl-vers); text-decoration: none; margin-right: .2rem; }
 .fpl-files .fpl-addr:hover { text-decoration: underline; }
 
 /* a band (fpl-annot.js scrunch, board G): the folded blocks are one seam,
@@ -487,10 +695,11 @@ label.fpl-item { cursor: text; }
   white-space: normal; }
 @media (hover: none) { .fpl-band > .fpl-tip { display: none; } }
 
-/* density (feedback 16): a bar in a block's gutter (or a band's), one hue in three steps by how many rows hang
-   from it (fpl-annot.js heat), each step 3:1 or more on the page. It keeps to its own lane, 2 to 6px left of the
-   text; the resumes arcs start at 8px and bow left of it. The padding widens the hover target, the colour stays
-   in the content box. */
+/* density (feedback 16): a bar in a block's gutter (or a band's), one hue in
+   three steps by how many rows hang from it (fpl-annot.js heat), each step 3:1
+   or more on the page. It keeps to its own lane, 2 to 6px left of the text; the
+   resumes arcs start at 8px and bow left of it. The padding widens the hover
+   target, the colour stays in the content box. */
 /* a level is a tone and a width (feedback 28: never colour alone), the
    right edge 2px from the text */
 .fpl-heat { position: absolute; top: 2px; bottom: 2px; left: -7px;
@@ -511,59 +720,89 @@ label.fpl-item { cursor: text; }
 .fpl-views hr { margin: 4px 0; border: 0;
   border-top: 1px solid var(--fpl-rule); }
 
-/* close reading: the sentence under the cursor (j / k), washed like a hot span */
+/* close reading: the sentence under the cursor (j / k), washed like a hot span
+   */
 .fpl-s.fpl-here { background: var(--fpl-vers-wash); }
 
-/* arguments: a claim's tree, + supports and − attacks, undercuts under the inference */
+/* arguments: a claim's tree, + supports and − attacks, undercuts under the
+   inference */
 .fpl-args { margin-top: .4rem; font-size: .8rem; }
-.fpl-args > summary { cursor: pointer; color: var(--fpl-mute); font-weight: 600; }
-.fpl-arg { list-style: none; margin: .2rem 0 0; padding-left: .55rem; border-left: 1px solid var(--fpl-rule); }
+.fpl-args > summary { cursor: pointer; color: var(--fpl-mute); font-weight: 600;
+}
+.fpl-arg { list-style: none; margin: .2rem 0 0; padding-left: .55rem;
+  border-left: 1px solid var(--fpl-rule); }
 .fpl-arg li { margin-top: .25rem; }
-.fpl-arg-node { all: unset; cursor: pointer; display: block; line-height: 1.35; }
+.fpl-arg-node { all: unset; cursor: pointer; display: block; line-height: 1.35;
+}
 .fpl-arg-node:hover, .fpl-arg-node:focus-visible { text-decoration: underline; }
 .fpl-arg-node b { display: inline-block; width: .8em; }
 .fpl-arg-attacks > .fpl-arg-node b { color: var(--fpl-con); }
-.fpl-weight { margin-left: 1.3em; font-size: .6rem; letter-spacing: .1em; color: var(--fpl-rule); }
+.fpl-weight { margin-left: 1.3em; font-size: .6rem; letter-spacing: .1em;
+  color: var(--fpl-rule); }
 .fpl-weight .on { color: var(--fpl-mute); }
 .fpl-weight button { all: unset; cursor: pointer; }
-.fpl-weight button:hover, .fpl-weight button:focus-visible { color: var(--fpl-ink, currentColor); }
-.fpl-arg-under { margin-top: .2rem; color: var(--fpl-mute); font-style: italic; }
+.fpl-weight button:hover, .fpl-weight button:focus-visible {
+  color: var(--fpl-ink, currentColor); }
+.fpl-arg-under { margin-top: .2rem; color: var(--fpl-mute); font-style: italic;
+}
 .fpl-arg-under > .fpl-arg { font-style: normal; color: var(--fpl-fg); }
-body.fpl-picking mark.fact, body.fpl-picking .fpl-card, body.fpl-picking [data-fact], body.fpl-picking li[data-id] { cursor: crosshair; }
+body.fpl-picking mark.fact,
+body.fpl-picking .fpl-card,
+body.fpl-picking [data-fact],
+body.fpl-picking li[data-id] { cursor: crosshair; }
 
 /* layers, coref, and the tfa lens */
 .fpl-layers small { color: var(--fpl-mute); margin-right: .2rem; }
-mark.fact.fpl-coref, .fpl-coref { outline: 1px dashed var(--fpl-vers); outline-offset: 1px; }
-/* tfa (board V4a): one wash of the layer's colour per clause, deeper from bound to focus; --fpl-tfa etc. are set by fpl-annot.js */
-.fpl-c[data-tfa="t"], .fpl-s[data-tfa="t"] { background: color-mix(in srgb, var(--fpl-tfa, #c66897) 8%, transparent); }
-.fpl-c[data-tfa="c"], .fpl-s[data-tfa="c"] { background: color-mix(in srgb, var(--fpl-tfa, #c66897) 16%, transparent); }
-.fpl-c[data-tfa="f"], .fpl-s[data-tfa="f"] { background: color-mix(in srgb, var(--fpl-tfa, #c66897) 28%, transparent); }
-body.fpl-numbered .fpl-c[data-tfa]::before { content: attr(data-n) attr(data-tfa); opacity: 1; font-weight: 700; }
-.fpl-arcs { position: absolute; top: 0; left: 0; pointer-events: none; z-index: 1; overflow: visible; }
-.fpl-arcs path { fill: none; stroke: var(--fpl-resumes, var(--fpl-mute)); stroke-width: 1.25; opacity: .85; pointer-events: stroke; }
+mark.fact.fpl-coref, .fpl-coref { outline: 1px dashed var(--fpl-vers);
+  outline-offset: 1px; }
+/* tfa (board V4a): one wash of the layer's colour per clause, deeper from bound
+   to focus; --fpl-tfa etc. are set by fpl-annot.js */
+.fpl-c[data-tfa="t"], .fpl-s[data-tfa="t"] {
+  background: color-mix(in srgb, var(--fpl-tfa, #c66897) 8%, transparent); }
+.fpl-c[data-tfa="c"], .fpl-s[data-tfa="c"] {
+  background: color-mix(in srgb, var(--fpl-tfa, #c66897) 16%, transparent); }
+.fpl-c[data-tfa="f"], .fpl-s[data-tfa="f"] {
+  background: color-mix(in srgb, var(--fpl-tfa, #c66897) 28%, transparent); }
+body.fpl-numbered .fpl-c[data-tfa]::before {
+  content: attr(data-n) attr(data-tfa); opacity: 1; font-weight: 700; }
+.fpl-arcs { position: absolute; top: 0; left: 0; pointer-events: none;
+  z-index: 1; overflow: visible; }
+.fpl-arcs path { fill: none; stroke: var(--fpl-resumes, var(--fpl-mute));
+  stroke-width: 1.25; opacity: .85; pointer-events: stroke; }
 .fpl-arcs path:hover { stroke-width: 2; opacity: 1; cursor: pointer; }
 body.fpl-picking .fpl-c[id], body.fpl-picking .fpl-s[id] { cursor: crosshair; }
 
 /* labels: quick chips, the offer, readings side by side */
 .fpl-quick { margin-bottom: .3rem; }
-.fpl-quick small, .fpl-filter small { color: var(--fpl-mute); margin-right: .2rem; }
+.fpl-quick small, .fpl-filter small { color: var(--fpl-mute);
+  margin-right: .2rem; }
 .fpl-offer { display: flex; gap: .5rem; align-items: center; }
-.fpl-offer button { font: inherit; font-weight: 600; background: none; border: 1px solid var(--fpl-rule); border-radius: 999px; padding: 0 .5rem; cursor: pointer; color: inherit; }
+.fpl-offer button { font: inherit; font-weight: 600; background: none;
+  border: 1px solid var(--fpl-rule); border-radius: 999px; padding: 0 .5rem;
+  cursor: pointer; color: inherit; }
 
-/* the graph (boards V2b-V2d, V4d): a plane beside the column, which stands at the window's left edge. The left nav
-   and the margin give way; the bar heads the plane (dock in fpl-annot.js), its Graph pressed, which closes it; on a
-   narrow window the plane is a sheet under the folded bar. Cards on a lattice, diamonds for relation rows, typed
-   edges, the kinds at the foot as toggles. */
-body.fpl-beside .page-columns { grid-template-columns: [screen-start] 0 [screen-start-inset] 0 [page-start] 0 [page-start-inset] 0
-  [body-start-outset] 0 [body-start] 24px [body-content-start] 740px [body-content-end] 0 [body-end] 0 [body-end-outset] 0
-  [page-end-inset] 0 [page-end] minmax(0, 1fr) [screen-end-inset] 0 [screen-end] !important; }
-body.fpl-beside #quarto-sidebar, body.fpl-beside #quarto-margin-sidebar { display: none !important; }
-.fpl-plane { position: fixed; z-index: 999; top: 0; right: 0; bottom: 0; display: flex; flex-direction: column; box-sizing: border-box;
-  border-left: 1px solid var(--fpl-rule); background: var(--fpl-wash); color: var(--fpl-fg); font: 13px/17px var(--bs-font-sans-serif, sans-serif);
+/* the graph (boards V2b-V2d, V4d): a plane beside the column, which stands at
+   the window's left edge. The left nav and the margin give way; the bar heads
+   the plane (dock in fpl-annot.js), its Graph pressed, which closes it; on a
+   narrow window the plane is a sheet under the folded bar. Cards on a lattice,
+   diamonds for relation rows, typed edges, the kinds at the foot as toggles. */
+body.fpl-beside .page-columns {
+  grid-template-columns: [screen-start] 0 [screen-start-inset] 0 [page-start] 0
+    [page-start-inset] 0 [body-start-outset] 0 [body-start] 24px
+    [body-content-start] 740px [body-content-end] 0 [body-end] 0
+    [body-end-outset] 0 [page-end-inset] 0 [page-end] minmax(0, 1fr)
+    [screen-end-inset] 0 [screen-end] !important; }
+body.fpl-beside #quarto-sidebar, body.fpl-beside #quarto-margin-sidebar {
+  display: none !important; }
+.fpl-plane { position: fixed; z-index: 999; top: 0; right: 0; bottom: 0;
+  display: flex; flex-direction: column; box-sizing: border-box;
+  border-left: 1px solid var(--fpl-rule); background: var(--fpl-wash);
+  color: var(--fpl-fg); font: 13px/17px var(--bs-font-sans-serif, sans-serif);
   animation: fpl-plane-in .26s cubic-bezier(.2, .8, .2, 1); outline: none; }
 @keyframes fpl-plane-in { from { opacity: 0; transform: translateX(24px); } }
 @media (prefers-reduced-motion: reduce) { .fpl-plane { animation: none; } }
-.fpl-plane:not(.is-sheet) { padding-top: 118px; }   /* room under the bar, which heads the plane */
+/* room under the bar, which heads the plane */
+.fpl-plane:not(.is-sheet) { padding-top: 118px; }
 .fpl-plane.is-sheet { border-left: 0; }
 .fpl-plane-area { position: relative; flex: 1; min-height: 0; overflow: auto; }
 /* below Quarto's lg the empty margin column stood past the window's edge,
@@ -572,31 +811,49 @@ body.fpl-beside #quarto-sidebar, body.fpl-beside #quarto-margin-sidebar { displa
   html:has(meta[name="fpl-commit"]) #quarto-margin-sidebar:not(.fpl-column) {
     display: none; }
 }
-.fpl-edges { position: absolute; left: 0; top: 0; overflow: visible; pointer-events: none; }
-.fpl-edge { fill: none; stroke: var(--lc, var(--fpl-mute)); stroke-width: 1.75; stroke-opacity: .7; transition: stroke-opacity .12s, stroke-width .12s; }
-.fpl-edge[data-kind="attacks"], .fpl-edge[data-kind="contradicts"] { stroke-dasharray: 6 4; }
-.fpl-edge[data-kind="coref"] { stroke-width: 2.5; stroke-dasharray: .5 5; stroke-linecap: round; }
+.fpl-edges { position: absolute; left: 0; top: 0; overflow: visible;
+  pointer-events: none; }
+.fpl-edge { fill: none; stroke: var(--lc, var(--fpl-mute)); stroke-width: 1.75;
+  stroke-opacity: .7; transition: stroke-opacity .12s, stroke-width .12s; }
+.fpl-edge[data-kind="attacks"], .fpl-edge[data-kind="contradicts"] {
+  stroke-dasharray: 6 4; }
+.fpl-edge[data-kind="coref"] { stroke-width: 2.5; stroke-dasharray: .5 5;
+  stroke-linecap: round; }
 .fpl-edge[data-kind="cites"] { stroke-width: 1.25; stroke-dasharray: 3 3; }
-.fpl-edge[data-kind="over"], .fpl-edge[data-kind="parts"], .fpl-edge[data-kind="code"] { stroke-width: 1; stroke-opacity: .45; }
+.fpl-edge[data-kind="over"],
+.fpl-edge[data-kind="parts"],
+.fpl-edge[data-kind="code"] { stroke-width: 1; stroke-opacity: .45; }
 .fpl-edge.is-hot { stroke-width: 2.75; stroke-opacity: 1; }
-.fpl-node { position: absolute; display: flex; flex-direction: column; align-items: stretch; width: 168px; height: 58px; margin: -29px 0 0 -84px;
-  padding: 5px 10px; box-sizing: border-box; border: 1px solid var(--fpl-node); border-radius: 7px; background: var(--fpl-bg);
-  font: 600 13px/17px var(--bs-font-sans-serif, sans-serif); color: var(--fpl-fg); text-align: left; cursor: pointer; touch-action: none;
+.fpl-node { position: absolute; display: flex; flex-direction: column;
+  align-items: stretch; width: 168px; height: 58px; margin: -29px 0 0 -84px;
+  padding: 5px 10px; box-sizing: border-box; border: 1px solid var(--fpl-node);
+  border-radius: 7px; background: var(--fpl-bg);
+  font: 600 13px/17px var(--bs-font-sans-serif, sans-serif);
+  color: var(--fpl-fg); text-align: left; cursor: pointer; touch-action: none;
   transition: opacity .12s, border-color .12s, box-shadow .12s; }
 /* a node is its kind on one line and two lines of its quote (board V2b) */
-.fpl-nkind { display: flex; align-items: center; min-width: 0; font: 600 11px/15px var(--bs-font-sans-serif, sans-serif); color: var(--fpl-mute);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.fpl-nq { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-weight: 400; }
+.fpl-nkind { display: flex; align-items: center; min-width: 0;
+  font: 600 11px/15px var(--bs-font-sans-serif, sans-serif);
+  color: var(--fpl-mute); white-space: nowrap; overflow: hidden;
+  text-overflow: ellipsis; }
+.fpl-nq { display: -webkit-box; -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical; overflow: hidden; font-weight: 400; }
 /* one border for every card, thin and solid; the kind is its shape */
 .fpl-node.is-ext { background: var(--fpl-wash); color: var(--fpl-mute);
   font-weight: 400; }
 .fpl-kg { margin-right: 5px; }
 .fpl-kg svg { width: 11px; height: 11px; }
-.fpl-node:hover, .fpl-node.is-hot { border-color: var(--fpl-vers); box-shadow: 0 0 0 3px var(--fpl-vers-wash); }
-.fpl-node.is-sel { border-color: var(--fpl-mine); box-shadow: 0 0 0 3px var(--fpl-mine-wash); }
-.fpl-node.is-lift { z-index: 2; cursor: grabbing; box-shadow: 0 14px 30px rgba(20, 30, 50, .2), 0 2px 6px rgba(20, 30, 50, .1); }
-.fpl-node:focus-visible { outline: 2px solid var(--fpl-mine); outline-offset: 2px; }
-.fpl-plane.has-sel .fpl-node:not(.is-near), .fpl-plane.has-sel .fpl-edges .fpl-edge:not(.is-hot) { opacity: .3; }
+.fpl-node:hover, .fpl-node.is-hot { border-color: var(--fpl-vers);
+  box-shadow: 0 0 0 3px var(--fpl-vers-wash); }
+.fpl-node.is-sel { border-color: var(--fpl-mine);
+  box-shadow: 0 0 0 3px var(--fpl-mine-wash); }
+.fpl-node.is-lift { z-index: 2; cursor: grabbing;
+  box-shadow: 0 14px 30px rgba(20, 30, 50, .2), 0 2px 6px rgba(20, 30, 50, .1);
+}
+.fpl-node:focus-visible { outline: 2px solid var(--fpl-mine);
+  outline-offset: 2px; }
+.fpl-plane.has-sel .fpl-node:not(.is-near),
+.fpl-plane.has-sel .fpl-edges .fpl-edge:not(.is-hot) { opacity: .3; }
 /* a relation's sign: its kind's shape in its colour, on a disc of the
    ground so the edges stop at it */
 .fpl-node.fpl-dia { width: 18px; height: 18px; margin: -9px 0 0 -9px;
@@ -606,7 +863,9 @@ body.fpl-beside #quarto-sidebar, body.fpl-beside #quarto-margin-sidebar { displa
   box-shadow: 0 0 0 2px var(--lc); }
 .fpl-pill { position: absolute; z-index: 3; transform: translate(-50%, -50%);
   padding: 0 6px; border: 1px solid var(--lc); border-radius: 999px;
-  background: var(--fpl-bg); font-size: 11px; font-weight: 600; line-height: 16px; color: var(--fpl-fg); white-space: nowrap; pointer-events: none; }
+  background: var(--fpl-bg); font-size: 11px; font-weight: 600;
+  line-height: 16px; color: var(--fpl-fg); white-space: nowrap;
+  pointer-events: none; }
 /* the graph's reach: Buurt (a card and its neighbours) or Hele pagina */
 .fpl-scope { flex: none; display: flex; gap: 8px; padding: 10px 24px 0; }
 .fpl-ways { display: flex; }
@@ -629,9 +888,13 @@ body.fpl-beside #quarto-sidebar, body.fpl-beside #quarto-margin-sidebar { displa
 .fpl-scope button:disabled { opacity: .45; cursor: default; }
 .fpl-scope button:focus-visible { outline: 2px solid var(--fpl-mine);
   outline-offset: 1px; }
-.fpl-plane-foot { flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 10px 24px 12px; }
-.fpl-kchip { font: inherit; font-size: 12.5px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 9px;
-  box-sizing: border-box; border: 1px solid var(--fpl-rule); border-radius: 999px; background: var(--fpl-bg); color: var(--fpl-fg); cursor: pointer; }
+.fpl-plane-foot { flex: none; display: flex; flex-wrap: wrap;
+  align-items: center; gap: 6px; padding: 10px 24px 12px; }
+.fpl-kchip { font: inherit; font-size: 12.5px; font-weight: 600;
+  display: inline-flex; align-items: center; gap: 6px; height: 28px;
+  padding: 0 9px; box-sizing: border-box; border: 1px solid var(--fpl-rule);
+  border-radius: 999px; background: var(--fpl-bg); color: var(--fpl-fg);
+  cursor: pointer; }
 .fpl-kchip svg { color: var(--lc); }
 .fpl-kchip[aria-pressed="false"] { background: none; color: var(--fpl-mute); }
 /* a switch shows its state as a box, filled while on (QA, block 5: code,
@@ -645,8 +908,10 @@ button.fpl-kchip[aria-pressed="true"]::before { background: currentColor;
   font-weight: 600; color: var(--fpl-mute); }
 .fpl-klegend path { fill: none; stroke: var(--lc); stroke-width: 1.5; }
 .fpl-kchip[aria-pressed="false"] svg { opacity: .35; }
-.fpl-kchip:focus-visible { outline: 2px solid var(--fpl-mine); outline-offset: 1px; }
-.fpl-topbar.is-plane { padding-left: 16px; padding-right: 24px; border-left: 1px solid var(--fpl-rule); }
+.fpl-kchip:focus-visible { outline: 2px solid var(--fpl-mine);
+  outline-offset: 1px; }
+.fpl-topbar.is-plane { padding-left: 16px; padding-right: 24px;
+  border-left: 1px solid var(--fpl-rule); }
 /* a card's graph (board J): what the old panel over the page gave it, a
    frame; blok 4's plane is a .fpl-graph too, so this is the popover's */
 .fpl-graph.fpl-around { z-index: 1003; background: var(--fpl-bg);
@@ -683,100 +948,157 @@ button.fpl-kchip[aria-pressed="true"]::before { background: currentColor;
 .fpl-cardhead > .fpl-ib[aria-expanded="true"] { opacity: 1; }
 
 /* the coref lens: each member carries its chain's number */
-.fpl-chain { font: 700 .58em var(--bs-font-sans-serif, sans-serif); color: var(--fpl-coref, var(--fpl-mine)); margin-left: .1em; user-select: none; }
+.fpl-chain { font: 700 .58em var(--bs-font-sans-serif, sans-serif);
+  color: var(--fpl-coref, var(--fpl-mine)); margin-left: .1em;
+  user-select: none; }
 
 .fpl-card.fpl-faded { opacity: .25; }
 .fpl-plane .fpl-node.fpl-faded, .fpl-plane .fpl-edge.fpl-faded { opacity: .2; }
 mark.fact.fpl-faded { background: none; box-shadow: none; }
-.fpl-c[data-tfa].fpl-faded, .fpl-s[data-tfa].fpl-faded { background: none; box-shadow: none; }
+.fpl-c[data-tfa].fpl-faded, .fpl-s[data-tfa].fpl-faded { background: none;
+  box-shadow: none; }
 
 
-/* the filter panel (board V4a): six layer buttons, then the labels as a field over their scopes */
+/* the filter panel (board V4a): six layer buttons, then the labels as a field
+   over their scopes */
 .fpl-sheets { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 4px; }
 .fpl-also { align-items: center; margin-top: 2px; }
 .fpl-also-head { font-size: 12px; color: var(--fpl-mute); margin-right: 2px; }
-.fpl-also .fpl-sheet { height: 26px; padding: 0 10px; border-radius: 13px; font-size: 12.5px; }
+.fpl-also .fpl-sheet { height: 26px; padding: 0 10px; border-radius: 13px;
+  font-size: 12.5px; }
 .fpl-panel-head .fpl-why { align-self: center; }
-.fpl-sheet { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 9px; box-sizing: border-box; border: 1px solid var(--fpl-rule);
-  border-radius: 6px; background: var(--fpl-bg); font: 600 13px/1 var(--bs-font-sans-serif, sans-serif); color: var(--fpl-mute); cursor: pointer; }
+.fpl-sheet { display: inline-flex; align-items: center; gap: 6px; height: 32px;
+  padding: 0 9px; box-sizing: border-box; border: 1px solid var(--fpl-rule);
+  border-radius: 6px; background: var(--fpl-bg);
+  font: 600 13px/1 var(--bs-font-sans-serif, sans-serif);
+  color: var(--fpl-mute); cursor: pointer; }
 .fpl-sheet:hover { background: var(--fpl-wash); color: var(--fpl-fg); }
-.fpl-sheet[aria-pressed="true"] { background: var(--fpl-mine-wash); border-color: color-mix(in srgb, var(--fpl-mine) 40%, transparent); color: var(--fpl-mine); }
-.fpl-sheet[aria-pressed="false"] .fpl-sq, .fpl-sheet[aria-pressed="false"] .fpl-line { opacity: .35; }
+.fpl-sheet[aria-pressed="true"] { background: var(--fpl-mine-wash);
+  border-color: color-mix(in srgb, var(--fpl-mine) 40%, transparent);
+  color: var(--fpl-mine); }
+.fpl-sheet[aria-pressed="false"] .fpl-sq,
+.fpl-sheet[aria-pressed="false"] .fpl-line { opacity: .35; }
 .fpl-sheet .fpl-sq { margin: 0; }
 .fpl-menu .fpl-sheet kbd { font-size: 10px; padding: 2px 4px; }
-.fpl-line { display: inline-block; width: 16px; border-top: 2px solid var(--lc); }
-.fpl-labelq { display: block; width: 100%; height: 32px; box-sizing: border-box; margin: 6px 0 4px; padding: 0 8px; border: 1px solid var(--fpl-rule); border-radius: 5px;
-  background: var(--fpl-bg); font: 13px var(--bs-font-sans-serif, sans-serif); color: var(--fpl-fg); }
+.fpl-line { display: inline-block; width: 16px; border-top: 2px solid var(--lc);
+}
+.fpl-labelq { display: block; width: 100%; height: 32px; box-sizing: border-box;
+  margin: 6px 0 4px; padding: 0 8px; border: 1px solid var(--fpl-rule);
+  border-radius: 5px; background: var(--fpl-bg);
+  font: 13px var(--bs-font-sans-serif, sans-serif); color: var(--fpl-fg); }
 .fpl-labelq::placeholder { color: var(--fpl-mute); }
 .fpl-labelq:focus { outline: 0; border-color: var(--fpl-mine); }
 /* one column: ↓ goes down (QA, block 5) */
 .fpl-scopes { list-style: none; margin: 0; padding: 0; display: grid;
   gap: 2px; }
-.fpl-scopes li { display: flex; align-items: center; gap: 6px; min-width: 0; height: 28px; padding: 0 2px 0 5px; border-radius: 4px; font-size: 13px; cursor: pointer; }
+.fpl-scopes li { display: flex; align-items: center; gap: 6px; min-width: 0;
+  height: 28px; padding: 0 2px 0 5px; border-radius: 4px; font-size: 13px;
+  cursor: pointer; }
 .fpl-scopes li:hover { background: var(--fpl-wash); }
 .fpl-scopes li[aria-selected="true"] { background: var(--fpl-mine-wash); }
-.fpl-scopes li.fpl-panel-none { grid-column: 1 / -1; cursor: default; background: none; }
+.fpl-scopes li.fpl-panel-none { grid-column: 1 / -1; cursor: default;
+  background: none; }
 .fpl-scopes .fpl-sq { margin: 0; flex: none; }
-.fpl-scope { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fpl-scope { min-width: 0; overflow: hidden; text-overflow: ellipsis;
+  white-space: nowrap; }
 .fpl-scope small { color: var(--fpl-mute); }
-.fpl-scopes li.is-off .fpl-scope { color: var(--fpl-mute); text-decoration: line-through; }
+.fpl-scopes li.is-off .fpl-scope { color: var(--fpl-mute);
+  text-decoration: line-through; }
 .fpl-scopes li.is-off .fpl-sq { opacity: .35; }
 .fpl-ct { margin-left: auto; font-size: 12px; color: var(--fpl-mute); }
-.fpl-why, .fpl-deeper { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; padding: 0; border: 0;
-  border-radius: 3px; background: none; color: var(--fpl-mute); cursor: pointer; }
+.fpl-why, .fpl-deeper { flex: none; display: inline-flex; align-items: center;
+  justify-content: center; width: 20px; height: 20px; padding: 0; border: 0;
+  border-radius: 3px; background: none; color: var(--fpl-mute); cursor: pointer;
+}
 .fpl-why .fpl-ico svg { width: 13px; height: 13px; }
-.fpl-why:hover, .fpl-deeper:hover { background: var(--fpl-bg); color: var(--fpl-fg); }
+.fpl-why:hover, .fpl-deeper:hover { background: var(--fpl-bg);
+  color: var(--fpl-fg); }
 /* / is Quarto's in Lezen (feedback 31) */
 /* spans off: the marks stay as anchors, unpainted and without their lines */
-body.fpl-nospans mark.fact { background: none; box-shadow: none; outline-color: transparent; }
+body.fpl-nospans mark.fact { background: none; box-shadow: none;
+  outline-color: transparent; }
 /* one layer alone (board V4b): the text dimmed, only that layer in colour */
-body.fpl-solo main :is(p, li, h1, h2, h3, h4, h5, a, code, td, th, figcaption, .breadcrumb, .fpl-n):not(.fpl-margin *, .fpl-inline *) { color: var(--fpl-mute); }   /* a narrow margin lives in main: its cards stay legible */
+/* a narrow margin lives in main: its cards stay legible */
+body.fpl-solo main :is(p, li, h1, h2, h3, h4, h5, a, code, td, th, figcaption,
+    .breadcrumb, .fpl-n):not(.fpl-margin *, .fpl-inline *) {
+  color: var(--fpl-mute); }
 body.fpl-solo .fpl-arcs path { stroke-width: 2; opacity: 1; }
 
-/* groups (boards V3a-V3d): a chip on each member's card, a frame round its cards in the graph, the group form. The
-   group scope's colour marks them all; a group's members light in a class of their own, several at once. */
-.fpl-card > .fpl-groups { margin: 5px 0 0 15px; display: flex; flex-wrap: wrap; gap: 4px; }
-.fpl-gchip { display: inline-flex; align-items: center; gap: 5px; max-width: 100%; height: 20px; padding: 0 8px 0 6px; box-sizing: border-box;
-  border: 1px solid var(--fpl-rule); border-radius: 999px; background: var(--fpl-bg); font-size: 11.5px; font-weight: 600; line-height: 1;
-  color: var(--fpl-fg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: default; }
+/* groups (boards V3a-V3d): a chip on each member's card, a frame round its
+   cards in the graph, the group form. The group scope's colour marks them all;
+   a group's members light in a class of their own, several at once. */
+.fpl-card > .fpl-groups { margin: 5px 0 0 15px; display: flex; flex-wrap: wrap;
+  gap: 4px; }
+.fpl-gchip { display: inline-flex; align-items: center; gap: 5px;
+  max-width: 100%; height: 20px; padding: 0 8px 0 6px; box-sizing: border-box;
+  border: 1px solid var(--fpl-rule); border-radius: 999px;
+  background: var(--fpl-bg); font-size: 11.5px; font-weight: 600;
+  line-height: 1; color: var(--fpl-fg); white-space: nowrap; overflow: hidden;
+  text-overflow: ellipsis; cursor: default; }
 .fpl-gchip:hover { border-color: var(--fpl-group); }
-.fpl-gchip .fpl-sq, .fpl-gtab .fpl-sq { flex: none; width: 8px; height: 8px; border-radius: 2px; background: var(--fpl-group); }
-mark.fact.fpl-ingroup, .fpl-p.fpl-ingroup, .fpl-ingroup:not(.fpl-card):not(.fpl-node) { outline: 1.5px solid var(--fpl-group); outline-offset: 1px; border-radius: 2px; }
+.fpl-gchip .fpl-sq, .fpl-gtab .fpl-sq { flex: none; width: 8px; height: 8px;
+  border-radius: 2px; background: var(--fpl-group); }
+mark.fact.fpl-ingroup,
+.fpl-p.fpl-ingroup,
+.fpl-ingroup:not(.fpl-card):not(.fpl-node) {
+  outline: 1.5px solid var(--fpl-group); outline-offset: 1px;
+  border-radius: 2px; }
 .fpl-card.fpl-ingroup { box-shadow: 0 0 0 1.5px var(--fpl-group); }
-.fpl-node.fpl-ingroup { border-color: var(--fpl-group); box-shadow: 0 0 0 3px color-mix(in srgb, var(--fpl-group) 18%, transparent); }
+.fpl-node.fpl-ingroup { border-color: var(--fpl-group);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--fpl-group) 18%, transparent); }
 .fpl-node.is-picked { border-color: var(--fpl-mine);
   box-shadow: 0 0 0 3px var(--fpl-mine-wash); }
-.fpl-gframe { position: absolute; box-sizing: border-box; border: 1px solid var(--fpl-node); border-radius: 12px;
-  background: color-mix(in srgb, var(--fpl-group) 6%, var(--fpl-bg)); transition: border-color .12s, box-shadow .12s; }
-.fpl-gframe:hover { border-color: var(--fpl-group); box-shadow: 0 0 0 3px color-mix(in srgb, var(--fpl-group) 14%, transparent); }
+.fpl-gframe { position: absolute; box-sizing: border-box;
+  border: 1px solid var(--fpl-node); border-radius: 12px;
+  background: color-mix(in srgb, var(--fpl-group) 6%, var(--fpl-bg));
+  transition: border-color .12s, box-shadow .12s; }
+.fpl-gframe:hover { border-color: var(--fpl-group);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--fpl-group) 14%, transparent); }
 /* a card carried over it (feedback 27): lit, and its rim dashed and
    thicker, not by colour alone */
 .fpl-gframe.is-over { border: 2px dashed var(--fpl-group);
   background: color-mix(in srgb, var(--fpl-group) 14%, var(--fpl-bg));
   box-shadow: 0 0 0 4px
     color-mix(in srgb, var(--fpl-group) 18%, transparent); }
-.fpl-gtab { position: absolute; left: 10px; top: 0; transform: translateY(-50%); display: inline-flex; align-items: center; gap: 6px; max-width: calc(100% - 20px);
-  height: 20px; padding: 0 8px 0 7px; box-sizing: border-box; border: 1px solid var(--fpl-node); border-radius: 999px; background: var(--fpl-bg);
-  font: 600 11.5px/1 var(--bs-font-sans-serif, sans-serif); color: var(--fpl-fg); cursor: pointer; white-space: nowrap; }
-.fpl-gtab .fpl-gname { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
-.fpl-grole { flex: none; padding: 2px 5px; border-radius: 4px; background: color-mix(in srgb, var(--fpl-role) 14%, var(--fpl-bg)); color: var(--fpl-role);
-  font-size: 10.5px; font-weight: 600; }
-.fpl-gtab:focus-visible { outline: 2px solid var(--fpl-mine); outline-offset: 1px; }
-.fpl-gform { position: absolute; z-index: 3; left: 24px; bottom: 60px; width: min(392px, calc(100% - 48px)); box-sizing: border-box; padding: 14px 16px 12px;
-  border: 1px solid var(--fpl-rule); border-radius: 10px; background: var(--fpl-bg);
-  box-shadow: 0 12px 32px rgba(20, 30, 50, .16), 0 2px 6px rgba(20, 30, 50, .08); display: grid; gap: 10px; }
+.fpl-gtab { position: absolute; left: 10px; top: 0; transform: translateY(-50%);
+  display: inline-flex; align-items: center; gap: 6px;
+  max-width: calc(100% - 20px); height: 20px; padding: 0 8px 0 7px;
+  box-sizing: border-box; border: 1px solid var(--fpl-node);
+  border-radius: 999px; background: var(--fpl-bg);
+  font: 600 11.5px/1 var(--bs-font-sans-serif, sans-serif);
+  color: var(--fpl-fg); cursor: pointer; white-space: nowrap; }
+.fpl-gtab .fpl-gname { min-width: 0; overflow: hidden; text-overflow: ellipsis;
+}
+.fpl-grole { flex: none; padding: 2px 5px; border-radius: 4px;
+  background: color-mix(in srgb, var(--fpl-role) 14%, var(--fpl-bg));
+  color: var(--fpl-role); font-size: 10.5px; font-weight: 600; }
+.fpl-gtab:focus-visible { outline: 2px solid var(--fpl-mine);
+  outline-offset: 1px; }
+.fpl-gform { position: absolute; z-index: 3; left: 24px; bottom: 60px;
+  width: min(392px, calc(100% - 48px)); box-sizing: border-box;
+  padding: 14px 16px 12px; border: 1px solid var(--fpl-rule);
+  border-radius: 10px; background: var(--fpl-bg);
+  box-shadow: 0 12px 32px rgba(20, 30, 50, .16), 0 2px 6px rgba(20, 30, 50,
+    .08); display: grid; gap: 10px; }
 .fpl-gform-h { margin: 0; font-size: 14px; font-weight: 700; }
 .fpl-gform label { display: grid; gap: 4px; margin: 0; }
-.fpl-gform label > span, .fpl-glabel { display: block; margin-bottom: 4px; font-size: 12px; font-weight: 600; color: var(--fpl-mute); }
-.fpl-gform input { font: inherit; font-size: 13.5px; height: 32px; padding: 0 9px; border: 1px solid var(--fpl-rule); border-radius: 6px;
+.fpl-gform label > span, .fpl-glabel { display: block; margin-bottom: 4px;
+  font-size: 12px; font-weight: 600; color: var(--fpl-mute); }
+.fpl-gform input { font: inherit; font-size: 13.5px; height: 32px;
+  padding: 0 9px; border: 1px solid var(--fpl-rule); border-radius: 6px;
   background: var(--fpl-bg); color: var(--fpl-fg); }
-.fpl-gform input:focus { outline: none; border-color: var(--fpl-mine); box-shadow: 0 0 0 3px var(--fpl-mine-wash); }
-.fpl-roles { display: grid; grid-template-columns: repeat(4, 1fr); border: 1px solid var(--fpl-rule); border-radius: 6px; overflow: hidden; }
-.fpl-roles button { font: inherit; font-size: 12.5px; font-weight: 600; height: 30px; border: 0; border-left: 1px solid var(--fpl-rule);
+.fpl-gform input:focus { outline: none; border-color: var(--fpl-mine);
+  box-shadow: 0 0 0 3px var(--fpl-mine-wash); }
+.fpl-roles { display: grid; grid-template-columns: repeat(4, 1fr);
+  border: 1px solid var(--fpl-rule); border-radius: 6px; overflow: hidden; }
+.fpl-roles button { font: inherit; font-size: 12.5px; font-weight: 600;
+  height: 30px; border: 0; border-left: 1px solid var(--fpl-rule);
   background: var(--fpl-bg); color: var(--fpl-fg); cursor: pointer; }
 .fpl-roles button:first-child { border-left: 0; }
-.fpl-roles button[aria-checked="true"] { background: var(--fpl-mine-wash); color: var(--fpl-mine); box-shadow: inset 0 -2px 0 var(--fpl-mine); }
-.fpl-roles button:focus-visible { outline: 2px solid var(--fpl-mine); outline-offset: -2px; }
+.fpl-roles button[aria-checked="true"] { background: var(--fpl-mine-wash);
+  color: var(--fpl-mine); box-shadow: inset 0 -2px 0 var(--fpl-mine); }
+.fpl-roles button:focus-visible { outline: 2px solid var(--fpl-mine);
+  outline-offset: -2px; }
 .fpl-gform .fpl-bar button.fpl-danger { color: var(--fpl-con); }
 /* in a card's ⋯ menu (Groepeer…): the menu is its frame */
 .fpl-cardmenu .fpl-gform { position: static; width: auto; padding: 8px 12px;
@@ -788,33 +1110,54 @@ mark.fact.fpl-ingroup, .fpl-p.fpl-ingroup, .fpl-ingroup:not(.fpl-card):not(.fpl-
 .fpl-gsug .fpl-item:focus-visible { outline: 2px solid var(--fpl-mine);
   outline-offset: -2px; }
 
-/* the tree (boards V3c, V4c): the groups as an argument in the plane, a block per group under its parent, the step's
-   weight as the line's thickness and as dots in the block's head; at the plane's foot the tray of pulled sentences */
-.fpl-plane.is-boom .fpl-plane-area { padding: 16px 24px 24px 24px; box-sizing: border-box; }
-.fpl-tree { position: relative; display: flex; flex-direction: column; gap: 14px; }
+/* the tree (boards V3c, V4c): the groups as an argument in the plane, a block
+   per group under its parent, the step's weight as the line's thickness and as
+   dots in the block's head; at the plane's foot the tray of pulled sentences */
+.fpl-plane.is-boom .fpl-plane-area { padding: 16px 24px 24px 24px;
+  box-sizing: border-box; }
+.fpl-tree { position: relative; display: flex; flex-direction: column;
+  gap: 14px; }
 .fpl-tlines { z-index: 1; }
-.fpl-tree.is-moving .fpl-tlines, .fpl-tree.is-moving .fpl-tsign, .fpl-tree.is-moving .fpl-tinf { opacity: 0; }
-.fpl-tline { fill: none; stroke: var(--lc); stroke-opacity: .8; transition: stroke-opacity .12s; }
+.fpl-tree.is-moving .fpl-tlines,
+.fpl-tree.is-moving .fpl-tsign,
+.fpl-tree.is-moving .fpl-tinf { opacity: 0; }
+.fpl-tline { fill: none; stroke: var(--lc); stroke-opacity: .8;
+  transition: stroke-opacity .12s; }
 .fpl-tline.is-hot { stroke-opacity: 1; }
-.fpl-thit { fill: none; stroke: transparent; stroke-width: 14; pointer-events: stroke; }
-.fpl-tblock { position: relative; z-index: 2; box-sizing: border-box; min-width: 0; padding: 6px 10px 8px 4px; border: 1px solid var(--fpl-node);
-  border-radius: 8px; background: var(--fpl-bg); transition: border-color .12s, box-shadow .12s; }
+.fpl-thit { fill: none; stroke: transparent; stroke-width: 14;
+  pointer-events: stroke; }
+.fpl-tblock { position: relative; z-index: 2; box-sizing: border-box;
+  min-width: 0; padding: 6px 10px 8px 4px; border: 1px solid var(--fpl-node);
+  border-radius: 8px; background: var(--fpl-bg);
+  transition: border-color .12s, box-shadow .12s; }
 .fpl-tblock.is-uc { border-style: dashed; }
 .fpl-tblock:hover, .fpl-tblock.is-over { border-color: var(--fpl-group); }
-.fpl-tblock.is-over { box-shadow: 0 0 0 3px color-mix(in srgb, var(--fpl-group) 18%, transparent); }
-.fpl-tblock.is-lift { z-index: 4; border-color: var(--fpl-mine); box-shadow: 0 14px 30px rgba(20, 30, 50, .2), 0 2px 6px rgba(20, 30, 50, .1); }
-.fpl-tslot { flex: none; box-sizing: border-box; border: 1.5px dashed var(--fpl-edge); border-radius: 8px; }
+.fpl-tblock.is-over {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--fpl-group) 18%, transparent); }
+.fpl-tblock.is-lift { z-index: 4; border-color: var(--fpl-mine);
+  box-shadow: 0 14px 30px rgba(20, 30, 50, .2), 0 2px 6px rgba(20, 30, 50, .1);
+}
+.fpl-tslot { flex: none; box-sizing: border-box;
+  border: 1.5px dashed var(--fpl-edge); border-radius: 8px; }
 .fpl-thead { display: flex; align-items: center; gap: 8px; min-height: 30px; }
-.fpl-grip { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 30px; padding: 0; border: 0;
-  border-radius: 4px; background: none; color: var(--fpl-mute); cursor: grab; touch-action: none; }
+.fpl-grip { flex: none; display: inline-flex; align-items: center;
+  justify-content: center; width: 24px; height: 30px; padding: 0; border: 0;
+  border-radius: 4px; background: none; color: var(--fpl-mute); cursor: grab;
+  touch-action: none; }
 .fpl-grip:hover { background: var(--fpl-wash); color: var(--fpl-fg); }
-.fpl-grip:focus-visible { outline: 2px solid var(--fpl-mine); outline-offset: 0; }
-.fpl-trole, .fpl-tuc { flex: none; display: inline-flex; align-items: center; gap: 5px; padding: 4px 7px; border-radius: 999px;
-  font-size: 11px; font-weight: 600; line-height: 1; }
-.fpl-trole { background: color-mix(in srgb, var(--fpl-role) 12%, var(--fpl-bg)); color: var(--fpl-fg); }
-.fpl-trole .fpl-sq { width: 8px; height: 8px; margin: 0; border-radius: 2px; background: var(--fpl-role); }
-.fpl-tuc { margin-left: 6px; border: 1.5px solid var(--fpl-attacks); background: var(--fpl-bg); color: var(--fpl-fg); }
-.fpl-tname { flex: 1; min-width: 0; font-size: 14.5px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fpl-grip:focus-visible { outline: 2px solid var(--fpl-mine); outline-offset: 0;
+}
+.fpl-trole, .fpl-tuc { flex: none; display: inline-flex; align-items: center;
+  gap: 5px; padding: 4px 7px; border-radius: 999px; font-size: 11px;
+  font-weight: 600; line-height: 1; }
+.fpl-trole { background: color-mix(in srgb, var(--fpl-role) 12%, var(--fpl-bg));
+  color: var(--fpl-fg); }
+.fpl-trole .fpl-sq { width: 8px; height: 8px; margin: 0; border-radius: 2px;
+  background: var(--fpl-role); }
+.fpl-tuc { margin-left: 6px; border: 1.5px solid var(--fpl-attacks);
+  background: var(--fpl-bg); color: var(--fpl-fg); }
+.fpl-tname { flex: 1; min-width: 0; font-size: 14.5px; font-weight: 700;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .fpl-tblock.is-uc .fpl-tname { font-size: 13px; font-weight: 600; }
 /* a loose unit (feedback 28): one row or id, its kind's shape, its words a
    jump to it */
@@ -824,35 +1167,54 @@ mark.fact.fpl-ingroup, .fpl-p.fpl-ingroup, .fpl-ingroup:not(.fpl-card):not(.fpl-
   text-align: left; cursor: pointer; font-family: inherit; }
 .fpl-tagain { flex: none; font-size: 12px; color: var(--fpl-mute); }
 .fpl-tgo:hover, .fpl-tgo:focus-visible { color: var(--fpl-mine); outline: 0; }
-.fpl-thead .fpl-weight { flex: none; margin: 0 2px 0 auto; font-size: 11px; letter-spacing: .12em; color: var(--fpl-edge); }
+.fpl-thead .fpl-weight { flex: none; margin: 0 2px 0 auto; font-size: 11px;
+  letter-spacing: .12em; color: var(--fpl-edge); }
 .fpl-thead .fpl-weight .on { color: var(--fpl-fg); }
-.fpl-trows { list-style: none; margin: 2px 0 0 32px; padding: 0; display: flex; flex-direction: column; }
+.fpl-trows { list-style: none; margin: 2px 0 0 32px; padding: 0; display: flex;
+  flex-direction: column; }
 .fpl-tblock.is-uc .fpl-trows { margin-left: 10px; }
-.fpl-trow { display: flex; align-items: center; gap: 8px; width: 100%; height: 26px; padding: 0 6px; border: 0; border-radius: 4px; background: none;
-  font: 13.5px/1 var(--bs-font-sans-serif, sans-serif); color: var(--fpl-fg); text-align: left; cursor: pointer; }
-.fpl-trow > span:last-child { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.fpl-trow:hover, .fpl-trow:focus-visible { background: var(--fpl-mine-wash); color: var(--fpl-mine); outline: 0; }
-.fpl-trow .fpl-sq, .fpl-tpill .fpl-sq { flex: none; width: 9px; height: 9px; margin: 0; border-radius: 2px; background: var(--lc, var(--fpl-mute)); }
-.fpl-trow .fpl-sq.is-note { box-sizing: border-box; background: none; border: 1.5px dashed var(--fpl-mute); }
+.fpl-trow { display: flex; align-items: center; gap: 8px; width: 100%;
+  height: 26px; padding: 0 6px; border: 0; border-radius: 4px; background: none;
+  font: 13.5px/1 var(--bs-font-sans-serif, sans-serif); color: var(--fpl-fg);
+  text-align: left; cursor: pointer; }
+.fpl-trow > span:last-child { flex: 1; min-width: 0; white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis; }
+.fpl-trow:hover, .fpl-trow:focus-visible { background: var(--fpl-mine-wash);
+  color: var(--fpl-mine); outline: 0; }
+.fpl-trow .fpl-sq, .fpl-tpill .fpl-sq { flex: none; width: 9px; height: 9px;
+  margin: 0; border-radius: 2px; background: var(--lc, var(--fpl-mute)); }
+.fpl-trow .fpl-sq.is-note { box-sizing: border-box; background: none;
+  border: 1.5px dashed var(--fpl-mute); }
 .fpl-tsign, .fpl-ksign { position: absolute; z-index: 3; width: 20px;
   height: 20px; margin: -10px 0 0 -10px; box-sizing: border-box; display: flex;
-  align-items: center; justify-content: center; border: 1.5px solid var(--lc); border-radius: 50%; background: var(--fpl-bg); color: var(--lc); }
+  align-items: center; justify-content: center; border: 1.5px solid var(--lc);
+  border-radius: 50%; background: var(--fpl-bg); color: var(--lc); }
 .fpl-tsign path, .fpl-ksign path { fill: none; stroke: currentColor;
   stroke-width: 1.8; stroke-linecap: round; }
 .fpl-tinf, .fpl-kinf { position: absolute; z-index: 3; width: 11px;
   height: 11px; margin: -5.5px 0 0 -5.5px; box-sizing: border-box;
-  transform: rotate(45deg);
-  border: 1.5px solid var(--lc); background: var(--fpl-bg); pointer-events: none; }
-.fpl-wtip { position: absolute; z-index: 5; transform: translateX(-50%); padding: 3px 7px; border-radius: 5px; background: var(--fpl-fg);
-  color: var(--fpl-bg); font: 600 12px/1.3 var(--bs-font-sans-serif, sans-serif); pointer-events: none; }
-.fpl-tray { flex: none; display: flex; flex-direction: column; gap: 10px; box-sizing: border-box;
-  padding: 12px 24px 14px 16px; border-top: 1px solid var(--fpl-rule); background: var(--fpl-bg); transition: background .12s; }
+  transform: rotate(45deg); border: 1.5px solid var(--lc);
+  background: var(--fpl-bg); pointer-events: none; }
+.fpl-wtip { position: absolute; z-index: 5; transform: translateX(-50%);
+  padding: 3px 7px; border-radius: 5px; background: var(--fpl-fg);
+  color: var(--fpl-bg);
+  font: 600 12px/1.3 var(--bs-font-sans-serif, sans-serif);
+  pointer-events: none; }
+.fpl-tray { flex: none; display: flex; flex-direction: column; gap: 10px;
+  box-sizing: border-box; padding: 12px 24px 14px 16px;
+  border-top: 1px solid var(--fpl-rule); background: var(--fpl-bg);
+  transition: background .12s; }
 .fpl-tray[hidden] { display: none; }
-.fpl-tray.is-over { background: color-mix(in srgb, var(--fpl-group) 8%, var(--fpl-bg)); }
-.fpl-tray h2 { display: flex; align-items: center; gap: 7px; margin: 0; padding: 0; border: 0; font-size: 14px; font-weight: 700; color: var(--fpl-fg); }
-.fpl-tray h2 .fpl-sq, .fpl-tpill .fpl-sq { width: 9px; height: 9px; margin: 0; border-radius: 2px; background: var(--fpl-group); }
+.fpl-tray.is-over {
+  background: color-mix(in srgb, var(--fpl-group) 8%, var(--fpl-bg)); }
+.fpl-tray h2 { display: flex; align-items: center; gap: 7px; margin: 0;
+  padding: 0; border: 0; font-size: 14px; font-weight: 700;
+  color: var(--fpl-fg); }
+.fpl-tray h2 .fpl-sq, .fpl-tpill .fpl-sq { width: 9px; height: 9px; margin: 0;
+  border-radius: 2px; background: var(--fpl-group); }
 .fpl-pills { display: flex; flex-wrap: wrap; gap: 8px; min-height: 34px; }
-.fpl-pills:empty { box-sizing: border-box; border: 1.5px dashed var(--fpl-edge); border-radius: 6px; }
+.fpl-pills:empty { box-sizing: border-box; border: 1.5px dashed var(--fpl-edge);
+  border-radius: 6px; }
 .fpl-pills:empty::before { content: "Sleep een bolletje hierheen"; margin: auto;
   font-size: 12.5px; color: var(--fpl-mute); }   /* the empty tray (QA 5) */
 /* the tree's legend (QA, block 5): its signs in a line over it */
@@ -863,20 +1225,34 @@ mark.fact.fpl-ingroup, .fpl-p.fpl-ingroup, .fpl-ingroup:not(.fpl-card):not(.fpl-
 .fpl-tkey .fpl-ksign, .fpl-tkey .fpl-kinf { position: static; margin: 0; }
 .fpl-tkey b { font-size: 9px; letter-spacing: .12em; color: var(--fpl-fg); }
 .fpl-tkey .fpl-why { margin-left: auto; }
-.fpl-tpill { font: 13.5px/1 var(--bs-font-sans-serif, sans-serif); display: inline-flex; align-items: center; gap: 7px; max-width: 100%; height: 34px;
-  box-sizing: border-box; padding: 0 12px 0 10px; border: 1px solid var(--fpl-node); border-radius: 6px; background: var(--fpl-bg); color: var(--fpl-fg);
-  cursor: grab; touch-action: none; }
-.fpl-tpill > span:last-child { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fpl-tpill { font: 13.5px/1 var(--bs-font-sans-serif, sans-serif);
+  display: inline-flex; align-items: center; gap: 7px; max-width: 100%;
+  height: 34px; box-sizing: border-box; padding: 0 12px 0 10px;
+  border: 1px solid var(--fpl-node); border-radius: 6px;
+  background: var(--fpl-bg); color: var(--fpl-fg); cursor: grab;
+  touch-action: none; }
+.fpl-tpill > span:last-child { min-width: 0; white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis; }
 .fpl-tpill:hover { border-color: var(--fpl-group); }
-.fpl-tpill.is-lift { position: relative; z-index: 6; cursor: grabbing; box-shadow: 0 10px 24px rgba(20, 30, 50, .18), 0 2px 6px rgba(20, 30, 50, .1); }
-/* a sentence in the tray, while the tree is open: dashed in the text, as pulled out of it */
-mark.fact.fpl-pulled { background: none; box-shadow: none; text-decoration: underline dashed var(--fpl-mute); text-decoration-thickness: 2px; text-underline-offset: .22em; }
+.fpl-tpill.is-lift { position: relative; z-index: 6; cursor: grabbing;
+  box-shadow: 0 10px 24px rgba(20, 30, 50, .18), 0 2px 6px rgba(20, 30, 50, .1);
+}
+/* a sentence in the tray, while the tree is open: dashed in the text, as pulled
+   out of it */
+mark.fact.fpl-pulled { background: none; box-shadow: none;
+  text-decoration: underline dashed var(--fpl-mute);
+  text-decoration-thickness: 2px; text-underline-offset: .22em; }
 /* the tree without a group: one empty block, one action (QA, block 4) */
-.fpl-tempty { display: flex; justify-content: center; padding: 22px 16px; border: 1.5px dashed var(--fpl-rule); background: none; }
-.fpl-tmake { display: inline-flex; align-items: center; gap: 7px; height: 32px; padding: 0 14px; border: 1px solid var(--fpl-rule); border-radius: 7px;
-  background: var(--fpl-bg); font: 600 13px var(--bs-font-sans-serif, sans-serif); color: var(--fpl-fg); cursor: pointer; }
+.fpl-tempty { display: flex; justify-content: center; padding: 22px 16px;
+  border: 1.5px dashed var(--fpl-rule); background: none; }
+.fpl-tmake { display: inline-flex; align-items: center; gap: 7px; height: 32px;
+  padding: 0 14px; border: 1px solid var(--fpl-rule); border-radius: 7px;
+  background: var(--fpl-bg);
+  font: 600 13px var(--bs-font-sans-serif, sans-serif); color: var(--fpl-fg);
+  cursor: pointer; }
 .fpl-tmake:hover { background: var(--fpl-wash); }
-.fpl-tmake:focus-visible { outline: 2px solid var(--fpl-mine); outline-offset: 2px; }
+.fpl-tmake:focus-visible { outline: 2px solid var(--fpl-mine);
+  outline-offset: 2px; }
 .fpl-plane-foot .fpl-why { margin-left: auto; align-self: center; }
 
 /* the spin (board V5b): a name in a fence or the prose's inline code is a
